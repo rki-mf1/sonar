@@ -97,6 +97,7 @@ DATABASES = {
         "OPTIONS": {"options": "-c search_path=public"},
         "NAME": "covsonar",
         "USER": "postgres",
+        "PASSWORD": "123456",
         "HOST": "localhost",
         "PORT": "5432",
     }
