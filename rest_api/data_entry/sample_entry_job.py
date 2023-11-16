@@ -9,7 +9,7 @@ from django.db import transaction
 
 from rest_api.data_entry.sample_import import SampleImport
 
-_debug = False  # set to True to run only one file
+_debug = False   # set to True to run only one file
 _async = True
 
 
