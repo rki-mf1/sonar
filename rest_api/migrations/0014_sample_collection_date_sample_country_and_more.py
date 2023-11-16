@@ -67,6 +67,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="molecule",
             name="standard",
-            field=models.BooleanField(blank=True, null=True),
+            field=models.IntegerField(blank=True, null=True),
         ),
     ]

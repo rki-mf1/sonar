@@ -1,14 +1,77 @@
-### Setup
+# Setup
 
 ## Prerequisites
 
- - install postgres
- - setup a new (clean & empty) postgres DB (name (covsonar) or edit settings accordingly, see [settings.py -> Databases](covsonar_backend/settings.py#L87))
- - install requirements (poetry)
- - recommended software: DB Management Software (e.g. DBeaver), REST Client (e.g. Insomnia, Insomnia configuration can be shared)
+ - Install postgres
 
-## Setup Django
+    example commnad in Ubuntu/Debian system.
+    ```
+    sudo apt-get install postgresql 
+    ```
+    start the service
+    ```
+    sudo service postgresql start
+    ```
+ - Setup username/password for postgres
 
+    login and connect as default user (postgres)
+    ```
+    sudo -u postgres psql
+    ```
+    change the password
+    ```
+    postgres=# ALTER USER postgres PASSWORD '123456';
+    ```
+
+ - Setup a new (clean & empty) postgres DB (datbase name (e.g., covsonar) and edit settings accordingly, see [settings.py -> Databases](covsonar_backend/settings.py#L87))
+    
+    create new database
+    ```
+    postgres=# CREATE DATABASE covsonar;
+    ```
+
+ - Install requirements (e.g., python and poetry)
+
+    install new python environment with conda
+    ```
+    conda create -n sonar-backend python=3.11 poetry
+    conda activate sonar-backend
+    ```
+    
+**🗿 Recommended software:** DB Management Software (e.g. DBeaver), REST Client (e.g. Insomnia, Insomnia configuration can be shared)
+
+## Install sonar-backend
+
+1. Clone the project
+    ```
+    git clone https://github.com/rki-mf1/sonar-backend.git
+    cd sonar-backend
+    ```
+2. Install dependencies with poetry 
+    ```
+    poetry install
+    ```
+
+Once these steps are completed, you can move on to the next section.
+
+## Setup Django (development server)
+
+1. Check if the application and django are set up and running correctly.
+    ```
+    python manage.py 
+    ```
+    This will show a list of commands and options that can be used with manage.py.
+2. Start database migration (create the table in the database)
+    ```
+    python manage.py migrate
+    ```
+3. Start application
+    ```
+    python manage.py runserver
+    ```
+    You can access the application at `http://127.0.0.1:8000/`.
+
+Note:
  - `manage.py` is used for all django commands
  - `python .\manage.py migrate` commits all migration db changes to the database. also creates django specific administrative tables 
  - `python .\manage.py createsuperuser` creates a user with full access to all db operations and to the admin page
