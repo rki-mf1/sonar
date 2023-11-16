@@ -85,25 +85,12 @@ Note:
 
 ### TODO
 
-## DB unique keys:
-- mutation duplicates - enforce unique_together
-- gene accession - enforce unique
+## move todos to gitlab issues!
 
 ## DB Issues:
 - mutation start and end are zero based index, label is 1 based index
-- remove mutation2property
-- remove mutation frameshift
-- gene cds accession
-- gene cds symbol
 
 ## Open Tasks:
 - lineages table and filter
 - mutation annotations POS = ANN[*.EFFECT] = annotation_type
-- exclude/q-object performance check
 - property exclude
-
-
-## Notes:
- - mutation - accession
- - type: nt replicon.accesison
- - type: cds gene gene_accession
