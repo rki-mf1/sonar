@@ -76,6 +76,12 @@ class MutationViewSet(
     queryset = models.Mutation.objects.all()
     serializer_class = MutationSerializer
 
+    @action(detail=False, methods=["get"])
+    def distinct_alts(self, request: Request, *args, **kwargs):
+        queryset = models.Mutation.objects.distinct("alt").values("alt")
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(element__molecule__reference__accession=ref)
+        return Response({"alts": [item["alt"] for item in queryset]})
 
 class PropertySerializer(serializers.ModelSerializer):
     class Meta:
@@ -117,7 +123,7 @@ class SampleViewSet(
             if filter_params := request.query_params.get("filters"):
                 filters = json.loads(filter_params)
                 queryset = self.resolve_genome_filter(filters)
-            profiles_qs = models.Mutation.objects.filter(
+            genomic_profiles_qs = models.Mutation.objects.filter(
                 ~Q(alt="N"), type="nt"
             ).only("ref", "alt", "start")
             proteomic_profiles_qs = models.Mutation.objects.filter(
@@ -511,6 +517,10 @@ class ReferenceViewSet(
         gbk_file = request.FILES.get("gbk_file")
         import_gbk_file(gbk_file)
         return Response("OK")
+    
+    @action(detail=False, methods=["get"])
+    def distinct_accessions(self, request: Request, *args, **kwargs):
+        return Response("hello")
 
 
 class SNP1Serializer(serializers.HyperlinkedModelSerializer):

@@ -1,21 +1,29 @@
 from concurrent.futures import ThreadPoolExecutor
 import pathlib
-from datetime import datetime
+from datetime import date, datetime
 from multiprocessing import Pool, cpu_count
+from threading import Lock
+
 import traceback
 
-import django
+import django, json
 from django.db import transaction
 
 from rest_api.data_entry.sample_import import SampleImport
 
 _debug = False  # set to True to run only one file
 _async = True
+_print_traceback = False
+
+global log_lock
+log_lock = Lock()
 
 
+# for actual multiprocessing, not needed rn
 def async_init():
     django.setup()
     from django.db import connections
+
     connections.close_all()
 
 
@@ -58,7 +66,6 @@ def file_worker(file):
                     except Exception as e:
                         if sample_import:
                             sample_import.move_files(success=False)
-                        print(f"Error importing file: {base_name}: \n\t {e}\n")
                         raise e
                     else:
                         EnteredData.objects.create(
@@ -67,5 +74,25 @@ def file_worker(file):
                 else:
                     print("already imported ", file)
     except Exception as e:
-        print(f"Error importing file: {file}: \n\t {e}\n")
+        write_to_log(e, file)
+    else:
+        print("imported ", file)
+
+
+def write_to_log(e, file):
+    print(f"Error importing file: {file}: \n\t {e}")
+    if _print_traceback:
         traceback.print_exc()
+    log_path = f"import_data/logs/{date.today().isoformat()}_sample_error_import.log"
+    global log_lock
+    with log_lock:
+        if not pathlib.Path(log_path).is_file():
+            print("creating log file")
+            pathlib.Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+            with open(log_path, "w") as f:
+                json.dump({file: str(e)}, f)
+            return
+        current_data = json.loads(open(log_path, "r").read())
+        current_data[file] = str(e)
+        with open(log_path, "w") as f:
+            json.dump(current_data, f)

@@ -22,6 +22,12 @@ class Alignment(models.Model):
                 fields=["replicon", "sequence"],
             )
         ]
+        constraints = [
+            UniqueConstraint(
+                name="unique_alignment",
+                fields=["replicon", "sequence"],
+            ),
+        ]
         db_table = "alignment"
 
 
@@ -36,7 +42,12 @@ class Alignment2Mutation(models.Model):
             )
         ]
         db_table = "alignment2mutation"
-        unique_together = (("mutation", "alignment"),)
+        constraints = [
+            UniqueConstraint(
+                name="unique_alignment2mutation",
+                fields=["mutation", "alignment"],
+            ),
+        ]
 
 
 class AnnotationType(models.Model):
@@ -46,6 +57,17 @@ class AnnotationType(models.Model):
 
     class Meta:
         db_table = "annotation_type"
+        constraints = [
+            UniqueConstraint(
+                name="unique_annotation",
+                fields=["seq_ontology", "region", "impact"],
+            ),
+            UniqueConstraint(
+                name="unique_annotation_null_region",
+                fields=["seq_ontology", "impact"],
+                condition=models.Q(region__isnull=True),
+            ),
+        ]
 
 
 class Replicon(models.Model):
@@ -168,7 +190,12 @@ class Sample2Property(models.Model):
 
     class Meta:
         db_table = "sample2property"
-        unique_together = (("property", "sample"),)
+        constraints = [
+            UniqueConstraint(
+                name="unique_property2sample",
+                fields=["property", "sample"],
+            ),
+        ]
 
 
 class Mutation(models.Model):
@@ -204,6 +231,16 @@ class Mutation(models.Model):
                 fields=["ref", "alt", "start", "end", "type", "replicon"],
                 condition=models.Q(gene__isnull=True),
             ),
+            UniqueConstraint(
+                name="unique_mutation_null_alt",
+                fields=["ref", "start", "end", "type", "gene", "replicon"],
+                condition=models.Q(alt__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_mutation_null_alt_null_gene",
+                fields=["ref", "start", "end", "type", "replicon"],
+                condition=models.Q(alt__isnull=True) & models.Q(gene__isnull=True),
+            ),
         ]
 
 
@@ -216,7 +253,12 @@ class Mutation2Annotation(models.Model):
 
     class Meta:
         db_table = "mutation2annotation"
-        unique_together = (("mutation", "alignment", "annotation"),)
+        constraints = [
+            UniqueConstraint(
+                name="unique_mutation2annotation",
+                fields=["mutation", "alignment", "annotation"],
+            ),
+        ]
 
 
 class EnteredData(models.Model):
@@ -226,4 +268,9 @@ class EnteredData(models.Model):
 
     class Meta:
         db_table = "entered_data"
-        unique_together = (("type", "name"),)
+        constraints = [
+            UniqueConstraint(
+                name="unique_entered_data",
+                fields=["type", "name"],
+            ),
+        ]
