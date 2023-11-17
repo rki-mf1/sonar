@@ -62,6 +62,11 @@ class AnnotationType(models.Model):
                 name="unique_annotation",
                 fields=["seq_ontology", "region", "impact"],
             ),
+            UniqueConstraint(
+                name="unique_annotation_null_region",
+                fields=["seq_ontology", "impact"],
+                condition=models.Q(region__isnull=True),
+            ),
         ]
 
 
@@ -225,6 +230,16 @@ class Mutation(models.Model):
                 name="unique_mutation_null_gene",
                 fields=["ref", "alt", "start", "end", "type", "replicon"],
                 condition=models.Q(gene__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_mutation_null_alt",
+                fields=["ref", "start", "end", "type", "gene", "replicon"],
+                condition=models.Q(alt__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_mutation_null_alt_null_gene",
+                fields=["ref", "start", "end", "type", "replicon"],
+                condition=models.Q(alt__isnull=True) & models.Q(gene__isnull=True),
             ),
         ]
 

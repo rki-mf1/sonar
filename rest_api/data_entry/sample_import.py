@@ -1,6 +1,7 @@
 import pathlib
 import pickle
 from dataclasses import dataclass
+import re
 
 from django.db.models import Q, QuerySet
 
@@ -113,13 +114,20 @@ class SampleImport:
         self.sample_file_path = path
         self.import_folder = import_folder
         self.sample_raw = SampleRaw(**self._import_pickle(path))
-        self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
-        self.vcf_raw = [
-            vcf_line for vcf_line in self._import_vcf(self.sample_raw.anno_vcf_file)
-        ]
-        self.seq = "".join(
-            [line for line in self._import_seq(self.sample_raw.seq_file)]
-        )
+        if self.sample_raw.seq_file:
+            self.seq = "".join(
+                [line for line in self._import_seq(self.sample_raw.seq_file)]
+            )
+        else:
+            raise Exception("No sequence file found")
+        if self.sample_raw.var_file:
+            self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
+        else:
+            raise Exception("No var file found")
+        if self.sample_raw.anno_vcf_file:
+            self.vcf_raw = [
+                vcf_line for vcf_line in self._import_vcf(self.sample_raw.anno_vcf_file)
+            ]
 
     def write_to_db(self):
         sequence = Sequence.objects.get_or_create(seqhash=self.sample_raw.seqhash)[0]
@@ -185,21 +193,28 @@ class SampleImport:
     def _update_annotations(self, alignment, db_mutations: QuerySet[Mutation]):
         mutation2annotation_objects = []
         for mutation in self.vcf_raw:
+            mut_lookup_data = {
+                "start": mutation.pos - 1,
+                "ref": mutation.ref,
+                "alt": mutation.alt,
+                "replicon__accession": mutation.chrom,
+            }
+            if mutation.alt and len(mutation.alt) < len(mutation.ref):
+                # deletion and alt not null
+                mut_lookup_data["start"] += 1
+                mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
+                mut_lookup_data["alt"] = None
             try:
-                db_mutation = db_mutations.get(
-                    start=mutation.pos,
-                    ref=mutation.ref,
-                    alt=mutation.alt,
-                    replicon__accession=mutation.chrom,
-                )
+                db_mutation = db_mutations.get(**mut_lookup_data)
             except Mutation.DoesNotExist:
-                print(f"Mutation not found: {mutation.__dict__}")
-                return
+                print(
+                    f"Annotation Mutation not found using lookup: {mut_lookup_data}, varfile: {self.sample_raw.var_file} -skipping-"
+                )
+                continue
             annotations = self._parse_vcf_info(mutation.info)
             annotation_data = [
                 {
                     "seq_ontology": a.annotation,
-                    "region": a.transcript_bio_type,
                     "impact": a.annotation_impact,
                 }
                 for a in annotations
@@ -229,11 +244,20 @@ class SampleImport:
     def _parse_vcf_info(self, info) -> list[VCFInfoANNRaw]:
         # only ANN= is parsed
         if info.startswith("ANN="):
+            r = re.compile(r"\(([^()]*|(?R))*\)")
             info = info[4:]
             annotations = []
             for annotation in info.split(","):
+                # replace pipes inside paranthesis
+                annotation = r.sub(lambda x: x.group().replace("|", "-"), annotation)
                 annotation = annotation.split("|")
-                annotations.append(VCFInfoANNRaw(*annotation))
+                try:
+                    annotations.append(VCFInfoANNRaw(*annotation))
+                except Exception:
+                    print(
+                        f"Failed to parse annotation: {annotation}, from file {self.vcf_file_path}"
+                    )
+
             return annotations
         return []
 
@@ -319,6 +343,8 @@ class SampleImport:
                 yield line.strip("\r\n")
 
     def move_files(self, success):
+        # dont move files for now
+        return
         for file in [
             self.sample_file_path,
             self.var_file_path,

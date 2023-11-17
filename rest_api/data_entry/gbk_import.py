@@ -39,7 +39,7 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile):
             replicon_data = {
                 "accession": f"{record.name}.{record.annotations['sequence_version']}",
                 "description": record.description,
-                "length": int(source_feature.location.end.position)
+                "length": int(source_feature.location.end)
                 - int(source_feature.location.start),
                 "sequence": str(source_feature.extract(record.seq)),
                 "reference": reference.id,
@@ -188,9 +188,12 @@ def _put_reference_from_record(record: SeqRecord.SeqRecord) -> Reference:
                 ).date()
             else:
                 reference[attr_name] = source.qualifiers[attr_name][0]
-    serializer = ReferenceSerializer(data=reference)
-    serializer.is_valid(raise_exception=True)
-    return serializer.save()
+    try:
+        return Reference.objects.get(db_xref=reference["db_xref"])
+    except Reference.DoesNotExist:
+        serializer = ReferenceSerializer(data=reference)
+        serializer.is_valid(raise_exception=True)
+        return serializer.save()
 
 
 def _create_elemparts(feature: SeqFeature.SeqFeature, gene: Gene):

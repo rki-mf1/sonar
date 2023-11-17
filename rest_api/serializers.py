@@ -160,7 +160,7 @@ class GeneSegmentSerializer(serializers.ModelSerializer):
 class SampleGenomesSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
     genomic_profiles = serializers.SerializerMethodField()
-    #proteomic_profiles = serializers.SerializerMethodField()
+    proteomic_profiles = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Sample
@@ -199,12 +199,12 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         # genomic_profiles are prefetched for genomes endpoint
         list = []
         for alignment in obj.sequence.alignments.all():
-            list += [mutation.label for mutation in alignment.genomic_profiles]
+            list += [mutation.alt for mutation in alignment.genomic_profiles]
         return list
 
-    # def get_proteomic_profiles(self, obj: models.Sample):
-    #     # proteomic_profiles are prefetched
-    #     list = []
-    #     for alignment in obj.sequence.alignments.all():
-    #         list += [f"{alignment.gene.gene_symbol}:{mutation.label}" for mutation in alignment.proteomic_profiles]
-    #     return list
+    def get_proteomic_profiles(self, obj: models.Sample):
+        # proteomic_profiles are prefetched
+        list = []
+        for alignment in obj.sequence.alignments.all():
+            list += [f"{mutation.alt}" for mutation in alignment.proteomic_profiles]
+        return list
