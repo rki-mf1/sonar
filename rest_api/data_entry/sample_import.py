@@ -140,6 +140,7 @@ class SampleImport:
         self._update_annotations(alignment, mutations)
 
         return sample
+    
 
     def _update_mutations(self, replicon, alignment):
         sample_mutations = []
@@ -186,57 +187,61 @@ class SampleImport:
             [
                 Mutation.alignments.through(alignment=alignment, mutation=mutation)
                 for mutation in db_sample_mutations
-            ]
+            ],
+            ignore_conflicts=True,
         )
         return db_sample_mutations
 
     def _update_annotations(self, alignment, db_mutations: QuerySet[Mutation]):
         mutation2annotation_objects = []
         for mutation in self.vcf_raw:
-            mut_lookup_data = {
-                "start": mutation.pos - 1,
-                "ref": mutation.ref,
-                "alt": mutation.alt,
-                "replicon__accession": mutation.chrom,
-            }
-            if mutation.alt and len(mutation.alt) < len(mutation.ref):
-                # deletion and alt not null
-                mut_lookup_data["start"] += 1
-                mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
-                mut_lookup_data["alt"] = None
-            try:
-                db_mutation = db_mutations.get(**mut_lookup_data)
-            except Mutation.DoesNotExist:
-                print(
-                    f"Annotation Mutation not found using lookup: {mut_lookup_data}, varfile: {self.sample_raw.var_file} -skipping-"
-                )
-                continue
             annotations = self._parse_vcf_info(mutation.info)
-            annotation_data = [
-                {
-                    "seq_ontology": a.annotation,
-                    "impact": a.annotation_impact,
+            for alt in mutation.alt.split(",") if mutation.alt else [None]:
+                mut_lookup_data = {
+                    "start": mutation.pos - 1,
+                    "ref": mutation.ref,
+                    "alt": alt,
+                    "replicon__accession": mutation.chrom,
                 }
-                for a in annotations
-            ]
-            AnnotationType.objects.bulk_create(
-                [AnnotationType(**data) for data in annotation_data],
-                ignore_conflicts=True,
-            )
-            db_annotations_query = Q()
-            for annotation in annotation_data:
-                db_annotations_query |= Q(**annotation)
-            db_annotations = AnnotationType.objects.filter(db_annotations_query)
-            mutation2annotation_objects.extend(
-                [
-                    Mutation2Annotation(
-                        mutation=db_mutation,
-                        alignment=alignment,
-                        annotation=annotation,
+                if alt and len(alt) < len(mutation.ref):
+                    # deletion and alt not null
+                    mut_lookup_data["start"] += 1
+                    mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
+                    mut_lookup_data["alt"] = None
+                try:
+                    db_mutation = db_mutations.get(**mut_lookup_data)
+                except Mutation.DoesNotExist:
+                    print(
+                        f"Annotation Mutation not found using lookup: {mut_lookup_data}, varfile: {self.sample_raw.var_file} -skipping-"
                     )
-                    for annotation in db_annotations
-                ]
-            )
+                    continue
+                annotation_data = []
+                for a in annotations:
+                    for ontology in a.annotation.split("&"):
+                        annotation_data.append(
+                            {
+                                "seq_ontology": ontology,
+                                "impact": a.annotation_impact,
+                            }
+                        )
+                AnnotationType.objects.bulk_create(
+                    [AnnotationType(**data) for data in annotation_data],
+                    ignore_conflicts=True,
+                )
+                db_annotations_query = Q()
+                for annotation in annotation_data:
+                    db_annotations_query |= Q(**annotation)
+                db_annotations = AnnotationType.objects.filter(db_annotations_query)
+                mutation2annotation_objects.extend(
+                    [
+                        Mutation2Annotation(
+                            mutation=db_mutation,
+                            alignment=alignment,
+                            annotation=annotation,
+                        )
+                        for annotation in db_annotations
+                    ]
+                )
         Mutation2Annotation.objects.bulk_create(
             mutation2annotation_objects, ignore_conflicts=True
         )
@@ -244,7 +249,7 @@ class SampleImport:
     def _parse_vcf_info(self, info) -> list[VCFInfoANNRaw]:
         # only ANN= is parsed
         if info.startswith("ANN="):
-            r = re.compile(r"\(([^()]*|(?R))*\)")
+            r = re.compile(r"\(([^()]*|)*\)")
             info = info[4:]
             annotations = []
             for annotation in info.split(","):

@@ -14,7 +14,7 @@ from rest_api.data_entry.sample_import import SampleImport
 _debug = False  # set to True to run only one file
 _async = True
 _print_traceback = False
-
+_batch_size = 100
 global log_lock
 log_lock = Lock()
 
@@ -35,7 +35,9 @@ class SampleEntryJob:
         )
         print(f"{len(files)} files found")
         timer = datetime.now()
-        if _debug:
+        if _batch_size:
+            
+        elif _debug:
             file_worker(files[0])
         elif _async:
             with ThreadPoolExecutor(cpu_count(), initializer=async_init) as p:
