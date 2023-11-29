@@ -244,7 +244,8 @@ class SampleImport:
     def _parse_vcf_info(self, info) -> list[VCFInfoANNRaw]:
         # only ANN= is parsed
         if info.startswith("ANN="):
-            r = re.compile(r"\(([^()]*|(?R))*\)")
+            # r = re.compile(r"\(([^()]*|(?R))*\)")
+            r = re.compile(r"\(([^()]*|(R))*\)")
             info = info[4:]
             annotations = []
             for annotation in info.split(","):

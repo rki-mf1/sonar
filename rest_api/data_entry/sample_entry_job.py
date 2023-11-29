@@ -13,7 +13,7 @@ from rest_api.data_entry.sample_import import SampleImport
 
 _debug = False  # set to True to run only one file
 _async = True
-_print_traceback = False
+_print_traceback = True
 
 global log_lock
 log_lock = Lock()

@@ -3,6 +3,7 @@ from rest_framework import routers, serializers, viewsets
 from rest_api import viewsets
 from django.contrib import admin
 from . import settings
+import pprint
 
 router = routers.DefaultRouter()
 router.register(r"mutations", viewsets.MutationViewSet)
@@ -11,14 +12,20 @@ router.register(r"mutation_signature", viewsets.MutationSignatureViewSet)
 router.register(r"samples", viewsets.SampleViewSet)
 router.register(r"sample_genomes", viewsets.SampleGenomeViewSet)
 router.register(r"references", viewsets.ReferenceViewSet)
+router.register(r"replicons", viewsets.RepliconViewSet)
+router.register(r"alignments", viewsets.AlignmentViewSet)
 router.register(r"property", viewsets.PropertyViewSet)
 router.register(r"aa_mutations", viewsets.AAMutationViewSet)
-router.register(r"gene", viewsets.GeneViewSet)
+router.register(r"genes", viewsets.GeneViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include(router.urls)),
+    # path('alignments/get_alignment_data/<int:seq_id>/<int:element_id>/', viewsets.AlignmentViewSet.as_view({'get': 'get_alignment_data'}), name='get_alignment_data'),
 ]
+
+pprint.pprint(router.urls)
+
 if settings.DEBUG:
     import debug_toolbar
 
