@@ -87,6 +87,9 @@ Note:
 
 ## move todos to gitlab issues!
 
+## Annotations
+- region from where?
+
 ## DB Issues:
 - mutation start and end are zero based index, label is 1 based index
 

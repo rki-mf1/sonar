@@ -20,6 +20,7 @@ django-apscheduler = "^0.6.2"
 psycopg2-binary = "^2.9.9"
 biopython = "^1.81"
 django-debug-toolbar = "^4.2.0"
+whitenoise = "^6.6.0"
 
 
 [build-system]
