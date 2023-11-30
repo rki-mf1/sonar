@@ -1,6 +1,8 @@
 import csv
 import json
+import os
 import pathlib
+import pickle
 import traceback
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,7 +17,7 @@ from django.db.models import Count, F, Q, QuerySet, Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_api.utils import create_error_response, create_success_response
 from rest_framework import generics, serializers, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -858,8 +860,20 @@ class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixi
         pass
 
 
-class DownloadViewSet(APIView):
+class ResourceViewSet(viewsets.ViewSet):
 
-    def get_translation_table():
+    @action(detail=False, methods=["get"])
+    def get_translation_table(self, request: Request):
         # file path -> resource/1.tt
-        pass
+
+        file_path = os.path.join("resource", "1.tt")
+
+        try:
+            with open(file_path, "rb") as file:
+                translation_table = pickle.load(file)
+        except FileNotFoundError:
+            return create_error_response(message="error: File not found", status=404)
+        except Exception as e:
+            return create_error_response({"error": str(e)}, status=500)
+        
+        return create_success_response(data=translation_table)

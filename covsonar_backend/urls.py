@@ -17,6 +17,7 @@ router.register(r"alignments", viewsets.AlignmentViewSet)
 router.register(r"property", viewsets.PropertyViewSet)
 router.register(r"aa_mutations", viewsets.AAMutationViewSet)
 router.register(r"genes", viewsets.GeneViewSet)
+router.register(r'resources', viewsets.ResourceViewSet, basename='resources')
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -31,4 +32,5 @@ if settings.DEBUG:
 
     urlpatterns += [
         path('__debug__/', include(debug_toolbar.urls)),
+
     ]
