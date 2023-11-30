@@ -8,13 +8,15 @@ import traceback
 
 import django, json
 from django.db import transaction
+from django.db.utils import DataError
 
 from rest_api.data_entry.sample_import import SampleImport
+from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequence
 
 _debug = False  # set to True to run only one file
 _async = True
-_print_traceback = True
-
+_print_traceback = False
+_batch_size = 10
 global log_lock
 log_lock = Lock()
 
@@ -35,17 +37,65 @@ class SampleEntryJob:
         )
         print(f"{len(files)} files found")
         timer = datetime.now()
-        if _debug:
+        if _batch_size:
+            for i in range(0, len(files), _batch_size):
+                batch = files[i : i + _batch_size]
+                for file in batch:
+                    self.process_batch(batch)
+        elif _debug:
             file_worker(files[0])
         elif _async:
             with ThreadPoolExecutor(cpu_count(), initializer=async_init) as p:
-                p.map(file_worker, files)
+                p.map(file_worker, files),
                 p.shutdown(wait=True)
         else:
             for file in files:
                 file_worker(file)
 
         print(f"import done in {datetime.now() - timer}")
+
+    def process_batch(self, batch):
+        sample_import_objs = [SampleImport(file) for file in batch]
+        replicon_cache = {}
+        with transaction.atomic():
+            sequences = [
+                sample_import_obj.get_sequence_obj()
+                for sample_import_obj in sample_import_objs
+            ]
+            Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
+            samples = [
+                sample_import_obj.get_sample_obj()
+                for sample_import_obj in sample_import_objs
+            ]
+            Sample.objects.bulk_create(samples, ignore_conflicts=True)
+            [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
+            alignments = [
+                sample_import_obj.get_alignment_obj()
+                for sample_import_obj in sample_import_objs
+            ]
+            Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
+            mutations = []
+            for sample_import_obj in sample_import_objs:
+                mutations.extend(sample_import_obj.get_mutation_objs())
+            Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
+            
+
+            mutations2alignments = []
+            for sample_import_obj in sample_import_objs:
+                mutations2alignments.extend(
+                    sample_import_obj.get_mutation2alignment_objs()
+                )
+            
+            Mutation.alignments.through.objects.bulk_create(
+                mutations2alignments, ignore_conflicts=True
+            )
+            annotations = []
+            for sample_import_obj in sample_import_objs:
+                annotations.extend(sample_import_obj.get_annotation_objs())
+            AnnotationType.objects.bulk_create(
+                annotations,
+                ignore_conflicts=True,
+            )
 
 
 def file_worker(file):

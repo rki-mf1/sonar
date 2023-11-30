@@ -73,9 +73,9 @@ class AnnotationType(models.Model):
 class Replicon(models.Model):
     length = models.BigIntegerField(blank=True, null=True)
     sequence = models.TextField(blank=True, null=True)
-    accession = models.CharField(unique=True, blank=True, null=True)
-    description = models.CharField(blank=True, null=True)
-    type = models.CharField(blank=True, null=True)
+    accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    description = models.CharField(max_length=400, blank=True, null=True)
+    type = models.CharField(max_length=50, blank=True, null=True)
     segment_number = models.BigIntegerField(blank=True, null=True)
     reference = models.ForeignKey("Reference", models.DO_NOTHING, blank=True, null=True)
 
@@ -84,14 +84,14 @@ class Replicon(models.Model):
 
 
 class Gene(models.Model):
-    description = models.CharField(blank=True, null=True)
+    description = models.CharField(max_length=100, blank=True, null=True)
     start = models.BigIntegerField(blank=True, null=True)
     end = models.BigIntegerField(blank=True, null=True)
     strand = models.BigIntegerField(blank=True, null=True)
-    gene_symbol = models.CharField(blank=True, null=True)
-    cds_symbol = models.CharField(blank=True, null=True)
-    gene_accession = models.CharField(unique=True, blank=True, null=True)
-    cds_accession = models.CharField(unique=True, blank=True, null=True)
+    gene_symbol = models.CharField(max_length=50, blank=True, null=True)
+    cds_symbol = models.CharField(max_length=50, blank=True, null=True)
+    gene_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
 
@@ -127,15 +127,15 @@ class Lineages(models.Model):
 
 
 class Reference(models.Model):
-    name = models.CharField(unique=True, blank=True, null=True)
-    accession = models.CharField(unique=True, blank=True, null=True)
-    description = models.CharField(blank=True, null=True)
-    organism = models.CharField(blank=True, null=True)
-    mol_type = models.CharField(blank=True, null=True)
-    isolate = models.CharField(blank=True, null=True)
-    host = models.CharField(blank=True, null=True)
-    db_xref = models.CharField(blank=True, null=True, unique=True)
-    country = models.CharField(blank=True, null=True)
+    name = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    description = models.CharField(max_length=400, blank=True, null=True)
+    organism = models.CharField(max_length=50, blank=True, null=True)
+    mol_type = models.CharField(max_length=50, blank=True, null=True)
+    isolate = models.CharField(max_length=50, blank=True, null=True)
+    host = models.CharField(max_length=50, blank=True, null=True)
+    db_xref = models.CharField(max_length=50, blank=True, null=True, unique=True)
+    country = models.CharField(max_length=50, blank=True, null=True)
     collection_date = models.DateField(blank=True, null=True)
 
     class Meta:
@@ -143,31 +143,31 @@ class Reference(models.Model):
 
 
 class Property(models.Model):
-    name = models.CharField(unique=True)
-    datatype = models.CharField()
-    querytype = models.CharField(blank=True, null=True)
-    description = models.CharField(blank=True, null=True)
-    target = models.CharField(blank=True, null=True)
-    standard = models.CharField(blank=True, null=True)
+    name = models.CharField(max_length=50, unique=True)
+    datatype = models.CharField(max_length=50)
+    querytype = models.CharField(max_length=50, blank=True, null=True)
+    description = models.CharField(max_length=400, blank=True, null=True)
+    target = models.CharField(max_length=50, blank=True, null=True)
+    standard = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         db_table = "property"
 
 
 class Sample(models.Model):
-    name = models.CharField(unique=True, blank=True, null=True)
-    datahash = models.CharField(blank=True, null=True)
+    name = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    datahash = models.CharField(max_length=50, blank=True, null=True)
     sequence = models.ForeignKey(
         Sequence, models.DO_NOTHING, blank=True, null=True, related_name="samples"
     )
-    sequencing_tech = models.CharField(blank=True, null=True)
+    sequencing_tech = models.CharField(max_length=50, blank=True, null=True)
     processing_date = models.DateField(blank=True, null=True)
-    country = models.CharField(blank=True, null=True)
-    host = models.CharField(blank=True, null=True)
-    zip_code = models.CharField(blank=True, null=True)
-    lab = models.CharField(blank=True, null=True)
-    lineage = models.CharField(blank=True, null=True)
-    genome_completeness = models.CharField(blank=True, null=True)
+    country = models.CharField(max_length=50, blank=True, null=True)
+    host = models.CharField(max_length=50, blank=True, null=True)
+    zip_code = models.CharField(max_length=50, blank=True, null=True)
+    lab = models.CharField(max_length=50, blank=True, null=True)
+    lineage = models.CharField(max_length=50, blank=True, null=True)
+    genome_completeness = models.CharField(max_length=50, blank=True, null=True)
     length = models.IntegerField(blank=True, null=True)
     collection_date = models.DateField(blank=True, null=True)
 
@@ -183,10 +183,10 @@ class Sample2Property(models.Model):
         max_digits=10, decimal_places=10, blank=True, null=True
     )
     value_text = models.TextField(blank=True, null=True)
-    value_varchar = models.CharField(blank=True, null=True)
+    value_varchar = models.CharField(max_length=400, blank=True, null=True)
     value_blob = models.BinaryField(blank=True, null=True)
     value_date = models.DateField(blank=True, null=True)
-    value_zip = models.CharField(blank=True, null=True)
+    value_zip = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         db_table = "sample2property"
@@ -201,15 +201,17 @@ class Sample2Property(models.Model):
 class Mutation(models.Model):
     gene = models.ForeignKey("Gene", models.DO_NOTHING, blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.DO_NOTHING, blank=True, null=True)
-    ref = models.CharField(blank=True, null=True)
-    alt = models.CharField(blank=True, null=True)
+    ref = models.CharField(max_length=400, blank=True, null=True)
+    alt = models.CharField(max_length=400, blank=True, null=True)
     start = models.BigIntegerField(blank=True, null=True)
     end = models.BigIntegerField(blank=True, null=True)
     parent_id = models.BigIntegerField(blank=True, null=True)
     alignments = models.ManyToManyField(
         Alignment, through="Alignment2Mutation", related_name="mutations"
     )
-    type = models.CharField(blank=True, null=True)  # cds / nt / intergenic
+    type = models.CharField(
+        max_length=50, blank=True, null=True
+    )  # cds / nt / intergenic
 
     class Meta:
         db_table = "mutation"
