@@ -16,7 +16,7 @@ from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequenc
 _debug = False  # set to True to run only one file
 _async = True
 _print_traceback = False
-_batch_size = 10
+_batch_size = 50
 global log_lock
 log_lock = Lock()
 
@@ -39,6 +39,7 @@ class SampleEntryJob:
         timer = datetime.now()
         if _batch_size:
             for i in range(0, len(files), _batch_size):
+                print(f"Batch {i}")
                 batch = files[i : i + _batch_size]
                 for file in batch:
                     self.process_batch(batch)

@@ -14,13 +14,16 @@ from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 from django.db.models import Count, F, Q, QuerySet, Prefetch
+from covsonar_backend.settings import IMPORTED_DATA_DIR
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_api.utils import create_error_response, create_success_response
+from rest_api.utils import create_error_response, create_success_response, write_to_file
 from rest_framework import generics, serializers, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser
+from rest_framework import status
 
 from django.core.serializers import serialize
 
@@ -867,13 +870,38 @@ class ResourceViewSet(viewsets.ViewSet):
         # file path -> resource/1.tt
 
         file_path = os.path.join("resource", "1.tt")
-
         try:
             with open(file_path, "rb") as file:
                 translation_table = pickle.load(file)
         except FileNotFoundError:
-            return create_error_response(message="error: File not found", status=404)
+            return create_error_response(message="error: File not found", return_status=404)
         except Exception as e:
-            return create_error_response({"error": str(e)}, status=500)
+            return create_error_response({"error": str(e)}, return_status=500)
         
         return create_success_response(data=translation_table)
+    
+class FileUploadViewSet(viewsets.ViewSet):
+
+    @action(detail=False, methods=["post"])
+    def import_upload(self, request, *args, **kwargs):
+        if "sample_file" not in request.FILES:
+            return create_error_response(message="No sample file uploaded.", return_status=400)
+        if "anno_file" not in request.FILES:
+            return create_error_response(message="No ann file uploaded.", return_status=400)
+        if "var_file" not in request.FILES:
+            return create_error_response(message="No var file uploaded.", return_status=400)
+        
+        sample_file = request.FILES.get("sample_file")
+        anno_file = request.FILES.get("anno_file")
+        var_file = request.FILES.get("var_file")
+
+
+        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "samples", sample_file.name[0:2], sample_file.name)
+        write_to_file(_save_path, sample_file)
+
+        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "anno", anno_file.name[0:2], anno_file.name)
+        write_to_file(_save_path, anno_file)
+
+        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "var", var_file.name[0:2], var_file.name)
+        write_to_file(_save_path, var_file)
+        return create_success_response(message='File uploaded successfully', return_status=status.HTTP_201_CREATED)

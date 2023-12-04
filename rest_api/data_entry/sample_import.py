@@ -33,6 +33,7 @@ class SampleRaw:
     ref_file: str
     refmol: str
     refmolid: int
+    refseq_id: int
     sampleid: int | None
     seq_file: str
     seqhash: str
@@ -121,12 +122,18 @@ class SampleImport:
         self.mutation_query_data: list[dict] = []
         self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
         self.db_sample_mutations: None | QuerySet[Mutation] = None
+
+        """
+        NOTE: probaly dont need self.seq since the original seq. file 
+        will be processed during alignment (e.g., seq. alignment and paranoid check) 
+
         if self.sample_raw.seq_file:
             self.seq = "".join(
                 [line for line in self._import_seq(self.sample_raw.seq_file)]
             )
         else:
             raise Exception("No sequence file found")
+        """
         if self.sample_raw.var_file:
             self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
         else:

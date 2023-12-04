@@ -18,6 +18,7 @@ router.register(r"property", viewsets.PropertyViewSet)
 router.register(r"aa_mutations", viewsets.AAMutationViewSet)
 router.register(r"genes", viewsets.GeneViewSet)
 router.register(r'resources', viewsets.ResourceViewSet, basename='resources')
+router.register(r'file_uploads', viewsets.FileUploadViewSet, basename='import_upload')
 
 urlpatterns = [
     path("admin/", admin.site.urls),
