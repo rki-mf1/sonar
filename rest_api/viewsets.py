@@ -1,26 +1,40 @@
 import csv
 import json
+import os
 import pathlib
+import pickle
 import traceback
 from dataclasses import dataclass
 from datetime import datetime
+import zipfile
 from django.http import HttpResponse
 
 import pandas as pd
+
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 from django.db.models import Count, F, Q, QuerySet, Prefetch
+from covsonar_backend.settings import IMPORTED_DATA_DIR
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_api.utils import create_error_response, create_success_response, write_to_file
 from rest_framework import generics, serializers, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser
+from rest_framework import status
+
+from django.core.serializers import serialize
 
 from rest_api.data_entry.gbk_import import import_gbk_file
 
 from . import models
 from .serializers import (
+    AlignmentSerializer,
+    GeneSerializer,
+    ReferenceSerializer,
     MutationSerializer,
     RepliconSerializer,
     Sample2PropertyBulkCreateOrUpdateSerializer,
@@ -45,6 +59,29 @@ class PropertyColumnMapping:
     data_type: str
 
 
+class AlignmentViewSet(viewsets.GenericViewSet,
+    generics.mixins.ListModelMixin,
+    generics.mixins.RetrieveModelMixin,):
+    """
+    AlignmentViewSet
+    """
+    queryset = models.Alignment.objects.all()
+    serializer_class = AlignmentSerializer
+
+    @action(detail=False, methods=["get"], url_path='get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)')
+    def get_alignment_data(self, request: Request, seqhash=None, replicon_id=None):
+        # if seq_id is None  or element_id is None:
+        #    return create_error_response(message='Some parameters are missing in URL')
+        # already taking care by Django
+        sample_data = {}
+        # replicon_id = element_id
+        queryset =  self.queryset.filter(sequence__seqhash=seqhash , replicon_id= replicon_id )
+        sample_data = queryset.values()
+        if sample_data:
+            sample_data = sample_data[0]
+        return create_success_response(data=sample_data)
+
+
 class RepliconViewSet(viewsets.ModelViewSet):
     queryset = models.Replicon.objects.all()
     serializer_class = RepliconSerializer
@@ -56,9 +93,51 @@ class RepliconViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(molecule__reference__accession=ref)
         return Response({"genes": [item["symbol"] for item in queryset]})
 
+    @action(detail=False, methods=["get"])
+    def get_molecule_data(self, request: Request, *args, **kwargs):
+        sample_data = {}
+
+        if replicon_id := request.query_params.get("replicon_id"):
+            queryset_obj = self.queryset.filter(id=replicon_id)
+        elif ref := request.query_params.get("reference_accession"):
+            queryset_obj = self.queryset.filter(reference__accession=ref)
+        else:
+            return create_error_response(message='Accession ID is missing')
+        
+        if queryset_obj.exists():
+            # NOTE: Fixed value for translation ID
+            # sample_data.translation_id = 1
+            # sample_data = serialize('json', queryset_obj)
+            sample_data = queryset_obj.values()
+            for obj in sample_data:
+                obj["translation_id"] = 1
+        return create_success_response(data=sample_data)
+    
+    @action(detail=False, methods=["get"])
+    def get_source_data(self, request: Request, *args, **kwargs):
+
+        """
+        Returns the source data given a molecule id.
+
+        Args:
+            molecule_id (int): The id of the molecule.
+
+        Returns:
+            Optional[str]: The source if it exists, None otherwise.
+
+        """
+        sample_data = {}
+
+        if molecule_id := request.query_params.get("molecule_id"):
+            queryset = self.queryset.filter(reference__accession=molecule_id)
+            sample_data = queryset.values()
+        else:
+            return create_error_response(message='Accession ID is missing')
+        return create_success_response(data=sample_data)
 
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = models.Gene.objects.all()
+    serializer_class = GeneSerializer
 
     @action(detail=False, methods=["get"])
     def distinct_gene_symbols(self, request: Request, *args, **kwargs):
@@ -67,7 +146,22 @@ class GeneViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(molecule__reference__accession=ref)
         return Response({"gene_symbols": [item["gene_symbol"] for item in queryset]})
 
+    @action(detail=False, methods=["get"])
+    def get_gene_data(self, request: Request):
+        sample_data = {}
 
+        if ref_acc := request.query_params.get("ref_acc"):
+            queryset = self.queryset.filter(replicon__reference__accession=ref_acc)
+
+        elif replicon_id := request.query_params.get("replicon_id"):
+            queryset = self.queryset.filter(replicon_id=replicon_id)
+
+        else:
+            return create_error_response(message='Searchable field is missing')
+        
+        sample_data = queryset.values()
+        return create_success_response(data=sample_data)
+    
 class MutationViewSet(
     viewsets.GenericViewSet,
     generics.mixins.ListModelMixin,
@@ -80,7 +174,7 @@ class MutationViewSet(
     def distinct_alts(self, request: Request, *args, **kwargs):
         queryset = models.Mutation.objects.distinct("alt").values("alt")
         if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(element__molecule__reference__accession=ref)
+            queryset = queryset.filter(element__replicon__reference__accession=ref)
         return Response({"alts": [item["alt"] for item in queryset]})
 
 class PropertySerializer(serializers.ModelSerializer):
@@ -491,16 +585,25 @@ class SampleViewSet(
         file_path = pathlib.Path("import_data") / uploaded_file.name
         with open(file_path, "wb") as f:
             f.write(uploaded_file.read())
-        return file_path
+        return file_path 
+    
+    @action(detail=False, methods=["get"])
+    def get_sample_data(self, request: Request, *args, **kwargs):      
+        sample_name = request.GET.get("sample_data") 
+        if not sample_name:
+            return create_error_response(message='Sample name is missing')
+        sample_model = models.Sample.objects.filter(name=sample_name).extra(select={'sample_id':'sample.id'}).values('sample_id',"name", 'sequence__seqhash')
+        if sample_model:
+            sample_data = list(sample_model)[0]
+            if len(sample_model)>1:
+                # Not sure ....---
+                print("more than one sample was using same name.")
+        else:
+            print("Cannot find:", sample_name)
+            sample_data = {}
 
-
-class ReferenceSerializer(serializers.HyperlinkedModelSerializer):
-    sequence = serializers.CharField(source="molecules.elements.sequence")
-
-    class Meta:
-        model = models.Reference
-        fields = ["accession", "description", "organism", "standard", "sequence"]
-
+        return create_success_response(data=sample_data)
+    
 
 class ReferenceViewSet(
     viewsets.GenericViewSet,
@@ -520,8 +623,11 @@ class ReferenceViewSet(
     
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
-        return Response("hello")
+        queryset =  models.Reference.objects.all()
+        accession = ([item.accession for item in queryset])
+        return Response({'data': accession})
 
+    # multilple get in one.
 
 class SNP1Serializer(serializers.HyperlinkedModelSerializer):
     reference_accession = serializers.CharField(
@@ -761,3 +867,56 @@ class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixi
     @action(detail=False, methods=["get"])
     def test_profile_filters():
         pass
+
+
+class ResourceViewSet(viewsets.ViewSet):
+
+    @action(detail=False, methods=["get"])
+    def get_translation_table(self, request: Request):
+        # file path -> resource/1.tt
+
+        file_path = os.path.join("resource", "1.tt")
+        try:
+            with open(file_path, "rb") as file:
+                translation_table = pickle.load(file)
+        except FileNotFoundError:
+            return create_error_response(message="error: File not found", return_status=404)
+        except Exception as e:
+            return create_error_response({"error": str(e)}, return_status=500)
+        
+        return create_success_response(data=translation_table)
+    
+class FileUploadViewSet(viewsets.ViewSet):
+
+    @action(detail=False, methods=["post"])
+    def import_upload(self, request, *args, **kwargs):
+        """
+        if "sample_file" not in request.FILES:
+            return create_error_response(message="No sample file uploaded.", return_status=400)
+        if "anno_file" not in request.FILES:
+            return create_error_response(message="No ann file uploaded.", return_status=400)
+        if "var_file" not in request.FILES:
+            return create_error_response(message="No var file uploaded.", return_status=400)
+        sample_file = request.FILES.get("sample_file")
+        anno_file = request.FILES.get("anno_file")
+        var_file = request.FILES.get("var_file")
+        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "samples", sample_file.name[0:2], sample_file.name)
+        write_to_file(_save_path, sample_file)
+        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "anno", anno_file.name[0:2], anno_file.name)
+        write_to_file(_save_path, anno_file)
+        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "var", var_file.name[0:2], var_file.name)
+        write_to_file(_save_path, var_file)
+        """
+
+        if "zip_file" not in request.FILES:
+            return create_error_response(message="No zip file uploaded.", return_status=400)
+
+        zip_file = request.FILES.get("zip_file")
+        # Extract files from the BytesIO
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            zip_ref.extractall(IMPORTED_DATA_DIR)
+            # to view list of files and file details in ZIP
+            # for file_info in zip_ref.infolist():
+            #    print(file_info)
+
+        return create_success_response(message='File uploaded successfully', return_status=status.HTTP_201_CREATED)
