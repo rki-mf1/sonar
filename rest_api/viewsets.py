@@ -6,6 +6,7 @@ import pickle
 import traceback
 from dataclasses import dataclass
 from datetime import datetime
+import zipfile
 from django.http import HttpResponse
 
 import pandas as pd
@@ -148,12 +149,17 @@ class GeneViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def get_gene_data(self, request: Request):
         sample_data = {}
-        if replicon_id := request.query_params.get("replicon_id"):
+
+        if ref_acc := request.query_params.get("ref_acc"):
+            queryset = self.queryset.filter(replicon__reference__accession=ref_acc)
+
+        elif replicon_id := request.query_params.get("replicon_id"):
             queryset = self.queryset.filter(replicon_id=replicon_id)
-            sample_data = queryset.values()
+
         else:
             return create_error_response(message='Searchable field is missing')
         
+        sample_data = queryset.values()
         return create_success_response(data=sample_data)
     
 class MutationViewSet(
@@ -168,7 +174,7 @@ class MutationViewSet(
     def distinct_alts(self, request: Request, *args, **kwargs):
         queryset = models.Mutation.objects.distinct("alt").values("alt")
         if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(element__molecule__reference__accession=ref)
+            queryset = queryset.filter(element__replicon__reference__accession=ref)
         return Response({"alts": [item["alt"] for item in queryset]})
 
 class PropertySerializer(serializers.ModelSerializer):
@@ -884,24 +890,33 @@ class FileUploadViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
+        """
         if "sample_file" not in request.FILES:
             return create_error_response(message="No sample file uploaded.", return_status=400)
         if "anno_file" not in request.FILES:
             return create_error_response(message="No ann file uploaded.", return_status=400)
         if "var_file" not in request.FILES:
             return create_error_response(message="No var file uploaded.", return_status=400)
-        
         sample_file = request.FILES.get("sample_file")
         anno_file = request.FILES.get("anno_file")
         var_file = request.FILES.get("var_file")
-
-
         _save_path = pathlib.Path(IMPORTED_DATA_DIR, "samples", sample_file.name[0:2], sample_file.name)
         write_to_file(_save_path, sample_file)
-
         _save_path = pathlib.Path(IMPORTED_DATA_DIR, "anno", anno_file.name[0:2], anno_file.name)
         write_to_file(_save_path, anno_file)
-
         _save_path = pathlib.Path(IMPORTED_DATA_DIR, "var", var_file.name[0:2], var_file.name)
         write_to_file(_save_path, var_file)
+        """
+
+        if "zip_file" not in request.FILES:
+            return create_error_response(message="No zip file uploaded.", return_status=400)
+
+        zip_file = request.FILES.get("zip_file")
+        # Extract files from the BytesIO
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            zip_ref.extractall(IMPORTED_DATA_DIR)
+            # to view list of files and file details in ZIP
+            # for file_info in zip_ref.infolist():
+            #    print(file_info)
+
         return create_success_response(message='File uploaded successfully', return_status=status.HTTP_201_CREATED)
