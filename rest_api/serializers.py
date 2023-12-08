@@ -108,14 +108,13 @@ class SequenceSerializer(serializers.ModelSerializer):
 
 class SampleSerializer(serializers.ModelSerializer):
     name = serializers.CharField(required=True)
-    properties = Sample2PropertyBulkCreateOrUpdateSerializer(many=True, read_only=True)
     sequence = serializers.PrimaryKeyRelatedField(
         queryset=models.Sequence.objects.all()
     )
-
     class Meta:
         model = models.Sample
         fields = "__all__"
+        lookup_field = "name"
 
 
 class ReferenceSerializer(serializers.ModelSerializer):
