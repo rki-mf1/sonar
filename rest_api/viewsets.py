@@ -83,6 +83,7 @@ class MutationViewSet(
             queryset = queryset.filter(element__molecule__reference__accession=ref)
         return Response({"alts": [item["alt"] for item in queryset]})
 
+
 class PropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Property
@@ -98,6 +99,7 @@ class SampleViewSet(
     queryset = models.Sample.objects.all().order_by("id")
     serializer_class = SampleSerializer
     filter_backends = [DjangoFilterBackend]
+    lookup_field = "name"
 
     @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
@@ -184,6 +186,12 @@ class SampleViewSet(
             filters = json.loads(filter_params)
             queryset = self.resolve_genome_filter(filters)
         response = HttpResponse(content=queryset, content_type="text/csv")
+
+    @action(detail=True, methods=["get"])
+    def get_sample_data(self, request: Request, *args, **kwargs):
+        sample = self.get_object()
+        serializer = SampleGenomesSerializer(sample)
+        return Response(serializer.data)
 
     def filter_property(
         self,
@@ -514,10 +522,13 @@ class ReferenceViewSet(
     def import_gbk(self, request: Request, *args, **kwargs):
         if not request.FILES or "gbk_file" not in request.FILES:
             return Response("No file uploaded.")
+        if "translation_id" not in request.data:
+            return Response("No translation_id provided.")
+        translation_id = int(request.data.get("translation_id"))
         gbk_file = request.FILES.get("gbk_file")
-        import_gbk_file(gbk_file)
+        import_gbk_file(gbk_file, translation_id)
         return Response("OK")
-    
+
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
         return Response("hello")
