@@ -1,9 +1,14 @@
 import pathlib
 import pickle
-from dataclasses import dataclass
 import re
+import typing
+from dataclasses import dataclass
+from typing import Any
 
-from django.db.models import Q, QuerySet
+from django.db.models import Q
+
+if typing.TYPE_CHECKING:
+    from django.db.models.query import ValuesQuerySet
 
 from rest_api.models import (
     Alignment,
@@ -121,25 +126,20 @@ class SampleImport:
         self.alignment: None | Alignment = None
         self.mutation_query_data: list[dict] = []
         self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
-        self.db_sample_mutations: None | QuerySet[Mutation] = None
-
-        """
-        NOTE: probaly dont need self.seq since the original seq. file 
-        will be processed during alignment (e.g., seq. alignment and paranoid check) 
-
+        self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
         if self.sample_raw.seq_file:
             self.seq = "".join(
                 [line for line in self._import_seq(self.sample_raw.seq_file)]
             )
         else:
             raise Exception("No sequence file found")
-        """
+
         if self.sample_raw.var_file:
             self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
         else:
             raise Exception("No var file found")
         if self.sample_raw.anno_vcf_file:
-            self.vcf_raw = [
+            self.anno_vcf_raw = [
                 vcf_line for vcf_line in self._import_vcf(self.sample_raw.anno_vcf_file)
             ]
 
@@ -183,11 +183,12 @@ class SampleImport:
         self.alignment = Alignment(sequence=self.sequence, replicon=self.replicon)
         return self.alignment
 
-    def get_mutation_objs(self) -> list[Mutation]:
+    def get_mutation_objs(self, gene_cache: dict[str, Gene | None]) -> list[Mutation]:
         sample_mutations = []
         self.mutation_query_data = []
         for var_raw in self.vars_raw:
             gene = None
+            replicon = None
             if var_raw.type == "nt":
                 replicon = Replicon.objects.get(
                     accession=var_raw.replicon_or_cds_accession
@@ -196,13 +197,17 @@ class SampleImport:
                     replicon=replicon, start__gte=var_raw.start, end__lte=var_raw.end
                 ).first()
             elif var_raw.type == "cds":
-                try:
-                    gene = Gene.objects.get(
-                        cds_accession=var_raw.replicon_or_cds_accession
-                    )
-                    replicon = gene.replicon
-                except Gene.DoesNotExist:
-                    pass
+                if not var_raw.replicon_or_cds_accession in gene_cache:
+                    try:
+                        gene_cache[
+                            var_raw.replicon_or_cds_accession
+                        ] = Gene.objects.get(
+                            cds_accession=var_raw.replicon_or_cds_accession
+                        )
+                    except Gene.DoesNotExist:
+                        gene_cache[var_raw.replicon_or_cds_accession] = None
+                gene = gene_cache[var_raw.replicon_or_cds_accession]
+                replicon = gene.replicon if gene else None
             mutation_data = {
                 "gene": gene if gene else None,
                 "ref": var_raw.ref,
@@ -211,8 +216,8 @@ class SampleImport:
                 "end": var_raw.end,
                 "replicon": self.replicon,
                 "type": var_raw.type,
-            }
-            # safe query data for creating mutation2alignment objects later
+            }            
+            # save query data for creating mutation2alignment objects later
             self.mutation_query_data.append(mutation_data)
             mutation = Mutation(**mutation_data)
             sample_mutations.append(mutation)
@@ -225,15 +230,25 @@ class SampleImport:
         db_mutations_query = Q()
         for mutation in self.mutation_query_data:
             db_mutations_query |= Q(**mutation)
-        self.db_sample_mutations = Mutation.objects.filter(db_mutations_query)
+        self.db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
+            "id",
+            "start",
+            "ref",
+            "alt",
+            "replicon__accession",
+        )
         return [
-            Mutation.alignments.through(alignment=self.alignment, mutation=mutation)
+            Mutation.alignments.through(
+                alignment=self.alignment, mutation_id=mutation["id"]
+            )
             for mutation in self.db_sample_mutations
         ]
 
     def get_annotation_objs(self) -> list[AnnotationType]:
+        if self.db_sample_mutations is None:
+            raise Exception("Mutation objects not created yet")
         self.annotation_query_data = {}
-        for mutation in self.vcf_raw:
+        for mutation in self.anno_vcf_raw:
             annotations = self._parse_vcf_info(mutation.info)
             for alt in mutation.alt.split(",") if mutation.alt else [None]:
                 mut_lookup_data = {
@@ -248,7 +263,11 @@ class SampleImport:
                     mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
                     mut_lookup_data["alt"] = None
                 try:
-                    db_mutation = self.db_sample_mutations.get(**mut_lookup_data)
+                    db_mutation = next(
+                        x
+                        for x in self.db_sample_mutations
+                        if all(x[k] == v for k, v in mut_lookup_data.items())
+                    )
                 except Mutation.DoesNotExist:
                     print(
                         f"Annotation Mutation not found using lookup: {mut_lookup_data}, varfile: {self.sample_raw.var_file} -skipping-"
@@ -256,9 +275,9 @@ class SampleImport:
                     continue
                 for a in annotations:
                     for ontology in a.annotation.split("&"):
-                        if not db_mutation in self.annotation_query_data.keys():
-                            self.annotation_query_data[db_mutation] = []
-                        self.annotation_query_data[db_mutation].append(
+                        if not db_mutation["id"] in self.annotation_query_data.keys():
+                            self.annotation_query_data[db_mutation["id"]] = []
+                        self.annotation_query_data[db_mutation["id"]].append(
                             {
                                 "seq_ontology": ontology,
                                 "impact": a.annotation_impact,
@@ -295,8 +314,7 @@ class SampleImport:
     def _parse_vcf_info(self, info) -> list[VCFInfoANNRaw]:
         # only ANN= is parsed
         if info.startswith("ANN="):
-            # r = re.compile(r"\(([^()]*|(?R))*\)")
-            r = re.compile(r"\(([^()]*|(R))*\)")
+            r = re.compile(r"\(([^()]*|)*\)")
             info = info[4:]
             annotations = []
             for annotation in info.split(","):
