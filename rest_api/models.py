@@ -137,6 +137,7 @@ class Reference(models.Model):
     db_xref = models.CharField(max_length=50, blank=True, null=True, unique=True)
     country = models.CharField(max_length=50, blank=True, null=True)
     collection_date = models.DateField(blank=True, null=True)
+    translation_id = models.IntegerField()
 
     class Meta:
         db_table = "reference"
@@ -201,7 +202,7 @@ class Sample2Property(models.Model):
 class Mutation(models.Model):
     gene = models.ForeignKey("Gene", models.DO_NOTHING, blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.DO_NOTHING, blank=True, null=True)
-    ref = models.CharField(max_length=400, blank=True, null=True)
+    ref = models.CharField(max_length=5000, blank=True, null=True)
     alt = models.CharField(max_length=400, blank=True, null=True)
     start = models.BigIntegerField(blank=True, null=True)
     end = models.BigIntegerField(blank=True, null=True)

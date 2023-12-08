@@ -21,10 +21,10 @@ from rest_api.serializers import (
 from django.db import transaction
 
 
-def import_gbk_file(uploaded_file: InMemoryUploadedFile):
+def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
     records = list(SeqIO.parse(_temp_save_file(uploaded_file), "genbank"))
     records: list[SeqRecord.SeqRecord]
-    reference = _put_reference_from_record(records[0])
+    reference = _put_reference_from_record(records[0], translation_id)
     with transaction.atomic():
         for record in records:
             source_features = list(
@@ -154,7 +154,9 @@ def _put_gene_from_feature(
     return GeneSerializer(gene).update(gene, gene_update_data)
 
 
-def _put_reference_from_record(record: SeqRecord.SeqRecord) -> Reference:
+def _put_reference_from_record(
+    record: SeqRecord.SeqRecord, translation_id: int
+) -> Reference:
     source = None
     for feature in record.features:
         if feature.type == "source":
@@ -171,6 +173,7 @@ def _put_reference_from_record(record: SeqRecord.SeqRecord) -> Reference:
         "accession": f"{record.name}.{record.annotations['sequence_version']}",
         "description": record.description,
         "organism": record.annotations["organism"],
+        "translation_id": translation_id,
     }
     for attr_name in [
         "mol_type",
