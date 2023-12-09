@@ -20,7 +20,8 @@ def create_success_response(message='', data=None, return_status=status.HTTP_200
         json_response['message'] = message
     return Response(
         json_response,
-        status=return_status , content_type='application/json'
+        status=return_status,
+        content_type='application/json'
     )
 
 def write_to_file(_path: pathlib.Path, file_obj: InMemoryUploadedFile):

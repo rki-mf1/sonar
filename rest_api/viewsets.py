@@ -151,15 +151,49 @@ class GeneViewSet(viewsets.ModelViewSet):
         sample_data = {}
 
         if ref_acc := request.query_params.get("ref_acc"):
-            queryset = self.queryset.filter(replicon__reference__accession=ref_acc)
-
+            # queryset =  models.Gene.objects.filter(replicon__reference__accession=ref_acc)
+            
+            queryset = models.GeneSegment.objects.select_related("gene__replicon__reference").filter(gene__replicon__reference__accession=ref_acc)
+            print(queryset.query)
         elif replicon_id := request.query_params.get("replicon_id"):
             queryset = self.queryset.filter(replicon_id=replicon_id)
-
         else:
             return create_error_response(message='Searchable field is missing')
+
+        sample_data = []
+        for item in queryset.all():
+            _data = {}
+            _data["reference.id"] = item.gene.replicon.reference.id
+            _data["reference.accession"] = item.gene.replicon.reference.accession
+            _data["reference.description"] = item.gene.replicon.reference.description
+            _data["reference.organism"] = item.gene.replicon.reference.organism
+            _data["reference.host"] = item.gene.replicon.reference.host
+            _data["replicon.id"] = item.gene.replicon.id
+            _data["replicon.accession"] = item.gene.replicon.accession
+            _data["replicon.description"] = item.gene.replicon.description
+            _data["replicon.length"] = item.gene.replicon.length
+            _data["replicon.segment_number"] = item.gene.replicon.segment_number
+            _data["gene.id"] = item.gene.id
+            _data["gene.start"] = item.gene.start
+            _data["gene.end"] = item.gene.end
+            _data["gene.description"] = item.gene.description
+            _data["gene.gene_symbol"] = item.gene.gene_symbol
+            _data["gene.gene_accession"] = item.gene.gene_accession
+            _data["gene.gene_sequence"] = item.gene.gene_sequence
+            _data["gene.cds_sequence"] = item.gene.cds_sequence
+            _data["gene.cds_accession"] = item.gene.cds_accession
+            _data["gene.cds_symbol"] = item.gene.cds_symbol
+            _data["gene_segment.id"] = item.id
+            _data["gene_segment.gene_id"] = item.gene_id
+            _data["gene_segment.start"] = item.start
+            _data["gene_segment.end"] = item.end
+            _data["gene_segment.strand"] = item.strand
+            _data["gene_segment.base"] = item.base
+            _data["gene_segment.segment"] = item.segment
+            sample_data.append(_data)
+
+        # sample_data =queryset.values()
         
-        sample_data = queryset.values()
         return create_success_response(data=sample_data)
     
 class MutationViewSet(
@@ -466,6 +500,7 @@ class SampleViewSet(
     def import_properties_tsv(self, request: Request, *args, **kwargs):
         print("Importing properties...")
         sample_id_column = request.data.get("sample_id_column")
+
         column_mapping = self._convert_property_column_mapping(
             json.loads(request.data.get("column_mapping"))
         )
@@ -476,9 +511,11 @@ class SampleViewSet(
         if not request.FILES or "properties_tsv" not in request.FILES:
             return Response("No file uploaded.", status=400)
         tsv_file = request.FILES.get("properties_tsv")
+
         properties_df = pd.read_csv(
             self._temp_save_file(tsv_file), sep="\t", dtype=object
         )
+        # print(properties_df)
         sample_property_names = []
         custom_property_names = []
         for property_name in properties_df.columns:
@@ -497,7 +534,9 @@ class SampleViewSet(
         properties_df.convert_dtypes()
         properties_df.set_index(sample_id_column, inplace=True)
         for sample in samples:
+
             row = properties_df[properties_df.index == sample.name]
+
             for name, value in row.items():
                 if name in column_mapping.keys():
                     db_name = column_mapping[name].db_property_name
@@ -517,7 +556,9 @@ class SampleViewSet(
                 },
                 True,
             )
+
         print("Saving...")
+  
         with transaction.atomic():
             models.Sample.objects.bulk_update(sample_updates, sample_property_names)
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
@@ -537,15 +578,11 @@ class SampleViewSet(
                     "value_zip",
                 ],
                 unique_fields=["sample", "property"],
-            )
+            )   
+      
         print("Done.")
-        return Response(
-            {
-                "sample_updates": len(sample_updates),
-                "property_updates": len(property_updates),
-            },
-            status=200,
-        )
+        return create_success_response(message='File uploaded successfully',
+                                    return_status=status.HTTP_201_CREATED)
 
     def _convert_property_column_mapping(
         self, column_mapping: dict[str, str]
