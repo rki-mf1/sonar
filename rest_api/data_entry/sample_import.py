@@ -127,12 +127,14 @@ class SampleImport:
         self.mutation_query_data: list[dict] = []
         self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
         self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
-        if self.sample_raw.seq_file:
-            self.seq = "".join(
-                [line for line in self._import_seq(self.sample_raw.seq_file)]
-            )
-        else:
-            raise Exception("No sequence file found")
+        
+        # NOTE: We probably won't need it
+        # if self.sample_raw.seq_file:
+        #    self.seq = "".join(
+        #        [line for line in self._import_seq(self.sample_raw.seq_file)]
+        #    )
+        #else:
+        #    raise Exception("No sequence file found")
 
         if self.sample_raw.var_file:
             self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
