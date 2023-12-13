@@ -4,8 +4,8 @@ from django.db import transaction
 from rest_api.data_entry.sample_import import SampleImport
 from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequence
 
-_batch_size = 1000
-
+# NOTE: This variable need to be adjustable.
+_batch_size = 100
 
 class SampleEntryJob:
     def run_data_entry(self):
@@ -16,7 +16,7 @@ class SampleEntryJob:
         print(f"{len(files)} files found")
         timer = datetime.now()
         number_of_batches = len(files) // _batch_size + 1
-        print(f"number of batches: {number_of_batches} of {_batch_size}")
+        print(f"Total number of batches: {number_of_batches} of {_batch_size} batch size")
         if _batch_size:
             replicon_cache = {}
             gene_cache = {}
