@@ -3,7 +3,6 @@ from typing import Type
 from rest_framework import serializers
 from . import models
 from django.db.models import Model as DjangoModel
-from rest_framework import serializers
 from django.db.models import Q
 
 
@@ -123,6 +122,10 @@ class ReferenceSerializer(serializers.ModelSerializer):
         model = models.Reference
         fields = "__all__"
 
+class AlignmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Alignment
+        fields = "__all__"
 
 class RepliconSerializer(serializers.ModelSerializer):
     def create(self, validated_data):

@@ -38,6 +38,7 @@ class SampleRaw:
     ref_file: str
     refmol: str
     refmolid: int
+    refseq_id: int
     sampleid: int | None
     seq_file: str
     seqhash: str
@@ -126,12 +127,15 @@ class SampleImport:
         self.mutation_query_data: list[dict] = []
         self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
         self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
-        if self.sample_raw.seq_file:
-            self.seq = "".join(
-                [line for line in self._import_seq(self.sample_raw.seq_file)]
-            )
-        else:
-            raise Exception("No sequence file found")
+        
+        # NOTE: We probably won't need it
+        # if self.sample_raw.seq_file:
+        #    self.seq = "".join(
+        #        [line for line in self._import_seq(self.sample_raw.seq_file)]
+        #    )
+        #else:
+        #    raise Exception("No sequence file found")
+
         if self.sample_raw.var_file:
             self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
         else:
@@ -212,7 +216,7 @@ class SampleImport:
                 "alt": var_raw.alt,
                 "start": var_raw.start,
                 "end": var_raw.end,
-                "replicon": replicon,
+                "replicon": self.replicon,
                 "type": var_raw.type,
             }            
             # save query data for creating mutation2alignment objects later
@@ -312,7 +316,8 @@ class SampleImport:
     def _parse_vcf_info(self, info) -> list[VCFInfoANNRaw]:
         # only ANN= is parsed
         if info.startswith("ANN="):
-            r = re.compile(r"\(([^()]*|)*\)")
+            # r = re.compile(r"\(([^()]*|(?R))*\)")
+            r = re.compile(r"\(([^()]*|(R))*\)")
             info = info[4:]
             annotations = []
             for annotation in info.split(","):
