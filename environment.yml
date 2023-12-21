@@ -1,0 +1,10 @@
+name: sonar-cli
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - nox=2023.4.22
+  - poetry=1.6.1
+  - pre-commit
+  - python=3.11
