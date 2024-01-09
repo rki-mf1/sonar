@@ -29,6 +29,7 @@ from rest_framework import status
 from django.core.serializers import serialize
 
 from rest_api.data_entry.gbk_import import import_gbk_file
+from rest_api.data_entry.sample_entry_job import SampleEntryJob
 
 from . import models
 from .serializers import (
@@ -968,3 +969,7 @@ class FileUploadViewSet(viewsets.ViewSet):
             #    print(file_info)
 
         return create_success_response(message='File uploaded successfully', return_status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=["get"])
+    def start_file_import(self, request, *args, **kwargs):
+        SampleEntryJob().run_data_entry()

@@ -21,12 +21,12 @@ from rest_api.models import (
     Sequence,
 )
 from rest_api.serializers import SampleSerializer
+from typing import Optional
 
 
 @dataclass
 class SampleRaw:
     algn_file: str
-    algnid: int | None
     anno_tsv_file: str
     anno_vcf_file: str
     cds_file: str
@@ -38,8 +38,6 @@ class SampleRaw:
     ref_file: str
     refmol: str
     refmolid: int
-    refseq_id: int
-    sampleid: int | None
     seq_file: str
     seqhash: str
     sourceid: int
@@ -47,7 +45,10 @@ class SampleRaw:
     tt_file: str
     var_file: str
     vcffile: str
-    source_acc: str
+    algnid: Optional[int] = None
+    sampleid: Optional[int] = None
+    refseq_id: Optional[int] = None
+    source_acc: Optional[str] = None
 
 
 @dataclass
@@ -58,6 +59,7 @@ class VarRaw:
     alt: str | None
     replicon_or_cds_accession: str
     type: str
+
 
 
 @dataclass

@@ -26,8 +26,6 @@ urlpatterns = [
     # path('alignments/get_alignment_data/<int:seq_id>/<int:element_id>/', viewsets.AlignmentViewSet.as_view({'get': 'get_alignment_data'}), name='get_alignment_data'),
 ]
 
-pprint.pprint(router.urls)
-
 if settings.DEBUG:
     import debug_toolbar
 
