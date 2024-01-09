@@ -1,3 +1,14 @@
+# sonar-backend
+
+The sonar-backend is web service that represents the API version of the Sonar tool (covsonar), which utilizes Django REST + PostgreSQL for scalability and integration with the web application.
+
+![Static Badge](https://img.shields.io/badge/Lifecycle-Experimental-ff7f2a)
+
+![Static Badge](https://img.shields.io/badge/Maintenance%20status-actively%20developed-brightgreen)
+
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) 
+![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+
 # Setup
 
 ## Prerequisites
@@ -79,9 +90,13 @@ Note:
  - `python .\manage.py runserver` starts the development server. in 99% of cases no restart is needed to apply changes to the django code. While running, the terminal will output any api requests and `print` statements. exceptions will not be printed automatically.
 
 ## Misc
-
  - dev admin page should be reached under [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/) for login see createsuperuser above
  - reset(empty) the database with `python .\manage.py flush`
+ - During development, we use [Insomnia](https://insomnia.rest/) for API testing. To facilitate testing, we provide the API collection in the file `resource/Insomnia_XXXX.json`. The datasets can be found under the `test-data` folder. You can easily import the collection into your Insomnia API client and start testing."
+
+I added some clarifications and fixed the link syntax for better readability.
+
+-------
 
 ### TODO
 

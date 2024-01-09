@@ -43,11 +43,11 @@ class SampleRaw:
     seq_file: str
     seqhash: str
     sourceid: int
-    translationid: int
-    tt_file: str
-    var_file: str
-    vcffile: str
     source_acc: str
+    translationid: int
+    tt_file: str = ""
+    var_file: str = ""
+    vcffile: str = ""
 
 
 @dataclass

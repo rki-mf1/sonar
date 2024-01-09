@@ -968,3 +968,12 @@ class FileUploadViewSet(viewsets.ViewSet):
             #    print(file_info)
 
         return create_success_response(message='File uploaded successfully', return_status=status.HTTP_201_CREATED)
+
+
+
+
+class FuctionsViewSet(viewsets.ViewSet):
+
+    @action(detail=False, methods=["get"])
+    def match(self, request: Request):
+        return create_success_response(return_status=status.HTTP_200_OK)
