@@ -200,13 +200,18 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     def get_genomic_profiles(self, obj: models.Sample):
         # genomic_profiles are prefetched for genomes endpoint
         list = []
+
         for alignment in obj.sequence.alignments.all():
-            list += [mutation.alt for mutation in alignment.genomic_profiles]
+            # SNP
+            # DEL 
+            # INS
+            list += [f"{mutation.ref}{mutation.start}{mutation.alt}"  for mutation in alignment.genomic_profiles]
+            
         return list
 
     def get_proteomic_profiles(self, obj: models.Sample):
         # proteomic_profiles are prefetched
         list = []
         for alignment in obj.sequence.alignments.all():
-            list += [f"{mutation.alt}" for mutation in alignment.proteomic_profiles]
+            list += [f"{mutation.ref}{mutation.start}{mutation.alt}" for mutation in alignment.proteomic_profiles]
         return list

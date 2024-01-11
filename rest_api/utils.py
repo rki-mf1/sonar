@@ -25,7 +25,6 @@ def create_success_response(message='', data=None, return_status=status.HTTP_200
     )
 
 def write_to_file(_path: pathlib.Path, file_obj: InMemoryUploadedFile):
-    
     _path.parent.mkdir(exist_ok=True, parents=True)
     with open(_path, 'wb') as destination:
         for chunk in file_obj.chunks():

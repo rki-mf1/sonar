@@ -11,9 +11,9 @@ class Sequence(models.Model):
 
 
 class Alignment(models.Model):
-    replicon = models.ForeignKey("Replicon", models.DO_NOTHING, blank=True, null=True)
+    replicon = models.ForeignKey("Replicon", models.CASCADE , blank=True, null=True)
     sequence = models.ForeignKey(
-        "Sequence", models.DO_NOTHING, blank=True, null=True, related_name="alignments"
+        "Sequence", models.CASCADE, blank=True, null=True, related_name="alignments"
     )
 
     class Meta:
@@ -32,10 +32,10 @@ class Alignment(models.Model):
 
 
 class Alignment2Mutation(models.Model):
-    alignment = models.ForeignKey(Alignment, models.DO_NOTHING)
-    mutation = models.ForeignKey("Mutation", models.DO_NOTHING, blank=True, null=True)
+    alignment = models.ForeignKey(Alignment, models.CASCADE)
+    mutation = models.ForeignKey("Mutation", models.CASCADE, blank=True, null=True)
 
-    class Meta:
+    class Meta:                 
         indexes = [
             models.Index(
                 fields=["alignment", "mutation"],
@@ -77,7 +77,7 @@ class Replicon(models.Model):
     description = models.CharField(max_length=400, blank=True, null=True)
     type = models.CharField(max_length=50, blank=True, null=True)
     segment_number = models.BigIntegerField(blank=True, null=True)
-    reference = models.ForeignKey("Reference", models.DO_NOTHING, blank=True, null=True)
+    reference = models.ForeignKey("Reference", models.CASCADE, blank=True, null=True)
 
     class Meta:
         db_table = "replicon"
@@ -95,14 +95,14 @@ class Gene(models.Model):
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
 
-    replicon = models.ForeignKey(Replicon, models.DO_NOTHING, blank=True, null=True)
+    replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
 
     class Meta:
         db_table = "gene"
 
 
 class GeneSegment(models.Model):
-    gene = models.ForeignKey(Gene, models.DO_NOTHING, blank=True, null=True)
+    gene = models.ForeignKey(Gene, models.CASCADE, blank=True, null=True)
     start = models.BigIntegerField()
     end = models.BigIntegerField()
     strand = models.BigIntegerField()
@@ -177,8 +177,8 @@ class Sample(models.Model):
 
 
 class Sample2Property(models.Model):
-    property = models.ForeignKey(Property, models.DO_NOTHING)
-    sample = models.ForeignKey(Sample, models.DO_NOTHING, related_name="properties")
+    property = models.ForeignKey(Property, models.CASCADE)
+    sample = models.ForeignKey(Sample, models.CASCADE, related_name="properties")
     value_integer = models.BigIntegerField(blank=True, null=True)
     value_float = models.DecimalField(
         max_digits=10, decimal_places=10, blank=True, null=True
@@ -200,8 +200,8 @@ class Sample2Property(models.Model):
 
 
 class Mutation(models.Model):
-    gene = models.ForeignKey("Gene", models.DO_NOTHING, blank=True, null=True)
-    replicon = models.ForeignKey(Replicon, models.DO_NOTHING, blank=True, null=True)
+    gene = models.ForeignKey("Gene", models.CASCADE, blank=True, null=True)
+    replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
     ref = models.CharField(max_length=5000, blank=True, null=True)
     alt = models.CharField(max_length=400, blank=True, null=True)
     start = models.BigIntegerField(blank=True, null=True)
@@ -249,7 +249,7 @@ class Mutation(models.Model):
 
 class Mutation2Annotation(models.Model):
     mutation = models.ForeignKey(Mutation, models.DO_NOTHING, blank=True, null=True)
-    alignment = models.ForeignKey(Alignment, models.DO_NOTHING, blank=True, null=True)
+    alignment = models.ForeignKey(Alignment, models.CASCADE, blank=True, null=True)
     annotation = models.ForeignKey(
         AnnotationType, models.DO_NOTHING, blank=True, null=True
     )

@@ -19,9 +19,7 @@ router.register(r"aa_mutations", viewsets.AAMutationViewSet)
 router.register(r"genes", viewsets.GeneViewSet)
 
 router.register(r'resources', viewsets.ResourceViewSet, basename='resources')
-
 router.register(r'functions', viewsets.FuctionsViewSet, basename='functions')
-
 router.register(r'file_uploads', viewsets.FileUploadViewSet, basename='import_upload')
 
 urlpatterns = [
@@ -30,7 +28,7 @@ urlpatterns = [
     # path('alignments/get_alignment_data/<int:seq_id>/<int:element_id>/', viewsets.AlignmentViewSet.as_view({'get': 'get_alignment_data'}), name='get_alignment_data'),
 ]
 
-pprint.pprint(router.urls)
+# pprint.pprint(router.urls)
 
 if settings.DEBUG:
     import debug_toolbar
