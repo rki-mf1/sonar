@@ -5,16 +5,21 @@ from io import BytesIO
 import json
 import os
 import sys
+from typing import Any
 from typing import Dict
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Set
+from typing import Union
 import zipfile
 
 from mpire import WorkerPool
+import pandas as pd
 from sonar_cli.align import sonarAligner
 from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
+from sonar_cli.basic import construct_query
 from sonar_cli.cache import sonarCache
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
@@ -22,7 +27,9 @@ from sonar_cli.config import SNPSIFT_TOOL_PATH
 from sonar_cli.config import VCF_ONEPERLINE_PATH
 from sonar_cli.dbm import sonarDBManager
 from sonar_cli.logging import LoggingConfigurator
+from sonar_cli.utils_1 import _files_exist
 from sonar_cli.utils_1 import _get_csv_colnames
+from sonar_cli.utils_1 import flatten_json_output
 from sonar_cli.utils_1 import open_file_autodetect
 from sonar_cli.utils_1 import out_autodetect
 from sonar_cli.utils_1 import read_var_file
@@ -34,11 +41,20 @@ LOGGER = LoggingConfigurator.get_logger()
 
 class sonarUtils:
     """
-    A class used to perform operations on a Tool's database.
+    A class used to perform operations on a Tool's.
     """
 
     def __init__(self):
         pass
+
+    def get_default_reference_gb() -> str:
+        """Gets the default reference GenBank file.
+        Returns:
+            str: Absolute path to the reference GenBank file.
+        """
+        return os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "data", "ref.gb"
+        )
 
     # DATA IMPORT
     @staticmethod
@@ -80,9 +96,8 @@ class sonarUtils:
         tsv_files = tsv_files or []
         csv_files = csv_files or []
 
-        if not _files_exist(*fasta, *tsv_files, *csv_files):
-            LOGGER.error("At least one provided file does not exist.")
-            sys.exit(1)
+        _files_exist(*fasta, *tsv_files, *csv_files)
+
         if not _is_import_required(fasta, tsv_files, csv_files, update):
             LOGGER.info("Nothing to import.")
             sys.exit(0)
@@ -93,38 +108,50 @@ class sonarUtils:
         # NOTE:
         # In the future, we need to edit/design the code to
         # be more flexible when managing newly added properties.
+
+        # TODO: Right now we just use fixed code, need to edit it.
+        """
+                properties = {
+            "SEQUENCE.DATE_OF_SAMPLING": {
+                "db_property_name": "collection_date",
+                "data_type": "value_varchar",
+            },
+            "SEQUENCE.SEQUENCING_METHOD": {
+                "db_property_name": "sequencing_tech",
+                "data_type": "value_varchar",
+            },
+            "DL.POSTAL_CODE": {
+                "db_property_name": "zip_code",
+                "data_type": "value_varchar",
+            },
+            "SL.ID": {"db_property_name": "lab", "data_type": "value_varchar"},
+            "PANGOLIN.LINEAGE_LATEST": {
+                "db_property_name": "lineage",
+                "data_type": "value_varchar",
+            },
+            "SEQUENCE.SEQUENCING_REASON": {
+                "db_property_name": "sequencing_reason",
+                "data_type": "value_varchar",
+            },
+            "SEQUENCE.SAMPLE_TYPE": {
+                "db_property_name": "sample_type",
+                "data_type": "value_varchar",
+            },
+        }
+        """
+
         if prop_links:
-            prop_names = sonarUtils._get_prop_names(prop_links, autolink)
-            # extract properties form csv/tsv files
+            # construct property dcit from file header or user provide
+            properties = sonarUtils._get_prop_names(
+                prop_links=prop_links,
+                autolink=autolink,
+                csv_files=csv_files,
+                tsv_files=tsv_files,
+            )
+            # extract properties form csv/tsv files (this done by backend)
             # properties = sonarUtils._extract_props(csv_files, tsv_files, prop_names, quiet)
-            sample_id_column = prop_names["sample"]
-            properties = {
-                "SEQUENCE.DATE_OF_SAMPLING": {
-                    "db_property_name": "collection_date",
-                    "data_type": "value_varchar",
-                },
-                "SEQUENCE.SEQUENCING_METHOD": {
-                    "db_property_name": "sequencing_tech",
-                    "data_type": "value_varchar",
-                },
-                "DL.POSTAL_CODE": {
-                    "db_property_name": "zip_code",
-                    "data_type": "value_varchar",
-                },
-                "SL.ID": {"db_property_name": "lab", "data_type": "value_varchar"},
-                "PANGOLIN.LINEAGE_LATEST": {
-                    "db_property_name": "lineage",
-                    "data_type": "value_varchar",
-                },
-                "SEQUENCE.SEQUENCING_REASON": {
-                    "db_property_name": "sequencing_reason",
-                    "data_type": "value_varchar",
-                },
-                "SEQUENCE.SAMPLE_TYPE": {
-                    "db_property_name": "sample_type",
-                    "data_type": "value_varchar",
-                },
-            }
+            sample_id_column = properties["sample"]
+            del properties["sample"]
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
@@ -372,15 +399,30 @@ class sonarUtils:
         LOGGER.info("Property import completed")
 
     @staticmethod
-    def _get_prop_names(
-        # db: str,
+    def _get_prop_names(  # noqa: C901
         prop_links: List[str],
         autolink: bool,
+        csv_files: List[str],
+        tsv_files: List[str],
     ) -> Dict[str, str]:
-        """get property names based on user input."""
-        # db_properties = sonarUtils._get_properties_from_db(db)
-        # propnames = {x: x for x in db_properties} if autolink else {}
+        """
+        get property names based on user input.
+
+        "--auto-link" will link columns in the file to existing properties
+        in the database (no new property name will be created in database).
+        However, if the properties that the user manually inputs don't exist,
+        we add those as new properties to the database.
+
+        """
         propnames = {}
+
+        listofkeys, values_listofdict = sonarUtils.get_all_properties()
+        prop_df = pd.DataFrame(values_listofdict, columns=listofkeys)
+        # print(prop_df)
+        # propnames = {x: x for x in prop_df} if autolink else {}
+        # print(propnames)
+
+        # link from user input
         for link in prop_links:
             if link.count("=") != 1:
                 LOGGER.error(
@@ -388,9 +430,11 @@ class sonarUtils:
                 )
                 sys.exit(1)
             prop, col = link.split("=")
-            if prop == "SAMPLE":
+            #
+            if prop.upper() == "SAMPLE":
                 prop = "sample"
-
+                propnames[prop] = col
+                continue
             # if prop not in db_properties:
             #    LOGGER.error(
             #        "Sample property '"
@@ -398,7 +442,48 @@ class sonarUtils:
             #        + "' is unknown to the selected database. Use list-props to see all valid properties."
             #    )
             #    sys.exit(1)
-            propnames[prop] = col
+
+            # lookup
+            # _row_df = prop_df.loc[prop_df["name"] == prop]
+            _row_df = prop_df[
+                prop_df["name"].str.contains(prop, na=False, case=False, regex=False)
+            ]
+
+            if not _row_df.empty:
+                query_type = _row_df["query_type"].values[0]
+                propnames[col] = {"db_property_name": prop, "data_type": query_type}
+
+        #  link from files, process files- get headers
+        if autolink:
+            file_tuples = [(x, ",") for x in csv_files] + [(x, "\t") for x in tsv_files]
+            col_names_fromfile = []
+            for fname, delim in file_tuples:
+                # LOGGER.info("linking data from " + fname + "...")
+                col_names_fromfile.extend(_get_csv_colnames(fname, delim))
+
+            col_names_fromfile = list(set(col_names_fromfile))
+            for col_name in col_names_fromfile:
+                _row_df = prop_df[
+                    prop_df["name"].str.contains(
+                        col_name, na=False, case=False, regex=False
+                    )
+                ]
+
+                # prop_df.loc[prop_df["name"] == col_name]
+                if not _row_df.empty:
+                    query_type = _row_df["query_type"].values[0]
+                    name = _row_df["name"].values[0]
+                    propnames[col_name] = {
+                        "db_property_name": name,
+                        "data_type": query_type,
+                    }
+        # print(propnames)
+        LOGGER.info("column corresponds to a property field in database")
+        for prop, prop_info in propnames.items():
+            if prop == "sample":
+                continue
+            db_property_name = prop_info.get("db_property_name", "N/A")
+            LOGGER.verbose(f"{prop} <- {db_property_name}")
 
         return propnames
 
@@ -441,15 +526,64 @@ class sonarUtils:
         return db_properties
 
     def _check_reference(reference):
-        accession_list = APIClient(base_url=BASE_URL).get_all_reference()
+        accession_list = APIClient(base_url=BASE_URL).get_distinct_reference()
         if reference is not None and reference not in accession_list:
             LOGGER.error(f"The reference {reference} does not exist.")
+            sys.exit(1)
+
+    @staticmethod
+    def _export_query_results(
+        cursor: object,
+        format: str,
+        reference: str,
+        outfile: Optional[str],
+        output_column: Optional[List[str]] = [],
+    ):
+        """
+        Export results depending on the specified format.
+
+        Args:
+            cursor: Cursor object.
+            format: Output format.
+            reference: Reference accession.
+            outfile: Output file path.
+
+        Returns:
+            None
+        """
+        if format in ["csv", "tsv"]:
+            tsv = format == "tsv"
+
+            cursor = flatten_json_output(cursor["results"])
+
+            sonarUtils.export_csv(
+                cursor,
+                output_column=output_column,
+                outfile=outfile,
+                na="*** no match ***",
+                tsv=tsv,
+            )
+        elif format == "count":
+            count = cursor["count"]
+            if outfile:
+                with open(outfile, "w") as handle:
+                    handle.write(str(count))
+            else:
+                print(count)
+        elif format == "vcf":
+            sonarUtils.export_vcf(
+                cursor,
+                reference=reference,
+                outfile=outfile,
+                na="*** no match ***",
+            )
+        else:
+            LOGGER.error(f"'{format}' is not a valid output format")
             sys.exit(1)
 
     # MATCHING
     @staticmethod
     def match(
-        db: str,
         profiles: List[str] = [],
         samples: List[str] = [],
         properties: Dict[str, str] = {},
@@ -460,6 +594,7 @@ class sonarUtils:
         showNX: bool = False,
         ignore_terminal_gaps: bool = True,
         frameshifts_only: bool = False,
+        defined_props: Optional[List[Dict[str, str]]] = [],
     ):
         """
         Perform match operation and export the results.
@@ -485,26 +620,43 @@ class sonarUtils:
         # if not reference:
         #    reference = dbm.get_default_reference_accession()
         #    LOGGER.info(f"Using Default Reference: {reference}")
-        rows = APIClient(base_url=BASE_URL).get_variant_profile_bymatch_command(
-            profiles=profiles,
-            samples=samples,
-            reference_accession=reference,
-            properties=properties,
-            format=format,
-            output_columns=output_column,
-            filter_n=not showNX,
-            filter_x=not showNX,
-            frameshifts_only=frameshifts_only,
-            ignore_terminal_gaps=ignore_terminal_gaps,
+
+        params = {}
+        params[
+            "filters"
+        ] = '{"andFilter":[{"label":"Property","property_name":"sequencing_reason","filter_type":"exact","value":"N"}],"orFilter":[]}'
+
+        params["filters"] = json.dumps(
+            construct_query(
+                profiles=profiles, properties=properties, defined_props=defined_props
+            )
         )
+        params["reference_accession"] = reference
+        params["limit"] = -1
+        params["offset"] = 0
+
+        LOGGER.verbose(params["filters"])
+
+        json_response = APIClient(
+            base_url=BASE_URL
+        ).get_variant_profile_bymatch_command(params=params)
+
+        if "results" in json_response:
+            rows = json_response
+        else:
+            LOGGER.error("server cannot return a result")
+            sys.exit(1)  # or just return??
 
         sonarUtils._export_query_results(
-            rows, format, reference, outfile, output_column, db
+            rows,
+            format,
+            reference,
+            outfile,
+            output_column,
         )
 
     @staticmethod
     def annotate_sample(shared_objects, **kwargs):
-
         """
 
         kwargs are sample dict object
@@ -530,7 +682,6 @@ class sonarUtils:
             outfile=sample_data["vcffile"],
             format="vcf",
         )
-
         """
 
         annotator = Annotator(ANNO_TOOL_PATH, SNPSIFT_TOOL_PATH, VCF_ONEPERLINE_PATH)
@@ -543,54 +694,54 @@ class sonarUtils:
         #    sample_data["anno_vcf_file"], sample_data["anno_tsv_file"]
         # )
 
-        # import annotation
-        # import_annvcf_SonarCMD(
-        #    db_path,
-        #    get_filename_sonarhash(sample_data["vcffile"]),
-        #    sample_data["anno_tsv_file"],
-        # )
-
     @staticmethod
-    def _export_query_results(
-        cursor: object,
-        format: str,
-        reference: str,
-        outfile: Optional[str],
+    def export_csv(
+        data: Union[List[Dict[str, Any]], Iterator[Dict[str, Any]]],
         output_column: Optional[List[str]] = [],
-        db: Optional[str] = None,
-    ):
+        outfile: Optional[str] = None,
+        na: str = "*** no data ***",
+        tsv: bool = False,
+    ) -> None:
         """
-        Export results depending on the specified format.
+        Export the results of a SQL query or a list of rows into a CSV file.
 
-        Args:
-            cursor: Cursor object.
-            format: Output format.
-            reference: Reference accession.
-            outfile: Output file path.
-
-        Returns:
-            None.
+        Parameters:
+        data: An iterator over the rows of the query result, or a list of rows.
+        outfile: The path to the output file. If None, the output is printed to stdout.
+        na: The string to print when no data is available.
+        tsv: If True, the output is formatted as a TSV (Tab-Separated Values) file. Otherwise, it is formatted as a CSV (Comma-Separated Values) file.
         """
-        if format in ["csv", "tsv"]:
-            tsv = format == "tsv"
-            sonarUtils.export_csv(
-                cursor,
-                output_column=output_column,
-                outfile=outfile,
-                na="*** no match ***",
-                tsv=tsv,
-            )
-        elif format == "vcf":
-            sonarUtils.export_vcf(
-                cursor,
-                reference=reference,
-                outfile=outfile,
-                na="*** no match ***",
-                db=db,
-            )
+        # Convert list data to an iterator
+
+        if isinstance(data, list):
+            data_iter = iter(data)
         else:
-            LOGGER.error(f"'{format}' is not a valid output format")
-            sys.exit(1)
+            data_iter = data
+
+        try:
+            first_row = next(data_iter)
+            # get only selected columns
+            if output_column:
+                first_row = {k: first_row[k] for k in output_column}
+        except StopIteration:
+            print(na)
+            return
+
+        with out_autodetect(outfile) as handle:
+            sep = "\t" if tsv else ","
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=first_row.keys(),
+                delimiter=sep,
+                lineterminator=os.linesep,
+            )
+            writer.writeheader()
+            writer.writerow(first_row)
+
+            for row in data_iter:
+                if output_column:
+                    row = {k: row[k] for k in output_column}
+                writer.writerow(row)
 
     # vcf
     @staticmethod
@@ -641,6 +792,109 @@ class sonarUtils:
             with out_autodetect(outfile) as handle:
                 _write_vcf_header(handle, reference, all_samples)
                 _write_vcf_records(handle, records, all_samples)
+
+    @staticmethod
+    def get_all_properties():
+
+        json_response = APIClient(base_url=BASE_URL).get_all_properties()
+        if json_response["status"] != "success":
+            LOGGER.error(json_response["message"])
+            sys.exit(0)
+        data = json_response["data"]
+
+        return data["keys"], data["values"]
+
+    @staticmethod
+    def get_all_references():
+        rows = APIClient(base_url=BASE_URL).get_all_references()
+        if not rows:
+            return {"accession": "", "description": "", "organism": ""}
+        # only neccessary column
+        modified_data = [
+            {
+                "accession": entry["accession"],
+                "description": entry["description"],
+                "organism": entry["organism"],
+            }
+            for entry in rows
+        ]
+
+        return modified_data
+
+    @staticmethod
+    def add_ref_by_genebank_file(reference_gb, debug=False, default_reference=False):
+        """
+        add reference
+        """
+        if default_reference:
+            reference_gb = sonarUtils.get_default_reference_gb()
+        _files_exist(reference_gb)
+        reference_gb_obj = open(reference_gb, "rb")
+        try:
+            return APIClient(base_url=BASE_URL).post_add_reference(reference_gb_obj)
+        except Exception as e:
+            LOGGER.exception(e)
+            LOGGER.error("Fail to process GeneBank file")
+            raise
+
+    @staticmethod
+    def delete_reference(reference, debug):
+        LOGGER.info("Start to delete....the process is not reversible.")
+
+        # delete only reference will also delete the whole linked data.
+        """
+        if samples_ids:
+            if debug:
+                logging.info(f"Delete: {samples_ids}")
+            for sample in samples_ids:
+                # dbm.delete_seqhash(sample["seqhash"])
+                dbm.delete_alignment(
+                    seqhash=sample["seqhash"], element_id=_ref_element_id
+                )
+        """
+        json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
+        if json_response["status"] == "success":
+            LOGGER.info(
+                f"{json_response['data']['samples_count']} alignments that linked to the reference will be also deleted."
+            )
+        else:
+            LOGGER.Error("Cannot delete the reference")
+            LOGGER.Error(f"Message: {json_response['status']}")
+
+    @staticmethod
+    def delete_sample(reference: str, samples: List[str] = []) -> None:
+        """
+        Delete samples from the database.
+
+        Args:
+            db (str): The database to delete samples from.
+            samples (list[str]): A list of samples to be deleted.  x
+
+        NOTE: if we delete a sample, then all alignment that related
+        to this sample will also deleted.
+        """
+        if len(samples) == 0:
+            LOGGER.info("Nothing to delete.")
+
+        json_response = APIClient(base_url=BASE_URL).post_delete_sample(
+            reference, list(samples)
+        )
+        if json_response["status"] == "success":
+            deleted = json_response["data"]["samples_count"]
+            LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
+        else:
+            LOGGER.error(f"{json_response['message']}")
+        """
+        with sonarDBManager(db, readonly=False) as dbm:
+            before_count = dbm.count_samples()
+            dbm.delete_samples(*samples)
+            after_count = dbm.count_samples()
+
+            deleted = before_count - after_count
+
+        LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
+        LOGGER.info(f"{after_count} samples remain in the database.")
+        """
 
 
 def _get_vcf_data_form_var_file(cursor, selected_ref_seq, showNX) -> Dict:
@@ -845,34 +1099,6 @@ def _log_import_mode(update: bool, quiet: bool):
             if update
             else "import mode: skipping existing samples"
         )
-
-
-def check_file(fname, exit_on_fail=True):
-    """
-    Check if a given file path exists.
-
-    Args:
-        fname (string): The name and path to an existing file.
-        exit_on_fail (boolean): Whether to exit the script if the file doesn't exist.
-        Default is True.
-
-    Returns:
-        True if the file exists, False otherwise.
-    """
-    if not os.path.isfile(fname):
-        if exit_on_fail:
-            sys.exit("Error: The file '" + fname + "' does not exist.")
-        return False
-    return True
-
-
-def _files_exist(*files: str) -> bool:
-    """Check if files exit."""
-
-    for fname in files:
-        if not os.path.isfile(fname):
-            return False
-    return True
 
 
 def _link_columns_to_props(

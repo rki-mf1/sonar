@@ -144,10 +144,10 @@ class sonarDBManager:
         Returns:
             DBOperations: The current instance.
         """
-        #self.con = self.connect()
-        #self.cursor = self.con.cursor(dictionary=True)
-        #self.check_db_compatibility()
-        #self.start_transaction()
+        # self.con = self.connect()
+        # self.cursor = self.con.cursor(dictionary=True)
+        # self.check_db_compatibility()
+        # self.start_transaction()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):

@@ -4,8 +4,49 @@ import sys
 from typing import Dict
 from typing import Optional
 
+import colorlog
+
 
 class LoggingConfigurator:
+    _formatter = colorlog.ColoredFormatter(
+        "\n%(log_color)s%(levelname)-4s%(reset)s %(message)s",
+        datefmt=None,
+        reset=True,
+        log_colors={
+            "DEBUG": "cyan",
+            "INFO": "green",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "bold_red",
+        },
+        secondary_log_colors={},
+        style="%",
+    )
+
+    info_formatter = colorlog.ColoredFormatter(
+        "%(log_color)s%(message)s",
+        datefmt=None,
+        reset=True,
+        log_colors={
+            "INFO": "green",
+        },
+        secondary_log_colors={},
+        style="%",
+    )
+    # Define a new log level
+    VERBOSE = 21  # Assign a unique integer value
+    # Define a corresponding logging level name and add it to the `logging` module
+    logging.addLevelName(VERBOSE, "VERBOSE:")
+
+    # Define a custom logging function for the new level
+    def verbose(self, message, *args, **kwargs):
+        VERBOSE = 21
+        if self.isEnabledFor(VERBOSE):
+            self._log(VERBOSE, message, args, **kwargs)
+
+    # Attach the new logging function to the Logger class
+    logging.Logger.verbose = verbose
+
     """A class to configure logging.
 
     INFO messages are directed to stdout, while DEBUG, WARNING, ERROR, and CRITICAL messages are directed to stderr.
@@ -125,8 +166,10 @@ class LoggingConfigurator:
             else_handler.setFormatter(formatter_detailed)
         else:
             logger.setLevel(logging.INFO)
-            formatter_info = logging.Formatter("\n%(message)s")
-            formatter_else = logging.Formatter("\n%(levelname)s: %(message)s")
+            formatter_info = self.info_formatter  # logging.Formatter("\n%(message)s")
+            formatter_else = (
+                self._formatter
+            )  # logging.Formatter("\n%(levelname)s: %(message)s")
 
             info_handler.setFormatter(formatter_info)
             else_handler.setFormatter(formatter_else)

@@ -1,23 +1,32 @@
+import json
+import sys
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
 
 import requests
+from sonar_cli.logging import LoggingConfigurator
+
+# Initialize logger
+LOGGER = LoggingConfigurator.get_logger()
 
 
 class APIClient:
-
-    get_all_reference_endpoint = "references/distinct_accessions"
+    get_all_references_endpoint = "references/get_all_references"
+    get_distinct_accession_endpoint = "references/distinct_accessions"
     get_sample_data_endpoint = "samples/get_sample_data"
     get_alignment_endpoint = "alignments/get_alignment_data"
     get_gene_endpoint = "genes/get_gene_data"
     get_replicon_endpoint = "replicons/get_molecule_data"
-
-    get_match_endpoint = "functions/match"
+    get_match_endpoint = "samples/genomes"
 
     get_translation_table_endpoint = "resources/get_translation_table"
+    get_properties_endpont = "property/get_all_properties"
+
+    post_add_reference_endpoint = "references/import_gbk/"
+    post_delete_reference_endpoint = "references/delete_reference/"
+    post_delete_sample_endpoint = "samples/delete_sample_data/"
     post_import_property_upload_endpoint = "samples/import_properties_tsv/"
     post_import_upload_endpoint = "file_uploads/import_upload/"
 
@@ -32,21 +41,75 @@ class APIClient:
         params: dict | None = {},
         data: dict | None = {},
         files: dict | None = {},
+        headers: dict | None = {},
     ):
-        url = f"{self.base_url}/{endpoint}"
-        response = requests.request(
-            method,
-            url,
-            headers=self.headers,
-            data=data,
-            params=params,
-            files=files,
-            verify=True,
-        )
-        response.raise_for_status()  # Raise an exception for HTTP errors (4xx, 5xx)
-        return response.json()
+        if headers:
+            self.headers.update(headers)
+        try:
+            url = f"{self.base_url}/{endpoint}"
+            response = requests.request(
+                method,
+                url,
+                headers=self.headers,
+                data=data,
+                params=params,
+                files=files,
+                verify=True,
+            )
+            return_json = response.json()
+            #   response.raise_for_status() for HTTP errors (4xx, 5xx)
+            if 400 <= response.status_code < 500:
+                # Handle client-side errors (e.g., bad request)
+                LOGGER.error(
+                    f"{response.status_code} Client Error: {response.reason}: {return_json['message']} "
+                )
+            elif 500 <= response.status_code < 600:
+                LOGGER.error(
+                    f"{response.status_code} Server Error: {response.reason} for url: {url}"
+                )
+                sys.exit(1)
 
-    def get_all_reference(self):
+        except requests.exceptions.HTTPError as errh:
+            LOGGER.error(f"HTTP Error: {errh}")
+            response.raise_for_status()
+            sys.exit(1)
+        except requests.exceptions.RequestException as err:
+            LOGGER.error(f"Request Exception: {err}")
+            response.raise_for_status()
+            sys.exit(1)
+
+        return return_json
+
+    def get_all_references(self):
+        """
+        Returns:
+            List[str]: A list of references
+        """
+        json_response = self._make_request(
+            "GET", endpoint=self.get_all_references_endpoint
+        )
+        try:
+            data = json_response["data"]
+            # if not data:
+            #    raise ValueError("No data found in the response.")
+            return data
+
+        # TODO: can we move this except to the def _make_request, so we dont repeat the code
+        except KeyError:
+            raise ValueError("Invalid JSON response. 'data' key not found.")
+        except Exception as e:
+            raise ValueError(f"Error processing JSON response: {str(e)}")
+
+    def get_all_properties(self):
+        """
+        Returns:
+            List[str]: A list of properties
+        """
+        json_response = self._make_request("GET", endpoint=self.get_properties_endpont)
+
+        return json_response
+
+    def get_distinct_reference(self):
         """
         Json response example:
             {
@@ -59,7 +122,7 @@ class APIClient:
             List[str]: A list of accession
         """
         json_response = self._make_request(
-            "GET", endpoint=self.get_all_reference_endpoint
+            "GET", endpoint=self.get_distinct_accession_endpoint
         )
         try:
             data = json_response["data"]
@@ -243,6 +306,32 @@ class APIClient:
         else:
             return False
 
+    def post_add_reference(self, reference_gb_obj):
+        """
+        send gbk file.
+        """
+
+        data = {"translation_id": 1}
+
+        file = {"gbk_file": reference_gb_obj}
+
+        json_response = self._make_request(
+            "POST", endpoint=self.post_add_reference_endpoint, data=data, files=file
+        )
+        if json_response["status"] == "success":
+            return True
+        else:
+            return False
+
+    def post_delete_reference(self, reference_accession):
+        """ """
+        data = {"accession": reference_accession}
+
+        json_response = self._make_request(
+            "POST", endpoint=self.post_delete_reference_endpoint, data=data
+        )
+        return json_response
+
     def post_import_property_upload(self, data, file):
 
         json_response = self._make_request(
@@ -256,38 +345,23 @@ class APIClient:
         else:
             return False, json_response["message"]
 
-    def get_variant_profile_bymatch_command(
-        self,
-        profiles: Optional[Tuple[str, ...]] = None,
-        samples: Optional[List[str]] = None,
-        reference_accession: Optional[str] = None,
-        properties: Optional[Dict[str, List[str]]] = None,
-        frameshifts_only: Optional[bool] = False,
-        filter_n: Optional[bool] = True,
-        filter_x: Optional[bool] = True,
-        ignore_terminal_gaps: Optional[bool] = True,
-        output_columns: Optional[List[str]] = None,
-        format: Optional[str] = "csv",
-    ):
-
-        params = {}
-
-        params["profiles"] = profiles
-        params["samples"] = samples
-        params["reference_accession"] = reference_accession
-        params["properties"] = properties
-        params["frameshifts_only"] = frameshifts_only
-        params["filter_n"] = filter_n
-        params["filter_x"] = filter_x
-        params["ignore_terminal_gaps"] = ignore_terminal_gaps
-        params["output_columns"] = output_columns
-        params["format"] = format
+    def get_variant_profile_bymatch_command(self, params: dict):
 
         json_response = self._make_request(
-            "GET", endpoint=self.get_gene_endpoint, params=params
+            "GET", endpoint=self.get_match_endpoint, params=params
         )
-        if json_response["data"]:
-            data = json_response["data"]
-            return data
-        else:
-            return None
+
+        return json_response
+
+    def post_delete_sample(self, reference_accession, samples: List[str] = []):
+        data = {
+            "reference_accession": reference_accession,
+            "sample_list": json.dumps(samples),
+        }
+
+        json_response = self._make_request(
+            "POST",
+            endpoint=self.post_delete_sample_endpoint,
+            data=data,
+        )
+        return json_response

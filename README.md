@@ -97,6 +97,13 @@ The table below shows the several commands that can be used.
 | subcommand | purpose                                                             |
 |------------|---------------------------------------------------------------------|
 | [import](#importing-genomes)   | import genome sequences and sample information to the database     |
+| [match](#importing-genomes)   | import genome sequences and sample information to the database     |
+| [add-ref](#importing-genomes)   | import genome sequences and sample information to the database     |
+| [delete-ref](#importing-genomes)   | import genome sequences and sample information to the database     |
+| [list-ref](#importing-genomes)   | import genome sequences and sample information to the database     |
+| [list-prop](#importing-genomes)   | import genome sequences and sample information to the database     |
+| [delete-sample](#importing-genomes)   | import genome sequences and sample information to the database     |
+
 
 
 ## Importing Genomes

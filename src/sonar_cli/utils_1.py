@@ -172,3 +172,59 @@ def read_var_file(var_file: str, exclude_var_type: str = "", showNX: bool = Fals
                     }  # frameshift
                 )
     return iter_dna_list
+
+
+def flatten_json_output(result_data: list):
+    flattened_data = []
+    # Load JSON data
+
+    for result in result_data:
+        flattened_entry = {
+            "name": result.get("name", ""),
+        }
+
+        for prop in result.get("properties", []):
+            flattened_entry[prop["name"]] = prop["value"]
+
+        flattened_entry["genomic_profiles"] = " ".join(
+            result.get("genomic_profiles", [])
+        )
+        flattened_entry["proteomic_profiles"] = " ".join(
+            result.get("proteomic_profiles", [])
+        )
+
+        flattened_data.append(flattened_entry)
+
+    return flattened_data
+
+
+def combine_sample_argument(samples: List[str] = [], sample_files: List[str] = []):
+    samples = set([x.strip() for x in samples])
+    for fname in sample_files:
+        _files_exist(fname)
+        with open_file_autodetect(fname) as handle:
+            for line in handle:
+                samples.add(line.strip())
+    return samples
+
+
+def _files_exist(*files: str, exit_on_fail=True) -> bool:
+    """
+    Check if a given file path exists.
+
+    Args:
+        files (string): The name and path to an existing file  with unpacking (*), each element of the list becomes a separate argument
+        exit_on_fail (boolean): Whether to exit the script if the file doesn't exist.
+        Default is True.
+
+    Returns:
+        True if the file exists, False otherwise.
+    """
+
+    for fname in files:
+        if not os.path.isfile(fname):
+            print(f"Error: The file '{fname}' does not exist.")
+            if exit_on_fail:
+                sys.exit(1)
+            return False
+    return True
