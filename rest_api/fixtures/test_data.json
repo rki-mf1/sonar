@@ -1,5 +1,17 @@
 [
   {
+    "model": "auth.User",
+    "pk": 1,
+    "fields": {
+      "username": "request_user",
+      "groups": [
+        [
+          "admin"
+        ]
+      ]
+    }
+  },
+  {
     "model": "rest_api.Sequence",
     "pk": 1,
     "fields": {

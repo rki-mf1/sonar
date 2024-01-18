@@ -16,7 +16,6 @@ services:
   dev-django:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
     env_file:
-      - conf/smtp.env
       - conf/dev_django.env
       - conf/dev_secrets.env
     container_name: dev-covsonar-django
@@ -40,7 +39,6 @@ services:
   dev-django-apscheduler:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
     env_file:
-      - conf/smtp.env
       - conf/dev_django.env
       - conf/dev_secrets.env
     container_name: dev-covsonar-django-apscheduler

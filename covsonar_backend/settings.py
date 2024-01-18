@@ -35,7 +35,7 @@ STATIC_URL = "/static/"
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
-    "django-insecure-ixxtp)b-0*btccc*^(4$@lt2g*@rg6xxtea!x@vc0un)$xzren",
+    r"django-insecure-ixxtp)b-0*btccc*^(4$@lt2g*@rg6xxtea!x@vc0un)\$xzren",
 )
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -169,3 +169,5 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
 IMPORTED_DATA_DIR = "import_data"
+
+PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]

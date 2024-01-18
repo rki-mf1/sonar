@@ -180,9 +180,7 @@ class Sample2Property(models.Model):
     property = models.ForeignKey(Property, models.DO_NOTHING)
     sample = models.ForeignKey(Sample, models.DO_NOTHING, related_name="properties")
     value_integer = models.BigIntegerField(blank=True, null=True)
-    value_float = models.DecimalField(
-        max_digits=10, decimal_places=10, blank=True, null=True
-    )
+    value_float = models.FloatField(blank=True, null=True)
     value_text = models.TextField(blank=True, null=True)
     value_varchar = models.CharField(max_length=400, blank=True, null=True)
     value_blob = models.BinaryField(blank=True, null=True)
