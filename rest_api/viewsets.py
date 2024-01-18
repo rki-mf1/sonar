@@ -19,7 +19,7 @@ from covsonar_backend.settings import DEBUG, IMPORTED_DATA_DIR
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_api.data_entry.reference_job import delete_reference
 from rest_api.data_entry.sample_job import delete_sample
-from rest_api.utils import create_error_response, create_success_response, write_to_file
+from rest_api.utils import create_error_response, create_success_response, resolve_ambiguous_NT_AA, strtobool, write_to_file
 from rest_framework import generics, serializers, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
@@ -41,6 +41,7 @@ from .serializers import (
     RepliconSerializer,
     Sample2PropertyBulkCreateOrUpdateSerializer,
     SampleGenomesSerializer,
+    SampleGenomesSerializerVCF,
     SampleSerializer,
 )
 
@@ -251,15 +252,29 @@ class SampleViewSet(
     def genomes(self, request: Request, *args, **kwargs):
         try:
             queryset = models.Sample.objects.all()
+
             if filter_params := request.query_params.get("filters"):
                 filters = json.loads(filter_params)
                 queryset = self.resolve_genome_filter(filters)
-            genomic_profiles_qs = models.Mutation.objects.filter(
-                ~Q(alt="N"), type="nt"
-            ).only("ref", "alt", "start","end").order_by("start")
-            proteomic_profiles_qs = models.Mutation.objects.filter(
-                ~Q(alt="X"), type="cds"
-            ).only("ref", "alt", "start","end").order_by("start")
+
+            # we try to use bool(), but it is not working as expected.
+                
+            showNX  = strtobool(request.query_params.get("showNX"))
+            vcf_format = strtobool(request.query_params.get("vcf_format"))
+
+            if not showNX:
+                genomic_profiles_qs = models.Mutation.objects.filter(
+                    ~Q(alt="N"), type="nt"
+                ).only("ref", "alt", "start","end").order_by("start")
+                proteomic_profiles_qs = models.Mutation.objects.filter(
+                    ~Q(alt="X"), type="cds"
+                ).only("ref", "alt", "start","end").order_by("start")
+            else:
+                genomic_profiles_qs = models.Mutation.objects.filter(
+                ).only("ref", "alt", "start","end").order_by("start")
+                proteomic_profiles_qs = models.Mutation.objects.filter(
+                ).only("ref", "alt", "start","end").order_by("start")
+
             queryset = queryset.select_related("sequence").prefetch_related(
                 Prefetch(
                     "sequence__alignments__mutations",
@@ -272,20 +287,31 @@ class SampleViewSet(
                     to_attr="proteomic_profiles",
                 ),
             )
-            queryset = queryset.prefetch_related(
-                "properties__property",
-            )
 
-            queryset = self.paginate_queryset(queryset)
-            serializer = SampleGenomesSerializer(queryset, many=True)
+            # if VCF 
+            # for obj in queryset.all():
+            #    print(obj.name)
+            #    for alignment in obj.sequence.alignments.all():
+            #        print(alignment)
+            if vcf_format:
+                queryset = self.paginate_queryset(queryset)
+                serializer = SampleGenomesSerializerVCF(queryset, many=True)
+                return self.get_paginated_response(serializer.data)
+            else:
+                queryset = queryset.prefetch_related(
+                    "properties__property",
+                )
 
-            return self.get_paginated_response(serializer.data)
+                queryset = self.paginate_queryset(queryset)
+                serializer = SampleGenomesSerializer(queryset, many=True)
+                return self.get_paginated_response(serializer.data)
+        
         except Exception as e:
             print(e)
             traceback.print_exc()
             return create_error_response(message=str(e))
 
-    def resolve_genome_filter(self, filters) -> QuerySet:
+    def resolve_genome_filter(self, filters, level=0) -> QuerySet:
         queryset = models.Sample.objects.all()
         filter_label_to_methods = {
             "Property": self.filter_property,
@@ -296,6 +322,7 @@ class SampleViewSet(
             "Ins Nt": self.filter_ins_profile_nt,
             "Ins AA": self.filter_ins_profile_aa,
         }
+        print("andFilter: ---- lv:",level)
         for filter in filters.get("andFilter", []):
             print(filter)
             method = filter_label_to_methods.get(filter.get("label"))
@@ -308,11 +335,17 @@ class SampleViewSet(
         if len(filters.get("andFilter", [])) > 0:
             or_query |= Q(id__in=queryset)
 
+        print("orFilter: ---- lv:",level)
         for or_filter in filters.get("orFilter", []):
-            or_query |= Q(id__in=self.resolve_genome_filter(or_filter))
-        
+            or_query |= Q(id__in=self.resolve_genome_filter(or_filter, level=level+1))
+
+        print("end: -------- lv:",level)
         final_queryset = models.Sample.objects.filter(or_query)
-        print(final_queryset.query)
+
+        if level == 0:
+            print()
+            print(final_queryset.query)
+            print()
         return models.Sample.objects.filter(or_query)
 
     # WIP - not working yet
@@ -337,19 +370,44 @@ class SampleViewSet(
         value,
         exclude: bool = False,
         qs: QuerySet | None = None,
+        with_sublineage: bool = False,
         *args,
         **kwargs,
     ):
         if qs is None:
             qs = models.Sample.objects.all()
             qs.prefetch_related("properties__property")
+
+        if filter_type =="contains":
+            value = value.strip("%")
+
         if property_name in [field.name for field in models.Sample._meta.get_fields()]:
+
             query = {}
-            query[f"{property_name}__{filter_type}"] = value
+
+            # with sublineage search 
+            # search A.2.5 also includes A.2.5.1,A.2.5.2,A.2.5.3
+            # TODO: however if we combine A% (contains) with sublineage search??
+            if with_sublineage:
+                value_list = []
+                # the parent lineage
+                value_list.append(value)
+
+                # NOTE: warning the lineage table can return "none",
+                rows = models.Lineages.objects.filter(lineage=value).values('sublineage')
+                if rows:
+                    value_list.extend(rows[0]["sublineage"].split(','))
+
+
+                query[f"{property_name}__in"] = value_list
+            else:
+                query[f"{property_name}__{filter_type}"] = value
+            print(query)
         else:
             datatype = models.Property.objects.get(name=property_name).datatype
             query = {f"properties__property__name": property_name}
             query[f"properties__{datatype}__{filter_type}"] = value
+
         qs = qs.exclude(**query) if exclude else qs.filter(**query)
         return qs
 
@@ -367,13 +425,27 @@ class SampleViewSet(
         # For NT: ref_nuc followed by ref_pos followed by alt_nuc (e.g. T28175C).
         if qs is None:
             qs = models.Sample.objects.all()
-        alignment_qs = models.Alignment.objects.filter(
-            mutations__end=ref_pos,
-            mutations__ref=ref_nuc,
-            mutations__alt=alt_nuc,
-            # mutations__gene__gene_symbol=gene_symbol,
-            mutations__type="nt",
-        )
+        # Create Q() objects for each condition
+        if alt_nuc == "N":
+            mutation_alt = Q() 
+            for  x in resolve_ambiguous_NT_AA(type="nt", char = alt_nuc):
+                mutation_alt  = mutation_alt | Q(mutations__alt=x)
+            # Unsupported lookup 'alt_in' for ForeignKey or join on the field not permitted.
+            # mutation_alt = Q(
+            #     mutations__alt_in=resolve_ambiguous_NT_AA(type="nt", char = alt_nuc)
+            # )
+        else:
+            if alt_nuc == "n":
+                alt_nuc = "N"
+
+            mutation_alt = Q(
+                mutations__alt=alt_nuc
+            )
+        mutation_condition = (Q(mutations__end=ref_pos) &  Q(mutations__ref=ref_nuc) & (mutation_alt) & Q(mutations__type="nt") )
+        if DEBUG:
+            print(mutation_condition)
+
+        alignment_qs = models.Alignment.objects.filter(mutation_condition)
         filters = {"sequence__alignments__in": alignment_qs}
         qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
         return qs
@@ -392,22 +464,31 @@ class SampleViewSet(
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aa (e.g. OPG098:E162K)
         if qs is None:
             qs = models.Sample.objects.all()
-        alignment_qs = models.Alignment.objects.filter(
-            mutations__end=ref_pos,
-            mutations__ref=ref_aa,
-            mutations__alt=alt_aa,
-            mutations__gene__gene_symbol=protein_symbol,
-            mutations__type="cds",
-        )
+
+        if alt_aa == "X":
+            mutation_alt = Q() 
+            for  x in resolve_ambiguous_NT_AA(type="aa", char = alt_aa):
+                mutation_alt  = mutation_alt | Q(mutations__alt=x)
+        else:
+            if alt_aa == "x":
+                alt_aa = "X"    
+            mutation_alt = Q(
+                mutations__alt=alt_aa
+            )
+
+        mutation_condition = (Q(mutations__end=ref_pos) &  Q(mutations__ref=ref_aa) & (mutation_alt) 
+                              & Q(mutations__gene__gene_symbol=protein_symbol) & Q(mutations__type="cds") )
+
+        alignment_qs = models.Alignment.objects.filter(mutation_condition)
+
         filters = {"sequence__alignments__in": alignment_qs}
         qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
         return qs
 
     def filter_del_profile_nt(
         self,
-        first_deleted_nt: str,
-        last_deleted_nt: str,
-        gene_symbol: str,
+        first_deleted: str,
+        last_deleted: str,
         qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
@@ -420,9 +501,8 @@ class SampleViewSet(
         if qs is None:
             qs = models.Sample.objects.all()
         alignment_qs = models.Alignment.objects.filter(
-            mutations__gene__gene_symbol=gene_symbol,
-            mutations__start=int(first_deleted_nt) - 1,
-            mutations__end=last_deleted_nt,
+            mutations__start=int(first_deleted) - 1,
+            mutations__end=last_deleted,
             mutations__alt__in=[" ", "", None],
             mutations__type="nt",
         )
@@ -433,8 +513,8 @@ class SampleViewSet(
     def filter_del_profile_aa(
         self,
         protein_symbol: str,
-        first_deleted_aa: int,
-        last_deleted_aa: int,
+        first_deleted: int,
+        last_deleted: int,
         exclude: bool = False,
         qs: QuerySet | None = None,
         *args,
@@ -445,8 +525,8 @@ class SampleViewSet(
             qs = models.Sample.objects.all()
         alignment_qs = models.Alignment.objects.filter(
             mutations__gene__gene_symbol=protein_symbol,
-            mutations__start=int(first_deleted_aa) - 1,
-            mutations__end=last_deleted_aa,
+            mutations__start=int(first_deleted) - 1,
+            mutations__end=last_deleted,
             mutations__alt__in=[" ", "", None],
             mutations__type="cds",
         )
@@ -456,7 +536,6 @@ class SampleViewSet(
 
     def filter_ins_profile_nt(
         self,
-        gene_symbol: str,
         ref_nuc: str,
         ref_pos: int,
         alt_nucs: str,
@@ -472,7 +551,6 @@ class SampleViewSet(
             mutations__end=ref_pos,
             mutations__ref=ref_nuc,
             mutations__alt=alt_nucs,
-            mutations__gene__gene_symbol=gene_symbol,
             mutations__type="nt",
         )
         filters = {"sequence__alignments__in": alignment_qs}
@@ -529,6 +607,7 @@ class SampleViewSet(
         properties_df = pd.read_csv(
             self._temp_save_file(tsv_file), sep="\t", dtype=object, keep_default_na=False
         )
+
         sample_property_names = []
         custom_property_names = []
         for property_name in properties_df.columns:

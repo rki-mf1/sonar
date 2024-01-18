@@ -82,6 +82,14 @@ Once these steps are completed, you can move on to the next section.
     ```
     You can access the application at `http://127.0.0.1:8000/`.
 
+
+Import Parent-Child relationship (optional, but to enable sublineage search)
+    ```
+    python manage.py import_lineage --lineages test-data/lineages_2024_01_15.csv  --alias-key test-data/alias_key_2024_01_15.json
+    ```
+
+
+
 Note:
  - `manage.py` is used for all django commands
  - `python .\manage.py migrate` commits all migration db changes to the database. also creates django specific administrative tables 
