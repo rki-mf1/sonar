@@ -19,6 +19,7 @@ from rest_api.serializers import (
 )
 
 from django.db import transaction
+from django.db.utils  import IntegrityError
 
 
 def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
@@ -55,8 +56,16 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                     "gene",
                 ]:
                     continue
-                element = _put_gene_from_feature(feature, record.seq, replicon.id)
-                _create_elemparts(feature, element)
+                # NOTE: some pathogens have duplicated gene names
+                #  this can cause IntegrityError: duplicate key value violates ??       
+                try:
+                    element = _put_gene_from_feature(feature, record.seq, replicon.id)
+                    _create_elemparts(feature, element)
+                except (IntegrityError ) as e:
+                    print(f"Error: {e}")
+                    print(f"Error at: {feature}")
+                    continue
+
     return records
 
 
@@ -185,10 +194,12 @@ def _put_reference_from_record(
     ]:
         if attr_name in source.qualifiers:
             if attr_name == "collection_date":
-                reference[attr_name] = datetime.strptime(
-                    source.qualifiers[attr_name][0],
-                    "%b-%Y",
-                ).date()
+                # handle both date formats    
+                date_string = source.qualifiers[attr_name][0]
+                try:
+                    reference[attr_name] = datetime.strptime(date_string, "%Y-%m").date()
+                except ValueError:
+                    reference[attr_name] = datetime.strptime(date_string, "%b-%Y").date()
             else:
                 reference[attr_name] = source.qualifiers[attr_name][0]
     try:

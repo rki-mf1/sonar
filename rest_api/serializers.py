@@ -203,13 +203,64 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     def get_genomic_profiles(self, obj: models.Sample):
         # genomic_profiles are prefetched for genomes endpoint
         list = []
+
         for alignment in obj.sequence.alignments.all():
-            list += [mutation.alt for mutation in alignment.genomic_profiles]
+            for mutation in alignment.genomic_profiles:
+                label = ""
+                # SNP and INS
+                if mutation.alt != None:
+                    label = f"{mutation.ref}{mutation.end}{mutation.alt}"
+                    
+                else : # DEL
+                    if mutation.end - mutation.start == 1:
+                        label = "del:" + str(mutation.start + 1) 
+                    else:
+                        label = "del:" + str(mutation.start + 1) + "-" + str(mutation.end)
+                list.append(label)
+            
         return list
 
     def get_proteomic_profiles(self, obj: models.Sample):
         # proteomic_profiles are prefetched
         list = []
         for alignment in obj.sequence.alignments.all():
-            list += [f"{mutation.alt}" for mutation in alignment.proteomic_profiles]
+            for mutation in alignment.proteomic_profiles:
+                label = ""
+                # SNP and INS
+                if mutation.alt != None:
+                    label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
+                else : # DEL
+                    if mutation.end - mutation.start == 1:
+                        label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) 
+                    else:
+                        label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) + "-" + str(mutation.end)
+                list.append(label)
+            
+        return list
+
+
+class SampleGenomesSerializerVCF(serializers.ModelSerializer):
+    genomic_profiles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Sample
+        fields = [
+            "id",
+            "name",
+
+            "genomic_profiles"
+        ]
+
+    def get_genomic_profiles(self, obj: models.Sample):
+        list = []
+        for alignment in obj.sequence.alignments.all():
+
+            for mutation in alignment.genomic_profiles:
+                variant = {}
+                variant['variant.id'] = mutation.id
+                variant['variant.ref'] = mutation.ref
+                variant['variant.alt'] = mutation.alt
+                variant['variant.start'] = mutation.start
+                variant['variant.end'] = mutation.end
+                list.append(variant)   
         return list

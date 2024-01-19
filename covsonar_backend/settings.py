@@ -9,12 +9,15 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import environ
 from pathlib import Path
 import os
-import environ
 
+
+# Initialise environment variables
 env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False),
     POSTGRES_USER=str,
     POSTGRES_PASSWORD=str,
     POSTGRES_DB=str,
@@ -29,22 +32,21 @@ PROJECT_ROOT = os.path.normpath(os.path.dirname(__file__))
 STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
 STATIC_URL = "/static/"
 
+# Take environment variables from .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    r"django-insecure-ixxtp)b-0*btccc*^(4$@lt2g*@rg6xxtea!x@vc0un)\$xzren",
-)
+
+SECRET_KEY = env("SECRET_KEY")
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-# DEBUG = False
+DEBUG = env('DEBUG')
 
 if not DEBUG:
     ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
-
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -103,8 +105,16 @@ WSGI_APPLICATION = "covsonar_backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
+# NOTE: The `env.db()` method is an alias for `db_url()`.
+# We can use the code like `if not env.db()`.
+# However, we need to set the `DATABASE_URL` in the environment; otherwise,
+# we will get a message like the one below:
+# UserWarning: Engine not recognized from the URL: {'NAME': '', 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': '', 'ENGINE': ''}
+# As of now, we just ignore the UserWarning message and still set it as a dictionary
+# by using `env("DATABASE_URL")` this way.
+if not env("DATABASE_URL"):
+    print("Using the default database.")
+    database_connection = {
         "ENGINE": "django.db.backends.postgresql",
         "OPTIONS": {"options": "-c search_path=public"},
         "NAME": env("POSTGRES_DB"),
@@ -113,6 +123,12 @@ DATABASES = {
         "HOST": "postgres",
         "PORT": env("POSTGRES_PORT"),
     }
+else:
+    print("Using the provided database.")
+    database_connection = env.db("DATABASE_URL")
+
+DATABASES = {
+    "default": database_connection
 }
 
 
