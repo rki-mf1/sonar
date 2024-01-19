@@ -111,6 +111,7 @@ class SampleSerializer(serializers.ModelSerializer):
     sequence = serializers.PrimaryKeyRelatedField(
         queryset=models.Sequence.objects.all()
     )
+
     class Meta:
         model = models.Sample
         fields = "__all__"
@@ -122,10 +123,12 @@ class ReferenceSerializer(serializers.ModelSerializer):
         model = models.Reference
         fields = "__all__"
 
+
 class AlignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Alignment
         fields = "__all__"
+
 
 class RepliconSerializer(serializers.ModelSerializer):
     def create(self, validated_data):

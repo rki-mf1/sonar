@@ -175,9 +175,6 @@ class Sample2Property(models.Model):
     property = models.ForeignKey(Property, models.CASCADE)
     sample = models.ForeignKey(Sample, models.CASCADE, related_name="properties")
     value_integer = models.BigIntegerField(blank=True, null=True)
-    # . If the precision (max_digits) is set to 10 and the scale (decimal_places) is set to 10,
-    # it means that the maximum value that can be stored in the euro column is 1 (10^0),
-    # and any value greater than 1 will cause an overflow error.
     value_float = models.FloatField(blank=True, null=True)
     value_text = models.TextField(blank=True, null=True)
     value_varchar = models.CharField(max_length=400, blank=True, null=True)

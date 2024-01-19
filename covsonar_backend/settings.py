@@ -14,19 +14,23 @@ from pathlib import Path
 import os
 
 
-
 # Initialise environment variables
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False),
-    DJANGO_SECRET_KEY=(str, "django-insecure-ixxtp)b-0*btccc*^(4$@lt2g*@rg6xxtea!x@vc0un)$xzren"),
+    POSTGRES_USER=str,
+    POSTGRES_PASSWORD=str,
+    POSTGRES_DB=str,
+    POSTGRES_HOST=str,
+    POSTGRES_PORT=str,
+    SECRET_KEY=str,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = os.path.normpath(os.path.dirname(__file__))
-STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
-STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
+STATIC_URL = "/static/"
 
 # Take environment variables from .env file
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
@@ -35,10 +39,11 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("DJANGO_SECRET_KEY")
+
+SECRET_KEY = env("SECRET_KEY")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
-# DEBUG = False
 
 if not DEBUG:
     ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
@@ -52,6 +57,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "environ",
     "rest_api.apps.RestApiConfig",
     "rest_framework",
     "django_filters",
@@ -111,11 +117,11 @@ if not env("DATABASE_URL"):
     database_connection = {
         "ENGINE": "django.db.backends.postgresql",
         "OPTIONS": {"options": "-c search_path=public"},
-        "NAME": "covsonar",
-        "USER": "postgres",
-        "PASSWORD": "123456",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": "postgres",
+        "PORT": env("POSTGRES_PORT"),
     }
 else:
     print("Using the provided database.")
@@ -180,3 +186,5 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
 IMPORTED_DATA_DIR = "import_data"
+
+PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]
