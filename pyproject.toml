@@ -21,6 +21,8 @@ psycopg2-binary = "^2.9.9"
 biopython = "^1.81"
 django-debug-toolbar = "^4.2.0"
 whitenoise = "^6.6.0"
+environ = "^1.0"
+django-environ = "^0.11.2"
 
 
 [build-system]

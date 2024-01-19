@@ -1,0 +1,4 @@
+coverage
+parameterized
+pyyaml
+unittest-xml-reporting

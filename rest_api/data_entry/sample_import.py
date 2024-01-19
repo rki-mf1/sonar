@@ -21,12 +21,12 @@ from rest_api.models import (
     Sequence,
 )
 from rest_api.serializers import SampleSerializer
+from typing import Optional
 
 
 @dataclass
 class SampleRaw:
     algn_file: str
-    algnid: int | None
     anno_tsv_file: str
     anno_vcf_file: str
     cds_file: str
@@ -38,16 +38,17 @@ class SampleRaw:
     ref_file: str
     refmol: str
     refmolid: int
-    refseq_id: int
-    sampleid: int | None
     seq_file: str
     seqhash: str
     sourceid: int
-    source_acc: str
     translationid: int
-    tt_file: str = ""
-    var_file: str = ""
-    vcffile: str = ""
+    tt_file: str
+    var_file: str
+    vcffile: str
+    algnid: Optional[int] = None
+    sampleid: Optional[int] = None
+    refseq_id: Optional[int] = None
+    source_acc: Optional[str] = None
 
 
 @dataclass
@@ -127,13 +128,13 @@ class SampleImport:
         self.mutation_query_data: list[dict] = []
         self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
         self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
-        
+
         # NOTE: We probably won't need it
         # if self.sample_raw.seq_file:
         #    self.seq = "".join(
         #        [line for line in self._import_seq(self.sample_raw.seq_file)]
         #    )
-        #else:
+        # else:
         #    raise Exception("No sequence file found")
 
         if self.sample_raw.var_file:
@@ -218,7 +219,7 @@ class SampleImport:
                 "end": var_raw.end,
                 "replicon": self.replicon,
                 "type": var_raw.type,
-            }            
+            }
             # save query data for creating mutation2alignment objects later
             self.mutation_query_data.append(mutation_data)
             mutation = Mutation(**mutation_data)
@@ -251,7 +252,7 @@ class SampleImport:
             raise Exception("Mutation objects not created yet")
         self.annotation_query_data = {}
         for mutation in self.anno_vcf_raw:
-            annotations = self._parse_vcf_info(mutation.info)
+            annotations = [self._parse_vcf_info(info) for info in mutation.info.split(";") if info]
             for alt in mutation.alt.split(",") if mutation.alt else [None]:
                 mut_lookup_data = {
                     "start": mutation.pos - 1,
@@ -332,7 +333,7 @@ class SampleImport:
                     )
 
             return annotations
-        return []
+        return None
 
     def _find_or_create_sample(self, sequence):
         try:

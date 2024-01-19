@@ -12,11 +12,22 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+import environ
+
+env = environ.Env(
+    POSTGRES_USER=str,
+    POSTGRES_PASSWORD=str,
+    POSTGRES_DB=str,
+    POSTGRES_HOST=str,
+    POSTGRES_PORT=str,
+    SECRET_KEY=str,
+)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = os.path.normpath(os.path.dirname(__file__))
-STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
-STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
+STATIC_URL = "/static/"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -24,7 +35,7 @@ STATIC_URL = '/static/'
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
-    "django-insecure-ixxtp)b-0*btccc*^(4$@lt2g*@rg6xxtea!x@vc0un)$xzren",
+    r"django-insecure-ixxtp)b-0*btccc*^(4$@lt2g*@rg6xxtea!x@vc0un)\$xzren",
 )
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -44,6 +55,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "environ",
     "rest_api.apps.RestApiConfig",
     "rest_framework",
     "django_filters",
@@ -95,11 +107,11 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "OPTIONS": {"options": "-c search_path=public"},
-        "NAME": "covsonar",
-        "USER": "postgres",
-        "PASSWORD": "123456",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": "postgres",
+        "PORT": env("POSTGRES_PORT"),
     }
 }
 
@@ -158,3 +170,5 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
 IMPORTED_DATA_DIR = "import_data"
+
+PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]

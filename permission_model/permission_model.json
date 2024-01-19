@@ -1,0 +1,538 @@
+{
+  "aa_mutation-list": {
+    "pattern": "^aa_mutations/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "aa_mutation-mutation-frequency": {
+    "pattern": "^aa_mutations/mutation_frequency/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "alignment-detail": {
+    "pattern": "^alignments/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "alignment-get-alignment-data": {
+    "pattern": "^alignments/get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)/$",
+    "test_kwargs": {
+      "seqhash": 1,
+      "replicon_id": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "alignment-list": {
+    "pattern": "^alignments/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "gene-detail": {
+    "pattern": "^genes/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ],
+      "put": [],
+      "patch": [],
+      "delete": []
+    }
+  },
+  "gene-distinct-gene-symbols": {
+    "pattern": "^genes/distinct_gene_symbols/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "gene-get-gene-data": {
+    "pattern": "^genes/get_gene_data/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "gene-list": {
+    "pattern": "^genes/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ],
+      "post": [
+        "reading_user"
+      ]
+    }
+  },
+  "import_upload-import-upload": {
+    "pattern": "^file_uploads/import_upload/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "reading_user"
+      ]
+    }
+  },
+  "import_upload-start-file-import": {
+    "pattern": "^file_uploads/start_file_import/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "mutation-detail": {
+    "pattern": "^mutations/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "mutation-distinct-alts": {
+    "pattern": "^mutations/distinct_alts/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "mutation-list": {
+    "pattern": "^mutations/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "mutation_signature-detail": {
+    "pattern": "^mutation_signatures/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "mutation_signature-list": {
+    "pattern": "^mutation_signatures/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "mutation_signature-raw": {
+    "pattern": "^mutation_signatures/raw/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-detail": {
+    "pattern": "^properties/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-distinct-properties": {
+    "pattern": "^properties/distinct_properties/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-distinct-property-names": {
+    "pattern": "^properties/distinct_property_names/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-list": {
+    "pattern": "^properties/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-unique-collection-dates": {
+    "pattern": "^properties/unique_collection_dates/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-unique-countries": {
+    "pattern": "^properties/unique_countries/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-unique-sequencing-techs": {
+    "pattern": "^properties/unique_sequencing_techs/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "reference-detail": {
+    "pattern": "^references/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "reference-distinct-accessions": {
+    "pattern": "^references/distinct_accessions/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "reference-import-gbk": {
+    "pattern": "^references/import_gbk/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "reading_user"
+      ]
+    }
+  },
+  "reference-list": {
+    "pattern": "^references/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "replicon-detail": {
+    "pattern": "^replicons/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ],
+      "put": [],
+      "patch": [],
+      "delete": []
+    }
+  },
+  "replicon-distinct-genes": {
+    "pattern": "^replicons/distinct_genes/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "replicon-get-molecule-data": {
+    "pattern": "^replicons/get_molecule_data/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "replicon-get-source-data": {
+    "pattern": "^replicons/get_source_data/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "replicon-list": {
+    "pattern": "^replicons/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ],
+      "post": [
+        "reading_user"
+      ]
+    }
+  },
+  "resources-get-translation-table": {
+    "pattern": "^resources/get_translation_table/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample-count-unique-nt-mut-ref-view-set": {
+    "pattern": "^samples/count_unique_nt_mut_ref_view_set/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample-detail": {
+    "pattern": "^samples/(?P<name>[^/.]+)/$",
+    "test_kwargs": {
+      "name": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample-download-genomes-export": {
+    "pattern": "^samples/download_genomes_export/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample-genomes": {
+    "pattern": "^samples/genomes/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample-get-sample-data": {
+    "pattern": "^samples/get_sample_data/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample-import-properties-tsv": {
+    "pattern": "^samples/import_properties_tsv/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "reading_user"
+      ]
+    }
+  },
+  "sample-list": {
+    "pattern": "^samples/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample_genome-list": {
+    "pattern": "^sample_genomes/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample_genome-match": {
+    "pattern": "^sample_genomes/match/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample_genome-test-profile-filters": {
+    "pattern": "^sample_genomes/test_profile_filters/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "snp1-detail": {
+    "pattern": "^snp1/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "snp1-list": {
+    "pattern": "^snp1/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  }
+}

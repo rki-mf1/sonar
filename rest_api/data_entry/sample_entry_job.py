@@ -8,6 +8,7 @@ from django.db import DataError
 # NOTE: This variable need to be adjustable.
 _batch_size = 100
 
+
 class SampleEntryJob:
     def run_data_entry(self):
         print("--- running data entry ---")
@@ -17,18 +18,25 @@ class SampleEntryJob:
         print(f"{len(files)} files found")
         timer = datetime.now()
         number_of_batches = len(files) // _batch_size + 1
-        print(f"Total number of batches: {number_of_batches} of {_batch_size} batch size")
+        print(
+            f"Total number of batches: {number_of_batches} of {_batch_size} batch size"
+        )
         if _batch_size:
             replicon_cache = {}
             gene_cache = {}
             for i in range(0, len(files), _batch_size):
-                batchtimer = datetime.now()
-                print(f"processing batch {(i//_batch_size) + 1} of {number_of_batches}")
-                batch = files[i : i + _batch_size]
-                self.process_batch(batch, replicon_cache, gene_cache)
-                print(
-                    f"batch {(i//_batch_size) + 1} done in {datetime.now() - batchtimer}"
-                )
+                try:
+                    batchtimer = datetime.now()
+                    print(
+                        f"processing batch {(i//_batch_size) + 1} of {number_of_batches}"
+                    )
+                    batch = files[i : i + _batch_size]
+                    self.process_batch(batch, replicon_cache, gene_cache)
+                    print(
+                        f"batch {(i//_batch_size) + 1} done in {datetime.now() - batchtimer}"
+                    )
+                except Exception as e:
+                    print(f"Error in batch {(i//_batch_size) + 1}: {e}")
         print(f"import done in {datetime.now() - timer}")
 
     def process_batch(self, batch, replicon_cache, gene_cache):

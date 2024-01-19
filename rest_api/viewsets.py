@@ -29,6 +29,7 @@ from rest_framework import status
 from django.core.serializers import serialize
 
 from rest_api.data_entry.gbk_import import import_gbk_file
+from rest_api.data_entry.sample_entry_job import SampleEntryJob
 
 from . import models
 from .serializers import (
@@ -59,23 +60,32 @@ class PropertyColumnMapping:
     data_type: str
 
 
-class AlignmentViewSet(viewsets.GenericViewSet,
+class AlignmentViewSet(
+    viewsets.GenericViewSet,
     generics.mixins.ListModelMixin,
-    generics.mixins.RetrieveModelMixin,):
+    generics.mixins.RetrieveModelMixin,
+):
     """
     AlignmentViewSet
     """
+
     queryset = models.Alignment.objects.all()
     serializer_class = AlignmentSerializer
 
-    @action(detail=False, methods=["get"], url_path='get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)')
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)",
+    )
     def get_alignment_data(self, request: Request, seqhash=None, replicon_id=None):
         # if seq_id is None  or element_id is None:
         #    return create_error_response(message='Some parameters are missing in URL')
         # already taking care by Django
         sample_data = {}
         # replicon_id = element_id
-        queryset =  self.queryset.filter(sequence__seqhash=seqhash , replicon_id= replicon_id )
+        queryset = self.queryset.filter(
+            sequence__seqhash=seqhash, replicon_id=replicon_id
+        )
         sample_data = queryset.values()
         if sample_data:
             sample_data = sample_data[0]
@@ -102,8 +112,8 @@ class RepliconViewSet(viewsets.ModelViewSet):
         elif ref := request.query_params.get("reference_accession"):
             queryset_obj = self.queryset.filter(reference__accession=ref)
         else:
-            return create_error_response(message='Accession ID is missing')
-        
+            return create_error_response(message="Accession ID is missing")
+
         if queryset_obj.exists():
             # NOTE: Fixed value for translation ID
             # sample_data.translation_id = 1
@@ -112,10 +122,9 @@ class RepliconViewSet(viewsets.ModelViewSet):
             for obj in sample_data:
                 obj["translation_id"] = 1
         return create_success_response(data=sample_data)
-    
+
     @action(detail=False, methods=["get"])
     def get_source_data(self, request: Request, *args, **kwargs):
-
         """
         Returns the source data given a molecule id.
 
@@ -132,8 +141,9 @@ class RepliconViewSet(viewsets.ModelViewSet):
             queryset = self.queryset.filter(reference__accession=molecule_id)
             sample_data = queryset.values()
         else:
-            return create_error_response(message='Accession ID is missing')
+            return create_error_response(message="Accession ID is missing")
         return create_success_response(data=sample_data)
+
 
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = models.Gene.objects.all()
@@ -152,13 +162,15 @@ class GeneViewSet(viewsets.ModelViewSet):
 
         if ref_acc := request.query_params.get("ref_acc"):
             # queryset =  models.Gene.objects.filter(replicon__reference__accession=ref_acc)
-            
-            queryset = models.GeneSegment.objects.select_related("gene__replicon__reference").filter(gene__replicon__reference__accession=ref_acc)
+
+            queryset = models.GeneSegment.objects.select_related(
+                "gene__replicon__reference"
+            ).filter(gene__replicon__reference__accession=ref_acc)
             print(queryset.query)
         elif replicon_id := request.query_params.get("replicon_id"):
             queryset = self.queryset.filter(replicon_id=replicon_id)
         else:
-            return create_error_response(message='Searchable field is missing')
+            return create_error_response(message="Searchable field is missing")
 
         sample_data = []
         for item in queryset.all():
@@ -193,9 +205,10 @@ class GeneViewSet(viewsets.ModelViewSet):
             sample_data.append(_data)
 
         # sample_data =queryset.values()
-        
+
         return create_success_response(data=sample_data)
-    
+
+
 class MutationViewSet(
     viewsets.GenericViewSet,
     generics.mixins.ListModelMixin,
@@ -534,7 +547,6 @@ class SampleViewSet(
         properties_df.convert_dtypes()
         properties_df.set_index(sample_id_column, inplace=True)
         for sample in samples:
-
             row = properties_df[properties_df.index == sample.name]
 
             for name, value in row.items():
@@ -558,7 +570,7 @@ class SampleViewSet(
             )
 
         print("Saving...")
-  
+
         with transaction.atomic():
             models.Sample.objects.bulk_update(sample_updates, sample_property_names)
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
@@ -578,11 +590,12 @@ class SampleViewSet(
                     "value_zip",
                 ],
                 unique_fields=["sample", "property"],
-            )   
-      
+            )
+
         print("Done.")
-        return create_success_response(message='File uploaded successfully',
-                                    return_status=status.HTTP_201_CREATED)
+        return create_success_response(
+            message="File uploaded successfully", return_status=status.HTTP_201_CREATED
+        )
 
     def _convert_property_column_mapping(
         self, column_mapping: dict[str, str]
@@ -630,17 +643,21 @@ class SampleViewSet(
         file_path = pathlib.Path("import_data") / uploaded_file.name
         with open(file_path, "wb") as f:
             f.write(uploaded_file.read())
-        return file_path 
-    
+        return file_path
+
     @action(detail=False, methods=["get"])
-    def get_sample_data(self, request: Request, *args, **kwargs):      
-        sample_name = request.GET.get("sample_data") 
+    def get_sample_data(self, request: Request, *args, **kwargs):
+        sample_name = request.GET.get("sample_data")
         if not sample_name:
-            return create_error_response(message='Sample name is missing')
-        sample_model = models.Sample.objects.filter(name=sample_name).extra(select={'sample_id':'sample.id'}).values('sample_id',"name", 'sequence__seqhash')
+            return create_error_response(message="Sample name is missing")
+        sample_model = (
+            models.Sample.objects.filter(name=sample_name)
+            .extra(select={"sample_id": "sample.id"})
+            .values("sample_id", "name", "sequence__seqhash")
+        )
         if sample_model:
             sample_data = list(sample_model)[0]
-            if len(sample_model)>1:
+            if len(sample_model) > 1:
                 # Not sure ....---
                 print("more than one sample was using same name.")
         else:
@@ -648,7 +665,7 @@ class SampleViewSet(
             sample_data = {}
 
         return create_success_response(data=sample_data)
-    
+
 
 class ReferenceViewSet(
     viewsets.GenericViewSet,
@@ -671,11 +688,12 @@ class ReferenceViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
-        queryset =  models.Reference.objects.all()
-        accession = ([item.accession for item in queryset])
-        return Response({'data': accession})
+        queryset = models.Reference.objects.all()
+        accession = [item.accession for item in queryset]
+        return Response({"data": accession})
 
     # multilple get in one.
+
 
 class SNP1Serializer(serializers.HyperlinkedModelSerializer):
     reference_accession = serializers.CharField(
@@ -918,7 +936,6 @@ class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixi
 
 
 class ResourceViewSet(viewsets.ViewSet):
-
     @action(detail=False, methods=["get"])
     def get_translation_table(self, request: Request):
         # file path -> resource/1.tt
@@ -928,14 +945,16 @@ class ResourceViewSet(viewsets.ViewSet):
             with open(file_path, "rb") as file:
                 translation_table = pickle.load(file)
         except FileNotFoundError:
-            return create_error_response(message="error: File not found", return_status=404)
+            return create_error_response(
+                message="error: File not found", return_status=404
+            )
         except Exception as e:
             return create_error_response({"error": str(e)}, return_status=500)
-        
-        return create_success_response(data=translation_table)
-    
-class FileUploadViewSet(viewsets.ViewSet):
 
+        return create_success_response(data=translation_table)
+
+
+class FileUploadViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
         """
@@ -957,16 +976,25 @@ class FileUploadViewSet(viewsets.ViewSet):
         """
 
         if "zip_file" not in request.FILES:
-            return create_error_response(message="No zip file uploaded.", return_status=400)
+            return create_error_response(
+                message="No zip file uploaded.", return_status=400
+            )
 
         zip_file = request.FILES.get("zip_file")
         # Extract files from the BytesIO
-        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_file, "r") as zip_ref:
             zip_ref.extractall(IMPORTED_DATA_DIR)
             # to view list of files and file details in ZIP
             # for file_info in zip_ref.infolist():
             #    print(file_info)
 
+        return create_success_response(
+            message="File uploaded successfully", return_status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=False, methods=["get"])
+    def start_file_import(self, request, *args, **kwargs):
+        SampleEntryJob().run_data_entry()
         return create_success_response(message='File uploaded successfully', return_status=status.HTTP_201_CREATED)
 
 
