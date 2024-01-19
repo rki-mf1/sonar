@@ -3,6 +3,7 @@ from datetime import datetime
 from django.db import transaction
 from rest_api.data_entry.sample_import import SampleImport
 from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequence
+from django.db import DataError
 
 # NOTE: This variable need to be adjustable.
 _batch_size = 100
@@ -39,40 +40,53 @@ class SampleEntryJob:
         print(f"import done in {datetime.now() - timer}")
 
     def process_batch(self, batch, replicon_cache, gene_cache):
-        sample_import_objs = [SampleImport(file) for file in batch]
-        with transaction.atomic():
-            sequences = [
-                sample_import_obj.get_sequence_obj()
-                for sample_import_obj in sample_import_objs
-            ]
-            Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
-            samples = [
-                sample_import_obj.get_sample_obj()
-                for sample_import_obj in sample_import_objs
-            ]
-            Sample.objects.bulk_create(samples, ignore_conflicts=True)
-            [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
-            alignments = [
-                sample_import_obj.get_alignment_obj()
-                for sample_import_obj in sample_import_objs
-            ]
-            Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
-            mutations = []
-            for sample_import_obj in sample_import_objs:
-                mutations.extend(sample_import_obj.get_mutation_objs(gene_cache))
-            Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
-            mutations2alignments = []
-            for sample_import_obj in sample_import_objs:
-                mutations2alignments.extend(
-                    sample_import_obj.get_mutation2alignment_objs()
+        try:
+            sample_import_objs = [SampleImport(file) for file in batch]
+            with transaction.atomic():
+                sequences = [
+                    sample_import_obj.get_sequence_obj()
+                    for sample_import_obj in sample_import_objs
+                ]
+                Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
+                samples = [
+                    sample_import_obj.get_sample_obj()
+                    for sample_import_obj in sample_import_objs
+                ]
+                Sample.objects.bulk_create(samples, ignore_conflicts=True)
+                [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
+                alignments = [
+                    sample_import_obj.get_alignment_obj()
+                    for sample_import_obj in sample_import_objs
+                ]
+                Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
+                mutations = []
+                for sample_import_obj in sample_import_objs:
+                    mutations.extend(sample_import_obj.get_mutation_objs(gene_cache))
+                Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
+                mutations2alignments = []
+                for sample_import_obj in sample_import_objs:
+                    mutations2alignments.extend(
+                        sample_import_obj.get_mutation2alignment_objs()
+                    )
+                Mutation.alignments.through.objects.bulk_create(
+                    mutations2alignments, ignore_conflicts=True
                 )
-            Mutation.alignments.through.objects.bulk_create(
-                mutations2alignments, ignore_conflicts=True
-            )
-            annotations = []
+                annotations = []
+                for sample_import_obj in sample_import_objs:
+                    annotations.extend(sample_import_obj.get_annotation_objs())
+                AnnotationType.objects.bulk_create(
+                    annotations,
+                    ignore_conflicts=True,
+                )
+        except DataError as data_error:
+            # Handle the DataError exception here
+            print(f"DataError: {data_error}")
+            # Perform additional error handling or logging as needed
+            print("Error happens on this batch")
             for sample_import_obj in sample_import_objs:
-                annotations.extend(sample_import_obj.get_annotation_objs())
-            AnnotationType.objects.bulk_create(
-                annotations,
-                ignore_conflicts=True,
-            )
+                print(sample_import_obj.sample_file_path)
+            raise
+        except Exception as e:
+            # Handle other exceptions if necessary
+            print(f"An unexpected error occurred: {e}")
+            raise
