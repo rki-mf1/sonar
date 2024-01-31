@@ -24,11 +24,14 @@ env = environ.Env(
     POSTGRES_HOST=str,
     POSTGRES_PORT=str,
     SECRET_KEY=str,
+    IMPORTED_DATA_DIR=(str, None),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 PROJECT_ROOT = os.path.normpath(os.path.dirname(__file__))
+
 STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
 STATIC_URL = "/static/"
 
@@ -112,7 +115,7 @@ WSGI_APPLICATION = "covsonar_backend.wsgi.application"
 # UserWarning: Engine not recognized from the URL: {'NAME': '', 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': '', 'ENGINE': ''}
 # As of now, we just ignore the UserWarning message and still set it as a dictionary
 # by using `env("DATABASE_URL")` this way.
-if not env("DATABASE_URL"):
+if not os.environ.get("DATABASE_URL"):
     print("Using the default database.")
     database_connection = {
         "ENGINE": "django.db.backends.postgresql",
@@ -185,6 +188,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
-IMPORTED_DATA_DIR = "import_data"
+
+IMPORTED_DATA_DIR = env("IMPORTED_DATA_DIR") if env("IMPORTED_DATA_DIR") else os.path.join(BASE_DIR,"import_data")
 
 PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]

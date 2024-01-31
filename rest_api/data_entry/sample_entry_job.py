@@ -2,7 +2,8 @@ import pathlib
 from datetime import datetime
 from django.db import transaction
 from rest_api.data_entry.sample_import import SampleImport
-from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequence
+from rest_api.data_entry.sequence_job import clean_unused_sequences
+from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequence, Mutation2Annotation
 from django.db import DataError
 
 # NOTE: This variable need to be adjustable.
@@ -18,8 +19,9 @@ class SampleEntryJob:
         print(f"{len(files)} files found")
         timer = datetime.now()
         number_of_batches = len(files) // _batch_size + 1
+        print("Batch size:", _batch_size)
         print(
-            f"Total number of batches: {number_of_batches} of {_batch_size} batch size"
+            f"Total number of batches: {number_of_batches}"
         )
         if _batch_size:
             replicon_cache = {}
@@ -47,12 +49,13 @@ class SampleEntryJob:
                     sample_import_obj.get_sequence_obj()
                     for sample_import_obj in sample_import_objs
                 ]
+               
                 Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
                 samples = [
                     sample_import_obj.get_sample_obj()
                     for sample_import_obj in sample_import_objs
                 ]
-                Sample.objects.bulk_create(samples, ignore_conflicts=True)
+                Sample.objects.bulk_create(samples, update_conflicts=True, unique_fields=['name'], update_fields=['sequence'])
                 [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
                 alignments = [
                     sample_import_obj.get_alignment_obj()
@@ -72,12 +75,27 @@ class SampleEntryJob:
                     mutations2alignments, ignore_conflicts=True
                 )
                 annotations = []
+
                 for sample_import_obj in sample_import_objs:
                     annotations.extend(sample_import_obj.get_annotation_objs())
                 AnnotationType.objects.bulk_create(
                     annotations,
                     ignore_conflicts=True,
                 )
+
+                annotation2mutations = []
+                for sample_import_obj in sample_import_objs:
+                    annotation2mutations.extend(
+                        sample_import_obj.get_annotation2mutation_objs()
+                    )
+
+                Mutation2Annotation.objects.bulk_create(
+                    annotation2mutations, ignore_conflicts=True
+                )
+
+                # Filter sequences without associated samples    
+                clean_unused_sequences()
+                
         except DataError as data_error:
             # Handle the DataError exception here
             print(f"DataError: {data_error}")

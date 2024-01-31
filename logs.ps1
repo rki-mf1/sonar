@@ -1,0 +1,1 @@
+./dc-dev.ps1 logs --tail 50 -f dev-django

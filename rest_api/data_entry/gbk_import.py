@@ -221,6 +221,7 @@ def _create_elemparts(feature: SeqFeature.SeqFeature, gene: Gene):
 
 def _temp_save_file(uploaded_file: InMemoryUploadedFile):
     file_path = pathlib.Path("import_data") / uploaded_file.name
+    pathlib.Path("import_data").mkdir(parents=True, exist_ok=True)
     with open(file_path, "wb") as f:
         f.write(uploaded_file.read())
     return file_path
