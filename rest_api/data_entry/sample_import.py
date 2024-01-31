@@ -42,9 +42,9 @@ class SampleRaw:
     seqhash: str
     sourceid: int
     translationid: int
-    tt_file: str
-    var_file: str
-    vcffile: str
+    tt_file: Optional[str] = None
+    var_file: Optional[str] = None
+    vcffile: Optional[str] = None
     algnid: Optional[int] = None
     sampleid: Optional[int] = None
     refseq_id: Optional[int] = None
@@ -252,7 +252,12 @@ class SampleImport:
             raise Exception("Mutation objects not created yet")
         self.annotation_query_data = {}
         for mutation in self.anno_vcf_raw:
-            annotations = [self._parse_vcf_info(info) for info in mutation.info.split(";") if info]
+            annotations = []
+            for annotation in [
+                self._parse_vcf_info(info) for info in mutation.info.split(";") if info
+            ]:
+                if annotation:
+                    annotations.extend(annotation)
             for alt in mutation.alt.split(",") if mutation.alt else [None]:
                 mut_lookup_data = {
                     "start": mutation.pos - 1,

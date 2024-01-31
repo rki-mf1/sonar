@@ -2,7 +2,7 @@ import pathlib
 from datetime import datetime
 from django.db import transaction
 from rest_api.data_entry.sample_import import SampleImport
-from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequence
+from rest_api.models import Alignment, AnnotationType, Mutation, Sample, Sequence, Mutation2Annotation
 from django.db import DataError
 
 # NOTE: This variable need to be adjustable.
@@ -78,6 +78,15 @@ class SampleEntryJob:
                     annotations,
                     ignore_conflicts=True,
                 )
+                annotation2mutations = []
+                for sample_import_obj in sample_import_objs:
+                    annotation2mutations.extend(
+                        sample_import_obj.get_annotation2mutation_objs()
+                    )
+                Mutation2Annotation.objects.bulk_create(
+                    annotation2mutations, ignore_conflicts=True
+                )
+
         except DataError as data_error:
             # Handle the DataError exception here
             print(f"DataError: {data_error}")

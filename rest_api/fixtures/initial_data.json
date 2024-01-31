@@ -57,22 +57,6 @@
     }
   },
   {
-    "model": "rest_api.Lineages",
-    "pk": 1,
-    "fields": {
-      "lineage": "lineage1",
-      "parent_lineage": null
-    }
-  },
-  {
-    "model": "rest_api.Lineages",
-    "pk": 2,
-    "fields": {
-      "lineage": "lineage2",
-      "parent_lineage": 1
-    }
-  },
-  {
     "model": "rest_api.Reference",
     "pk": 1,
     "fields": {

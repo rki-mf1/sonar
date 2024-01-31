@@ -19,7 +19,13 @@ from covsonar_backend.settings import DEBUG, IMPORTED_DATA_DIR
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_api.data_entry.reference_job import delete_reference
 from rest_api.data_entry.sample_job import delete_sample
-from rest_api.utils import create_error_response, create_success_response, resolve_ambiguous_NT_AA, strtobool, write_to_file
+from rest_api.utils import (
+    create_error_response,
+    create_success_response,
+    resolve_ambiguous_NT_AA,
+    strtobool,
+    write_to_file,
+)
 from rest_framework import generics, serializers, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
@@ -243,7 +249,19 @@ class SampleViewSet(
     serializer_class = SampleSerializer
     filter_backends = [DjangoFilterBackend]
     lookup_field = "name"
-
+    
+    @property
+    def filter_label_to_methods(self):
+        return {
+            "Property": self.filter_property,
+            "SNP Nt": self.filter_snp_profile_nt,
+            "SNP AA": self.filter_snp_profile_aa,
+            "Del Nt": self.filter_del_profile_nt,
+            "Del AA": self.filter_del_profile_aa,
+            "Ins Nt": self.filter_ins_profile_nt,
+            "Ins AA": self.filter_ins_profile_aa,
+        }
+    
     @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
         # TODO-smc abklären ob das so richtig ist
@@ -270,24 +288,20 @@ class SampleViewSet(
                 filters = json.loads(filter_params)
                 queryset = self.resolve_genome_filter(filters)
 
-            # we try to use bool(), but it is not working as expected.
-                
-            showNX  = strtobool(request.query_params.get("showNX"))
-            vcf_format = strtobool(request.query_params.get("vcf_format"))
+            showNX = strtobool(request.query_params.get("showNX", "False"))
+            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
 
+            genomic_profiles_qs = models.Mutation.objects.only(
+                "ref", "alt", "start", "end"
+            ).order_by("start")
+            proteomic_profiles_qs = models.Mutation.objects.only(
+                "ref", "alt", "start", "end"
+            ).order_by("start")
             if not showNX:
-                genomic_profiles_qs = models.Mutation.objects.filter(
-                    ~Q(alt="N"), type="nt"
-                ).only("ref", "alt", "start","end").order_by("start")
-                proteomic_profiles_qs = models.Mutation.objects.filter(
+                genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"), type="nt")
+                proteomic_profiles_qs = proteomic_profiles_qs.filter(
                     ~Q(alt="X"), type="cds"
-                ).only("ref", "alt", "start","end").order_by("start")
-            else:
-                genomic_profiles_qs = models.Mutation.objects.filter(
-                ).only("ref", "alt", "start","end").order_by("start")
-                proteomic_profiles_qs = models.Mutation.objects.filter(
-                ).only("ref", "alt", "start","end").order_by("start")
-
+                )
             queryset = queryset.select_related("sequence").prefetch_related(
                 Prefetch(
                     "sequence__alignments__mutations",
@@ -301,7 +315,7 @@ class SampleViewSet(
                 ),
             )
 
-            # if VCF 
+            # if VCF
             # for obj in queryset.all():
             #    print(obj.name)
             #    for alignment in obj.sequence.alignments.all():
@@ -318,48 +332,42 @@ class SampleViewSet(
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializer(queryset, many=True)
                 return self.get_paginated_response(serializer.data)
-        
         except Exception as e:
             print(e)
             traceback.print_exc()
             return create_error_response(message=str(e))
 
-    def resolve_genome_filter(self, filters, level=0) -> QuerySet:
-        queryset = models.Sample.objects.all()
-        filter_label_to_methods = {
-            "Property": self.filter_property,
-            "SNP Nt": self.filter_snp_profile_nt,
-            "SNP AA": self.filter_snp_profile_aa,
-            "Del Nt": self.filter_del_profile_nt,
-            "Del AA": self.filter_del_profile_aa,
-            "Ins Nt": self.filter_ins_profile_nt,
-            "Ins AA": self.filter_ins_profile_aa,
-        }
-        print("andFilter: ---- lv:",level)
-        for filter in filters.get("andFilter", []):
-            print(filter)
-            method = filter_label_to_methods.get(filter.get("label"))
-            if method:
-                queryset = method(qs=queryset, **filter)
-            else:
-                raise Exception(f"filter_method not found for:{filter.get('label')}")
-            
+    def resolve_genome_filter(
+        self, filters, queryset: QuerySet | None = None
+    ) -> QuerySet:
+        if not queryset:
+            queryset = models.Sample.objects.all()
+        
+        if "andFilter" in filters:
+            for filter in filters.get("andFilter", []):
+                if "orFilter" in filter or "andFilter" in filter:
+                    queryset = self.resolve_genome_filter(filter, queryset)
+                else:
+                    queryset = self.eval_basic_filter(queryset, filter)
+        elif "label" in filters:
+            queryset = self.eval_basic_filter(queryset, filters)     
+
         or_query = Q()
-        if len(filters.get("andFilter", [])) > 0:
+        if len(filters.get("andFilter", [])) > 0 or "label" in filters:
             or_query |= Q(id__in=queryset)
 
-        print("orFilter: ---- lv:",level)
         for or_filter in filters.get("orFilter", []):
-            or_query |= Q(id__in=self.resolve_genome_filter(or_filter, level=level+1))
+            or_query |= Q(id__in=self.resolve_genome_filter(or_filter))
 
-        print("end: -------- lv:",level)
-        final_queryset = models.Sample.objects.filter(or_query)
-
-        if level == 0:
-            print()
-            print(final_queryset.query)
-            print()
         return models.Sample.objects.filter(or_query)
+
+    def eval_basic_filter(self, queryset, filter):
+        method = self.filter_label_to_methods.get(filter.get("label"))
+        if method:
+            queryset = method(qs=queryset, **filter)
+        else:
+            raise Exception(f"filter_method not found for:{filter.get('label')}")
+        return queryset
 
     # WIP - not working yet
     @action(detail=False, methods=["get"])
@@ -383,39 +391,15 @@ class SampleViewSet(
         value,
         exclude: bool = False,
         qs: QuerySet | None = None,
-        with_sublineage: bool = False,
         *args,
         **kwargs,
     ):
         if qs is None:
             qs = models.Sample.objects.all()
             qs.prefetch_related("properties__property")
-
-        if filter_type =="contains":
-            value = value.strip("%")
-
         if property_name in [field.name for field in models.Sample._meta.get_fields()]:
-
             query = {}
-
-            # with sublineage search 
-            # search A.2.5 also includes A.2.5.1,A.2.5.2,A.2.5.3
-            # TODO: however if we combine A% (contains) with sublineage search??
-            if with_sublineage:
-                value_list = []
-                # the parent lineage
-                value_list.append(value)
-
-                # NOTE: warning the lineage table can return "none",
-                rows = models.Lineages.objects.filter(lineage=value).values('sublineage')
-                if rows:
-                    value_list.extend(rows[0]["sublineage"].split(','))
-
-
-                query[f"{property_name}__in"] = value_list
-            else:
-                query[f"{property_name}__{filter_type}"] = value
-            print(query)
+            query[f"{property_name}__{filter_type}"] = value
         else:
             datatype = models.Property.objects.get(name=property_name).datatype
             query = {f"properties__property__name": property_name}
@@ -440,9 +424,9 @@ class SampleViewSet(
             qs = models.Sample.objects.all()
         # Create Q() objects for each condition
         if alt_nuc == "N":
-            mutation_alt = Q() 
-            for  x in resolve_ambiguous_NT_AA(type="nt", char = alt_nuc):
-                mutation_alt  = mutation_alt | Q(mutations__alt=x)
+            mutation_alt = Q()
+            for x in resolve_ambiguous_NT_AA(type="nt", char=alt_nuc):
+                mutation_alt = mutation_alt | Q(mutations__alt=x)
             # Unsupported lookup 'alt_in' for ForeignKey or join on the field not permitted.
             # mutation_alt = Q(
             #     mutations__alt_in=resolve_ambiguous_NT_AA(type="nt", char = alt_nuc)
@@ -451,10 +435,13 @@ class SampleViewSet(
             if alt_nuc == "n":
                 alt_nuc = "N"
 
-            mutation_alt = Q(
-                mutations__alt=alt_nuc
-            )
-        mutation_condition = (Q(mutations__end=ref_pos) &  Q(mutations__ref=ref_nuc) & (mutation_alt) & Q(mutations__type="nt") )
+            mutation_alt = Q(mutations__alt=alt_nuc)
+        mutation_condition = (
+            Q(mutations__end=ref_pos)
+            & Q(mutations__ref=ref_nuc)
+            & (mutation_alt)
+            & Q(mutations__type="nt")
+        )
         if DEBUG:
             print(mutation_condition)
 
@@ -479,18 +466,21 @@ class SampleViewSet(
             qs = models.Sample.objects.all()
 
         if alt_aa == "X":
-            mutation_alt = Q() 
-            for  x in resolve_ambiguous_NT_AA(type="aa", char = alt_aa):
-                mutation_alt  = mutation_alt | Q(mutations__alt=x)
+            mutation_alt = Q()
+            for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
+                mutation_alt = mutation_alt | Q(mutations__alt=x)
         else:
             if alt_aa == "x":
-                alt_aa = "X"    
-            mutation_alt = Q(
-                mutations__alt=alt_aa
-            )
+                alt_aa = "X"
+            mutation_alt = Q(mutations__alt=alt_aa)
 
-        mutation_condition = (Q(mutations__end=ref_pos) &  Q(mutations__ref=ref_aa) & (mutation_alt) 
-                              & Q(mutations__gene__gene_symbol=protein_symbol) & Q(mutations__type="cds") )
+        mutation_condition = (
+            Q(mutations__end=ref_pos)
+            & Q(mutations__ref=ref_aa)
+            & (mutation_alt)
+            & Q(mutations__gene__gene_symbol=protein_symbol)
+            & Q(mutations__type="cds")
+        )
 
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
@@ -618,7 +608,10 @@ class SampleViewSet(
         tsv_file = request.FILES.get("properties_tsv")
 
         properties_df = pd.read_csv(
-            self._temp_save_file(tsv_file), sep="\t", dtype=object, keep_default_na=False
+            self._temp_save_file(tsv_file),
+            sep="\t",
+            dtype=object,
+            keep_default_na=False,
         )
 
         sample_property_names = []
@@ -631,7 +624,7 @@ class SampleViewSet(
                     sample_property_names.append(db_property_name)
                 except FieldDoesNotExist:
                     custom_property_names.append(property_name)
-                    
+
         sample_id_set = set(properties_df[sample_id_column])
         samples = models.Sample.objects.filter(name__in=sample_id_set).iterator()
         sample_updates = []
@@ -648,7 +641,7 @@ class SampleViewSet(
                     if db_name in sample_property_names:
                         setattr(sample, db_name, value.values[0])
             sample_updates.append(sample)
-       
+
             property_updates += self._create_property_updates(
                 sample,
                 {
@@ -758,19 +751,20 @@ class SampleViewSet(
             sample_data = {}
 
         return create_success_response(data=sample_data)
-    
+
     @action(detail=False, methods=["post"])
-    def delete_sample_data(self, request: Request, *args, **kwargs):    
+    def delete_sample_data(self, request: Request, *args, **kwargs):
         sample_data = {}
         reference_accession = request.data.get("reference_accession", "")
-        sample_list =  json.loads(request.data.get("sample_list"))
+        sample_list = json.loads(request.data.get("sample_list"))
         if DEBUG:
             print("Reference Accession:", reference_accession)
             print("Sample List:", sample_list)
 
-        sample_data = delete_sample( sample_list=sample_list)
+        sample_data = delete_sample(sample_list=sample_list)
 
-        return create_success_response( data=sample_data)
+        return create_success_response(data=sample_data)
+
 
 class ReferenceViewSet(
     viewsets.GenericViewSet,
@@ -782,42 +776,41 @@ class ReferenceViewSet(
 
     @action(detail=False, methods=["post"])
     def import_gbk(self, request: Request, *args, **kwargs):
-
         if not request.FILES or "gbk_file" not in request.FILES:
             return create_error_response(message="No file uploaded.")
-        
         if "translation_id" not in request.data:
             return create_error_response(message="No translation_id provided.")
-        
         translation_id = int(request.data.get("translation_id"))
         gbk_file = request.FILES.get("gbk_file")
-
-        import_gbk_file(gbk_file, translation_id)
+        try:
+            import_gbk_file(gbk_file, translation_id)
+        except Exception as e:
+            print(e)
+            return create_error_response(message=str(e))
         return create_success_response(message="OK")
-    
+
     @action(detail=False, methods=["post"])
     def delete_reference(self, request: Request, *args, **kwargs):
-
         if "accession" not in request.data:
             return create_error_response(message="No accession provided.")
-        
+
         accession = request.data.get("accession")
 
         data = delete_reference(accession)
         return create_success_response(message="OK", data=data)
 
-
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
-        queryset =  models.Reference.objects.all()
-        accession = ([item.accession for item in queryset])
-        return create_success_response(data= accession)
+        queryset = models.Reference.objects.all()
+        accession = [item.accession for item in queryset]
+        return create_success_response(data=accession)
 
     @action(detail=False, methods=["get"])
     def get_all_references(self, request: Request, *args, **kwargs):
-        queryset =  models.Reference.objects.all()
+        queryset = models.Reference.objects.all()
         sample_data = queryset.values()
-        return  create_success_response(data= sample_data)
+        return create_success_response(data=sample_data)
+
     # multilple get in one.
 
 
@@ -925,7 +918,6 @@ class PropertyViewSet(
         sample_property_fields = [
             field.name for field in models.Sample._meta.get_fields()
         ]
-        print(property_name in sample_property_fields)
         if property_name in sample_property_fields:
             queryset = models.Sample.objects.all()
             queryset = queryset.distinct(property_name)
@@ -985,7 +977,6 @@ class PropertyViewSet(
         property_names += [item.name for item in sample_properties]
         return Response(data={"property_names": property_names})
 
-
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
         """
@@ -999,14 +990,34 @@ class PropertyViewSet(
         """
         # fixed datatype accroding to the Sample Table.
         data_list = [
-            {"name": "collection_date", "query_type": "value_date", "description": "Collected date of sample"},
-            {"name": "length", "query_type": "value_integer", "description": "Length of sequence"},
+            {
+                "name": "collection_date",
+                "query_type": "value_date",
+                "description": "Collected date of sample",
+            },
+            {
+                "name": "length",
+                "query_type": "value_integer",
+                "description": "Length of sequence",
+            },
             {"name": "lab", "query_type": "value_varchar", "description": ""},
             {"name": "zip_code", "query_type": "value_varchar", "description": ""},
-            {"name": "host", "query_type": "value_varchar", "description": "A host (e.g., Human)"},
-            {"name": "genome_completeness", "query_type": "value_varchar", "description": "Genome completeness (partial/complete)"},
+            {
+                "name": "host",
+                "query_type": "value_varchar",
+                "description": "A host (e.g., Human)",
+            },
+            {
+                "name": "genome_completeness",
+                "query_type": "value_varchar",
+                "description": "Genome completeness (partial/complete)",
+            },
             {"name": "lineage", "query_type": "value_varchar", "description": ""},
-            {"name": "sequencing_tech", "query_type": "value_varchar", "description": ""},
+            {
+                "name": "sequencing_tech",
+                "query_type": "value_varchar",
+                "description": "",
+            },
             {"name": "processing_date", "query_type": "value_date", "description": ""},
             {"name": "country", "query_type": "value_varchar", "description": ""},
         ]  # from SAMPLE TABLE
@@ -1017,16 +1028,16 @@ class PropertyViewSet(
         ]
 
         for _property_queryset in models.Property.objects.all():
-            data_list.append({
-                "name": _property_queryset.name,
-                "query_type": _property_queryset.datatype,
-                "description": _property_queryset.description
-            })
-        data ={
-            "keys":cols,
-            "values": data_list
-        }
+            data_list.append(
+                {
+                    "name": _property_queryset.name,
+                    "query_type": _property_queryset.datatype,
+                    "description": _property_queryset.description,
+                }
+            )
+        data = {"keys": cols, "values": data_list}
         return create_success_response(data=data)
+
 
 class MutationFrequencySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -1163,13 +1174,16 @@ class FileUploadViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"])
     def start_file_import(self, request, *args, **kwargs):
         SampleEntryJob().run_data_entry()
-        return create_success_response(message='File uploaded successfully', return_status=status.HTTP_201_CREATED)
-
-
+        return create_success_response(
+            message="File uploaded successfully", return_status=status.HTTP_201_CREATED
+        )
 
 
 class FuctionsViewSet(viewsets.ViewSet):
-
     @action(detail=False, methods=["get"])
     def match(self, request: Request):
         return create_success_response(return_status=status.HTTP_200_OK)
+
+
+class LineageViewSet(viewsets.ViewSet):
+    model = models.Lineage

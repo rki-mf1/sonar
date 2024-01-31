@@ -1,93 +1,19 @@
-
-# sars-cov2
-
-#!/usr/bin/python
-# Maintainer: KongkitimanonK
-# The method originally came from  https://github.com/cov-lineages/pango-designation.
-# We just adapt and change some parts to be used in covsonar, vocal etc.
-
-import importlib.resources
 import json
 import os
 import shutil
 from tempfile import mkdtemp
-from typing import Optional
+from typing import List, Optional
 
 import pandas as pd
 import requests
 
 
-
 from django.core.management.base import BaseCommand
 
-from rest_api.models import Lineages
+from rest_api.models import Lineage, LineageAlias
 
 
-
-class Aliasor:
-    """
-    Aliasor class is used to handle aliases.
-
-    Attributes:
-        alias_dict (dict): Alias dictionary.
-        realias_dict (dict): Reverse alias dictionary.
-    """
-
-    def __init__(self, alias_file: Optional[str] = None):
-        """
-        Aliasor Constructor.
-
-        Args:
-            alias_file (str): File containing the alias information.
-        """
-
-        # Load the alias file
-        if alias_file is None:
-            with importlib.resources.open_text(
-                "pango_designation", "alias_key.json"
-            ) as file:
-                alias_data = json.load(file)
-        else:
-            with open(alias_file) as file:
-                alias_data = json.load(file)
-
-        # Create the alias and realias dictionaries
-        self.alias_dict = {
-            column: (
-                alias_data[column]
-                if type(alias_data[column]) is not list and alias_data[column] != ""
-                else column
-            )
-            for column in alias_data.keys()
-        }
-        self.realias_dict = {v: k for k, v in self.alias_dict.items()}
-
-    def compress(self, name):
-        name_split = name.split(".")
-        levels = len(name_split) - 1
-        num_indirections = (levels - 1) // 3
-        if num_indirections <= 0:
-            return name
-        alias = ".".join(name_split[0 : (3 * num_indirections + 1)])
-        ending = ".".join(name_split[(3 * num_indirections + 1) :])
-        return self.realias_dict[alias] + "." + ending
-
-    def uncompress(self, name):
-        name_split = name.split(".")
-        letter = name_split[0]
-        try:
-            unaliased = self.alias_dict[letter]
-        except KeyError:
-            return name
-        if len(name_split) == 1:
-            return name
-        if len(name_split) == 2:
-            return unaliased + "." + name_split[1]
-        else:
-            return unaliased + "." + ".".join(name_split[1:])
-
-
-class sonarLinmgr:
+class LineageImport:
     """
     sonarLinmgr class is used to manage the lineages.
 
@@ -124,9 +50,14 @@ class sonarLinmgr:
         """
         # Download and write the lineage file
         print(f"Downloading lineage info from: {self._linurl}")
-        url_content = requests.get(self._linurl)
-        with open(self.lineage_file, "wb") as handle:
-            handle.write(url_content.content)
+        try:
+            url_content = requests.get(self._linurl)
+            with open(self.lineage_file, "wb") as handle:
+                handle.write(url_content.content)
+        except:
+            print("Connection refused by the server..")
+            print("Using local data..")
+            self.lineage_file = "test-data/lineages_2024_01_15.csv"
 
     def download_alias_data(self):
         """
@@ -134,76 +65,76 @@ class sonarLinmgr:
         """
         # Download and write the alias file
         print(f"Downloading lineage aliases info from: {self._aliurl}")
-        items = requests.get(self._aliurl)
-        with open(self.alias_file, "w") as handle:
-            json.dump(items.json(), handle)
+        try:
+            items = requests.get(self._aliurl)
+            with open(self.alias_file, "w") as handle:
+                json.dump(items.json(), handle)
+        except:
+            print("Connection refused by the server..")
+            print("Using local data..")
+            self.alias_file = "test-data/alias_key_2024_01_15.json"
 
-    @staticmethod
-    def lts(lineage: str) -> str:
-        """
-        Convert lineage into a sortable format.
-
-        Args:
-            lineage (str): The lineage.
-
-        Returns:
-            str: The lineage in sortable format.
-        """
-        items = []
-        for item in lineage.split("."):
-            item_string = str(item)
-            items.append((5 - len(item)) * "0" + item_string)
-        return "".join(items)
-
-    def process_lineage_data(self) -> pd.DataFrame:
+    def process_lineage_data(self) -> List[Lineage]:
         """
         Process the lineage data.
-
-        Returns:
-            pd.DataFrame: The dataframe with processed data.
         """
-        aliasor = Aliasor(self.alias_file)
-        df_lineages = pd.read_csv(self.lineage_file, usecols=[0, 1])
-        lineages = df_lineages.lineage.unique()
-
-        uncompressed_lineages = []
-        sorted_lineages = []
-
-        # Calculating parent-child relationship
-        cleanedlineages = [x for x in lineages if str(x) != "nan"]
-        uncompressed_lineages = list(map(aliasor.uncompress, cleanedlineages))
-        uncompressed_lineages.sort(key=sonarLinmgr.lts)
-        sorted_lineages = list(map(aliasor.compress, uncompressed_lineages))
-
-        _final_list = []
-        for _id in sorted_lineages:
-            alias_lineage_char = aliasor.uncompress(_id)
-            sub_lineage_list = []
-            row_dict = {}
-
-            for name_ in uncompressed_lineages:  # fetch all lineage again
-                root = ""
-                for index, letter in enumerate(name_.split(".")):
-                    if index != 0:
-                        letter = root + "." + letter
-                    root = letter
-                    if letter == alias_lineage_char:
-                        sub_lineage_list.append(aliasor.compress(name_))
-            # remove root lineage
-            sub_lineage_list.remove(_id)
-            if len(sub_lineage_list) > 0:
-                row_dict["lineage"] = _id
-                row_dict["sublineage"] = ",".join(sub_lineage_list)
+        with open(self.alias_file) as f:
+            alias_json = json.load(f)
+        aliases = []
+        alias_lineages = []
+        for key, value in alias_json.items():
+            if isinstance(value, str):
+                if "." in value:
+                    lineage = self.get_or_create_lineage_obj(
+                        value, alias_lineages, alias_json
+                    )
+                    alias_lineages.append(lineage)
+                    aliases.append(LineageAlias(alias=key, lineage=lineage))
+                else:
+                    aliases.append(LineageAlias(alias=key, parent_alias=value))
             else:
-                row_dict["lineage"] = _id
-                row_dict["sublineage"] = "none"
-            _final_list.append(row_dict)
+                for item in value:
+                    if "." in item:
+                        lineage = self.get_or_create_lineage_obj(
+                            item, alias_lineages, alias_json
+                        )
+                        alias_lineages.append(lineage)
+                        aliases.append(LineageAlias(alias=key, lineage=lineage))
+                    else:
+                        aliases.append(LineageAlias(alias=key, parent_alias=item))
 
-        df = pd.DataFrame.from_dict(_final_list, orient="columns")
+        [lineage.save() for lineage in alias_lineages]
+        LineageAlias.objects.bulk_create(
+            aliases,
+            ignore_conflicts=True,
+        )
 
-        return df.sort_values(by=["lineage"])
+        df_lineages = pd.read_csv(self.lineage_file, usecols=[0, 1])
+        lineage_ids = df_lineages.lineage.unique()
+        lineages = [
+            self.get_or_create_lineage_obj(lineage_id, [], alias_json)
+            for lineage_id in lineage_ids
+        ]
+        return lineages
 
-    def update_lineage_data(self, alias_key: str, lineages: str) -> pd.DataFrame:
+    def get_or_create_lineage_obj(
+        self, lineage: str, lineage_list: List[Lineage], alias_dict: dict
+    ) -> Lineage:
+        split = lineage.split(".")
+        if split[0] in alias_dict.keys():
+            alias = split.pop(0)
+            return next(
+                (
+                    lineage
+                    for lineage in lineage_list
+                    if lineage.lineage == ".".join(split)
+                    and lineage.prefixed_alias == alias
+                ),
+                None,
+            ) or Lineage(lineage=".".join(split), prefixed_alias=alias)
+        return Lineage(lineage=lineage)
+
+    def update_lineage_data(self, alias_key: str, lineages: str) -> List[Lineage]:
         """
         Update the lineage data.
 
@@ -222,32 +153,36 @@ class sonarLinmgr:
 
         df = self.process_lineage_data()
         return df
-    
+
 
 class Command(BaseCommand):
-    help = 'Download latest pangolin information and import the information to a database.'
+    help = (
+        "Download latest pangolin information and import the information to a database."
+    )
 
     def add_arguments(self, parser):
-            parser.add_argument(
-                "--alias-key",
-                help="Pangolin alias_key.json file (default: auto download from GitHub)",
-                type=str,
-                default=None,
-            )
-            parser.add_argument(
-                "--lineages",
-                help="Pangolin lineages.csv file (default: auto download from GitHub)",
-                type=str,
-                default=None,
-            )
+        parser.add_argument(
+            "--alias-key",
+            help="Pangolin alias_key.json file (default: auto download from GitHub)",
+            type=str,
+            default=None,
+        )
+        parser.add_argument(
+            "--lineages",
+            help="Pangolin lineages.csv file (default: auto download from GitHub)",
+            type=str,
+            default=None,
+        )
 
     def handle(self, *args, **kwargs):
-
-        with sonarLinmgr() as lineage_manager:
-            lineage_data = lineage_manager.update_lineage_data(
+        Lineage.objects.all().delete()
+        LineageAlias.objects.all().delete()
+        with LineageImport() as lineage_manager:
+            lineages = lineage_manager.update_lineage_data(
                 kwargs["alias_key"], kwargs["lineages"]
             )
-        dict_records = lineage_data.to_dict(orient="records")
-        obj_list = [Lineages(**vals) for vals in dict_records ]
-        Lineages.objects.bulk_create(objs=obj_list, update_conflicts=True, unique_fields=['lineage'], update_fields=['sublineage'])
+        Lineage.objects.bulk_create(
+            objs=lineages,
+            ignore_conflicts=True,
+        )
         print("--Done--")

@@ -113,12 +113,44 @@ class GeneSegment(models.Model):
         db_table = "gene_segment"
 
 
-class Lineages(models.Model):
-    lineage = models.CharField(max_length=100, unique=True)
-    sublineage = models.TextField(blank=True, null=True)
+
+class Lineage(models.Model):
+    prefixed_alias = models.CharField(max_length=50, blank=True, null=True)
+    lineage = models.CharField(max_length=100)
 
     class Meta:
-        db_table = "lineages"
+        db_table = "lineage"
+        constraints = [
+            UniqueConstraint(
+                name="unique_lineage",
+                fields=["prefixed_alias", "lineage"],
+            ),
+            UniqueConstraint(
+                name="unique_lineage_null_alias",
+                fields=["lineage"],
+                condition=models.Q(prefixed_alias__isnull=True),      
+            ),
+        ]
+
+class LineageAlias(models.Model):
+    alias = models.CharField(max_length=50)
+    lineage = models.ForeignKey("Lineage", models.CASCADE, blank=True, null=True)
+    parent_alias = models.CharField(max_length=50, blank=True, null=True)
+
+    class Meta:
+        db_table = "lineage_alias"
+        constraints = [
+            UniqueConstraint(
+                name="unique_alias2lineage",
+                fields=["alias", "lineage"],
+                condition=models.Q(parent_alias__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_alias2parent_alias",
+                fields=["alias", "parent_alias"],
+                condition=models.Q(lineage__isnull=True),
+            ),
+        ]
 
 
 class Reference(models.Model):

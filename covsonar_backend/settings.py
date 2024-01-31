@@ -112,7 +112,7 @@ WSGI_APPLICATION = "covsonar_backend.wsgi.application"
 # UserWarning: Engine not recognized from the URL: {'NAME': '', 'USER': '', 'PASSWORD': '', 'HOST': '', 'PORT': '', 'ENGINE': ''}
 # As of now, we just ignore the UserWarning message and still set it as a dictionary
 # by using `env("DATABASE_URL")` this way.
-if not env("DATABASE_URL"):
+if not os.environ.get("DATABASE_URL"):
     print("Using the default database.")
     database_connection = {
         "ENGINE": "django.db.backends.postgresql",

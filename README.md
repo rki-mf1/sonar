@@ -120,3 +120,94 @@ I added some clarifications and fixed the link syntax for better readability.
 - lineages table and filter
 - mutation annotations POS = ANN[*.EFFECT] = annotation_type
 - property exclude
+
+
+### genome querying
+
+#### URL [api]/samples/genomes/
+#### Parameters
+| Parameter     | type | description                                       |
+|---------------|------|---------------------------------------------------|
+| filters       | s.b. | filters that will we be used to query the samples |
+| showNX        | bool | tbd                                               |
+| vcf_format    | bool | tbd                                               |
+
+#### Filters 
+
+The *filters* parameter sent to the endpoint must be a valid JSON containing a basic filter (see below) or "andFilter" and/or "orFilter":
+- "andFilter" is a list of basic filters like explained below.
+- "orFilter" is a list of basic filters or objects, that must contain further "andFilter"- or "orFilter"-objects
+
+On the most basic level, a filter must contain the following parameters:
+- A "label": used to determine the type of the filter, e.g. "Property", "SNP Nt" or "SNP AA", this is used, to choose the filtering method in the viewset
+- Parameters of the filtering method: these will be used by the method as keyword arguments, so they must have the exact same names as the filtering methods
+- "*filter_type*" will most likely correspond to a [django field lookup](https://docs.djangoproject.com/en/dev/ref/models/querysets/#field-lookups), like "gte" (greater then equals)
+- NOT filters can be done by giving the "*exclude*" parameter as True
+#### Examples
+Every letter stand for a complete basic filter, e.g.: 
+```json
+{
+    "label": "Property",
+    "property_name": "collection_date",
+    "filter_type": "exact",
+    "value": "2022-01-05"
+}
+```
+
+- A:
+```json
+{
+    "A"
+}
+```
+also possible:
+```json
+{
+    "andFilter": ["A"]
+}
+```
+
+- (A && B) || C:
+```json
+{
+    "andFilter": ["A", "B"],
+    "orFilter": [
+        {"andFilter": ["C"]}
+    ]
+}
+```
+also possible:
+```json
+{
+    "andFilter": ["A", "B"],
+    "orFilter": ["C"]
+}
+```
+
+- A || B || C:
+```json
+{
+    "andFilter": ["A"],
+    "orFilter": [
+        {"andFilter": ["B"]},
+        {"andFilter": ["C"]}
+        ]
+}
+```
+also possible:
+```json
+{
+    "orFilter": [
+        "A","B","C"
+    ]
+}
+```
+- (A || B) && C
+```json
+{
+    "andFilter": [
+        { "orFilter": ["A","B"]},
+        "C"
+    ]
+}
+```

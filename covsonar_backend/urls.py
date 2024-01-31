@@ -5,6 +5,7 @@ from . import settings
 
 urlpatterns = [
     path("admin/", admin.site.urls, name="admin"),
+    path("api/", include("rest_api.urls")),
 ]
 
 if settings.DEBUG:
