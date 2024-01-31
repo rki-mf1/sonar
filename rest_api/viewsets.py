@@ -338,10 +338,8 @@ class SampleViewSet(
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"), type="nt")
                 proteomic_profiles_qs = proteomic_profiles_qs.filter(
-
                     ~Q(alt="X"), type="cds"
                 )
-
             queryset = queryset.select_related("sequence").prefetch_related(
                 Prefetch(
                     "sequence__alignments__mutations",
@@ -357,6 +355,7 @@ class SampleViewSet(
 
 
             # TODO: output in  VCF 
+            # if VCF
             # for obj in queryset.all():
             #    print(obj.name)
             #    for alignment in obj.sequence.alignments.all():

@@ -82,13 +82,11 @@ class SampleEntryJob:
                     annotations,
                     ignore_conflicts=True,
                 )
-
                 annotation2mutations = []
                 for sample_import_obj in sample_import_objs:
                     annotation2mutations.extend(
                         sample_import_obj.get_annotation2mutation_objs()
                     )
-
                 Mutation2Annotation.objects.bulk_create(
                     annotation2mutations, ignore_conflicts=True
                 )
