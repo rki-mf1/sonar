@@ -19,7 +19,6 @@ from typing import Dict
 from typing import Iterator
 from typing import List
 from typing import Optional
-from typing import Tuple
 from typing import Union
 
 from mpire import WorkerPool
@@ -28,7 +27,6 @@ from sonar_cli.align import sonarAligner
 from sonar_cli.api_interface import APIClient
 from sonar_cli.config import BASE_URL
 from sonar_cli.config import TMP_CACHE
-from sonar_cli.dbm import sonarDBManager
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils_1 import harmonize_seq
 from sonar_cli.utils_1 import hash_seq
@@ -77,28 +75,17 @@ class sonarCache:
         self.temp = temp
         self.ignore_errors = ignore_errors
         self.disable_progress = disable_progress
-        # Molecule/replicon data that belongs to the reference.
+        # Molecule/replicon data that belongs to the reference.\
+        # self.source replaced by self.refmols
         self.refmols = APIClient(base_url=BASE_URL).get_molecule_data(
             reference_accession=self.refacc,
         )
-
         if not self.refmols:
             LOGGER.info(f"Cannot find reference: {self.refacc}")
             sys.exit()
         if self.debug:
             LOGGER.info(f"Init refmols: {self.refmols}")
-
         self.default_refmol_acc = [x for x in self.refmols][0]
-
-        # NOTE: self.sources is indentical to self.refmols
-        # have to rethink/redesign this again
-        self.sources = {
-            x["accession"]: x  # APIClient(base_url=BASE_URL).get_source(x["id"])
-            for x in self.refmols.values()
-        }
-
-        # with sonarDBManager(self.db, debug=self.debug) as dbm:
-        #    self.properties = dbm.properties
 
         # self._propregex = re.compile(
         #    r"\[(" + "|".join(self.properties.keys()) + r")=([^\[\]=]+)\]"
@@ -108,7 +95,7 @@ class sonarCache:
         self.basedir = TMP_CACHE if not outdir else os.path.abspath(outdir)
 
         if not os.path.exists(self.basedir):
-            os.makedirs(self.basedir)
+            os.makedirs(self.basedir, exist_ok=True)
 
         if not os.path.exists(os.path.join(self.basedir, logfile)):
             self.logfile_obj = open(os.path.join(self.basedir, logfile), "w")
@@ -125,7 +112,6 @@ class sonarCache:
         self.error_dir = os.path.join(self.basedir, "error")
         self.anno_dir = os.path.join(self.basedir, "anno")
 
-        os.makedirs(self.basedir, exist_ok=True)
         os.makedirs(self.seq_dir, exist_ok=True)
         os.makedirs(self.ref_dir, exist_ok=True)
         # os.makedirs(self.algn_dir, exist_ok=True)
@@ -247,11 +233,11 @@ class sonarCache:
         data = {
             "name": name,
             "sampleid": sampleid,
-            "refmol": refmol,  # from molecule table, moleculd accession
-            "refmolid": refmolid,  # from molecule table, moleculd id
-            "refseq_id": refseq_id,  # The reference sequence ID.
-            "source_acc": source_acc,
-            "sourceid": sourceid,
+            "refmol": refmol,  # from molecule (replicon)table, moleculd accession <-- we dont use this key at backend
+            "refmolid": refmolid,  # from molecule table, moleculd id <-- we dont use this key at backend
+            "refseq_id": refseq_id,  # The reference sequence ID. <-- we dont use this key at backend
+            "source_acc": source_acc,  # replicon acc
+            "sourceid": sourceid,  # replicon id
             "translationid": translation_id,
             "algnid": algnid,
             "header": header,
@@ -271,23 +257,22 @@ class sonarCache:
         }
         fname = self.get_sample_fname(name)  # return fname with full path
 
-        try:
-            self.write_pickle(fname, data)
-        except OSError:
-            os.makedirs(os.path.dirname(fname), exist_ok=True)
-            self.write_pickle(fname, data)
-        # Keeps Full path of each sample.
-        self._samplefiles.add(fname)
+        # NOTE: write files only need to be processed
+        if self.allow_updates or algnid is None:
+            try:
+                self.write_pickle(fname, data)
+            except OSError:
+                os.makedirs(os.path.dirname(fname), exist_ok=True)
+                self.write_pickle(fname, data)
 
-        if self.allow_updates:
             self._samplefiles_to_profile.add(fname)
-        elif algnid is None:
-            self._samplefiles_to_profile.add(fname)
-
         # NOTE: IF previous_seqhash != current_seqhash, we have realign and update the variant?
         # uncomment below to enable this
-        # elif  seqhash is not None:
-        #    self._samplefiles_to_profile.add(fname)
+        elif seqhash is not None:
+            self._samplefiles_to_profile.add(fname)
+
+        # Keeps Full path of each sample.
+        self._samplefiles.add(fname)
 
         return fname
 
@@ -561,7 +546,7 @@ class sonarCache:
         """
 
         return:
-            None: if cannot find mol_id from the header
+            return default_refmol_acc if cannot find mol_id from the header
         """
         mol = self._molregex.search(fasta_header)
         if not mol:
@@ -570,59 +555,14 @@ class sonarCache:
                 return self.refmols[mol]["accession"]
             except Exception:
                 None
+
         return self.default_refmol_acc
 
     def get_refseq(self, refmol_acc):
         try:
-            return self.sources[refmol_acc]["sequence"]
+            return self.refmols[refmol_acc]["sequence"]
         except Exception:
             return None
-
-    def iter_cds(
-        self, refmol_acc: str
-    ) -> Iterator[Dict[str, Union[int, str, List[Tuple[int, int, int]]]]]:
-        cds = {}
-        prev_elem = None
-        with sonarDBManager(self.db, debug=self.debug) as dbm:
-            for row in dbm.get_annotation(
-                reference_accession=refmol_acc,
-                molecule_accession=refmol_acc,
-                element_type="cds",
-            ):
-                if prev_elem is None:
-                    prev_elem = row["element.id"]
-                elif row["element.id"] != prev_elem:
-                    yield cds
-                    cds = {}
-                    prev_elem = row["element.id"]
-
-                if cds == {}:
-                    cds = {
-                        "id": row["element.id"],
-                        "accession": row["element.accession"],
-                        "symbol": row["element.symbol"],
-                        "sequence": row["element.sequence"],
-                        "ranges": [
-                            (
-                                row["elempart.start"],
-                                row["elempart.end"],
-                                row["elempart.strand"],
-                            )
-                        ],
-                    }
-                else:
-                    cds["ranges"].append(
-                        (
-                            row["elempart.start"],
-                            row["elempart.end"],
-                            row["elempart.strand"],
-                        )
-                    )
-                # if row["elempart.end"] == 21555:
-                #    print(cds)
-                #    sys.exit(1)
-        if cds:
-            yield cds
 
     def iter_cds_v2(self, refmol_acc):
         cds = {}
@@ -666,7 +606,7 @@ class sonarCache:
 
     def get_refseq_id(self, refmol_acc):
         try:
-            return self.sources[refmol_acc]["id"]
+            return self.refmols[refmol_acc]["id"]
         except Exception:
             return None
 
@@ -681,16 +621,100 @@ class sonarCache:
             str/None: The sequence hash if found, or None if not found.
         """
         try:
-            if "seqhash" not in self.sources[refmol_acc]:
-                self.sources[refmol_acc]["seqhash"] = hash_seq(
-                    self.sources[refmol_acc]["sequence"]
+            if "seqhash" not in self.refmols[refmol_acc]:
+                self.refmols[refmol_acc]["seqhash"] = hash_seq(
+                    self.refmols[refmol_acc]["sequence"]
                 )
-            return self.sources[refmol_acc]["seqhash"]
+            return self.refmols[refmol_acc]["seqhash"]
         except Exception:
             return None
 
     def get_properties(self, fasta_header):
         return {x.group(1): x.group(2) for x in self._propregex.finditer(fasta_header)}
+
+    def add_fasta_v2(
+        self, *fnames, properties=defaultdict(dict), method=1
+    ):  # noqa: C901
+        # TODO: automatically adjust chunk size
+        chunk_size = 500
+
+        for fname in fnames:
+            batch_data = []  # Collect data in batches before making API calls
+            for data in self.iter_fasta(fname):
+                batch_data.append(data)
+
+                if len(batch_data) == chunk_size:
+                    self.process_data_batch(batch_data, method)
+                    batch_data = []
+
+            # Process any remaining data in the last batch
+            if batch_data:
+                self.process_data_batch(batch_data, method)
+
+    def process_data_batch(
+        self, batch_data: List[Dict[str, Union[str, int]]], method: str
+    ):
+        # Make API call with the batch_data
+        api_client = APIClient(base_url=BASE_URL)
+
+        # fecth sample_hash
+        json_response = api_client.get_bulk_sample_data(
+            [data["name"] for data in batch_data]
+        )
+
+        sample_dict = {
+            sample_info["name"]: {
+                "sample_id": sample_info["sample_id"],
+                "sequence_seqhash": sample_info["sequence__seqhash"],
+            }
+            for sample_info in json_response["data"]
+        }
+
+        # fecth Alignment
+        # NOTE: need to evaluate this stmt id more.
+        # we assume refmolid == replicon_id == sourceid
+        json_response = api_client.get_bulk_alignment_data(
+            [
+                {"seqhash": data["seqhash"], "replicon_id": data["refmolid"]}
+                for data in batch_data
+            ]
+        )
+        alignemnt_dict = {
+            data["sequence__samples__name"]: data["alignement_id"]
+            for data in json_response["data"]
+        }
+
+        for i, data in enumerate(batch_data):
+
+            # get sample
+            batch_data[i]["sampleid"], seqhash_from_DB = (
+                sample_dict[data["name"]]["sample_id"],
+                sample_dict[data["name"]]["sequence_seqhash"],
+            )
+
+            # reuse the ref mols
+            # no dynamic seach or looping search is applied (use the default ref accession number)
+            batch_data[i]["sourceid"] = data[
+                "refmolid"
+            ]  # if self.refmols[self.default_refmol_acc]["id"]== data["refmolid"] else None
+            batch_data[i]["source_acc"] = (
+                self.refmols[self.default_refmol_acc]["accession"]
+                if self.refmols[self.default_refmol_acc]["id"] == data["refmolid"]
+                else None
+            )
+            refseq_accession = data["refmol"]
+            batch_data[i]["refseq_id"] = self.get_refseq_id(refseq_accession)
+
+            # Check Alignment if it exists or not (sample and seqhash)
+            batch_data[i]["algnid"] = alignemnt_dict.get(data["name"], None)
+
+            # Create path for cache file (e.g., .seq, .ref) and write them.
+            data = self.add_data_files(data, seqhash_from_DB, refseq_accession, method)
+
+            del batch_data[i]["sequence"]
+            # Create sample file
+            self.cache_sample(**batch_data[i])
+        return
 
     def add_fasta(self, *fnames, properties=defaultdict(dict), method=1):  # noqa: C901
         """
@@ -711,7 +735,7 @@ class sonarCache:
             for data in self.iter_fasta(fname):
 
                 # get sample
-                data["sampleid"], seqhash = APIClient(
+                data["sampleid"], seqhash_from_DB = APIClient(
                     base_url=BASE_URL
                 ).get_sample_data(data["name"])
 
@@ -752,7 +776,9 @@ class sonarCache:
                     data["seqhash"], data["sourceid"]
                 )
                 # Create path for cache file (e.g., .seq, .ref) and write them.
-                data = self.add_data_files(data, seqhash, refseq_accession, method)
+                data = self.add_data_files(
+                    data, seqhash_from_DB, refseq_accession, method
+                )
 
                 del data["sequence"]
                 # Create sample file
@@ -792,73 +818,60 @@ class sonarCache:
             data (dict): The data for the sample.
             seqhash (str): The sequence hash, optional.
             refseq_acc (str): accession from reference table.
-            dbm (sonarDBManager): The sonarDBManager instance.
             method (int): alignment method
         """
 
         # NOTE: It seems the current version didnt update variants if there is the new one (data["seqhash"] != seqhash)
 
         # TODO: Have to check this again and fix it if it was not correct.
-        # if data["algnid"] is None:  # <--- New Sample (no algnid found in database)
-        data["seqfile"] = self.cache_sequence(data["seqhash"], data["sequence"])
-        data["reffile"] = self.cache_reference(
-            refseq_acc, self.get_refseq(data["refmol"])
-        )
+        # 1. force update?
 
-        # We now use Biopython
-        # data["ttfile"] = self.cache_translation_table(data["translation_id"])
-
-        data["liftfile"] = self.cache_lift(
-            refseq_acc, data["refmol"], self.get_refseq(data["refmol"])
-        )
-
-        data["cdsfile"] = self.cache_cds(refseq_acc, data["refmol"])
-
-        data["algnfile"] = self.get_algn_fname(
-            data["seqhash"] + "@" + self.get_refhash(data["refmol"])
-        )
-        data["varfile"] = self.get_var_fname(
-            data["seqhash"] + "@" + self.get_refhash(data["refmol"])
-        )
-        if method == 1:
-            data["mafft_seqfile"] = self.cache_seq_mafftinput(
-                refseq_acc,
-                self.get_refseq(data["refmol"]),
-                data["seqhash"],
-                data["sequence"],
+        # In cases:
+        # 1. sample is reuploaded under the same name but changes in  sequence (fasta)
+        # 2. New Sample (no algnid found in database)
+        if self.allow_updates or data["algnid"] is None or data["seqhash"] != seqhash:
+            data["seqfile"] = self.cache_sequence(data["seqhash"], data["sequence"])
+            data["reffile"] = self.cache_reference(
+                refseq_acc, self.get_refseq(data["refmol"])
             )
-        else:
-            data["mafft_seqfile"] = None
-        """
-        else:
-            # In cases:
-            if data["seqhash"] != seqhash:
-                # 1. sample is reuploaded under the same name but changes in DNA sequence (fasta)
-                data["seqfile"] = self.cache_sequence(data["seqhash"], data["sequence"])
 
-                if method == 1:
-                    data["mafft_seqfile"] = self.cache_seq_mafftinput(
-                        refseq_acc,
-                        self.get_refseq(data["refmol"]),
-                        data["seqhash"],
-                        data["sequence"],
-                    )
-                else:
-                    data["mafft_seqfile"] = None
+            # We now use Biopython
+            # data["ttfile"] = self.cache_translation_table(data["translation_id"])
+            data["liftfile"] = self.cache_lift(
+                refseq_acc, data["refmol"], self.get_refseq(data["refmol"])
+            )
+            data["cdsfile"] = self.cache_cds(refseq_acc, data["refmol"])
+            data["algnfile"] = self.get_algn_fname(
+                data["seqhash"] + "@" + self.get_refhash(data["refmol"])
+            )
+            data["varfile"] = self.get_var_fname(
+                data["seqhash"] + "@" + self.get_refhash(data["refmol"])
+            )
+            if method == 1:
+                data["mafft_seqfile"] = self.cache_seq_mafftinput(
+                    refseq_acc,
+                    self.get_refseq(data["refmol"]),
+                    data["seqhash"],
+                    data["sequence"],
+                )
             else:
-                # 2. if no changed in sequence., use the existing cache and ID
-                # 3. if different samples but have similar sequence/varaint, use exiting alignID and map back to sample
-                data["seqhash"] = None
-                data["seqfile"] = None
                 data["mafft_seqfile"] = None
 
+        else:
+            # In cases:
+            # 2. if no changed in sequence., use the existing cache and ID
+            # 3. if different samples but have similar sequence/varaint, use exiting alignID and map back to sample
+            data["seqhash"] = None
+            data["seqfile"] = None
+            data["mafft_seqfile"] = None
+
             data["reffile"] = None
-            data["ttfile"] = None
+            # data["ttfile"] = None
             data["liftfile"] = None
             data["cdsfile"] = None
             data["algnfile"] = None
             data["varfile"] = None
-        """
+
         # annotation.
         data["vcffile"] = self.get_vcf_fname(refseq_acc + "@" + data["name"])
         data["anno_vcf_file"] = self.get_anno_vcf_fname(refseq_acc + "@" + data["name"])
@@ -1016,232 +1029,6 @@ class sonarCache:
         count_sample = total_samples - len(list_fail_samples)
         LOGGER.info(f"Total passed samples: {count_sample}")
 
-        return passed_samples_list
-
-    def import_cached_sample(self, **sample_data: Dict[str, Any]) -> None:  # noqa: C901
-        """
-
-        Returns:
-            If it passed paranoid
-                return 1, None, sample_data
-            If it failed paranoid
-                return 0, sample_data, None
-        """
-        anno_samples_list = []
-        refseqs = {}
-        paranoid_dict = {}
-        try:
-            with sonarDBManager(self.db, readonly=False, debug=self.debug) as dbm:
-                # Attempt the database operations
-                # nucleotide level import
-                var_row_list = []
-                if not sample_data["seqhash"] is None:
-                    dbm.insert_sample(sample_data["name"], sample_data["seqhash"])
-                    algnid = dbm.insert_alignment(
-                        sample_data["seqhash"], sample_data["sourceid"]
-                    )
-
-                if not sample_data["var_file"] is None:
-                    elements_dict = dict()
-                    # get element dict
-                    elements_rows = dbm.get_elements(
-                        molecule_id=sample_data["refmolid"]
-                    )
-                    # get only neccessary column and add to another dict.
-                    for row in elements_rows:
-                        elements_dict[row["accession"]] = row["id"]
-                    # print(elements_dict)
-                    with open(sample_data["var_file"], "r") as handle:
-                        for line in handle:
-                            if line == "//":
-                                break
-                            vardat = line.strip("\r\n").split("\t")
-                            var_row_list.append(
-                                (
-                                    elements_dict[vardat[4]],  # element id
-                                    vardat[0],  # ref
-                                    vardat[3],  # alt
-                                    vardat[1],  # start
-                                    vardat[2],  # end
-                                    vardat[5],  # label
-                                    vardat[6],
-                                )  # frameshift
-                            )
-                        if line != "//":
-                            sys.exit(
-                                "cache error: corrupted file ("
-                                + sample_data["var_file"]
-                                + ")"
-                            )
-                    if len(var_row_list) > 0:
-                        dbm.insert_variant_many(var_row_list, algnid)
-
-                if not sample_data["seqhash"] is None:
-                    # paranoia test
-                    paranoid_dict = self.paranoid_check(refseqs, sample_data, dbm)
-
-                # "If Dict is Empty", Proceed to Annotation step.
-                if not paranoid_dict:
-                    anno_samples_list.append(sample_data)
-                    return 1, None, sample_data  # success
-                else:
-                    return (
-                        0,
-                        sample_data,
-                        None,
-                    )  # fail in paranoid test, the fail one will not be imported.
-        except Exception as e:
-            LOGGER.error("\n------- Fatal Error ---------")
-            print(traceback.format_exc())
-            print("\nDebugging Information:")
-            print(e)
-            traceback.print_exc()
-            print("\n During insert:")
-            pp.pprint(sample_data)
-            sys.exit("Unknown import error")
-
-    def import_cached_samples_v2(self, threads) -> None:  # noqa: C901
-        samples_list = list(self.iter_samples())
-        count_result_import_samples = 0
-        passed_samples_list = []
-        with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
-            position=0,
-            leave=True,
-            desc="importing samples...",
-            total=len(samples_list),
-            unit="seqs",
-            bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-        ) as pbar:
-            for count, failed_sample, passed_sample in pool.imap_unordered(
-                self.import_cached_sample, list(self.iter_samples())
-            ):
-                count_result_import_samples = count_result_import_samples + count
-                if failed_sample:
-                    self.logfile_obj.write(f"Fail: {failed_sample}\n")
-                if passed_sample:
-                    passed_samples_list.append(passed_sample)
-                pbar.update(1)
-
-        if len(samples_list) != count_result_import_samples:
-            LOGGER.warn(
-                "Some samples fail in sanity check; please check import.log under the cache directory."
-            )
-
-        LOGGER.info(
-            f"Total passed samples: {count_result_import_samples}/{len(samples_list)}"
-        )
-        return passed_samples_list
-
-    def import_cached_samples_v1(self) -> list:  # noqa: C901
-        """
-        NOTE: Performance is so slow.
-        Can we change/edit this process into parallel style ( see def import_cached_samples_v2)
-        """
-        list_fail_samples = []
-        passed_samples_list = []
-        refseqs = {}
-        count_sample = 0
-        with sonarDBManager(self.db, readonly=False, debug=self.debug) as dbm:
-            for sample_data in tqdm(
-                self.iter_samples(),
-                total=len(self._samplefiles),
-                desc="importing samples...",
-                unit="samples",
-                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-                disable=self.disable_progress,
-            ):
-                # print("\n")
-                # print("-----####------ sample_data -----####------")
-                # print(sample_data)
-                # get the start time
-                try:
-                    # nucleotide level import
-                    var_row_list = []
-                    if not sample_data["seqhash"] is None:
-                        dbm.insert_sample(sample_data["name"], sample_data["seqhash"])
-                        # self.log("sample_data:" + str(sample_data))
-                        # sample_data["refmolid"]
-                        # print("-----####------ insert_alignment -----####------")
-                        # print(sample_data["seqhash"], sample_data["sourceid"])
-                        algnid = dbm.insert_alignment(
-                            sample_data["seqhash"], sample_data["sourceid"]
-                        )
-                        # self.log("Get algnid:" + algnid)
-                    if not sample_data["var_file"] is None:
-                        elements_dict = dict()
-                        # get element dict
-                        elements_rows = dbm.get_elements(
-                            molecule_id=sample_data["refmolid"]
-                        )
-                        # get only neccessary column and add to another dict.
-                        for row in elements_rows:
-                            elements_dict[row["accession"]] = row["id"]
-
-                        with open(sample_data["var_file"], "r") as handle:
-                            for line in handle:
-                                if line == "//":
-                                    break
-                                vardat = line.strip("\r\n").split("\t")
-                                var_row_list.append(
-                                    (
-                                        elements_dict[vardat[4]],  # element id
-                                        vardat[0],  # ref
-                                        vardat[3],  # alt
-                                        vardat[1],  # start
-                                        vardat[2],  # end
-                                        vardat[5],  # label
-                                        vardat[6],
-                                    )  # frameshift
-                                )
-                            if line != "//":
-                                sys.exit(
-                                    "cache error: corrupted file ("
-                                    + sample_data["var_file"]
-                                    + ")"
-                                )
-                            if len(var_row_list) > 0:
-                                dbm.insert_variant_many(var_row_list, algnid)
-                            else:
-                                LOGGER.info(
-                                    f"No mutations detected in {sample_data['name']} sample associated with the reference."
-                                )
-                    if not sample_data["seqhash"] is None:
-                        # paranoia test
-                        paranoid_dict = self.paranoid_check(refseqs, sample_data, dbm)
-                        if paranoid_dict:
-                            list_fail_samples.append(paranoid_dict)
-
-                        count_sample = count_sample + 1
-
-                        # "If Dict is Empty", Proceed to Annotation step.
-
-                        if not paranoid_dict:
-                            passed_samples_list.append(sample_data)
-
-                except Exception as e:
-                    LOGGER.error("\n------- Fatal Error ---------")
-                    print(traceback.format_exc())
-                    print("\nDebugging Information:")
-                    print(e)
-                    traceback.print_exc()
-                    print("\n During insert:")
-                    pp.pprint(sample_data)
-                    sys.exit("Unknown import error")
-
-        if list_fail_samples:
-            LOGGER.warn(
-                "Some samples fail in sanity check; please check import.log under the cache directory."
-            )
-            LOGGER.info(f"Start paranoid alignment on {len(list_fail_samples)} sample.")
-
-            # start process.
-            # self.paranoid_align_multi(list_fail_samples, threads)
-            self.logfile_obj.write("Fail sample:----\n")
-            for fail_sample in list_fail_samples:
-                self.logfile_obj.write(f"{ fail_sample['sample_name'] }\n")
-
-        count_sample = count_sample - len(list_fail_samples)
-        LOGGER.info(f"Total passed samples: {count_sample}")
         return passed_samples_list
 
     def _align(self, output_paranoid, qryfile, reffile, sample_name):

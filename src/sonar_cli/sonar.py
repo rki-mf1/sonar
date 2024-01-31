@@ -42,7 +42,7 @@ def parse_args(args=None):
     database_parser = create_parser_database()
     output_parser = create_parser_output()
     sample_parser = create_parser_sample()
-    # property_parser = create_parser_property()
+    property_parser = create_parser_property()
     reference_parser = create_parser_reference()
     thread_parser = create_parser_thread()
 
@@ -51,6 +51,14 @@ def parse_args(args=None):
 
     # Reference parser
     subparsers, _ = create_subparser_list_reference(subparsers, database_parser)
+
+    subparsers, _ = create_subparser_add_prop(
+        subparsers, database_parser, property_parser
+    )
+    subparsers, _ = create_subparser_delete_prop(
+        subparsers, database_parser, property_parser
+    )
+
     subparsers, _ = create_subparser_add_reference(subparsers, database_parser)
     subparsers, _ = create_subparser_delete_reference(
         subparsers, database_parser, reference_parser
@@ -61,7 +69,7 @@ def parse_args(args=None):
         subparsers, database_parser, thread_parser, reference_parser
     )
 
-    subparsers, _ = create_subparser_delete(subparsers, reference_parser, sample_parser)
+    subparsers, _ = create_subparser_delete(subparsers, sample_parser)
 
     # property
     subparsers, _ = create_subparser_list_prop(subparsers, database_parser)
@@ -91,7 +99,12 @@ def parse_args(args=None):
     if is_match_selected(known_args):
         _, values_listofdict = sonarUtils.get_all_properties()
         for property in values_listofdict:
-            subparser_match.add_argument("--" + property["name"], type=str, nargs="+")
+            subparser_match.add_argument(
+                "--" + property["name"],
+                type=str,
+                # action="append",  --> this will create a complex query (doesnt support it for now.)
+                nargs="+",
+            )
 
     return parser.parse_args(args=args, namespace=user_namespace)
 
@@ -149,6 +162,11 @@ def create_subparser_delete_reference(
         parents=parent_parsers,
         help="Deletes a reference from the database.",
     )
+    parser.add_argument(
+        "--force",
+        help="skip user confirmation.",
+        action="store_true",
+    )
     return subparsers, parser
 
 
@@ -170,6 +188,11 @@ def create_subparser_delete(
         help="Deletes samples from the database",
         parents=parent_parsers,
     )
+    parser.add_argument(
+        "--force",
+        help="skip user confirmation.",
+        action="store_true",
+    )
     return subparsers, parser
 
 
@@ -180,7 +203,12 @@ def create_parser_database() -> argparse.ArgumentParser:
         argparse.ArgumentParser: The created 'database' parent parser.
     """
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--db", metavar="URL", help="URL to backend", type=str)
+    parser.add_argument(
+        "--db",
+        metavar="URL",
+        help="URL to backend (example http://127.0.0.1:8000/)",
+        type=str,
+    )
     return parser
 
 
@@ -368,8 +396,8 @@ def create_subparser_import(
         action="store_true",
     )
     parser.add_argument(
-        "--no-update",
-        help="skip samples already existing in the database (default: False (no skip)",
+        "--update",
+        help="skip samples already existing in the database (default: False (no skip))",
         action="store_true",
     )
     parser.add_argument(
@@ -405,6 +433,96 @@ def create_subparser_add_reference(
         required=True,
     )
 
+    return subparsers, parser
+
+
+def create_subparser_add_prop(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    """
+    Creates an 'add-prop' subparser with command-specific arguments and options for the command-line interface.
+
+    Args:
+        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'add-prop' subparser to.
+        parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments and options.
+
+    Returns:
+        argparse.ArgumentParser: The created 'add-prop' subparser.
+    """
+    parser = subparsers.add_parser(
+        "add-prop", help="add a property to the database", parents=parent_parsers
+    )
+    parser.add_argument(
+        "--descr",
+        metavar="STR",
+        help="a short description of the property",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "--dtype",
+        metavar="STR",
+        help="the data type of the property",
+        type=str,
+        choices=[
+            "value_integer",
+            "value_float",
+            "value_text",
+            "value_date",
+            "value_zip",
+            "value_varchar",
+        ],
+        required=True,
+    )
+    """
+    parser.add_argument(
+        "--qtype",
+        metavar="STR",
+        help="the query type of the property",
+        type=str,
+        choices=["numeric", "float", "text", "date", "zip", "pango"],
+        default=None,
+    )
+    """
+    parser.add_argument(
+        "--default",
+        metavar="VAR",
+        help="the default value of the property (none by default)",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "--subject",
+        metavar="VAR",
+        help="choose between sample or variant property (by default: sample)",
+        choices=["sample", "variant"],
+        default="sample",
+    )
+
+    return subparsers, parser
+
+
+def create_subparser_delete_prop(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    """
+    Creates an 'delete-prop' subparser with command-specific arguments and options for the command-line interface.
+
+    Args:
+        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'delete-prop' subparser to.
+        parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments and options.
+
+    Returns:
+        argparse.ArgumentParser: The created 'delete-prop' subparser.
+    """
+    parser = subparsers.add_parser(
+        "delete-prop", help="delete a property to the database", parents=parent_parsers
+    )
+    parser.add_argument(
+        "--force",
+        help="skip user confirmation.",
+        action="store_true",
+    )
     return subparsers, parser
 
 
@@ -447,6 +565,13 @@ def create_subparser_match(
         help="match only mutation profiles with frameshift mutations",
         action="store_true",
     )
+
+    parser.add_argument(
+        "--with-sublineage",
+        help="recursively get all sublineages from a given lineage (--lineage) (only child) ",
+        action="store_true",
+    )
+
     parser.add_argument(
         "--out-cols",
         metavar="STR",
@@ -495,7 +620,7 @@ def handle_import(args: argparse.Namespace):
         autolink=args.auto_link,
         auto_anno=args.auto_anno,
         progress=not args.no_progress,
-        update=not args.no_update,
+        update=args.update,
         threads=args.threads,
         quiet=args.debug,
         reference=args.reference,
@@ -545,6 +670,7 @@ def handle_match(args: argparse.Namespace):
         format=output_format,
         showNX=args.showNX,
         frameshifts_only=args.frameshifts_only,
+        with_sublineage=args.with_sublineage,
         defined_props=values_listofdict,
     )
 
@@ -578,12 +704,14 @@ def handle_delete_ref(args: argparse.Namespace):
     LOGGER.warning(
         "If you need to import data again, you might have to rebuild a new cache directory."
     )
+    force_enabled = getattr(args, "force", False)
     decision = ""
-    while decision not in ("YES", "NO"):
-        decision = input("Do you really want to delete this reference? [YES/NO]: ")
-        decision = decision.upper()
+    if not force_enabled:
+        while decision not in ("YES", "NO"):
+            decision = input("Do you really want to delete this reference? [YES/NO]: ")
+            decision = decision.upper()
 
-    if decision == "YES":
+    if decision == "YES" or force_enabled:
         sonarUtils.delete_reference(args.reference, args.debug)
         LOGGER.info("Reference deleted.")
     else:
@@ -607,6 +735,73 @@ def handle_list_prop(args: argparse.Namespace):
     print(tabulate(rows, headers=keys, tablefmt="fancy_grid"))
 
 
+def handle_add_prop(args: argparse.Namespace):
+    """
+    Handle adding a new property to the database.
+
+    Args:
+        args (argparse.Namespace): Parsed command line arguments.
+    """
+    #
+    # value_varchar is best suited for storing short to medium-length strings,
+    # while value_text is better suited for storing large amounts of textual data.
+
+    if args.dtype == "value_integer":
+        args.qtype = "numeric"
+    elif args.dtype == "value_float":
+        args.qtype = "float"
+    elif args.dtype == "value_varchar":
+        args.qtype = "varchar"
+    elif args.dtype == "value_text":
+        args.qtype = "text"
+    elif args.dtype == "value_date":
+        args.qtype = "date"
+    elif args.dtype == "value_zip":
+        args.qtype = "zip"
+    elif args.dtype == "value_blob":
+        LOGGER.info("This type is not supported yet.")
+    else:
+        LOGGER.info("This type is not supported .")
+
+    sonarUtils.add_property(
+        args.name,
+        args.dtype,
+        args.qtype,
+        args.descr,
+        args.subject,
+        args.default,
+    )
+
+
+def handle_delete_prop(args: argparse.Namespace):
+    """
+    Handle deleting an existing property from the database.
+
+    This function removes a specified property from the database. If the 'force'
+    option is not set, the user is prompted to confirm the deletion, especially
+    when there are samples with non-default values for the property.
+
+    Args:
+    args (argparse.Namespace): Parsed command line arguments containing the
+    property name to be deleted and the 'force' flag.
+
+    Raises:
+    SystemExit: If the specified property name is not found in the database.
+    """
+    force_enabled = getattr(args, "force", False)
+    decision = ""
+    if not force_enabled:
+        while decision not in ("yes", "no"):
+            decision = input(
+                "Do you really want to delete this property? [YES/no]: "
+            ).lower()
+
+    if decision.lower() == "yes" or force_enabled:
+        sonarUtils.delete_property(name=args.name)
+    else:
+        LOGGER.info("Property is not deleted.")
+
+
 def handle_delete_sample(args: argparse.Namespace):
     """
     Handle deleting a sample from the database.
@@ -624,16 +819,19 @@ def handle_delete_sample(args: argparse.Namespace):
         FileNotFoundError: If the specified sample file is not found.
         SystemExit: If none of the specified samples are found in the database.
     """
+    force_enabled = getattr(args, "force", False)
     decision = ""
-    while decision not in ("YES", "NO"):
-        decision = input("Are you sure you want to perform this action? [YES/NO]: ")
-        decision = decision.upper()
 
-    if decision == "YES":
+    if not force_enabled:
+        while decision not in ("YES", "NO"):
+            decision = input("Are you sure you want to perform this action? [YES/NO]: ")
+            decision = decision.upper()
+
+    if decision == "YES" or force_enabled:
         samples = combine_sample_argument(
             samples=args.sample, sample_files=args.sample_file
         )
-        sonarUtils.delete_sample(reference=args.reference, samples=samples)
+        sonarUtils.delete_sample(samples=samples)  # reference=args.reference,
 
 
 def execute_commands(args):  # noqa: C901
@@ -660,6 +858,10 @@ def execute_commands(args):  # noqa: C901
         handle_delete_ref(args)
     elif args.command == "list-prop":
         handle_list_prop(args)
+    elif args.command == "add-prop":
+        handle_add_prop(args)
+    elif args.command == "delete-prop":
+        handle_delete_prop(args)
     elif args.command == "match":
         if len(sys.argv[1:]) == 1:
             parse_args(["match", "-h"])

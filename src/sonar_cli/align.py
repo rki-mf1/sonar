@@ -16,13 +16,17 @@ import pandas as pd
 import parasail
 import psutil
 from sonar_cli.config import TMP_CACHE
+from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils_1 import read_seqcache
 
 warnings.simplefilter("ignore", BiopythonWarning)
 
+# Initialize logger
+LOGGER = LoggingConfigurator.get_logger()
+
 
 class sonarAligner:
-    def __init__(self, cache_outdir=None, method=1):
+    def __init__(self, cache_outdir=None, method=1, allow_updates=False):
         self.nuc_profile = []
         self.nuc_n_profile = []
         self.aa_profile = []
@@ -31,6 +35,7 @@ class sonarAligner:
         self.outdir = TMP_CACHE if not cache_outdir else os.path.abspath(cache_outdir)
         self.logfile = open(os.path.join(self.outdir, "align.debug.log"), "a")
         self.method = method
+        self.allow_updates = allow_updates
 
     # gapopen=16, gapextend=4
     # gapopen=10, gapextend=1
@@ -46,19 +51,25 @@ class sonarAligner:
         )
 
     def align_MAFFT(self, input_fasta):
-        mafft_exe = "mafft"
-        mafft_cline = MafftCommandline(
-            mafft_exe, input=input_fasta, inputorder=True, auto=True
-        )
-        stdout, stderr = mafft_cline()
-        # find the fist position of '\n' to get seq1
-        s1 = stdout.find("\n") + 1
-        # find the start of second sequence position
-        e = stdout[1:].find(">") + 1
-        # find the '\n' of the second sequence to get seq2
-        s2 = stdout[e:].find("\n") + e
-        ref = stdout[s1:e].replace("\n", "").upper()
-        qry = stdout[s2:].replace("\n", "").upper()
+
+        try:
+            mafft_exe = "mafft"
+            mafft_cline = MafftCommandline(
+                mafft_exe, input=input_fasta, inputorder=True, auto=True
+            )
+            stdout, stderr = mafft_cline()
+            # find the fist position of '\n' to get seq1
+            s1 = stdout.find("\n") + 1
+            # find the start of second sequence position
+            e = stdout[1:].find(">") + 1
+            # find the '\n' of the second sequence to get seq2
+            s2 = stdout[e:].find("\n") + e
+            ref = stdout[s1:e].replace("\n", "").upper()
+            qry = stdout[s2:].replace("\n", "").upper()
+        except Exception as e:
+            LOGGER.error(f"An error occurred in align_MAFFT: {e}")
+            LOGGER.error(f"Input filename: {input_fasta}")
+            sys.exit("--stop--")
         return qry, ref
 
     def align_Stretcher(self, qry, ref, gapopen=16, gapextend=4):
@@ -104,7 +115,7 @@ class sonarAligner:
                         proc.kill()
             except psutil.NoSuchProcess:
                 pass
-            logging.error(
+            LOGGER.error(
                 "Stop process during alignment; to rerun again, you may need to provide a new cache directory."
             )
             sys.exit("exited after ctrl-c")
@@ -127,14 +138,19 @@ class sonarAligner:
         with open(fname, "rb") as handle:
             data = pickle.load(handle, encoding="bytes")
 
-        if data["var_file"] is None:
-            return True
-        elif os.path.isfile(data["var_file"]):
-            with open(data["var_file"], "r") as handle:
-                for line in handle:
-                    pass
-            if line == "//":
+        # If updates are not allowed:
+        # SKIP aligning sequences and call var_file again (i.e., skipping existing files in the cache).
+        # Otherwise: overwrite.
+        # NOTE: If the file contents change, the hash file name will also change.
+        if not self.allow_updates:
+            if data["var_file"] is None:
                 return True
+            elif os.path.isfile(data["var_file"]):
+                with open(data["var_file"], "r") as handle:
+                    for line in handle:
+                        pass
+                    if line == "//":
+                        return True
 
         source_acc = str(data["source_acc"])
         # self.log("data:" + str(data))

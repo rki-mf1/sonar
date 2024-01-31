@@ -10,7 +10,6 @@ from typing import Dict
 from typing import Iterator
 from typing import List
 from typing import Optional
-from typing import Set
 from typing import Union
 import zipfile
 
@@ -21,11 +20,9 @@ from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
 from sonar_cli.basic import construct_query
 from sonar_cli.cache import sonarCache
+from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
-from sonar_cli.config import SNPSIFT_TOOL_PATH
-from sonar_cli.config import VCF_ONEPERLINE_PATH
-from sonar_cli.dbm import sonarDBManager
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils_1 import _files_exist
 from sonar_cli.utils_1 import _get_csv_colnames
@@ -111,35 +108,38 @@ class sonarUtils:
 
         # TODO: Right now we just use fixed code, need to edit it.
         """
-                properties = {
-            "SEQUENCE.DATE_OF_SAMPLING": {
+        properties = {
+            "DATE_OF_SAMPLING": {
                 "db_property_name": "collection_date",
-                "data_type": "value_varchar",
+                "data_type": "value_varchar"
             },
-            "SEQUENCE.SEQUENCING_METHOD": {
+            "SEQUENCING_METHOD": {
                 "db_property_name": "sequencing_tech",
-                "data_type": "value_varchar",
+                "data_type": "value_varchar"
             },
             "DL.POSTAL_CODE": {
                 "db_property_name": "zip_code",
-                "data_type": "value_varchar",
+                "data_type": "value_varchar"
             },
-            "SL.ID": {"db_property_name": "lab", "data_type": "value_varchar"},
-            "PANGOLIN.LINEAGE_LATEST": {
+            "SL.ID": {
+                "db_property_name": "lab",
+                "data_type": "value_varchar"
+            },
+            "LINEAGE_LATEST": {
                 "db_property_name": "lineage",
-                "data_type": "value_varchar",
+                "data_type": "value_varchar"
             },
             "SEQUENCE.SEQUENCING_REASON": {
                 "db_property_name": "sequencing_reason",
-                "data_type": "value_varchar",
+                "data_type": "value_varchar"
             },
             "SEQUENCE.SAMPLE_TYPE": {
                 "db_property_name": "sample_type",
-                "data_type": "value_varchar",
-            },
-        }
+                "data_type": "value_varchar"
+            }
+            }
         """
-
+        properties = {}
         if prop_links:
             # construct property dcit from file header or user provide
             properties = sonarUtils._get_prop_names(
@@ -152,6 +152,10 @@ class sonarUtils:
             # properties = sonarUtils._extract_props(csv_files, tsv_files, prop_names, quiet)
             sample_id_column = properties["sample"]
             del properties["sample"]
+            if len(properties) == 0:
+                LOGGER.warn(
+                    "No column in the file is mapped to the corresponding variables in the database."
+                )
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
@@ -174,6 +178,7 @@ class sonarUtils:
         # TODO: change to API calls
         # importing properties
         if csv_files or tsv_files:
+
             sonarUtils._import_properties(
                 sample_id_column,
                 properties,
@@ -232,15 +237,18 @@ class sonarUtils:
         if not fasta_files:
             return
 
-        cache.add_fasta(*fasta_files, properties=properties, method=method)
+        cache.add_fasta_v2(*fasta_files, properties=properties, method=method)
 
-        LOGGER.info(f"Total input sample: {len(cache._samplefiles)}")
+        LOGGER.info(f"Total input samples: {len(cache._samplefiles)}")
+
         # Align sequences and process
-        aligner = sonarAligner(cache_outdir=cache.basedir, method=method)
+        aligner = sonarAligner(
+            cache_outdir=cache.basedir, method=method, allow_updates=cache.allow_updates
+        )
         l = len(cache._samplefiles_to_profile)
-        LOGGER.info(f"Total sample needs to be processed: {l}")
+        LOGGER.info(f"Total samples that need to be processed: {l}")
         with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
-            desc="profiling sequences...",
+            desc="Profiling sequences...",
             total=l,
             unit="seqs",
             bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
@@ -260,7 +268,7 @@ class sonarUtils:
             ) as pool, tqdm(
                 position=0,
                 leave=True,
-                desc="annotate samples...",
+                desc="Annotate samples...",
                 total=len(passed_samples_list),
                 unit="samples",
                 bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
@@ -354,22 +362,8 @@ class sonarUtils:
             db: The database where the properties will be imported.
             progress: If True, displays a progress bar.
 
-        with sonarDBManager(db, readonly=False) as dbm:
-            for sample_name in tqdm(
-                properties,
-                desc="Import data...",
-                total=len(properties),
-                unit="samples",
-                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-                disable=not progress,
-            ):
-                sample_id = dbm.get_sample_id(sample_name)
-                if not sample_id:
-                    continue
-                for property_name, value in properties[sample_name].items():
-                    dbm.insert_property(sample_id, property_name, value)
         """
-        LOGGER.info("Import properties")
+        LOGGER.info("Send property")
 
         all_files = tsv_files + csv_files
         for _file in tqdm(
@@ -396,7 +390,7 @@ class sonarUtils:
             if not passed:
                 LOGGER.error(message)
 
-        LOGGER.info("Property import completed")
+        LOGGER.info("Sending Complete")
 
     @staticmethod
     def _get_prop_names(  # noqa: C901
@@ -517,14 +511,6 @@ class sonarUtils:
 
         return properties
 
-    @staticmethod
-    def _get_properties_from_db(db: str) -> Set[str]:
-        """Get the properties stored in the database."""
-        with sonarDBManager(db, readonly=True) as dbm:
-            db_properties = set(dbm.properties.keys())
-        db_properties.add("sample")
-        return db_properties
-
     def _check_reference(reference):
         accession_list = APIClient(base_url=BASE_URL).get_distinct_reference()
         if reference is not None and reference not in accession_list:
@@ -594,6 +580,7 @@ class sonarUtils:
         showNX: bool = False,
         ignore_terminal_gaps: bool = True,
         frameshifts_only: bool = False,
+        with_sublineage: bool = False,
         defined_props: Optional[List[Dict[str, str]]] = [],
     ):
         """
@@ -628,10 +615,15 @@ class sonarUtils:
 
         params["filters"] = json.dumps(
             construct_query(
-                profiles=profiles, properties=properties, defined_props=defined_props
+                profiles=profiles,
+                properties=properties,
+                defined_props=defined_props,
+                with_sublineage=with_sublineage,
             )
         )
         params["reference_accession"] = reference
+        params["showNX"] = showNX
+        params["vcf_format"] = True if format == "vcf" else False
         params["limit"] = -1
         params["offset"] = 0
 
@@ -662,9 +654,11 @@ class sonarUtils:
         kwargs are sample dict object
         """
         cache = shared_objects
-        # TODO: check if it is already exist
-        # if os.path.exists(kwargs["anno_vcf_file"]):
-        #    return
+        #  check if it is already exist
+        # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
+        if not cache.allow_updates:
+            if os.path.exists(kwargs["anno_vcf_file"]):
+                return
         # export_vcf
         sonarUtils.export_vcf(
             cursor=kwargs,
@@ -684,7 +678,9 @@ class sonarUtils:
         )
         """
 
-        annotator = Annotator(ANNO_TOOL_PATH, SNPSIFT_TOOL_PATH, VCF_ONEPERLINE_PATH)
+        annotator = Annotator(
+            annotator_exe_path=ANNO_TOOL_PATH, config_path=ANNO_CONFIG_FILE
+        )
         annotator.snpeff_annotate(
             kwargs["vcffile"],
             kwargs["anno_vcf_file"],
@@ -774,7 +770,7 @@ class sonarUtils:
         else:
             # TODO: if we want to connect this function with match function
             # we have to put the condition to check the cursor type first.
-            _dict = cache.sources[reference]
+            _dict = cache.refmols[reference]
             refernce_sequence = _dict["sequence"]
 
             if from_var_file:
@@ -855,14 +851,14 @@ class sonarUtils:
         json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
         if json_response["status"] == "success":
             LOGGER.info(
-                f"{json_response['data']['samples_count']} alignments that linked to the reference will be also deleted."
+                f"{json_response['data']['samples_count']} alignments that are linked to the reference will also be deleted."
             )
         else:
             LOGGER.Error("Cannot delete the reference")
             LOGGER.Error(f"Message: {json_response['status']}")
 
     @staticmethod
-    def delete_sample(reference: str, samples: List[str] = []) -> None:
+    def delete_sample(reference: str = None, samples: List[str] = []) -> None:
         """
         Delete samples from the database.
 
@@ -880,21 +876,48 @@ class sonarUtils:
             reference, list(samples)
         )
         if json_response["status"] == "success":
-            deleted = json_response["data"]["samples_count"]
+            deleted = json_response["data"]["deleted_samples_count"]
             LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
         else:
             LOGGER.error(f"{json_response['message']}")
         """
-        with sonarDBManager(db, readonly=False) as dbm:
-            before_count = dbm.count_samples()
-            dbm.delete_samples(*samples)
-            after_count = dbm.count_samples()
-
-            deleted = before_count - after_count
 
         LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
         LOGGER.info(f"{after_count} samples remain in the database.")
         """
+
+    @staticmethod
+    def add_property(
+        name: str,
+        datatype: str,
+        querytype: str,
+        description: str,
+        subject: str,
+        standard: Optional[str] = None,
+        check_name: bool = True,
+    ) -> int:
+        data = {
+            "name": name,
+            "datatype": datatype,
+            "querytype": querytype,
+            "description": description,
+        }
+        json_response = APIClient(base_url=BASE_URL).post_add_property(data)
+
+        if json_response["status"] == "success":
+            LOGGER.info(json_response["message"])
+        else:
+            LOGGER.error(json_response["message"])
+
+    @staticmethod
+    def delete_property(
+        name: str,
+    ) -> int:
+        json_response = APIClient(base_url=BASE_URL).post_delete_property(name)
+        if json_response["status"] == "success":
+            LOGGER.info(json_response["message"])
+        else:
+            LOGGER.error(json_response["message"])
 
 
 def _get_vcf_data_form_var_file(cursor, selected_ref_seq, showNX) -> Dict:
@@ -1086,7 +1109,9 @@ def _is_import_required(
 ) -> bool:
     """Check if import is required."""
     if not fasta:
-        if (not tsv_files and not csv_files) or not update:
+        if tsv_files or csv_files or update:
+            return True
+        else:
             return False
     return True
 
@@ -1095,9 +1120,9 @@ def _log_import_mode(update: bool, quiet: bool):
     """Log the current import mode."""
     if not quiet:
         LOGGER.info(
-            "import mode: updating existing samples"
+            "Import mode: overwriting/updating existing samples in the database and cache directory."
             if update
-            else "import mode: skipping existing samples"
+            else "Import mode: skipping existing samples in the database and cache directory."
         )
 
 

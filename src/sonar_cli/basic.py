@@ -36,7 +36,7 @@ exact
 
 #
 
-import pprint
+import datetime
 import re
 import sys
 from typing import Dict
@@ -59,9 +59,9 @@ OPERATORS = {
         "<": "lt",
         ">=": "gte",
         "<=": "lte",
-        "IN": "IN",  # not support
-        "LIKE": "LIKE",  # not support
-        "BETWEEN": "BETWEEN",  # not support
+        "IN": "in",  # not support
+        "LIKE": "contains",  # not support
+        "BETWEEN": "range",  # not support
     },
     "inverse": {  # not support
         "exact": "iexact",
@@ -135,54 +135,66 @@ dna_allowed_letters = "[" + "".join(IUPAC_CODES["nt"].keys()) + "]"
 
 
 regexes = {
-    "snv": re.compile(r"^(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$"),
-    "del": re.compile(r"^(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$"),
+    "snv": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$"),
+    "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$"),
 }
-# print(match.group(0)) whole match
-# print(match.group(1))
-# print(match.group(2)) gene name
-# print(match.group(3)) Ref
-# print(match.group(4)) Postion
-# print(match.group(5)) Alt
+# snv
+# print(match.group(0))  match pattern T5386G S:E484K ^S:N501Y
+# print(match.group(1)) not ^
+# print(match.group(2))
+# print(match.group(3)) gene name
+# print(match.group(4)) REF
+# print(match.group(5)) POS
+# print(match.group(6)) ALT
+# del
+# print(match.group(0))  match pattern 	^del:99-102 ^S:del:99-102
+# print(match.group(1)) not ^
+# print(match.group(2))
+# print(match.group(3)) gene name
+# print(match.group(4)) START
+# print(match.group(5)) END
 
 
-def create_profile_query(mutation):  # noqa: C901
+def define_profile(mutation):  # noqa: C901
     """
     # check profile
     """
     _query = {"label": ""}
+    match = None
     for mutation_type, regex in regexes.items():
         match = regex.match(mutation)
         if match:
-
-            if match.group(2):
-                gene_name = match.group(2)[:-1]
+            if match.group(3):
+                gene_name = match.group(3)[:-1]
             else:
                 gene_name = None
 
             if mutation_type == "snv":
 
-                alt = match.group(5)
+                alt = match.group(6)
 
                 for x in alt:
-                    if x not in IUPAC_CODES["aa"]:
+                    if (
+                        x not in IUPAC_CODES["aa"].keys()
+                        and x not in IUPAC_CODES["nt"].keys()
+                    ):
                         LOGGER.error(f"Invalid alternate allele notation '{alt}'.")
                         sys.exit(1)
-                # AA
-                if gene_name is not None:
+
+                if gene_name is not None:  # AA
                     _query["alt_aa"] = alt
-                    _query["ref_aa"] = match.group(3)
-                    _query["ref_pos"] = match.group(4)
+                    _query["ref_aa"] = match.group(4)
+                    _query["ref_pos"] = match.group(5)
 
                     _query["protein_symbol"] = gene_name
                     if len(alt) == 1:  # SNP AA
                         _query["label"] = "SNP AA"
                     else:  # Ins AA
                         _query["label"] = "Ins AA"
-                else:
+                else:  # Nt
                     _query["alt_nuc"] = alt
-                    _query["ref_nuc"] = match.group(3)
-                    _query["ref_pos"] = match.group(4)
+                    _query["ref_nuc"] = match.group(4)
+                    _query["ref_pos"] = match.group(5)
 
                     if len(alt) == 1:  # SNP Nt
                         _query["label"] = "SNP Nt"
@@ -190,18 +202,85 @@ def create_profile_query(mutation):  # noqa: C901
                         _query["label"] = "Ins Nt"
 
             elif mutation_type == "del":
-                _query["first_delete"] = match.group(3)
-                _query["last_detete"] = match.group(4)[1:]
+                _query["first_deleted"] = match.group(4)
+                _query["last_deleted"] = match.group(5)[1:]
 
                 if gene_name is not None:  # Del AA
                     _query["protein_symbol"] = gene_name
                     _query["label"] = "Del AA"
                 else:  # Del Nt
                     _query["label"] = "Del Nt"
-        else:
-            # fail to validate
-            pass
+
+            negate = True if match.group(1) else False
+            _query["exclude"] = negate
+            break
+    if not match:
+        # fail to validate
+        LOGGER.error(f"Invalid mutation notation '{mutation}'.")
+        sys.exit(1)
+
     return _query
+
+
+def create_profile_query(profiles=[]):
+    final_result = {}
+    _temp_result = {}
+    # create filter with level(depth)
+    for _index, profile_set in enumerate(profiles):
+        and_filter = {"andFilter": []}
+        for mutation in profile_set:
+            _query = define_profile(mutation)
+            and_filter["andFilter"].append(_query)
+        _temp_result[_index] = and_filter
+    # convert to final result.
+    final_result = convert_to_desired_structure(_temp_result, 0)
+    return final_result
+
+
+def convert_to_desired_structure(result, depth=0):
+    """
+    Recursively constructs a nested filter structure by reversing the hierarchy from bottom to top.
+
+    Parameters:
+    - result (dict): A dictionary containing three levels (keys: 0-2), representing a hierarchical filter structure.
+    - depth (int): The depth level to start the construction from. Defaults to 0.
+
+    Returns:
+    dict: A dictionary representing the transformed filter structure with combined "orFilter" values based on the depth.
+
+    Example:
+    --------
+    Input: --profile
+    result = {
+        0: {'andFilter': [{'label': 'SNP AA', 'alt_aa': 'K', 'ref_aa': 'E', 'ref_pos': '484', 'protein_symbol': 'S'},
+                          {'label': 'SNP AA', 'alt_aa': 'Y', 'ref_aa': 'N', 'ref_pos': '501', 'protein_symbol': 'S'}]},
+        1: {'andFilter': [{'label': 'SNP Nt', 'alt_nuc': 'N', 'ref_nuc': 'A', 'ref_pos': '11022'}]},
+        2: {'andFilter': [{'label': 'Del AA', 'first_deleted': '3001', 'last_deleted': '3004', 'protein_symbol': 'ORF1ab'},
+                          {'label': 'Del Nt', 'first_deleted': '11288', 'last_deleted': '11300'}]}
+    }
+
+    converted_result = convert_to_desired_structure(result,0)
+
+    Output:
+    {"andFilter": [{"label": "SNP AA", "alt_aa": "K", "ref_aa": "E", "ref_pos": "484", "protein_symbol": "S"},
+                   {"label": "SNP AA", "alt_aa": "Y", "ref_aa": "N", "ref_pos": "501", "protein_symbol": "S"}],
+     "orFilter": [{"andFilter": [{"label": "SNP Nt", "alt_nuc": "N", "ref_nuc": "A", "ref_pos": "11022"}],
+                   "orFilter": [{"andFilter": [{"label": "Del AA", "first_deleted": "3001", "last_deleted": "3004",
+                                                 "protein_symbol": "ORF1ab"},
+                                                {"label": "Del Nt", "first_deleted": "11288", "last_deleted": "11300"}],
+                                 "orFilter": []}]}]}
+    """
+    final_result = {"andFilter": [], "orFilter": []}
+    if depth not in result:
+        return []
+
+    current_level = result[depth]
+    final_result["andFilter"] = current_level.get("andFilter", [])
+    _result = convert_to_desired_structure(result=result, depth=depth + 1)
+    if _result:
+        final_result["orFilter"].append(_result)
+
+    return final_result
 
 
 def create_property_query(prop_name, prop_value):
@@ -216,10 +295,27 @@ def create_property_query(prop_name, prop_value):
     return _query
 
 
+def get_operator(op: Optional[str] = None, inverse: bool = False) -> str:
+    """Returns the appropriate operator for a given operation type and inversion flag.
+
+    Args:
+        op (Optional[str]): The operation to be performed. If not specified or empty, the default operation '=' will be used.
+        inverse (bool, optional): A flag indicating whether to use the inverse of the operation. Defaults to False.
+
+    Returns:
+        str: The operator corresponding to the operation type and inversion flag.
+    """
+    op = op if op else OPERATORS["default"]
+    return OPERATORS["standard"][op]
+    # return OPERATORS["inverse"][op] if inverse else OPERATORS["standard"][op]
+
+
+# Backup
 def construct_query(  # noqa: C901
     properties: Optional[Dict[str, List[str]]] = None,
     profiles: Optional[Dict[str, List[str]]] = None,
     defined_props: Optional[List[Dict[str, str]]] = [],
+    with_sublineage: bool = False,
 ):
 
     int_pattern_single = re.compile(r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*)$")
@@ -236,140 +332,541 @@ def construct_query(  # noqa: C901
     float_pattern_range = re.compile(
         r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
     )
-
     final_query = {"andFilter": [], "orFilter": []}
+
     print("Input Profiles:", profiles)
+    print("Input Properties:", properties)
+    print("Enable Sublineage:", with_sublineage)
 
-    if defined_props:
-        defined_props_dict = {
-            item["name"]: item["query_type"] for item in defined_props
-        }
-    else:
-        defined_props_dict = {}
+    if profiles:
+        final_query = create_profile_query(profiles)
 
-    # combine OR
-    profile_OR_query = {"orFilter": []}
-    for profile_set in profiles:
+    if properties:
+        if defined_props:
+            defined_props_dict = {
+                item["name"]: item["query_type"] for item in defined_props
+            }
+        else:
+            defined_props_dict = {}
 
+        # NOTE: we dont support IN operand, so we combine them with OR, this can cause the performance issue.
+        # TODO: conside to rewirte the code.
         # combine AND
-        profile_AND_query = {"andFilter": []}
-        for mutation in profile_set:
-            _query = create_profile_query(mutation)
-            profile_AND_query["andFilter"].append(_query)
-        profile_OR_query["orFilter"].append(profile_AND_query)
+        _prop_query = {"andFilter": []}
+        for prop_name, prop_value_list in properties.items():
 
-    final_query["andFilter"].append(profile_OR_query)
+            if prop_value_list is None:
+                continue
 
-    # combine AND
+            prop_type = defined_props_dict.get(prop_name, "value_varchar")
+            print(
+                f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list}"
+            )
 
-    for prop_name, prop_value_list in properties.items():
-
-        if prop_value_list is None:
-            continue
-        prop_type = defined_props_dict.get(prop_name, "value_varchar")
-        print(
-            f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list}"
-        )
-
-        for prop_value in prop_value_list:
-
-            # check property query with the data type
-            if prop_type == "value_varchar":
+            # combine OR
+            _tmp_query = {"orFilter": []}
+            for prop_value in prop_value_list:
+                match = None
                 # Determine the operation key and strip the inverse symbol if necessary
                 negate = True if prop_value.startswith(NEGATE_OPERATOR) else False
-                extract_value = prop_value[1:] if negate else prop_value
-                # Determine the operator
-                operator = get_operator(
-                    "LIKE"
-                    if extract_value.startswith("%") or extract_value.endswith("%")
-                    else "exact",
-                    negate,
-                )
 
-                final_query["andFilter"].append(
-                    {
-                        "label": "Property",
-                        "property_name": prop_name,
-                        "filter_type": operator,
-                        "value": extract_value,
-                    }
-                )
+                # check property query with the data type
+                # not sure for two below
+                # if prop_type == "value_text":
+                #     pass
+                # if prop_type == "value_zip":
+                #     pass
+                if (
+                    prop_type == "value_varchar"
+                    or prop_type == "value_zip"
+                    or prop_type == "value_text"
+                ):
 
-            elif prop_type == "value_integer":
+                    extract_value = prop_value[1:] if negate else prop_value
 
-                if RANGE_OPERATOR not in prop_value:
-                    match = int_pattern_single.match(prop_value)
                     # Determine the operator
-                    operator = get_operator(op=match.group(2), inverse=match.group(1))
-                    extract_value = int(match.group(3))
+                    operator = get_operator(
+                        "LIKE"
+                        if extract_value.startswith("%") or extract_value.endswith("%")
+                        else "exact",
+                    )
+
                     _query = {
                         "label": "Property",
                         "property_name": prop_name,
                         "filter_type": operator,
                         "value": extract_value,
+                        "exclude": negate,
                     }
 
-                    final_query["andFilter"].append(_query)
-                else:  # Processing value range
-                    match = int_pattern_range.match(prop_value)
+                    if prop_name == "lineage":
+                        _query["with_sublineage"] = with_sublineage
 
-                    if not match:
-                        LOGGER.error(
-                            f"Invalid format: the '{prop_name}' with its type '{prop_type}' and value '{prop_value}' is not in the expected format."
+                    match = True
+
+                elif prop_type == "value_integer":
+                    if RANGE_OPERATOR not in prop_value:
+                        match = int_pattern_single.match(prop_value)
+                        # Determine the operator
+                        operator = get_operator(
+                            op=match.group(2), inverse=match.group(1)
                         )
-                        sys.exit(1)
 
-                    int(match.group(2))
-                    int(match.group(3))
+                        extract_value = int(match.group(3))
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": extract_value,
+                            "exclude": negate,
+                        }
 
-            # TODO: check float format.
-            elif prop_type == "value_float":
+                    else:  # Processing value range
+                        match = int_pattern_range.match(prop_value)
+                        num1 = int(match.group(2))
+                        num2 = int(match.group(3))
+                        operator = get_operator(op="BETWEEN", inverse=match.group(1))
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": [num1, num2],
+                            "exclude": negate,
+                        }
+                elif prop_type == "value_float":
 
-                if RANGE_OPERATOR not in prop_value:
-                    match = float_pattern_single.match(prop_value)
-                    # Determine the operator
-                    operator = get_operator(op=match.group(2), inverse=match.group(1))
-                    extract_value = int(match.group(3))
-                    _query = {
-                        "label": "Property",
-                        "property_name": prop_name,
-                        "filter_type": operator,
-                        "value": extract_value,
-                    }
-
-                    final_query["andFilter"].append(_query)
-                else:  # Processing value range
-                    match = float_pattern_range.match(prop_value)
-
-                    if not match:
-                        LOGGER.error(
-                            f"Invalid format: the '{prop_name}' with its type '{prop_type}' and value '{prop_value}' is not in the expected format."
+                    if RANGE_OPERATOR not in prop_value:
+                        match = float_pattern_single.match(prop_value)
+                        # Determine the operator
+                        operator = get_operator(
+                            op=match.group(2), inverse=match.group(1)
                         )
-                        sys.exit(1)
+                        extract_value = float(match.group(3))
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": extract_value,
+                            "exclude": negate,
+                        }
 
-                    int(match.group(2))
-                    int(match.group(3))
-            # TODO: check date format.
-            elif prop_type == "value_date":
-                if RANGE_OPERATOR not in prop_value:
-                    match = date_pattern_single.match(prop_value)
-                else:  # Processing value range
-                    match = date_pattern_range.match(prop_value)
+                        final_query["andFilter"].append(_query)
+                    else:  # Processing value range
+                        match = float_pattern_range.match(prop_value)
 
-    pprint.pprint(final_query, width=1)
+                        num1 = float(match.group(2))
+                        num2 = float(match.group(3))
+                        operator = get_operator(op="BETWEEN", inverse=match.group(1))
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": [num1, num2],
+                            "exclude": negate,
+                        }
+                elif prop_type == "value_date":
+
+                    if RANGE_OPERATOR not in prop_value:
+                        match = date_pattern_single.match(prop_value)
+                        operator = get_operator(
+                            op=match.group(2), inverse=match.group(1)
+                        )
+                        extract_value = match.group(3)
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": match.group(3),
+                            "exclude": negate,
+                        }
+                    else:  # Processing value range
+                        match = date_pattern_range.match(prop_value)
+                        operator = get_operator(op="BETWEEN", inverse=match.group(1))
+                        try:
+                            date1 = datetime.datetime.strptime(
+                                match.group(2), "%Y-%m-%d"
+                            )
+                            date2 = datetime.datetime.strptime(
+                                match.group(3), "%Y-%m-%d"
+                            )
+                        except ValueError:
+                            LOGGER.error("Invalid date format or out-of-range day.")
+                            sys.exit(1)
+
+                        # Plausibility check
+                        if date1 >= date2:
+                            LOGGER.error("Invalid range (" + match.group(0) + ").")
+                            sys.exit(1)
+
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": [match.group(2), match.group(3)],
+                            "exclude": negate,
+                        }
+                else:
+                    # fail to validate
+                    pass
+
+                if not match:
+                    LOGGER.error(
+                        f"Invalid format: the '{prop_name}' with its type '{prop_type}' and value '{prop_value}' is not in the expected format."
+                    )
+                    sys.exit(1)
+                else:
+                    _tmp_query["orFilter"].append(_query)
+
+            _prop_query["andFilter"].append(_tmp_query)
+
+    # Then merge back to the final query
+    final_query["andFilter"].append(_prop_query)
 
     return final_query
 
 
-def get_operator(op: Optional[str] = None, inverse: bool = False) -> str:
-    """Returns the appropriate operator for a given operation type and inversion flag.
+# dev function ()
+def construct_query_dev(  # noqa: C901
+    properties: Optional[Dict[str, List[str]]] = None,
+    profiles: Optional[Dict[str, List[str]]] = None,
+    defined_props: Optional[List[Dict[str, str]]] = [],
+    with_sublineage: bool = False,
+):
 
-    Args:
-        op (Optional[str]): The operation to be performed. If not specified or empty, the default operation '=' will be used.
-        inverse (bool, optional): A flag indicating whether to use the inverse of the operation. Defaults to False.
+    int_pattern_single = re.compile(r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*)$")
+    int_pattern_range = re.compile(r"^(\^*)(-?[1-9]+[0-9]*):(-?[1-9]+[0-9]*)$")
+    date_pattern_single = re.compile(
+        r"^(\^*)((?:>|>=|<|<=|!=|=)?)([0-9]{4}-[0-9]{2}-[0-9]{2})$"
+    )
+    date_pattern_range = re.compile(
+        r"^(\^*)([0-9]{4}-[0-9]{2}-[0-9]{2}):([0-9]{4}-[0-9]{2}-[0-9]{2})$"
+    )
+    float_pattern_single = re.compile(
+        r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
+    )
+    float_pattern_range = re.compile(
+        r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
+    )
+    final_query = {"andFilter": [], "orFilter": []}
 
-    Returns:
-        str: The operator corresponding to the operation type and inversion flag.
-    """
-    op = op if op else OPERATORS["default"]
-    return OPERATORS["inverse"][op] if inverse else OPERATORS["standard"][op]
+    print("Input Profiles:", profiles)
+    print("Input Properties:", properties)
+    print("Enable Sublineage:", with_sublineage)
+
+    if profiles:
+        final_query = create_profile_query(profiles)
+
+    if properties:
+        if defined_props:
+            defined_props_dict = {
+                item["name"]: item["query_type"] for item in defined_props
+            }
+        else:
+            defined_props_dict = {}
+
+        # TODO: combine AND OR
+        _tmp_Prop_query = {"andFilter": []}
+        for (
+            prop_name,
+            prop_value_list_list,
+        ) in properties.items():  # <------- combine with AND  (different property type)
+            if prop_value_list_list is None:
+                continue
+            # Get property query type.
+            prop_type = defined_props_dict.get(prop_name, "value_varchar")
+            print(
+                f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list_list}"
+            )
+
+            # check property query with the data type
+            if prop_type == "value_varchar":
+                tmp_SameNameProp_query = {"andFilter": [], "orFilter": []}
+                for (
+                    prop_value_list
+                ) in (
+                    prop_value_list_list
+                ):  # <------- combine with OR (same property type)
+                    _tmp_query = {"andFilter": []}
+                    if len(prop_value_list) > 1:
+                        # Check if it contains ! or %  or not
+
+                        _in_value = []
+                        for prop_value in prop_value_list:
+                            negate = (
+                                True
+                                if prop_value.startswith(NEGATE_OPERATOR)
+                                else False
+                            )
+                            extract_value = prop_value[1:] if negate else prop_value
+                            if extract_value.startswith("%") or extract_value.endswith(
+                                "%"
+                            ):
+                                wild_card = True
+                            else:
+                                wild_card = False
+
+                            if not negate and not wild_card:
+                                _in_value.append(extract_value)
+                            else:
+                                if wild_card:
+                                    op = "LIKE"
+                                else:
+                                    op = "exact"
+
+                                operator = get_operator(op)
+                                _query = {
+                                    "label": "Property",
+                                    "property_name": prop_name,
+                                    "filter_type": operator,
+                                    "value": extract_value,
+                                    "exclude": negate,
+                                }
+                                if prop_name == "lineage":
+                                    _query["with_sublineage"] = with_sublineage
+                                match = True
+                                _tmp_query["andFilter"].append(_query)
+
+                        if len(_in_value) > 0:
+                            op = "IN"
+                            extract_value = _in_value
+                            operator = get_operator(op)
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": extract_value,
+                                "exclude": negate,
+                            }
+                            if prop_name == "lineage":
+                                _query["with_sublineage"] = with_sublineage
+                            match = True
+                            _tmp_query["andFilter"].append(_query)
+                    else:
+                        prop_value = prop_value_list[0]
+                        negate = (
+                            True if prop_value.startswith(NEGATE_OPERATOR) else False
+                        )
+                        extract_value = prop_value[1:] if negate else prop_value
+
+                        op = "exact"
+                        if extract_value.startswith("%") or extract_value.endswith("%"):
+                            op = "LIKE"
+                        elif len(prop_value_list) > 1:
+                            op = "IN"
+
+                        # Determine the operator
+                        operator = get_operator(op)
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": extract_value,
+                            "exclude": negate,
+                        }
+
+                        if prop_name == "lineage":
+                            _query["with_sublineage"] = with_sublineage
+                        match = True
+
+                        _tmp_query["andFilter"].append(_query)
+
+                    tmp_SameNameProp_query["orFilter"].append(_tmp_query)
+
+            elif prop_type == "value_integer":
+                pass
+            elif prop_type == "value_float":
+                pass
+            elif prop_type == "value_date":
+                pass
+            elif prop_type == "value_zip":
+                pass
+            elif prop_type == "value_text":
+                pass
+
+            _tmp_Prop_query["andFilter"].append(tmp_SameNameProp_query)
+
+    final_query["andFilter"].append(_tmp_Prop_query)
+    return final_query
+    if False:
+        _tmp_Prop_query = {"andFilter": []}
+        for (
+            prop_name,
+            prop_value_list_list,
+        ) in properties.items():  # <------- combine with AND  (different property type)
+            if prop_value_list_list is None:
+                continue
+
+            # Get property query type.
+            prop_type = defined_props_dict.get(prop_name, "value_varchar")
+            print(
+                f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list_list}"
+            )
+            # reduce prop
+            # prop_value_list = sum(prop_value_list, [])
+            _tmp_SameNameProp_ORquery = {"orFilter": []}
+            for (
+                prop_value_list
+            ) in prop_value_list_list:  # <------- combine with OR (same property type)
+                print(prop_value_list)
+                _tmp_SameNameProp_ANDquery = {"andFilter": []}
+                for prop_value in prop_value_list:
+                    match = None
+                    # Determine the operation key and strip the inverse symbol if necessary
+                    negate = True if prop_value.startswith(NEGATE_OPERATOR) else False
+
+                    # check property query with the data type
+                    if prop_type == "value_varchar":
+
+                        extract_value = prop_value[1:] if negate else prop_value
+
+                        op = "exact"
+                        if extract_value.startswith("%") or extract_value.endswith("%"):
+                            op = "LIKE"
+                        elif len(prop_value_list) > 1:
+                            op = "IN"
+
+                        # Determine the operator
+                        operator = get_operator(op)
+
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": extract_value,
+                            "exclude": negate,
+                        }
+
+                        if prop_name == "lineage":
+                            _query["with_sublineage"] = with_sublineage
+
+                        match = True
+
+                    elif prop_type == "value_integer":
+                        if RANGE_OPERATOR not in prop_value:
+                            match = int_pattern_single.match(prop_value)
+                            # Determine the operator
+                            operator = get_operator(
+                                op=match.group(2), inverse=match.group(1)
+                            )
+
+                            extract_value = int(match.group(3))
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": extract_value,
+                                "exclude": negate,
+                            }
+
+                        else:  # Processing value range
+                            match = int_pattern_range.match(prop_value)
+                            num1 = int(match.group(2))
+                            num2 = int(match.group(3))
+                            operator = get_operator(
+                                op="BETWEEN", inverse=match.group(1)
+                            )
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": [num1, num2],
+                                "exclude": negate,
+                            }
+                    elif prop_type == "value_float":
+
+                        if RANGE_OPERATOR not in prop_value:
+                            match = float_pattern_single.match(prop_value)
+                            # Determine the operator
+                            operator = get_operator(
+                                op=match.group(2), inverse=match.group(1)
+                            )
+                            extract_value = float(match.group(3))
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": extract_value,
+                                "exclude": negate,
+                            }
+
+                            final_query["andFilter"].append(_query)
+                        else:  # Processing value range
+                            match = float_pattern_range.match(prop_value)
+
+                            num1 = float(match.group(2))
+                            num2 = float(match.group(3))
+                            operator = get_operator(
+                                op="BETWEEN", inverse=match.group(1)
+                            )
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": [num1, num2],
+                                "exclude": negate,
+                            }
+                    elif prop_type == "value_date":
+
+                        if RANGE_OPERATOR not in prop_value:
+                            match = date_pattern_single.match(prop_value)
+                            operator = get_operator(
+                                op=match.group(2), inverse=match.group(1)
+                            )
+                            extract_value = match.group(3)
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": match.group(3),
+                                "exclude": negate,
+                            }
+                        else:  # Processing value range
+                            match = date_pattern_range.match(prop_value)
+                            operator = get_operator(
+                                op="BETWEEN", inverse=match.group(1)
+                            )
+                            try:
+                                date1 = datetime.datetime.strptime(
+                                    match.group(2), "%Y-%m-%d"
+                                )
+                                date2 = datetime.datetime.strptime(
+                                    match.group(3), "%Y-%m-%d"
+                                )
+                            except ValueError:
+                                LOGGER.error("Invalid date format or out-of-range day.")
+                                sys.exit(1)
+
+                            # Plausibility check
+                            if date1 >= date2:
+                                LOGGER.error("Invalid range (" + match.group(0) + ").")
+                                sys.exit(1)
+
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": [match.group(2), match.group(3)],
+                                "exclude": negate,
+                            }
+
+                    else:
+                        # fail to validate
+                        pass
+
+                    if not match:
+                        LOGGER.error(
+                            f"Invalid format: the '{prop_name}' with its type '{prop_type}' and value '{prop_value}' is not in the expected format."
+                        )
+                        sys.exit(1)
+                    else:
+                        _tmp_SameNameProp_ANDquery["andFilter"].append(_query)
+
+                _tmp_SameNameProp_ORquery["orFilter"].append(_tmp_SameNameProp_ANDquery)
+
+            _tmp_Prop_query["andFilter"].append(_tmp_SameNameProp_ORquery)
+
+        print(_tmp_Prop_query)
+        # Then merge back to the final query
+        # final_query.update(_tmp_Prop_query)
+        final_query["andFilter"].append(_tmp_Prop_query)
+    return final_query

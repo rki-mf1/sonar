@@ -16,19 +16,23 @@ class APIClient:
     get_all_references_endpoint = "references/get_all_references"
     get_distinct_accession_endpoint = "references/distinct_accessions"
     get_sample_data_endpoint = "samples/get_sample_data"
+    get_bulk_sample_data_endpoint = "samples/get_bulk_sample_data/"
     get_alignment_endpoint = "alignments/get_alignment_data"
+    get_bulk_alignment_endpoint = "alignments/get_bulk_alignment_data/"
     get_gene_endpoint = "genes/get_gene_data"
     get_replicon_endpoint = "replicons/get_molecule_data"
     get_match_endpoint = "samples/genomes"
 
     get_translation_table_endpoint = "resources/get_translation_table"
-    get_properties_endpont = "property/get_all_properties"
+    get_properties_endpont = "properties/get_all_properties"
 
     post_add_reference_endpoint = "references/import_gbk/"
     post_delete_reference_endpoint = "references/delete_reference/"
     post_delete_sample_endpoint = "samples/delete_sample_data/"
     post_import_property_upload_endpoint = "samples/import_properties_tsv/"
     post_import_upload_endpoint = "file_uploads/import_upload/"
+    post_add_property_endpoint = "properties/add_property/"
+    post_delete_property_endpoint = "properties/delete_property/"
 
     def __init__(self, base_url, token=""):
         self.base_url = base_url
@@ -40,6 +44,7 @@ class APIClient:
         endpoint: str,
         params: dict | None = {},
         data: dict | None = {},
+        json: dict | None = {},
         files: dict | None = {},
         headers: dict | None = {},
     ):
@@ -52,6 +57,7 @@ class APIClient:
                 url,
                 headers=self.headers,
                 data=data,
+                json=json,
                 params=params,
                 files=files,
                 verify=True,
@@ -60,13 +66,17 @@ class APIClient:
             #   response.raise_for_status() for HTTP errors (4xx, 5xx)
             if 400 <= response.status_code < 500:
                 # Handle client-side errors (e.g., bad request)
+                message = return_json["message"] if "message" in return_json else ""
                 LOGGER.error(
-                    f"{response.status_code} Client Error: {response.reason}: {return_json['message']} "
+                    f"{response.status_code} Client Error: {response.reason}: {message} "
                 )
+                LOGGER.error("Immediately stop running and exit")
+                sys.exit(1)
             elif 500 <= response.status_code < 600:
                 LOGGER.error(
                     f"{response.status_code} Server Error: {response.reason} for url: {url}"
                 )
+                LOGGER.error("Immediately stop running and exit")
                 sys.exit(1)
 
         except requests.exceptions.HTTPError as errh:
@@ -134,6 +144,13 @@ class APIClient:
         except Exception as e:
             raise ValueError(f"Error processing JSON response: {str(e)}")
 
+    def get_bulk_sample_data(self, sample_name_list: List[str]):
+        data = {"sample_data": sample_name_list}
+        json_response = self._make_request(
+            "POST", endpoint=self.get_bulk_sample_data_endpoint, json=data
+        )
+        return json_response
+
     def get_sample_data(self, sample_name: str):
         """
         Returns a tuple of rowid and seqhash of a sample based on its name if it exists,
@@ -163,6 +180,13 @@ class APIClient:
             return (data["sample_id"], data["sequence__seqhash"])
         else:
             return (None, None)
+
+    def get_bulk_alignment_data(self, rep_seq_list: List[dict]):
+        data = {"sample_data": rep_seq_list}
+        json_response = self._make_request(
+            "POST", endpoint=self.get_bulk_alignment_endpoint, json=data
+        )
+        return json_response
 
     def get_alignment_id(self, seqhash: str, element_id: int):
         """
@@ -202,9 +226,16 @@ class APIClient:
             Dict[str, Dict[str, Any]]: Dictionary with molecule accessions as keys and their data as values.
 
             Examples:
-            {'NC_063383.1': {'molecule.accession': 'NC_063383.1',
-            'molecule.id': 1, 'molecule.standard': 1,
-            'translation.id': 1}}
+            {"id": 1,
+                        "length": 29903,
+                        "sequence": "ATCG"
+                        "accession": "MN908947.3",
+                        "description": "Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome",
+                        "type": null,
+                        "segment_number": null,
+                        "reference_id": 1,
+                        "translation_id": 1
+            }
         """
         params = {}
         params["reference_accession"] = reference_accession
@@ -333,7 +364,6 @@ class APIClient:
         return json_response
 
     def post_import_property_upload(self, data, file):
-
         json_response = self._make_request(
             "POST",
             endpoint=self.post_import_property_upload_endpoint,
@@ -363,5 +393,22 @@ class APIClient:
             "POST",
             endpoint=self.post_delete_sample_endpoint,
             data=data,
+        )
+        return json_response
+
+    def post_add_property(self, data: dict):
+        json_response = self._make_request(
+            "POST",
+            endpoint=self.post_add_property_endpoint,
+            data=data,
+        )
+        return json_response
+
+    def post_delete_property(self, name: str):
+        """ """
+        data = {"name": name}
+
+        json_response = self._make_request(
+            "POST", endpoint=self.post_delete_property_endpoint, data=data
         )
         return json_response

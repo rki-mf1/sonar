@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 
 import pandas as pd
@@ -12,18 +11,28 @@ LOGGER = LoggingConfigurator.get_logger()
 
 class Annotator:
     def __init__(
-        self, annotator_exe_path=None, SNPSIFT_exe_path=None, VCF_ONEPERLINE_PATH=None
+        self,
+        annotator_exe_path=None,
+        SNPSIFT_exe_path=None,
+        VCF_ONEPERLINE_PATH=None,
+        config_path=None,
     ) -> None:
         # "snpEff/SnpSift.jar"
         self.annotator = annotator_exe_path
         self.SNPSIFT = SNPSIFT_exe_path
         self.VCF_ONEPERLINE_TOOL = VCF_ONEPERLINE_PATH
+        self.config_path = config_path
 
     def snpeff_annotate(self, input_vcf, output_vcf, database_name):
-        if not self.annotator or not os.path.isfile(self.annotator):
+        if not self.annotator:
             raise ValueError("Annotator executable path is not provided.")
         # Command to annotate using SnpEff
-        command = [f"java -jar {self.annotator} {database_name} {input_vcf} -noStats "]
+        command = " ".join(
+            [f"{self.annotator}", f"{database_name}", f"{input_vcf}", "-noStats"]
+        )
+        if self.config_path:
+            command = command + f" -nodownload -config {self.config_path}"
+
         try:
             # Run the SnpEff annotation
             with open(output_vcf, "w") as output_file:
@@ -33,6 +42,7 @@ class Annotator:
             # result = subprocess.run(['java', '-version'], stderr=subprocess.STDOUT)
             if result.returncode != 0:
                 LOGGER.error("Output failed with exit code: %s", result.returncode)
+                print(command)
                 print("Error output:", result.stderr.decode("utf-8"))
 
         except subprocess.CalledProcessError as e:
