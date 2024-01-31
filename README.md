@@ -157,13 +157,13 @@ Every letter stand for a complete basic filter, e.g.:
 - A:
 ```json
 {
-    "A"
+    "andFilter": ["A"]
 }
 ```
-also possible:
+- A && B:
 ```json
 {
-    "andFilter": ["A"]
+    "andFilter": ["A", "B"]
 }
 ```
 
