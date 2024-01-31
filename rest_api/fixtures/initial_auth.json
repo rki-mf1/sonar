@@ -265,24 +265,24 @@
           "genesegment"
         ],
         [
-          "add_lineages",
+          "add_lineage",
           "rest_api",
-          "lineages"
+          "lineage"
         ],
         [
-          "change_lineages",
+          "change_lineage",
           "rest_api",
-          "lineages"
+          "lineage"
         ],
         [
-          "delete_lineages",
+          "delete_lineage",
           "rest_api",
-          "lineages"
+          "lineage"
         ],
         [
-          "view_lineages",
+          "view_lineage",
           "rest_api",
-          "lineages"
+          "lineage"
         ],
         [
           "add_mutation",
@@ -503,9 +503,9 @@
           "genesegment"
         ],
         [
-          "view_lineages",
+          "view_lineage",
           "rest_api",
-          "lineages"
+          "lineage"
         ],
         [
           "view_mutation",

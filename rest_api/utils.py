@@ -110,4 +110,3 @@ def resolve_ambiguous_NT_AA(type, char):
         raise KeyError(f"Invalid notation '{char}'.")
     
     return selected_chars
-

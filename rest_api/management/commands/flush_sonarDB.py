@@ -9,8 +9,8 @@ class Command(BaseCommand):
             cursor.execute('''
                 BEGIN;
                 TRUNCATE "sample", "sample2property", "mutation2annotation", "reference", "property", "alignment",
-                "gene_segment", "sequence", "annotation_type", "mutation", "gene", "lineages", "replicon",
-                "alignment2mutation"
+                "gene_segment", "sequence", "annotation_type", "mutation", "gene", "lineage", "replicon",
+                "alignment2mutation", "lineage_alias"
                 RESTART IDENTITY;
                 COMMIT;
             ''')
