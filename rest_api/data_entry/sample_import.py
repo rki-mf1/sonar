@@ -312,7 +312,7 @@ class SampleImport:
                     ):
                         mutation2annotation_objs.append(
                             Mutation2Annotation(
-                                mutation=mutation,
+                                mutation_id=mutation,
                                 alignment=self.alignment,
                                 annotation=annotation,
                             )

@@ -264,3 +264,8 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
                 variant['variant.end'] = mutation.end
                 list.append(variant)   
         return list
+
+class LineagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Lineage
+        fields = "__all__"

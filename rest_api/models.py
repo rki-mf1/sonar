@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.db import models
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, Q
 
 
 class Sequence(models.Model):
@@ -11,7 +11,7 @@ class Sequence(models.Model):
 
 
 class Alignment(models.Model):
-    replicon = models.ForeignKey("Replicon", models.CASCADE , blank=True, null=True)
+    replicon = models.ForeignKey("Replicon", models.CASCADE, blank=True, null=True)
     sequence = models.ForeignKey(
         "Sequence", models.CASCADE, blank=True, null=True, related_name="alignments"
     )
@@ -35,7 +35,7 @@ class Alignment2Mutation(models.Model):
     alignment = models.ForeignKey(Alignment, models.CASCADE)
     mutation = models.ForeignKey("Mutation", models.CASCADE, blank=True, null=True)
 
-    class Meta:                 
+    class Meta:
         indexes = [
             models.Index(
                 fields=["alignment", "mutation"],
@@ -113,10 +113,37 @@ class GeneSegment(models.Model):
         db_table = "gene_segment"
 
 
-
 class Lineage(models.Model):
     prefixed_alias = models.CharField(max_length=50, blank=True, null=True)
     lineage = models.CharField(max_length=100)
+
+    def _get_sublineages_query(self):
+        query = Q()
+        if self.prefixed_alias:
+            aliases = LineageAlias.objects.filter(lineage=self, parent_alias=None)
+            query |= Q(prefixed_alias__in=aliases.values_list("alias", flat=True))
+            for alias in aliases:
+                print(alias.alias, alias.lineage, alias.parent_alias)
+            print("__")
+            for sublineage in Lineage.objects.filter(
+                prefixed_alias__in=aliases.values_list("alias", flat=True)
+            ):  
+                print(sublineage.prefixed_alias, sublineage.lineage)
+                query |= sublineage._get_sublineages_query()
+        query |= Q(lineage__startswith=f"{self.lineage}.", prefixed_alias=self.prefixed_alias)
+        return query
+
+    def get_sublineages(self):
+        query = self._get_sublineages_query()
+        query |= Q(lineage=self.lineage, prefixed_alias=self.prefixed_alias)
+        return Lineage.objects.filter(query)
+    
+    def __str__(self) -> str:
+        if self.prefixed_alias:
+            if self.lineage:
+                return f"{self.prefixed_alias}.{self.lineage}"
+            return self.prefixed_alias
+        return self.lineage
 
     class Meta:
         db_table = "lineage"
@@ -128,9 +155,10 @@ class Lineage(models.Model):
             UniqueConstraint(
                 name="unique_lineage_null_alias",
                 fields=["lineage"],
-                condition=models.Q(prefixed_alias__isnull=True),      
+                condition=models.Q(prefixed_alias__isnull=True),
             ),
         ]
+
 
 class LineageAlias(models.Model):
     alias = models.CharField(max_length=50)

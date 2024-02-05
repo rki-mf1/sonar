@@ -6,6 +6,7 @@ import pickle
 import traceback
 from dataclasses import dataclass
 from datetime import datetime
+from rest_framework import generics
 import zipfile
 from django.http import HttpResponse
 
@@ -50,6 +51,7 @@ from .serializers import (
     SampleGenomesSerializer,
     SampleGenomesSerializerVCF,
     SampleSerializer,
+    LineagesSerializer,
 )
 
 
@@ -249,7 +251,7 @@ class SampleViewSet(
     serializer_class = SampleSerializer
     filter_backends = [DjangoFilterBackend]
     lookup_field = "name"
-    
+
     @property
     def filter_label_to_methods(self):
         return {
@@ -261,7 +263,7 @@ class SampleViewSet(
             "Ins Nt": self.filter_ins_profile_nt,
             "Ins AA": self.filter_ins_profile_aa,
         }
-    
+
     @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
         # TODO-smc abklären ob das so richtig ist
@@ -342,7 +344,7 @@ class SampleViewSet(
     ) -> QuerySet:
         if not queryset:
             queryset = models.Sample.objects.all()
-        
+
         if "andFilter" in filters:
             for filter in filters.get("andFilter", []):
                 if "orFilter" in filter or "andFilter" in filter:
@@ -350,7 +352,7 @@ class SampleViewSet(
                 else:
                     queryset = self.eval_basic_filter(queryset, filter)
         elif "label" in filters:
-            queryset = self.eval_basic_filter(queryset, filters)     
+            queryset = self.eval_basic_filter(queryset, filters)
 
         or_query = Q()
         if len(filters.get("andFilter", [])) > 0 or "label" in filters:
@@ -1185,5 +1187,16 @@ class FuctionsViewSet(viewsets.ViewSet):
         return create_success_response(return_status=status.HTTP_200_OK)
 
 
-class LineageViewSet(viewsets.ViewSet):
+class LineageViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin, generics.mixins.RetrieveModelMixin):
     model = models.Lineage
+    queryset = models.Lineage.objects.all()
+    serializer_class = LineagesSerializer
+
+    
+    @action(detail=True, methods=["get"])
+    def get_sublineages(self, request: Request, *args, **kwargs):
+        lineage = self.get_object()
+        sublineages = lineage.get_sublineages()
+        list = [str(lineage) for lineage in sublineages]
+        list.sort()
+        return create_success_response(data={"sublineages": list})

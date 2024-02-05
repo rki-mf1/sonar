@@ -21,5 +21,5 @@ router.register(r"aa_mutations", viewsets.AAMutationViewSet, basename="aa_mutati
 router.register(r"genes", viewsets.GeneViewSet, basename="gene")
 router.register(r"resources", viewsets.ResourceViewSet, basename="resources")
 router.register(r"file_uploads", viewsets.FileUploadViewSet, basename="import_upload")
-
+router.register(r"lineages", viewsets.LineageViewSet, basename="lineage")
 urlpatterns = [*router.urls]
