@@ -115,6 +115,14 @@ class RepliconViewSet(viewsets.ModelViewSet):
         return Response({"genes": [item["symbol"] for item in queryset]})
 
     @action(detail=False, methods=["get"])
+    def distinct_accessions(self, request: Request, *args, **kwargs):
+        queryset = models.Replicon.objects.distinct("accession").values("accession")
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(molecule__reference__accession=ref)
+        return Response({"accessions": [item["accession"] for item in queryset]})
+
+
+    @action(detail=False, methods=["get"])
     def get_molecule_data(self, request: Request, *args, **kwargs):
         sample_data = {}
 
@@ -262,6 +270,7 @@ class SampleViewSet(
             "Del AA": self.filter_del_profile_aa,
             "Ins Nt": self.filter_ins_profile_nt,
             "Ins AA": self.filter_ins_profile_aa,
+            "Replicon": self.filter_replicon,
         }
 
     @action(detail=False, methods=["get"])
@@ -288,6 +297,7 @@ class SampleViewSet(
 
             if filter_params := request.query_params.get("filters"):
                 filters = json.loads(filter_params)
+                print(filters)
                 queryset = self.resolve_genome_filter(filters)
 
             showNX = strtobool(request.query_params.get("showNX", "False"))
@@ -585,6 +595,20 @@ class SampleViewSet(
         )
         filters = {"sequence__alignments__in": alignment_qs}
         qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
+        return qs
+
+    def filter_replicon(
+        self,
+        accession,
+        qs: QuerySet | None = None,        
+        *args,
+        **kwargs,
+    ):
+        if qs is None:
+            qs = models.Sample.objects.all()
+        qs = qs.filter(
+            sequence__alignments__replicon__reference__accession=accession
+        )
         return qs
 
     def _convert_date(self, date: str):
@@ -1187,12 +1211,15 @@ class FuctionsViewSet(viewsets.ViewSet):
         return create_success_response(return_status=status.HTTP_200_OK)
 
 
-class LineageViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin, generics.mixins.RetrieveModelMixin):
+class LineageViewSet(
+    viewsets.GenericViewSet,
+    generics.mixins.ListModelMixin,
+    generics.mixins.RetrieveModelMixin,
+):
     model = models.Lineage
     queryset = models.Lineage.objects.all()
     serializer_class = LineagesSerializer
 
-    
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):
         lineage = self.get_object()
