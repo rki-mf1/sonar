@@ -600,15 +600,19 @@ class SampleViewSet(
     def filter_replicon(
         self,
         accession,
-        qs: QuerySet | None = None,        
+        qs: QuerySet | None = None,
+        exclude: bool = False,
         *args,
         **kwargs,
     ):
         if qs is None:
             qs = models.Sample.objects.all()
-        qs = qs.filter(
-            sequence__alignments__replicon__reference__accession=accession
-        )
+        if exclude:
+            qs = qs.exclude(sequence__alignments__replicon__reference__accession=accession)
+        else:
+            qs = qs.filter(
+                sequence__alignments__replicon__reference__accession=accession
+            )
         return qs
 
     def _convert_date(self, date: str):
