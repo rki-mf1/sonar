@@ -316,7 +316,7 @@ class SampleImport:
 
                         mutation2annotation_objs.append(
                             Mutation2Annotation(
-                                mutation=Mutation.objects.get(id=mutation_id),
+                                mutation_id=mutation_id,
                                 alignment=self.alignment,
                                 annotation=annotation,
                             )

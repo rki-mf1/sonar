@@ -229,17 +229,22 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         list = []
         for alignment in obj.sequence.alignments.all():
             for mutation in alignment.proteomic_profiles:
-                label = ""
-                # SNP and INS
-                if mutation.alt != None:
-                    label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
-                else : # DEL
-                    if mutation.end - mutation.start == 1:
-                        label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) 
-                    else:
-                        label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) + "-" + str(mutation.end)
-                list.append(label)
-            
+                try:
+                    label = ""
+                    # SNP and INS
+                    if mutation.alt != None:
+
+                        label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
+                    else : # DEL
+                        if mutation.end - mutation.start == 1:
+                            label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) 
+                        else:
+                            label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) + "-" + str(mutation.end)
+                    list.append(label)
+                except AttributeError as e: 
+                    print(e)
+                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")   
+                    continue  
         return list
 
 
@@ -268,3 +273,8 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
                 variant['variant.end'] = mutation.end
                 list.append(variant)   
         return list
+
+class LineagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Lineage
+        fields = "__all__"
