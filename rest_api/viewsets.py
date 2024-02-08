@@ -403,7 +403,6 @@ class SampleViewSet(
         if "label" in filters:
             q_obj &= self.eval_basic_filter(q_obj, filters)
 
-
         #
         for or_filter in filters.get("orFilter", []):
             q_obj |= self.resolve_genome_filter(or_filter)
@@ -500,7 +499,7 @@ class SampleViewSet(
             & (mutation_alt)
             & Q(mutations__type="nt")
         )
-        print("Snp NT:", mutation_condition)
+
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -557,8 +556,7 @@ class SampleViewSet(
         add new field exact match or not
         """
         # For NT: del:first_NT_deleted-last_NT_deleted (e.g. del:133177-133186).
-        if qs is None:
-            qs = models.Sample.objects.all()
+
         # in case only single deltion bp
         if last_deleted == "":    
             last_deleted = first_deleted
@@ -589,6 +587,7 @@ class SampleViewSet(
         # in case only single deltion bp
         if last_deleted == "":    
             last_deleted = first_deleted
+
 
         alignment_qs = models.Alignment.objects.filter(
             mutations__gene__gene_symbol=protein_symbol,
