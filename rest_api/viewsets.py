@@ -293,12 +293,14 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         try:
+            self.has_property_filter = False
             queryset = models.Sample.objects.all()
 
             if filter_params := request.query_params.get("filters"):
                 filters = json.loads(filter_params)
-                print(filters)
-                queryset = self.resolve_genome_filter(filters)
+                queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
+                if self.has_property_filter:
+                    queryset.prefetch_related("properties__property")
 
             showNX = strtobool(request.query_params.get("showNX", "False"))
             vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
@@ -336,11 +338,7 @@ class SampleViewSet(
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializerVCF(queryset, many=True)
                 return self.get_paginated_response(serializer.data)
-            else:
-                queryset = queryset.prefetch_related(
-                    "properties__property",
-                )
-
+            else:                
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializer(queryset, many=True)
                 return self.get_paginated_response(serializer.data)
@@ -350,36 +348,29 @@ class SampleViewSet(
             return create_error_response(message=str(e))
 
     def resolve_genome_filter(
-        self, filters, queryset: QuerySet | None = None
-    ) -> QuerySet:
-        if not queryset:
-            queryset = models.Sample.objects.all()
-
-        if "andFilter" in filters:
-            for filter in filters.get("andFilter", []):
-                if "orFilter" in filter or "andFilter" in filter:
-                    queryset = self.resolve_genome_filter(filter, queryset)
-                else:
-                    queryset = self.eval_basic_filter(queryset, filter)
-        elif "label" in filters:
-            queryset = self.eval_basic_filter(queryset, filters)
-
-        or_query = Q()
-        if len(filters.get("andFilter", [])) > 0 or "label" in filters:
-            or_query |= Q(id__in=queryset)
+        self, filters
+    ) -> Q:
+        q_obj = Q()
+        for filter in filters.get("andFilter", []):
+            if "orFilter" in filter or "andFilter" in filter:
+                q_obj &= self.resolve_genome_filter(filter)
+            else:
+                q_obj &= self.eval_basic_filter(q_obj, filter)
+        if "label" in filters:
+            q_obj &= self.eval_basic_filter(q_obj, filters)
 
         for or_filter in filters.get("orFilter", []):
-            or_query |= Q(id__in=self.resolve_genome_filter(or_filter))
+            q_obj |= self.resolve_genome_filter(or_filter)
+        print(q_obj)
+        return q_obj
 
-        return models.Sample.objects.filter(or_query)
-
-    def eval_basic_filter(self, queryset, filter):
+    def eval_basic_filter(self, q_obj, filter):
         method = self.filter_label_to_methods.get(filter.get("label"))
         if method:
-            queryset = method(qs=queryset, **filter)
+            q_obj = method(qs=q_obj, **filter)
         else:
             raise Exception(f"filter_method not found for:{filter.get('label')}")
-        return queryset
+        return q_obj
 
     # WIP - not working yet
     @action(detail=False, methods=["get"])
@@ -402,13 +393,10 @@ class SampleViewSet(
         filter_type,
         value,
         exclude: bool = False,
-        qs: QuerySet | None = None,
         *args,
         **kwargs,
-    ):
-        if qs is None:
-            qs = models.Sample.objects.all()
-            qs.prefetch_related("properties__property")
+    ) -> Q:
+        self.has_property_filter = True
         if property_name in [field.name for field in models.Sample._meta.get_fields()]:
             query = {}
             query[f"{property_name}__{filter_type}"] = value
@@ -416,9 +404,9 @@ class SampleViewSet(
             datatype = models.Property.objects.get(name=property_name).datatype
             query = {f"properties__property__name": property_name}
             query[f"properties__{datatype}__{filter_type}"] = value
-
-        qs = qs.exclude(**query) if exclude else qs.filter(**query)
-        return qs
+        if exclude:
+            return ~Q(**query)
+        return Q(**query)
 
     def filter_snp_profile_nt(
         self,
@@ -426,14 +414,11 @@ class SampleViewSet(
         ref_nuc: str,
         ref_pos: int,
         alt_nuc: str,
-        qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
         **kwargs,
-    ) -> QuerySet:
+    ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nuc (e.g. T28175C).
-        if qs is None:
-            qs = models.Sample.objects.all()
         # Create Q() objects for each condition
         if alt_nuc == "N":
             mutation_alt = Q()
@@ -454,13 +439,13 @@ class SampleViewSet(
             & (mutation_alt)
             & Q(mutations__type="nt")
         )
-        if DEBUG:
-            print(mutation_condition)
 
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
         filters = {"sequence__alignments__in": alignment_qs}
-        qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
-        return qs
+        if exclude:
+            return ~Q(**filters)  
+        return Q(**filters)
+    
 
     def filter_snp_profile_aa(
         self,
@@ -468,15 +453,12 @@ class SampleViewSet(
         ref_aa: str,
         ref_pos: str,
         alt_aa: str,
-        qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
         **kwargs,
-    ) -> QuerySet:
+    ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aa (e.g. OPG098:E162K)
-        if qs is None:
-            qs = models.Sample.objects.all()
-
+        
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
@@ -497,8 +479,9 @@ class SampleViewSet(
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
         filters = {"sequence__alignments__in": alignment_qs}
-        qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
-        return qs
+        if exclude:
+            return ~Q(**filters)  
+        return Q(**filters)
 
     def filter_del_profile_nt(
         self,
@@ -508,13 +491,11 @@ class SampleViewSet(
         exclude: bool = False,
         *args,
         **kwargs,
-    ) -> QuerySet:
+    ) -> Q:
         """
         add new field exact match or not
         """
         # For NT: del:first_NT_deleted-last_NT_deleted (e.g. del:133177-133186).
-        if qs is None:
-            qs = models.Sample.objects.all()
         alignment_qs = models.Alignment.objects.filter(
             mutations__start=int(first_deleted) - 1,
             mutations__end=last_deleted,
@@ -522,8 +503,9 @@ class SampleViewSet(
             mutations__type="nt",
         )
         filters = {"sequence__alignments__in": alignment_qs}
-        qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
-        return qs
+        if exclude:
+            return ~Q(**filters)  
+        return Q(**filters)
 
     def filter_del_profile_aa(
         self,
@@ -531,13 +513,10 @@ class SampleViewSet(
         first_deleted: int,
         last_deleted: int,
         exclude: bool = False,
-        qs: QuerySet | None = None,
         *args,
         **kwargs,
-    ) -> QuerySet:
+    ) -> Q:
         # For AA: protein_symbol:del:first_AA_deleted-last_AA_deleted (e.g. OPG197:del:34-35)
-        if qs is None:
-            qs = models.Sample.objects.all()
         alignment_qs = models.Alignment.objects.filter(
             mutations__gene__gene_symbol=protein_symbol,
             mutations__start=int(first_deleted) - 1,
@@ -546,22 +525,20 @@ class SampleViewSet(
             mutations__type="cds",
         )
         filters = {"sequence__alignments__in": alignment_qs}
-        qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
-        return qs
+        if exclude:
+            return ~Q(**filters)  
+        return Q(**filters)
 
     def filter_ins_profile_nt(
         self,
         ref_nuc: str,
         ref_pos: int,
         alt_nucs: str,
-        qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
         **kwargs,
-    ) -> QuerySet:
+    ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nucs (e.g. T133102TTT)
-        if qs is None:
-            qs = models.Sample.objects.all()
         alignment_qs = models.Alignment.objects.filter(
             mutations__end=ref_pos,
             mutations__ref=ref_nuc,
@@ -569,8 +546,9 @@ class SampleViewSet(
             mutations__type="nt",
         )
         filters = {"sequence__alignments__in": alignment_qs}
-        qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
-        return qs
+        if exclude:
+            return ~Q(**filters)  
+        return Q(**filters)
 
     def filter_ins_profile_aa(
         self,
@@ -578,14 +556,11 @@ class SampleViewSet(
         ref_aa: str,
         ref_pos: int,
         alt_aas: str,
-        qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
         **kwargs,
-    ) -> QuerySet:
+    ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aas (e.g. OPG197:A34AK)
-        if qs is None:
-            qs = models.Sample.objects.all()
         alignment_qs = models.Alignment.objects.filter(
             mutations__end=ref_pos,
             mutations__ref=ref_aa,
@@ -594,26 +569,21 @@ class SampleViewSet(
             mutations__type="cds",
         )
         filters = {"sequence__alignments__in": alignment_qs}
-        qs = qs.exclude(**filters) if exclude else qs.filter(**filters)
-        return qs
+        if exclude:
+            return ~Q(**filters)  
+        return Q(**filters)
 
     def filter_replicon(
         self,
         accession,
-        qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
         **kwargs,
     ):
-        if qs is None:
-            qs = models.Sample.objects.all()
         if exclude:
-            qs = qs.exclude(sequence__alignments__replicon__reference__accession=accession)
+            return ~Q(sequence__alignments__replicon__reference__accession=accession)
         else:
-            qs = qs.filter(
-                sequence__alignments__replicon__reference__accession=accession
-            )
-        return qs
+            return Q(sequence__alignments__replicon__reference__accession=accession)
 
     def _convert_date(self, date: str):
         datetime_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
