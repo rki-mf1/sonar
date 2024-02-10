@@ -75,6 +75,8 @@ Once these steps are completed, proceed to the next section.
 
 ## Setup sonar-backend (development server)
 
+There is a ".env.template" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+
 1. Check if the application and django are set up and running correctly.
     ```bash
     python manage.py 
@@ -138,6 +140,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 | `covid19.180.tsv`           | Input sample containing  meta information (tsv). |
 | `cache_180_mafft.zip`       | Input sample containing the genomic sequence (fasta) using MAFFT aligner. |
 | `MN908947.3.gbk`            | Reference genome of SARS-CoV-2 in GenBank format.                          |
+| `dump-sonar-test-db.sql`| SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest."                    |
 
 
 ## Setup sonar-backend (production)

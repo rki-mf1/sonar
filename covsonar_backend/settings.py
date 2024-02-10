@@ -191,4 +191,8 @@ APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
 IMPORTED_DATA_DIR = env("IMPORTED_DATA_DIR") if env("IMPORTED_DATA_DIR") else os.path.join(BASE_DIR,"import_data")
 
+# Check if the directory already exists
+if not os.path.exists(IMPORTED_DATA_DIR):
+    os.makedirs(IMPORTED_DATA_DIR)
+
 PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]

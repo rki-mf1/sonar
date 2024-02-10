@@ -297,6 +297,7 @@ class SampleViewSet(
             "Ins Nt": self.filter_ins_profile_nt,
             "Ins AA": self.filter_ins_profile_aa,
             "Replicon": self.filter_replicon,
+            "Sample": self.filter_sample,
         }
 
     @action(detail=False, methods=["get"])
@@ -339,7 +340,7 @@ class SampleViewSet(
                 if self.has_property_filter:
                     queryset.prefetch_related("properties__property")
 
-            # TODO: imrpove reference filter 
+            # TODO: improve reference filter 
             reference_query = Q(sequence__alignments__replicon__reference__accession=ref)
             queryset = queryset.filter(reference_query)
 
@@ -499,7 +500,7 @@ class SampleViewSet(
             & (mutation_alt)
             & Q(mutations__type="nt")
         )
-
+        print("Snp NT:", mutation_condition)
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -556,7 +557,6 @@ class SampleViewSet(
         add new field exact match or not
         """
         # For NT: del:first_NT_deleted-last_NT_deleted (e.g. del:133177-133186).
-
         # in case only single deltion bp
         if last_deleted == "":    
             last_deleted = first_deleted
@@ -588,15 +588,17 @@ class SampleViewSet(
         if last_deleted == "":    
             last_deleted = first_deleted
 
-
         alignment_qs = models.Alignment.objects.filter(
-            mutations__gene__gene_symbol=protein_symbol,
+            # search with case insensitive ORF1ab = orf1ab
+            mutations__gene__gene_symbol__iexact=protein_symbol,
             mutations__start=int(first_deleted) - 1,
             mutations__end=last_deleted,
             mutations__alt__isnull=True,
             mutations__type="cds",
         )
+        print(f"Del AA: {protein_symbol} mutations__start={int(first_deleted) - 1} mutations__end={last_deleted}")
         filters = {"sequence__alignments__in": alignment_qs}
+        print(filters)
         if exclude:
             return ~Q(**filters)  
         return Q(**filters)
@@ -644,6 +646,18 @@ class SampleViewSet(
         if exclude:
             return ~Q(**filters)  
         return Q(**filters)
+
+    def filter_sample(
+        self,
+        sample_list,
+        exclude: bool = False,
+        *args,
+        **kwargs,
+    ):
+        if exclude:
+            return ~Q(sample__in=sample_list)
+        else:
+            return Q(sample__in=sample_list)
 
     def filter_replicon(
         self,
