@@ -454,7 +454,7 @@ class sonarAligner:
         qrylen = len(qryseq)
         prefix = False
         vars = []
-        print(cigar)
+
         for match in self.cigar_pattern.finditer(cigar):
             vartype = match.group(2)
             varlen = int(match.group(1))
@@ -503,8 +503,6 @@ class sonarAligner:
                     )
                     refpos += varlen
                 elif varlen == 1:  # 1bp deletion
-                    if refpos == 11287:
-                        print("1bp deletion")
 
                     vars.append(
                         (
@@ -522,8 +520,7 @@ class sonarAligner:
                     )
                     refpos += 1
                 else:  # multi-bp inner deletion
-                    if refpos == 11287:
-                        print("multi-bp inner deletion")
+
                     vars.append(
                         (
                             refseq[refpos : refpos + varlen],
@@ -541,8 +538,7 @@ class sonarAligner:
                     refpos += varlen
             # insertion handling
             elif vartype == "I":
-                if refpos == 11287:
-                    print("insertion")
+
                 if refpos == 0:  # to consider insertion before sequence start
                     ref = "."
                     alt = qryseq[:varlen]

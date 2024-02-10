@@ -17,12 +17,13 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 
 ## 1. Prerequisite software
 
-### 1.1 Install sonar-backend
+### 1.1 Conda (Package manager)
+
+- please visit [Miniconda](https://docs.anaconda.com/free/miniconda/) for download and installation
+- please visit [Bioconda](https://bioconda.github.io/) for download and installation
+
+### 1.2 Install sonar-backend
 please visit [sonar-backend](https://github.com/rki-mf1/sonar-backend) for download and installation
-
-### 1.2 MAFFT (sequence alignment program)
-
-please visit [MAFFT](https://mafft.cbrc.jp/alignment/software/) for download and installation
 
 ## 2. Sonar-cli Setup
 
@@ -40,7 +41,7 @@ There is a ".env.template" file in the root directory. This file contains variab
 ### 2.3 Create python environment
 
 ```sh
-conda create -n sonar-cli python=3.11 poetry snpeff
+conda create -n sonar-cli python=3.11 poetry snpeff mafft
 conda activate sonar-cli
 ```
 

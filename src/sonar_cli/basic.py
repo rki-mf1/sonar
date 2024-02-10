@@ -349,9 +349,7 @@ def construct_query(  # noqa: C901
         else:
             defined_props_dict = {}
 
-        # NOTE: we dont support IN operand, so we combine them with OR, this can cause the performance issue.
-        # TODO: conside to rewirte the code.
-        # combine AND
+        # combine AND with different prop_name
         _prop_query = {"andFilter": []}
         for prop_name, prop_value_list in properties.items():
 
@@ -363,6 +361,8 @@ def construct_query(  # noqa: C901
                 f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list}"
             )
 
+            # NOTE: we dont use IN operator, so right now we combine them with OR, this can cause the performance issue.
+            # TODO: conside to rewirte the code to use IN if possible.
             # combine OR
             _tmp_query = {"orFilter": []}
             for prop_value in prop_value_list:
@@ -516,357 +516,26 @@ def construct_query(  # noqa: C901
                     sys.exit(1)
                 else:
                     _tmp_query["orFilter"].append(_query)
-
-            _prop_query["andFilter"].append(_tmp_query)
+            if len(_tmp_query.get("orFilter", [])) > 0:
+                _prop_query["andFilter"].append(_tmp_query)
 
     # Then merge back to the final query
-    final_query["andFilter"].append(_prop_query)
 
+    if len(_prop_query.get("andFilter", [])) > 0:
+        final_query["andFilter"].append(_prop_query)
+
+    # final_query = remove_empty_lists(final_query)
     return final_query
 
 
-# dev function ()
-def construct_query_dev(  # noqa: C901
-    properties: Optional[Dict[str, List[str]]] = None,
-    profiles: Optional[Dict[str, List[str]]] = None,
-    defined_props: Optional[List[Dict[str, str]]] = [],
-    with_sublineage: bool = False,
-):
-
-    int_pattern_single = re.compile(r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*)$")
-    int_pattern_range = re.compile(r"^(\^*)(-?[1-9]+[0-9]*):(-?[1-9]+[0-9]*)$")
-    date_pattern_single = re.compile(
-        r"^(\^*)((?:>|>=|<|<=|!=|=)?)([0-9]{4}-[0-9]{2}-[0-9]{2})$"
-    )
-    date_pattern_range = re.compile(
-        r"^(\^*)([0-9]{4}-[0-9]{2}-[0-9]{2}):([0-9]{4}-[0-9]{2}-[0-9]{2})$"
-    )
-    float_pattern_single = re.compile(
-        r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
-    )
-    float_pattern_range = re.compile(
-        r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
-    )
-    final_query = {"andFilter": [], "orFilter": []}
-
-    print("Input Profiles:", profiles)
-    print("Input Properties:", properties)
-    print("Enable Sublineage:", with_sublineage)
-
-    if profiles:
-        final_query = create_profile_query(profiles)
-
-    if properties:
-        if defined_props:
-            defined_props_dict = {
-                item["name"]: item["query_type"] for item in defined_props
-            }
-        else:
-            defined_props_dict = {}
-
-        # TODO: combine AND OR
-        _tmp_Prop_query = {"andFilter": []}
-        for (
-            prop_name,
-            prop_value_list_list,
-        ) in properties.items():  # <------- combine with AND  (different property type)
-            if prop_value_list_list is None:
-                continue
-            # Get property query type.
-            prop_type = defined_props_dict.get(prop_name, "value_varchar")
-            print(
-                f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list_list}"
-            )
-
-            # check property query with the data type
-            if prop_type == "value_varchar":
-                tmp_SameNameProp_query = {"andFilter": [], "orFilter": []}
-                for (
-                    prop_value_list
-                ) in (
-                    prop_value_list_list
-                ):  # <------- combine with OR (same property type)
-                    _tmp_query = {"andFilter": []}
-                    if len(prop_value_list) > 1:
-                        # Check if it contains ! or %  or not
-
-                        _in_value = []
-                        for prop_value in prop_value_list:
-                            negate = (
-                                True
-                                if prop_value.startswith(NEGATE_OPERATOR)
-                                else False
-                            )
-                            extract_value = prop_value[1:] if negate else prop_value
-                            if extract_value.startswith("%") or extract_value.endswith(
-                                "%"
-                            ):
-                                wild_card = True
-                            else:
-                                wild_card = False
-
-                            if not negate and not wild_card:
-                                _in_value.append(extract_value)
-                            else:
-                                if wild_card:
-                                    op = "LIKE"
-                                else:
-                                    op = "exact"
-
-                                operator = get_operator(op)
-                                _query = {
-                                    "label": "Property",
-                                    "property_name": prop_name,
-                                    "filter_type": operator,
-                                    "value": extract_value,
-                                    "exclude": negate,
-                                }
-                                if prop_name == "lineage":
-                                    _query["with_sublineage"] = with_sublineage
-                                match = True
-                                _tmp_query["andFilter"].append(_query)
-
-                        if len(_in_value) > 0:
-                            op = "IN"
-                            extract_value = _in_value
-                            operator = get_operator(op)
-                            _query = {
-                                "label": "Property",
-                                "property_name": prop_name,
-                                "filter_type": operator,
-                                "value": extract_value,
-                                "exclude": negate,
-                            }
-                            if prop_name == "lineage":
-                                _query["with_sublineage"] = with_sublineage
-                            match = True
-                            _tmp_query["andFilter"].append(_query)
-                    else:
-                        prop_value = prop_value_list[0]
-                        negate = (
-                            True if prop_value.startswith(NEGATE_OPERATOR) else False
-                        )
-                        extract_value = prop_value[1:] if negate else prop_value
-
-                        op = "exact"
-                        if extract_value.startswith("%") or extract_value.endswith("%"):
-                            op = "LIKE"
-                        elif len(prop_value_list) > 1:
-                            op = "IN"
-
-                        # Determine the operator
-                        operator = get_operator(op)
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": extract_value,
-                            "exclude": negate,
-                        }
-
-                        if prop_name == "lineage":
-                            _query["with_sublineage"] = with_sublineage
-                        match = True
-
-                        _tmp_query["andFilter"].append(_query)
-
-                    tmp_SameNameProp_query["orFilter"].append(_tmp_query)
-
-            elif prop_type == "value_integer":
-                pass
-            elif prop_type == "value_float":
-                pass
-            elif prop_type == "value_date":
-                pass
-            elif prop_type == "value_zip":
-                pass
-            elif prop_type == "value_text":
-                pass
-
-            _tmp_Prop_query["andFilter"].append(tmp_SameNameProp_query)
-
-    final_query["andFilter"].append(_tmp_Prop_query)
-    return final_query
-    if False:
-        _tmp_Prop_query = {"andFilter": []}
-        for (
-            prop_name,
-            prop_value_list_list,
-        ) in properties.items():  # <------- combine with AND  (different property type)
-            if prop_value_list_list is None:
-                continue
-
-            # Get property query type.
-            prop_type = defined_props_dict.get(prop_name, "value_varchar")
-            print(
-                f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list_list}"
-            )
-            # reduce prop
-            # prop_value_list = sum(prop_value_list, [])
-            _tmp_SameNameProp_ORquery = {"orFilter": []}
-            for (
-                prop_value_list
-            ) in prop_value_list_list:  # <------- combine with OR (same property type)
-                print(prop_value_list)
-                _tmp_SameNameProp_ANDquery = {"andFilter": []}
-                for prop_value in prop_value_list:
-                    match = None
-                    # Determine the operation key and strip the inverse symbol if necessary
-                    negate = True if prop_value.startswith(NEGATE_OPERATOR) else False
-
-                    # check property query with the data type
-                    if prop_type == "value_varchar":
-
-                        extract_value = prop_value[1:] if negate else prop_value
-
-                        op = "exact"
-                        if extract_value.startswith("%") or extract_value.endswith("%"):
-                            op = "LIKE"
-                        elif len(prop_value_list) > 1:
-                            op = "IN"
-
-                        # Determine the operator
-                        operator = get_operator(op)
-
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": extract_value,
-                            "exclude": negate,
-                        }
-
-                        if prop_name == "lineage":
-                            _query["with_sublineage"] = with_sublineage
-
-                        match = True
-
-                    elif prop_type == "value_integer":
-                        if RANGE_OPERATOR not in prop_value:
-                            match = int_pattern_single.match(prop_value)
-                            # Determine the operator
-                            operator = get_operator(
-                                op=match.group(2), inverse=match.group(1)
-                            )
-
-                            extract_value = int(match.group(3))
-                            _query = {
-                                "label": "Property",
-                                "property_name": prop_name,
-                                "filter_type": operator,
-                                "value": extract_value,
-                                "exclude": negate,
-                            }
-
-                        else:  # Processing value range
-                            match = int_pattern_range.match(prop_value)
-                            num1 = int(match.group(2))
-                            num2 = int(match.group(3))
-                            operator = get_operator(
-                                op="BETWEEN", inverse=match.group(1)
-                            )
-                            _query = {
-                                "label": "Property",
-                                "property_name": prop_name,
-                                "filter_type": operator,
-                                "value": [num1, num2],
-                                "exclude": negate,
-                            }
-                    elif prop_type == "value_float":
-
-                        if RANGE_OPERATOR not in prop_value:
-                            match = float_pattern_single.match(prop_value)
-                            # Determine the operator
-                            operator = get_operator(
-                                op=match.group(2), inverse=match.group(1)
-                            )
-                            extract_value = float(match.group(3))
-                            _query = {
-                                "label": "Property",
-                                "property_name": prop_name,
-                                "filter_type": operator,
-                                "value": extract_value,
-                                "exclude": negate,
-                            }
-
-                            final_query["andFilter"].append(_query)
-                        else:  # Processing value range
-                            match = float_pattern_range.match(prop_value)
-
-                            num1 = float(match.group(2))
-                            num2 = float(match.group(3))
-                            operator = get_operator(
-                                op="BETWEEN", inverse=match.group(1)
-                            )
-                            _query = {
-                                "label": "Property",
-                                "property_name": prop_name,
-                                "filter_type": operator,
-                                "value": [num1, num2],
-                                "exclude": negate,
-                            }
-                    elif prop_type == "value_date":
-
-                        if RANGE_OPERATOR not in prop_value:
-                            match = date_pattern_single.match(prop_value)
-                            operator = get_operator(
-                                op=match.group(2), inverse=match.group(1)
-                            )
-                            extract_value = match.group(3)
-                            _query = {
-                                "label": "Property",
-                                "property_name": prop_name,
-                                "filter_type": operator,
-                                "value": match.group(3),
-                                "exclude": negate,
-                            }
-                        else:  # Processing value range
-                            match = date_pattern_range.match(prop_value)
-                            operator = get_operator(
-                                op="BETWEEN", inverse=match.group(1)
-                            )
-                            try:
-                                date1 = datetime.datetime.strptime(
-                                    match.group(2), "%Y-%m-%d"
-                                )
-                                date2 = datetime.datetime.strptime(
-                                    match.group(3), "%Y-%m-%d"
-                                )
-                            except ValueError:
-                                LOGGER.error("Invalid date format or out-of-range day.")
-                                sys.exit(1)
-
-                            # Plausibility check
-                            if date1 >= date2:
-                                LOGGER.error("Invalid range (" + match.group(0) + ").")
-                                sys.exit(1)
-
-                            _query = {
-                                "label": "Property",
-                                "property_name": prop_name,
-                                "filter_type": operator,
-                                "value": [match.group(2), match.group(3)],
-                                "exclude": negate,
-                            }
-
-                    else:
-                        # fail to validate
-                        pass
-
-                    if not match:
-                        LOGGER.error(
-                            f"Invalid format: the '{prop_name}' with its type '{prop_type}' and value '{prop_value}' is not in the expected format."
-                        )
-                        sys.exit(1)
-                    else:
-                        _tmp_SameNameProp_ANDquery["andFilter"].append(_query)
-
-                _tmp_SameNameProp_ORquery["orFilter"].append(_tmp_SameNameProp_ANDquery)
-
-            _tmp_Prop_query["andFilter"].append(_tmp_SameNameProp_ORquery)
-
-        print(_tmp_Prop_query)
-        # Then merge back to the final query
-        # final_query.update(_tmp_Prop_query)
-        final_query["andFilter"].append(_tmp_Prop_query)
-    return final_query
+def remove_empty_lists(d):
+    if isinstance(d, dict):
+        return {
+            k: remove_empty_lists(v)
+            for k, v in d.items()
+            if v and remove_empty_lists(v)
+        }
+    elif isinstance(d, list):
+        return [remove_empty_lists(v) for v in d if v and remove_empty_lists(v)]
+    else:
+        return d

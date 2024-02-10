@@ -45,7 +45,6 @@ sonar-cli = "sonar_cli.sonar:run"
 
 [tool.poetry.group.dev.dependencies]
 pytest-dependency = "^0.5.1"
-pytest-parallel = "^0.1.1"
 pytest-xdist = "^3.3.1"
 pre-commit = "^3.4.0"
 pytest-order = "^1.1.0"
@@ -66,3 +65,8 @@ target-version = ['py311']
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+markers = [
+    "run: test order",
+]

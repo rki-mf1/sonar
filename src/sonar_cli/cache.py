@@ -49,7 +49,7 @@ class sonarCache:
         outdir: Optional[str] = None,
         refacc: Optional[str] = None,
         logfile: Optional[str] = None,
-        allow_updates: bool = True,
+        allow_updates: bool = False,
         ignore_errors: bool = False,
         temp: bool = False,
         debug: bool = False,

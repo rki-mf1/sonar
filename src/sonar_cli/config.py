@@ -23,4 +23,4 @@ MAX_SUPPORTED_DB_VERSION = 2
 SUPPORTED_DB_VERSION = 1.2
 
 # API/Backend
-BASE_URL = os.getenv("API_URL") or "http://127.0.0.1:8000/"
+BASE_URL = os.getenv("API_URL") or "http://127.0.0.1:8000/api"

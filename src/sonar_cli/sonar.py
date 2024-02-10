@@ -409,8 +409,12 @@ def create_subparser_import(
     )
     parser.add_argument(
         "--no-progress",
-        "-p",
         help="don't show progress bars while importing",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-upload",
+        help="don't upload processed sample to sonar-backend",
         action="store_true",
     )
     return subparsers, parser
@@ -625,6 +629,7 @@ def handle_import(args: argparse.Namespace):
         quiet=args.debug,
         reference=args.reference,
         method=args.method,
+        no_upload_sample=args.no_upload,
     )
 
 
@@ -889,6 +894,7 @@ def main(args: Optional[argparse.Namespace] = None) -> int:
     # process arguments
     if not args:
         args = parse_args(sys.argv[1:])
+
     # Set debugging mode
     if hasattr(args, "debug") and args.debug:
         debug = True

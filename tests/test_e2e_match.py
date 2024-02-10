@@ -1,0 +1,324 @@
+from .conftest import run_cli
+
+
+def test_match(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3")
+    out, err = capfd.readouterr()
+    assert code == 0
+
+
+def test_match_profile_count(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3  --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "12" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile G22992A --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "9" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_AND(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3  --profile T24469A C26858T --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "3" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_OR(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --profile A1741G --profile G22992A --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "10" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_AA(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile S:T19R --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_OR_AA(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --profile S:E484K --profile  S:N501Y  --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "9" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_showNX(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile S:T19R --showNX")
+    out, err = capfd.readouterr()
+    assert "A28213N" in out
+    assert "ORF8:L118X" in out
+    assert code == 0
+
+
+def test_match_profile_exactN():
+    pass
+
+
+def test_match_profile_exactX():
+    pass
+
+
+def test_match_profile_NT_INS(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --profile A29903NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_varchar_NULL(capfd, api_url):
+    pass
+
+
+def test_match_varchar_widecard(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --lab %101% --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "5" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_text(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --comments %mysteries% --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_text_NULL(capfd, api_url):
+    pass
+
+
+def test_match_prop_int(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --age 16 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_int_not(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --age ^16 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "11" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_int_range(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --age 50:80 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "3" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_int_gt(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --age '>80' --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "6" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_int_lt(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --age '<70' --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "5" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_float(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro 66.11 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_float_not(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro '^66.11' --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "11" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_float_range(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro '30:66.11' --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "6" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_float_gt(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro 31.16 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_float_lt(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro '<42.64' --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "6" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_date(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --collection_date 2022-01-30  --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_date_range(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --collection_date 2022-01-30:2022-06-30  --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "6" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_zip(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --zip_code 16816  --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_zip_not(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --zip_code ^16816  --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "11" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_complex_1(capfd, api_url):
+    # combine AA and AA AND PROP
+    code = run_cli(
+        f"match --db {api_url}  -r MN908947.3 --profile S:E484A S:N501Y --collection_date 2022-01-30 --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+    # fail in test
+    code = run_cli(
+        f"match --db {api_url}  -r MN908947.3 --profile S:E484K S:N501Y --collection_date 2022-01-30 --count "
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "0" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_complex_2():
+    # combine AA and NT AND PROP AND PROP
+    pass
+
+
+def test_match_prop_complex_3():
+    # combine AA OR NT AND PROP AND PROP
+    pass
+
+
+def test_match_profile_NT_DEL(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --profile del:21987-21995 --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "3" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_AA_INS(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile S:R214REPE --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_AA_DEL(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --profile ORF1ab:del:3675-3676 --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "6" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_NT_DEL_single(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile del:28271 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_profile_AA_DEL_single(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile S:del:157 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_varchar_lineage(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --lineage BA.1.1 AY.4 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "3" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_varchar_not(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --sequencing_reason ^X --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "6" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_varchar(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --sequencing_reason X  --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "5" == lines[-1]
+    assert code == 0

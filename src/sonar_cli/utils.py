@@ -65,11 +65,12 @@ class sonarUtils:
         autolink: bool = False,
         auto_anno: bool = False,
         progress: bool = False,
-        update: bool = True,
+        update: bool = False,
         threads: int = 1,
         quiet: bool = False,
         reference: str = None,
         method: int = 1,
+        no_upload_sample: bool = False,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -106,39 +107,6 @@ class sonarUtils:
         # In the future, we need to edit/design the code to
         # be more flexible when managing newly added properties.
 
-        # TODO: Right now we just use fixed code, need to edit it.
-        """
-        properties = {
-            "DATE_OF_SAMPLING": {
-                "db_property_name": "collection_date",
-                "data_type": "value_varchar"
-            },
-            "SEQUENCING_METHOD": {
-                "db_property_name": "sequencing_tech",
-                "data_type": "value_varchar"
-            },
-            "DL.POSTAL_CODE": {
-                "db_property_name": "zip_code",
-                "data_type": "value_varchar"
-            },
-            "SL.ID": {
-                "db_property_name": "lab",
-                "data_type": "value_varchar"
-            },
-            "LINEAGE_LATEST": {
-                "db_property_name": "lineage",
-                "data_type": "value_varchar"
-            },
-            "SEQUENCE.SEQUENCING_REASON": {
-                "db_property_name": "sequencing_reason",
-                "data_type": "value_varchar"
-            },
-            "SEQUENCE.SAMPLE_TYPE": {
-                "db_property_name": "sample_type",
-                "data_type": "value_varchar"
-            }
-            }
-        """
         properties = {}
         if prop_links:
             # construct property dcit from file header or user provide
@@ -172,10 +140,16 @@ class sonarUtils:
         # importing sequences
         if fasta:
             sonarUtils._import_fasta(
-                fasta, properties, cache, threads, progress, method, auto_anno
+                fasta,
+                properties,
+                cache,
+                threads,
+                progress,
+                method,
+                auto_anno,
+                no_upload_sample,
             )
 
-        # TODO: change to API calls
         # importing properties
         if csv_files or tsv_files:
 
@@ -222,6 +196,7 @@ class sonarUtils:
         progress: bool = False,
         method: int = 1,
         auto_anno: bool = False,
+        no_upload_sample: bool = False,
     ) -> None:
         """
         Process and import sequences from fasta files.
@@ -264,7 +239,10 @@ class sonarUtils:
         if auto_anno:
             # paired_anno_samples_list = [ {'db_path': self.db, 'sample_data': sample} for sample in anno_samples_list]
             with WorkerPool(
-                n_jobs=threads, start_method="fork", shared_objects=cache
+                n_jobs=threads,
+                start_method="fork",
+                shared_objects=cache,
+                use_worker_state=False,
             ) as pool, tqdm(
                 position=0,
                 leave=True,
@@ -274,13 +252,16 @@ class sonarUtils:
                 bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
                 disable=not progress,
             ) as pbar:
+                pool.set_shared_objects(cache)
                 for _ in pool.imap_unordered(
                     sonarUtils.annotate_sample, passed_samples_list
                 ):
                     pbar.update(1)
+        else:
+            LOGGER.info("Disable annotation step.")
 
         # Send Result over network.
-        if True:
+        if not no_upload_sample:
             with WorkerPool(
                 n_jobs=threads, start_method="fork", shared_objects=cache
             ) as pool, tqdm(
@@ -292,10 +273,13 @@ class sonarUtils:
                 bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
                 disable=not progress,
             ) as pbar:
+                pool.set_shared_objects(cache)
                 for _ in pool.imap_unordered(
                     sonarUtils.zip_import_upload, passed_samples_list
                 ):
                     pbar.update(1)
+        else:
+            LOGGER.info("Disable sending samples.")
 
         if method == 1:
             # LOGGER.info("Clean uncessary cache")
@@ -323,16 +307,18 @@ class sonarUtils:
     @staticmethod
     def zip_import_upload(shared_objects, **kwargs):
         cache = shared_objects
-
-        anno_vcf_file = kwargs["anno_vcf_file"]
         var_file = kwargs["var_file"]
         sample_file = cache.get_sample_fname(sample_name=kwargs["name"])
-        files_to_compress = [anno_vcf_file, var_file, sample_file]
-
+        files_to_compress = [var_file, sample_file]
+        if "anno_vcf_file" in kwargs:
+            anno_vcf_file = kwargs["anno_vcf_file"]
+            files_to_compress.append(anno_vcf_file)
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
             for file_path in files_to_compress:
+                if not os.path.exists(file_path):
+                    continue
                 # Get the relative path without the common prefix
                 rel_path = os.path.relpath(
                     file_path, os.path.commonprefix(files_to_compress)
@@ -455,6 +441,7 @@ class sonarUtils:
                 # LOGGER.info("linking data from " + fname + "...")
                 col_names_fromfile.extend(_get_csv_colnames(fname, delim))
 
+            # NOTE: case insensitive (SAMPLE_TYPE = sample_type)
             col_names_fromfile = list(set(col_names_fromfile))
             for col_name in col_names_fromfile:
                 _row_df = prop_df[
@@ -654,9 +641,10 @@ class sonarUtils:
         kwargs are sample dict object
         """
         cache = shared_objects
+
         #  check if it is already exist
         # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
-        if not cache.allow_updates:
+        if cache.allow_updates is False:
             if os.path.exists(kwargs["anno_vcf_file"]):
                 return
         # export_vcf
