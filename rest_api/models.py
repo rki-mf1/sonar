@@ -117,27 +117,27 @@ class Lineage(models.Model):
     prefixed_alias = models.CharField(max_length=50, blank=True, null=True)
     lineage = models.CharField(max_length=100)
 
-    def _get_sublineages_query(self):
+    def _get_sublineages_query(self, include_recombinants: bool):
         query = Q()
         if self.prefixed_alias:
             aliases = LineageAlias.objects.filter(lineage=self, parent_alias=None)
-            query |= Q(prefixed_alias__in=aliases.values_list("alias", flat=True))
-            for alias in aliases:
-                print(alias.alias, alias.lineage, alias.parent_alias)
-            print("__")
+            if not include_recombinants:
+                aliases = [alias.alias for alias in aliases if not alias.is_recombinant()]
+            query |= Q(prefixed_alias__in=aliases)
             for sublineage in Lineage.objects.filter(
-                prefixed_alias__in=aliases.values_list("alias", flat=True)
-            ):  
-                print(sublineage.prefixed_alias, sublineage.lineage)
-                query |= sublineage._get_sublineages_query()
-        query |= Q(lineage__startswith=f"{self.lineage}.", prefixed_alias=self.prefixed_alias)
+                prefixed_alias__in=aliases
+            ):
+                query |= sublineage._get_sublineages_query(include_recombinants=include_recombinants)
+        query |= Q(
+            lineage__startswith=f"{self.lineage}.", prefixed_alias=self.prefixed_alias
+        )
         return query
 
-    def get_sublineages(self):
-        query = self._get_sublineages_query()
+    def get_sublineages(self, include_recombinants=False):
+        query = self._get_sublineages_query(include_recombinants=include_recombinants)
         query |= Q(lineage=self.lineage, prefixed_alias=self.prefixed_alias)
         return Lineage.objects.filter(query)
-    
+
     def __str__(self) -> str:
         if self.prefixed_alias:
             if self.lineage:
@@ -164,6 +164,10 @@ class LineageAlias(models.Model):
     alias = models.CharField(max_length=50)
     lineage = models.ForeignKey("Lineage", models.CASCADE, blank=True, null=True)
     parent_alias = models.CharField(max_length=50, blank=True, null=True)
+    
+    def is_recombinant(self):
+        print(self.alias, LineageAlias.objects.filter(alias=self.alias).count() > 1)
+        return LineageAlias.objects.filter(alias=self.alias).count() > 1
 
     class Meta:
         db_table = "lineage_alias"

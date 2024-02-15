@@ -146,20 +146,6 @@ class SampleImport:
                 vcf_line for vcf_line in self._import_vcf(self.sample_raw.anno_vcf_file)
             ]
 
-    # def write_to_db(self):
-    #     self.sequence = Sequence.objects.get_or_create(seqhash=self.sample_raw.seqhash)[
-    #         0
-    #     ]
-    #     self.sample = self._find_or_create_sample(self.sequence)
-    #     self.replicon = Replicon.objects.get(accession=self.sample_raw.source_acc)
-    #     self.alignment = Alignment.objects.get_or_create(
-    #         sequence=sequence, replicon=replicon
-    #     )[0]
-    #     self.mutations = self._update_mutations(replicon, alignment)
-    #     self._update_annotations(alignment, mutations)
-
-    #     return sample
-
     def get_sequence_obj(self):
         self.sequence = Sequence(seqhash=self.sample_raw.seqhash)
         return self.sequence
