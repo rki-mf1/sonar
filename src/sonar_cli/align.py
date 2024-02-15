@@ -15,6 +15,7 @@ from Bio.Seq import Seq
 import pandas as pd
 import parasail
 import psutil
+from pywfa import WavefrontAligner
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils_1 import read_seqcache
@@ -36,6 +37,34 @@ class sonarAligner:
         self.logfile = open(os.path.join(self.outdir, "align.debug.log"), "a")
         self.method = method
         self.allow_updates = allow_updates
+
+    def align_WFA(self, qryseq, refseq, gapopen=16, gapextend=4):
+        """Method for WFA2-lib run"""
+        # wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
+        # attributes.alignment_form.span = alignment_endsfree;
+        # attributes.alignment_form.pattern_begin_free = 0;
+        # attributes.alignment_form.pattern_end_free = 0;
+        # attributes.alignment_form.text_begin_free = text_begin_free;
+        # attributes.alignment_form.text_end_free = text_end_free;
+        #
+        # From WFA2-lib:
+        # WFA2lib follows the convention that describes how to transform the (1) Pattern/Query into the (2) Text/Database/Reference used in classic pattern matching papers. However, the SAM CIGAR specification describes the transformation from (2) Reference to (1) Query. If you want CIGAR-compliant alignments, swap the pattern and text sequences argument when calling the WFA2lib's align functions (to convert all the Ds into Is and vice-versa).
+        # so there is a chance that the query and ref (pattern and text in WFA language) need to be swapped
+        a = WavefrontAligner(refseq, gap_opening=gapopen, gap_extension=gapextend)
+        a.wavefront_align(qryseq)
+        if a.status != 0:  # alignment was not successful
+            LOGGER.error("An error occurred in align_WFA")
+            LOGGER.error(f"Input sequence: {qryseq}")
+            sys.exit("--stop--")
+        cigar = a.cigarstring
+        traceback_ref = a.aligned_pattern
+        traceback_query = a.aligned_text
+
+        return (
+            traceback_ref,
+            traceback_query,
+            cigar,
+        )
 
     # gapopen=16, gapextend=4
     # gapopen=10, gapextend=1
