@@ -126,7 +126,7 @@ class SampleImport:
         self.replicon: None | Replicon = None
         self.alignment: None | Alignment = None
         self.mutation_query_data: list[dict] = []
-        self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
+        self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {} 
         self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
 
         # NOTE: We probably won't need it
@@ -270,6 +270,7 @@ class SampleImport:
                     mut_lookup_data["start"] += 1
                     mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
                     mut_lookup_data["alt"] = None
+                
                 try:
                     db_mutation = next(
                         x
@@ -282,21 +283,23 @@ class SampleImport:
                     )
                     continue
                 for a in annotations:
-                    for ontology in a.annotation.split("&"):
-                        if not db_mutation["id"] in self.annotation_query_data.keys():
-                            self.annotation_query_data[db_mutation["id"]] = []
-                        self.annotation_query_data[db_mutation["id"]].append(
-                            {
-                                "seq_ontology": ontology,
-                                "impact": a.annotation_impact,
-                            }
-                        )
+                    if a:  # skip None type
+                        for ontology in a.annotation.split("&"):
+                            if not db_mutation["id"] in self.annotation_query_data.keys():
+                                self.annotation_query_data[db_mutation["id"]] = []
+                            self.annotation_query_data[db_mutation["id"]].append(
+                                {
+                                    "seq_ontology": ontology,
+                                    "impact": a.annotation_impact,
+                                }
+                            )
         annotation_types = []
         for annotation in self.annotation_query_data.values():
             annotation_types.extend([AnnotationType(**data) for data in annotation])
         return annotation_types
 
     def get_annotation2mutation_objs(self) -> list[Mutation2Annotation]:
+
         db_annotations_query = Q()
         for annotation_list in self.annotation_query_data.values():
             for annotation in annotation_list:
@@ -304,19 +307,21 @@ class SampleImport:
         db_annotations = AnnotationType.objects.filter(db_annotations_query)
         mutation2annotation_objs = []
         for annotation in db_annotations:
-            for mutation, annotation_data_list in self.annotation_query_data.items():
+            for mutation_id, annotation_data_list in self.annotation_query_data.items():
                 for annotation_data in annotation_data_list:
                     if (
                         annotation_data["seq_ontology"] == annotation.seq_ontology
                         and annotation_data["impact"] == annotation.impact
                     ):
+
                         mutation2annotation_objs.append(
                             Mutation2Annotation(
-                                mutation_id=mutation,
+                                mutation_id=mutation_id,
                                 alignment=self.alignment,
                                 annotation=annotation,
                             )
                         )
+
         return mutation2annotation_objs
 
     def _parse_vcf_info(self, info) -> list[VCFInfoANNRaw]:
@@ -423,7 +428,7 @@ class SampleImport:
 
     def move_files(self, success):
         # dont move files for now
-        return
+        # return
         for file in [
             self.sample_file_path,
             self.var_file_path,

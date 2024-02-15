@@ -4,7 +4,7 @@ from rest_framework import serializers
 from . import models
 from django.db.models import Model as DjangoModel
 from django.db.models import Q
-
+from django_filters.rest_framework import DjangoFilterBackend
 
 def find_or_create(
     data, model: Type[DjangoModel], serializer_class: Type[serializers.Serializer]
@@ -16,6 +16,11 @@ def find_or_create(
         serializer.is_valid(raise_exception=True)
         return serializer.save()
 
+class PropertySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Property
+        fields = "__all__"
+        filter_backends = [DjangoFilterBackend]
 
 class MutationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -166,7 +171,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
     genomic_profiles = serializers.SerializerMethodField()
     proteomic_profiles = serializers.SerializerMethodField()
-
     class Meta:
         model = models.Sample
         fields = [
@@ -225,17 +229,22 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         list = []
         for alignment in obj.sequence.alignments.all():
             for mutation in alignment.proteomic_profiles:
-                label = ""
-                # SNP and INS
-                if mutation.alt != None:
-                    label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
-                else : # DEL
-                    if mutation.end - mutation.start == 1:
-                        label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) 
-                    else:
-                        label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) + "-" + str(mutation.end)
-                list.append(label)
-            
+                try:
+                    label = ""
+                    # SNP and INS
+                    if mutation.alt != None:
+
+                        label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
+                    else : # DEL
+                        if mutation.end - mutation.start == 1:
+                            label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) 
+                        else:
+                            label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) + "-" + str(mutation.end)
+                    list.append(label)
+                except AttributeError as e: 
+                    print(e)
+                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")   
+                    continue  
         return list
 
 

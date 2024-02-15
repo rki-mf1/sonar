@@ -1,4 +1,5 @@
 from covsonar_backend.settings import DEBUG
+from rest_api.data_entry.sequence_job import clean_unused_sequences
 from rest_api.models import Alignment, Sample, Sample2Property, Sequence
 from django.db import transaction
 
@@ -15,13 +16,9 @@ def delete_sample(sample_list: list):
         print("Seqhash IDs", seqhash_ids)
         # number of objects deleted and a dictionary with the number of deletions per object type
         print("Deleted sample:", deleted_sample)
-    # Check the sequence (seqhash) to see how many occurrences are left in the table.
-    # If we delete the last sample that use this seqhash, in this case, we also delete seqhash too;
-    # otherwise, we leave it as it is.
-    seqhash_result = Sequence.objects.filter(samples__id__isnull=True)
-    deleted_seqhash = seqhash_result.delete()
-    if DEBUG:
-        print("Deleted seqhash:",deleted_seqhash)
+        
+    # Filter sequences without associated samples    
+    clean_unused_sequences()
         
     # TODO: Delete Annotation
 
@@ -29,8 +26,8 @@ def delete_sample(sample_list: list):
 
     return data
 
-# just for reference for now.
-def delete_sample_backup(reference_accession, sample_list: list):
+# just for reference.
+def delete_sample_old(reference_accession, sample_list: list):
     """
     NOTE: This function allows for the deletion of a specific
     alignment by passing its reference ID as a parameter.

@@ -24,11 +24,14 @@ env = environ.Env(
     POSTGRES_HOST=str,
     POSTGRES_PORT=str,
     SECRET_KEY=str,
+    IMPORTED_DATA_DIR=(str, None),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 PROJECT_ROOT = os.path.normpath(os.path.dirname(__file__))
+
 STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
 STATIC_URL = "/static/"
 
@@ -185,6 +188,11 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
-IMPORTED_DATA_DIR = "import_data"
+
+IMPORTED_DATA_DIR = env("IMPORTED_DATA_DIR") if env("IMPORTED_DATA_DIR") else os.path.join(BASE_DIR,"import_data")
+
+# Check if the directory already exists
+if not os.path.exists(IMPORTED_DATA_DIR):
+    os.makedirs(IMPORTED_DATA_DIR)
 
 PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]
