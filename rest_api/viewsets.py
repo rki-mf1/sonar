@@ -298,6 +298,7 @@ class SampleViewSet(
             "Ins AA": self.filter_ins_profile_aa,
             "Replicon": self.filter_replicon,
             "Sample": self.filter_sample,
+            "Sublineages": self.filter_sublineages,
         }
 
     @action(detail=False, methods=["get"])
@@ -670,6 +671,17 @@ class SampleViewSet(
             return ~Q(sequence__alignments__replicon__reference__accession=accession)
         else:
             return Q(sequence__alignments__replicon__reference__accession=accession)
+
+    def filter_sublineages(
+        self,
+        lineage,
+        exclude: bool = False,
+        *args,
+        **kwargs,
+    ):
+        lineage = models.Lineage.objects.get(lineage=lineage)
+        sublineages = lineage.get_sublineages(include_recombinants=False)
+        return self.filter_property("lineage", "in", sublineages, exclude)
 
     def _convert_date(self, date: str):
         datetime_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
