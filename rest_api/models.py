@@ -166,7 +166,6 @@ class LineageAlias(models.Model):
     parent_alias = models.CharField(max_length=50, blank=True, null=True)
     
     def is_recombinant(self):
-        print(self.alias, LineageAlias.objects.filter(alias=self.alias).count() > 1)
         return LineageAlias.objects.filter(alias=self.alias).count() > 1
 
     class Meta:
