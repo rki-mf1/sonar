@@ -2,6 +2,7 @@ import argparse
 import sys
 from typing import Optional
 
+from sonar_cli import config
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils import sonarUtils
 from sonar_cli.utils_1 import combine_sample_argument
@@ -564,11 +565,11 @@ def create_subparser_match(
         help="include non-informative polymorphisms in resulting mutation profiles (X for AA and N for NT)",
         action="store_true",
     )
-    parser.add_argument(
-        "--frameshifts-only",
-        help="match only mutation profiles with frameshift mutations",
-        action="store_true",
-    )
+    # parser.add_argument(
+    #     "--frameshifts-only",
+    #     help="match only mutation profiles with frameshift mutations",
+    #     action="store_true",
+    # )
 
     parser.add_argument(
         "--with-sublineage",
@@ -674,7 +675,7 @@ def handle_match(args: argparse.Namespace):
         output_column=args.out_cols,
         format=output_format,
         showNX=args.showNX,
-        frameshifts_only=args.frameshifts_only,
+        # frameshifts_only=args.frameshifts_only,
         with_sublineage=args.with_sublineage,
         defined_props=values_listofdict,
     )
@@ -897,12 +898,12 @@ def main(args: Optional[argparse.Namespace] = None) -> int:
 
     # Set debugging mode
     if hasattr(args, "debug") and args.debug:
-        debug = True
+        config.DEBUG = True
     else:
-        debug = False
+        config.DEBUG = False
         args.debug = False
 
-    LoggingConfigurator(debug=debug)
+    LoggingConfigurator(debug=config.DEBUG)
 
     execute_commands(args)
 

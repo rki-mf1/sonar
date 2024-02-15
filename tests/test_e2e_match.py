@@ -69,12 +69,20 @@ def test_match_profile_showNX(capfd, api_url):
     assert code == 0
 
 
-def test_match_profile_exactN():
-    pass
+def test_match_profile_exactN(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile A27624n --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
 
 
-def test_match_profile_exactX():
-    pass
+def test_match_profile_exactX(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile ORF7a:Q76x --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
 
 
 def test_match_profile_NT_INS(capfd, api_url):
@@ -88,7 +96,11 @@ def test_match_profile_NT_INS(capfd, api_url):
 
 
 def test_match_varchar_NULL(capfd, api_url):
-    pass
+    code = run_cli(f'match --db {api_url} -r MN908947.3 --lab "" --count')
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
 
 
 def test_match_varchar_widecard(capfd, api_url):
@@ -236,7 +248,7 @@ def test_match_prop_complex_1(capfd, api_url):
     lines = out.splitlines()
     assert "1" == lines[-1]
     assert code == 0
-    # fail in test
+
     code = run_cli(
         f"match --db {api_url}  -r MN908947.3 --profile S:E484K S:N501Y --collection_date 2022-01-30 --count "
     )
@@ -246,14 +258,36 @@ def test_match_prop_complex_1(capfd, api_url):
     assert code == 0
 
 
-def test_match_prop_complex_2():
-    # combine AA and NT AND PROP AND PROP
+def test_match_prop_complex_2(capfd, api_url):
+    # seach on given samples and get only samples that contain sequencing reason is N
+    code = run_cli(
+        f"match --db {api_url} "
+        "-r MN908947.3 "
+        "--sample IMS-10150-CVDP-469B04EB-4D49-4109-9F81-0531CE275F6D "
+        "IMS-10768-CVDP-0E69A26F-7AC0-4631-B0F3-192FF005FDA0 "
+        "IMS-10013-CVDP-7629957A-D507-442D-BD2A-18236F7DB38C "
+        "--sequencing_reason N "
+        "--count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
+
+
+def skip_test_match_prop_complex_3():
+    # combine AA OR NT OR AA AND PROP
     pass
 
 
-def test_match_prop_complex_3():
-    # combine AA OR NT AND PROP AND PROP
-    pass
+def test_match_prop_complex_4(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --lineage BA.1 --profile C25584T --with-sublineage --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "4" == lines[-1]
+    assert code == 0
 
 
 def test_match_profile_NT_DEL(capfd, api_url):
@@ -305,6 +339,16 @@ def test_match_prop_varchar_lineage(capfd, api_url):
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "3" == lines[-1]
+    assert code == 0
+
+
+def test_match_prop_varchar_sublineage(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --lineage BA.1 --with-sublineage --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "4" == lines[-1]
     assert code == 0
 
 

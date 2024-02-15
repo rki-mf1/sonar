@@ -283,14 +283,26 @@ def convert_to_desired_structure(result, depth=0):
     return final_result
 
 
-def create_property_query(prop_name, prop_value):
+def create_sample_query(samples: List):
     """
-    # check property
+    Create a query object for samples.
 
-    # do we really need to know data type?
+    Parameters:
+    - samples (List): A list of samples to be included in the query.
 
+    Returns:
+    - dict: A dictionary representing the query object with the following structure:
+        {
+            "label": "Sample",
+            "exclude": False,
+            "value": <list of samples>
+        }
+
+    NOTE:
+    1. Currently, we do not support all exclusion operators, so 'exclude' is fixed with False.
+    2. At the backend side, it will use the IN operator to match the samples.
     """
-    _query = {"label": "Property", "property_name": prop_name, "value": prop_value}
+    _query = {"label": "Sample", "exclude": False, "value": samples}
 
     return _query
 
@@ -310,12 +322,12 @@ def get_operator(op: Optional[str] = None, inverse: bool = False) -> str:
     # return OPERATORS["inverse"][op] if inverse else OPERATORS["standard"][op]
 
 
-# Backup
 def construct_query(  # noqa: C901
     properties: Optional[Dict[str, List[str]]] = None,
     profiles: Optional[Dict[str, List[str]]] = None,
     defined_props: Optional[List[Dict[str, str]]] = [],
     with_sublineage: bool = False,
+    samples: Optional[List[str]] = [],
 ):
 
     int_pattern_single = re.compile(r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*)$")
@@ -333,13 +345,16 @@ def construct_query(  # noqa: C901
         r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
     )
     final_query = {"andFilter": [], "orFilter": []}
+    LOGGER.debug(f"Input Samples:{samples}")
+    LOGGER.debug(f"Input Profiles:{profiles}")
+    LOGGER.debug(f"Input Properties:{properties}")
+    LOGGER.debug(f"Enable Sublineage:{with_sublineage}")
 
-    print("Input Profiles:", profiles)
-    print("Input Properties:", properties)
-    print("Enable Sublineage:", with_sublineage)
+    if samples:
+        final_query["andFilter"].append(create_sample_query(samples))
 
     if profiles:
-        final_query = create_profile_query(profiles)
+        final_query["andFilter"].append(create_profile_query(profiles))
 
     if properties:
         if defined_props:
@@ -357,7 +372,7 @@ def construct_query(  # noqa: C901
                 continue
 
             prop_type = defined_props_dict.get(prop_name, "value_varchar")
-            print(
+            LOGGER.debug(
                 f"Process --> TYPE: {prop_type} NAME: {prop_name} VALUE: {prop_value_list}"
             )
 
@@ -381,26 +396,31 @@ def construct_query(  # noqa: C901
                     or prop_type == "value_zip"
                     or prop_type == "value_text"
                 ):
-
                     extract_value = prop_value[1:] if negate else prop_value
+                    if with_sublineage:
+                        _query = {
+                            "label": "Sublineages",
+                            "lineage": extract_value,
+                            "exclude": negate,
+                        }
 
-                    # Determine the operator
-                    operator = get_operator(
-                        "LIKE"
-                        if extract_value.startswith("%") or extract_value.endswith("%")
-                        else "exact",
-                    )
+                    else:
 
-                    _query = {
-                        "label": "Property",
-                        "property_name": prop_name,
-                        "filter_type": operator,
-                        "value": extract_value,
-                        "exclude": negate,
-                    }
+                        # Determine the operator
+                        operator = get_operator(
+                            "LIKE"
+                            if extract_value.startswith("%")
+                            or extract_value.endswith("%")
+                            else "exact",
+                        )
 
-                    if prop_name == "lineage":
-                        _query["with_sublineage"] = with_sublineage
+                        _query = {
+                            "label": "Property",
+                            "property_name": prop_name,
+                            "filter_type": operator,
+                            "value": extract_value,
+                            "exclude": negate,
+                        }
 
                     match = True
 

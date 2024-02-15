@@ -6,15 +6,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_URL = os.getenv("DB_URL")
-# FLASK APP
+
+# (access token?)
 SECRET_KEY = os.getenv("SECRET_KEY") or "development-secret"
-DEBUG = os.getenv("DEBUG") or False
+
+DEBUG = False
+
 # 10 = DEBUG, 20 = INFO, 30 = WARNING
 LOG_LEVEL = os.getenv("LOG_LEVEL") or 20
-
+CHUNK_SIZE = os.getenv("CHUNK_SIZE") or 10000
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))
 
-ANNO_TOOL_PATH = os.getenv("ANNO_TOOL_PATH")
+ANNO_TOOL_PATH = os.getenv("ANNO_TOOL_PATH", "snpEff")
 ANNO_CONFIG_FILE = os.getenv("ANNO_CONFIG_FILE", None)
 # SNPSIFT_TOOL_PATH = os.getenv("SNPSIFT_TOOL_PATH","")
 # VCF_ONEPERLINE_PATH = os.getenv("VCF_ONEPERLINE_PATH","")

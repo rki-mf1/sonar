@@ -6,7 +6,6 @@ import base64
 from collections import defaultdict
 import hashlib
 from itertools import zip_longest
-import logging
 import os
 import pickle
 import pprint
@@ -21,16 +20,16 @@ from typing import List
 from typing import Optional
 from typing import Union
 
-from mpire import WorkerPool
 import pandas as pd
-from sonar_cli.align import sonarAligner
 from sonar_cli.api_interface import APIClient
 from sonar_cli.config import BASE_URL
+from sonar_cli.config import CHUNK_SIZE
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils_1 import harmonize_seq
 from sonar_cli.utils_1 import hash_seq
 from sonar_cli.utils_1 import open_file_autodetect
+from sonar_cli.utils_1 import remove_charfromsequence_data
 from tqdm import tqdm
 
 # from .basics import sonarBasics
@@ -97,13 +96,6 @@ class sonarCache:
         if not os.path.exists(self.basedir):
             os.makedirs(self.basedir, exist_ok=True)
 
-        if not os.path.exists(os.path.join(self.basedir, logfile)):
-            self.logfile_obj = open(os.path.join(self.basedir, logfile), "w")
-        else:
-            self.logfile_obj = (
-                open(os.path.join(self.basedir, logfile), "a+") if logfile else None
-            )
-
         self.sample_dir = os.path.join(self.basedir, "samples")
         self.seq_dir = os.path.join(self.basedir, "seq")
         self.algn_dir = os.path.join(self.basedir, "algn")
@@ -126,6 +118,21 @@ class sonarCache:
         self._lifts = set()
         self._cds = set()
         self._tt = set()
+
+        self.logfile_name = os.path.join(self.basedir, logfile)
+        self.error_logfile_name = os.path.join(self.basedir, "error." + logfile)
+
+        if not os.path.exists(self.logfile_name):
+            self.logfile_obj = open(self.logfile_name, "w")
+        else:
+            self.logfile_obj = open(self.logfile_name, "a+") if logfile else None
+
+        if not os.path.exists(self.error_logfile_name):
+            self.error_logfile_obj = open(self.error_logfile_name, "w")
+        else:
+            self.error_logfile_obj = (
+                open(self.error_logfile_name, "a+") if logfile else None
+            )
 
     def __enter__(self):
         return self
@@ -498,6 +505,7 @@ class sonarCache:
                 + ")."
             )
         seq = harmonize_seq(seq)
+        seq = remove_charfromsequence_data(seq, char="-")
         seqhash = hash_seq(seq)
         refmolid = self.refmols[refmol]["id"]
 
@@ -635,8 +643,8 @@ class sonarCache:
     def add_fasta_v2(
         self, *fnames, properties=defaultdict(dict), method=1
     ):  # noqa: C901
-        # TODO: automatically adjust chunk size
-        chunk_size = 500
+
+        chunk_size = CHUNK_SIZE
 
         for fname in fnames:
             batch_data = []  # Collect data in batches before making API calls
@@ -965,14 +973,17 @@ class sonarCache:
                         if seq != orig_seq:
                             if not os.path.exists(self.error_dir):
                                 os.makedirs(self.error_dir)
-                            with open(
-                                os.path.join(
-                                    self.error_dir, f"{sample_name}.error.var"
-                                ),
-                                "w+",
-                            ) as handle:
-                                for vardata in iter_dna_list:
-                                    handle.write(str(vardata) + "\n")
+
+                            # NOTE: comment this part, for now, we need to discuss which
+                            # information we want to report for the failed sample.
+                            # with open(
+                            #     os.path.join(
+                            #         self.error_dir, f"{sample_name}.error.var"
+                            #     ),
+                            #     "w+",
+                            # ) as handle:
+                            #     for vardata in iter_dna_list:
+                            #         handle.write(str(vardata) + "\n")
 
                             qryfile = os.path.join(
                                 self.error_dir, sample_name + ".error.restored_sam.fa"
@@ -981,10 +992,13 @@ class sonarCache:
                                 self.error_dir, sample_name + ".error.original_sam.fa"
                             )
 
-                            with open(qryfile, "w+") as handle:
-                                handle.write(seq)
-                            with open(reffile, "w+") as handle:
-                                handle.write(orig_seq)
+                            # NOTE: comment this part, for now, we need to discuss which
+                            # information we want to report for the failed sample.
+                            # with open(qryfile, "w+") as handle:
+                            #     handle.write(seq)
+                            # with open(reffile, "w+") as handle:
+                            #     handle.write(orig_seq)
+
                             output_paranoid = os.path.join(
                                 self.basedir,
                                 f"{sample_name}.withref.{ref_name}.fail-paranoid.fna",
@@ -1020,138 +1034,141 @@ class sonarCache:
             )
             # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
 
-            # start process.
+            # NOTE: comment this part, for now, we need to discuss which
+            # information we want to report for the failed sample.
             # self.paranoid_align_multi(list_fail_samples, threads)
-            self.logfile_obj.write("Fail sample:----\n")
+
+            # currently, we report only failed sample IDs.
+            self.error_logfile_obj.write("Fail sample during alignment:----\n")
             for fail_sample in list_fail_samples:
-                self.logfile_obj.write(f"{ fail_sample['sample_name'] }\n")
+                self.error_logfile_obj.write(f"{ fail_sample['sample_name'] }\n")
 
         count_sample = total_samples - len(list_fail_samples)
         LOGGER.info(f"Total passed samples: {count_sample}")
 
         return passed_samples_list
 
-    def _align(self, output_paranoid, qryfile, reffile, sample_name):
-        # print(output_paranoid, qryfile, reffile, sample_name)
+    # def _align(self, output_paranoid, qryfile, reffile, sample_name):
+    #     # print(output_paranoid, qryfile, reffile, sample_name)
 
-        if not os.path.exists(output_paranoid):
-            aligner = sonarAligner(cache_outdir=self.basedir)
+    #     if not os.path.exists(output_paranoid):
+    #         aligner = sonarAligner(cache_outdir=self.basedir)
 
-            ref, qry, cigar = aligner.align(
-                aligner.read_seqcache(qryfile), aligner.read_seqcache(reffile)
-            )
-            with open(output_paranoid, "w+") as handle:
-                handle.write(
-                    ">original_"
-                    + sample_name
-                    + "\n"
-                    + ref
-                    + "\n>restored_"
-                    + sample_name
-                    + "\n"
-                    + qry
-                    + "\n"
-                )
-            logging.warn(
-                f"See {output_paranoid} for alignment comparison. CIGAR:{cigar}"
-            )
+    #         ref, qry, cigar = aligner.align(
+    #             aligner.read_seqcache(qryfile), aligner.read_seqcache(reffile)
+    #         )
+    #         with open(output_paranoid, "w+") as handle:
+    #             handle.write(
+    #                 ">original_"
+    #                 + sample_name
+    #                 + "\n"
+    #                 + ref
+    #                 + "\n>restored_"
+    #                 + sample_name
+    #                 + "\n"
+    #                 + qry
+    #                 + "\n"
+    #             )
+    #         logging.warn(
+    #             f"See {output_paranoid} for alignment comparison. CIGAR:{cigar}"
+    #         )
 
-    def paranoid_align_multi(self, list_fail_samples, threads):  # noqa: C901
-        l = len(list_fail_samples)
-        with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
-            position=0,
-            leave=True,
-            desc="paranoid align...",
-            total=l,
-            unit="seqs",
-            bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-        ) as pbar:
-            for _ in pool.imap_unordered(self._align, list_fail_samples):
-                pbar.update(1)
+    # def paranoid_align_multi(self, list_fail_samples, threads):  # noqa: C901
+    #     l = len(list_fail_samples)
+    #     with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
+    #         position=0,
+    #         leave=True,
+    #         desc="paranoid align...",
+    #         total=l,
+    #         unit="seqs",
+    #         bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+    #     ) as pbar:
+    #         for _ in pool.imap_unordered(self._align, list_fail_samples):
+    #             pbar.update(1)
 
-    def paranoid_check(self, refseqs, sample_data, dbm):  # noqa: C901
-        """
-        This is the current version of paranoid test.
+    # def paranoid_check(self, refseqs, sample_data, dbm):  # noqa: C901
+    #     """
+    #     This is the current version of paranoid test.
 
-        Return:
-            dict.
-        """
-        try:
-            seq = list(refseqs[sample_data["sourceid"]])
-        except Exception:
-            refseqs[sample_data["sourceid"]] = list(
-                dbm.get_sequence(sample_data["sourceid"])
-            )
-            seq = list(refseqs[sample_data["sourceid"]])
+    #     Return:
+    #         dict.
+    #     """
+    #     try:
+    #         seq = list(refseqs[sample_data["sourceid"]])
+    #     except Exception:
+    #         refseqs[sample_data["sourceid"]] = list(
+    #             dbm.get_sequence(sample_data["sourceid"])
+    #         )
+    #         seq = list(refseqs[sample_data["sourceid"]])
 
-        prefix = ""
-        gaps = {".", " "}
-        sample_name = sample_data["name"]
-        iter_dna_list = list(
-            dbm.iter_dna_variants(sample_name, sample_data["sourceid"])
-        )
-        # print(iter_dna_list)
-        for vardata in iter_dna_list:
-            if vardata["variant.alt"] in gaps:
-                for i in range(vardata["variant.start"], vardata["variant.end"]):
-                    seq[i] = ""
-            elif vardata["variant.alt"] == ".":
-                for i in range(vardata["variant.start"], vardata["variant.end"]):
-                    seq[i] = ""
-            elif vardata["variant.start"] >= 0:
-                seq[vardata["variant.start"]] = vardata["variant.alt"]
-            else:
-                prefix = vardata["variant.alt"]
+    #     prefix = ""
+    #     gaps = {".", " "}
+    #     sample_name = sample_data["name"]
+    #     iter_dna_list = list(
+    #         dbm.iter_dna_variants(sample_name, sample_data["sourceid"])
+    #     )
+    #     # print(iter_dna_list)
+    #     for vardata in iter_dna_list:
+    #         if vardata["variant.alt"] in gaps:
+    #             for i in range(vardata["variant.start"], vardata["variant.end"]):
+    #                 seq[i] = ""
+    #         elif vardata["variant.alt"] == ".":
+    #             for i in range(vardata["variant.start"], vardata["variant.end"]):
+    #                 seq[i] = ""
+    #         elif vardata["variant.start"] >= 0:
+    #             seq[vardata["variant.start"]] = vardata["variant.alt"]
+    #         else:
+    #             prefix = vardata["variant.alt"]
 
-        ref_name = sample_data["refmol"]
-        # seq is now a restored version from variant dict.
-        seq = prefix + "".join(seq)
-        with open(sample_data["seq_file"], "r") as handle:
-            orig_seq = handle.read()
+    #     ref_name = sample_data["refmol"]
+    #     # seq is now a restored version from variant dict.
+    #     seq = prefix + "".join(seq)
+    #     with open(sample_data["seq_file"], "r") as handle:
+    #         orig_seq = handle.read()
 
-        if seq != orig_seq:
-            if not os.path.exists(self.error_dir):
-                os.makedirs(self.error_dir)
-            with open(
-                os.path.join(self.error_dir, f"{sample_name}.error.var"), "w+"
-            ) as handle:
-                for vardata in iter_dna_list:
-                    handle.write(str(vardata) + "\n")
+    #     if seq != orig_seq:
+    #         if not os.path.exists(self.error_dir):
+    #             os.makedirs(self.error_dir)
+    #         with open(
+    #             os.path.join(self.error_dir, f"{sample_name}.error.var"), "w+"
+    #         ) as handle:
+    #             for vardata in iter_dna_list:
+    #                 handle.write(str(vardata) + "\n")
 
-            qryfile = os.path.join(
-                self.error_dir, sample_name + ".error.restored_sam.fa"
-            )
-            reffile = os.path.join(
-                self.error_dir, sample_name + ".error.original_sam.fa"
-            )
+    #         qryfile = os.path.join(
+    #             self.error_dir, sample_name + ".error.restored_sam.fa"
+    #         )
+    #         reffile = os.path.join(
+    #             self.error_dir, sample_name + ".error.original_sam.fa"
+    #         )
 
-            with open(qryfile, "w+") as handle:
-                handle.write(seq)
-            with open(reffile, "w+") as handle:
-                handle.write(orig_seq)
-            output_paranoid = os.path.join(
-                self.basedir, f"{sample_name}.withref.{ref_name}.fail-paranoid.fna"
-            )
+    #         with <(qryfile, "w+") as handle:
+    #             handle.write(seq)
+    #         with open(reffile, "w+") as handle:
+    #             handle.write(orig_seq)
+    #         output_paranoid = os.path.join(
+    #             self.basedir, f"{sample_name}.withref.{ref_name}.fail-paranoid.fna"
+    #         )
 
-            dbm.delete_alignment(
-                seqhash=sample_data["seqhash"], element_id=sample_data["sourceid"]
-            )
-            # delete sample  if this sample didnt have any alignment and variant??.
-            _return_ali_id = dbm.get_alignment_by_seqhash(
-                seqhash=sample_data["seqhash"]
-            )
-            if len(_return_ali_id) == 0:
-                dbm.delete_samples(sample_name)
-                dbm.delete_seqhash(sample_data["seqhash"])
+    #         dbm.delete_alignment(
+    #             seqhash=sample_data["seqhash"], element_id=sample_data["sourceid"]
+    #         )
+    #         # delete sample  if this sample didnt have any alignment and variant??.
+    #         _return_ali_id = dbm.get_alignment_by_seqhash(
+    #             seqhash=sample_data["seqhash"]
+    #         )
+    #         if len(_return_ali_id) == 0:
+    #             dbm.delete_samples(sample_name)
+    #             dbm.delete_seqhash(sample_data["seqhash"])
 
-            return {
-                "sample_name": sample_name,
-                "qryfile": qryfile,
-                "reffile": reffile,
-                "output_paranoid": output_paranoid,
-            }
-        else:
-            return {}
+    #         return {
+    #             "sample_name": sample_name,
+    #             "qryfile": qryfile,
+    #             "reffile": reffile,
+    #             "output_paranoid": output_paranoid,
+    #         }
+    #     else:
+    #         return {}
 
     def clear_unnecessary_cache(self, samples):
         for sample in samples:

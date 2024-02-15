@@ -36,7 +36,7 @@ class LoggingConfigurator:
     # Define a new log level
     VERBOSE = 21  # Assign a unique integer value
     # Define a corresponding logging level name and add it to the `logging` module
-    logging.addLevelName(VERBOSE, "VERBOSE:")
+    logging.addLevelName(VERBOSE, "VERBOSE")
 
     # Define a custom logging function for the new level
     def verbose(self, message, *args, **kwargs):
@@ -158,7 +158,7 @@ class LoggingConfigurator:
             formatter_detailed = logging.Formatter(
                 self.custom_config.get(
                     "detailed_format",
-                    "%(asctime)s - %(name)s - %(filename)s:%(lineno)d - %(levelname)s: %(message)s",
+                    "%(asctime)s %(name)s-%(filename)s:%(lineno)d %(levelname)s: %(message)s",
                 ),
                 datefmt="%Y-%m-%d %H:%M:%S",
             )

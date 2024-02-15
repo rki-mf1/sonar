@@ -36,7 +36,7 @@ cd sonar-cli
 
 ### 2.2 Configuration
 
-There is a ".env.template" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+🤓 There is a "env.template" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
 
 ### 2.3 Create python environment
 
@@ -152,6 +152,11 @@ The table below shows the several commands that can be used.
 | [add-prop](#adding-property) | Add property key for storage and querying in the database.                 |
 | [delete-prop](#deleting-property) | Delete properties in the database.          |
 | [delete-sample](#deleting-sample) | Delete samples and associated information from the database. |
+
+> [!TIP]
+> You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
+>
+> for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb MN908947.3.gbk`
 
 ## Adding Reference
 The `add-ref` subcommand is used to add reference genome sequences to the database.

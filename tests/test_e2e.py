@@ -44,7 +44,7 @@ def test_add_prop_varchar(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.run(order=2)
 def test_add_prop_int(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_integer --dtype value_integer --descr 'test-integer' "
@@ -54,7 +54,7 @@ def test_add_prop_int(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.run(order=3)
 def test_add_prop_float(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_float --dtype value_float --descr 'test-floating-point-number' "
@@ -64,7 +64,7 @@ def test_add_prop_float(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.run(order=4)
 def test_add_prop_text(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_text --dtype value_text --descr 'test-text' "
@@ -74,7 +74,7 @@ def test_add_prop_text(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.run(order=5)
 def test_add_prop_zip(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_zip --dtype value_zip --descr 'test-zip' "
@@ -84,7 +84,7 @@ def test_add_prop_zip(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.run(order=6)
 def test_add_prop_date(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_date --dtype value_date --descr 'test-date' "
@@ -94,7 +94,7 @@ def test_add_prop_date(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=2)
+@pytest.mark.run(order=7)
 def test_delete_prop(capfd, api_url):
     code = run_cli(f" delete-prop --db {api_url} --name test_varchar --force ")
     out, err = capfd.readouterr()

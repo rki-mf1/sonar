@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import datetime
 import gzip
 from hashlib import sha256
 import lzma
@@ -89,6 +90,21 @@ def harmonize_seq(seq: str) -> str:
         raise ValueError(
             f"Invalid input, expected a string, got {type(seq).__name__}"
         ) from e
+
+
+def remove_charfromsequence_data(seq: str, char="-") -> str:
+    """
+    Removes specified character from the sequence data.
+
+    Args:
+        seq (str): The input sequence data.
+        char (str): The character to be removed. If empty, removes all occurrences of '-'. Default is empty.
+
+    Returns:
+        str: The sequence data with specified characters removed.
+    """
+
+    return seq.replace(char, "")
 
 
 def read_seqcache(fname):
@@ -205,7 +221,8 @@ def combine_sample_argument(samples: List[str] = [], sample_files: List[str] = [
         with open_file_autodetect(fname) as handle:
             for line in handle:
                 samples.add(line.strip())
-    return samples
+
+    return list(samples)
 
 
 def _files_exist(*files: str, exit_on_fail=True) -> bool:
@@ -228,3 +245,34 @@ def _files_exist(*files: str, exit_on_fail=True) -> bool:
                 sys.exit(1)
             return False
     return True
+
+
+def get_current_time(format="%d.%b %Y %H:%M:%S"):
+    """
+    Get the current time in the specified format.
+
+    Args:
+        format (str): The format to represent the datetime string.
+            Default is "%d.%b %Y %H:%M:%S".
+
+    Returns:
+        str: The current time formatted according to the specified format.
+    """
+    return datetime.datetime.now().strftime(format)
+
+
+def calculate_time_difference(start_time, end_time, format="%d.%b %Y %H:%M:%S"):
+    """
+    Calculate the time difference between two timestamps.
+
+    Args:
+        start_time (str): The start timestamp.
+        end_time (str): The end timestamp.
+        format (str): The format of the timestamps. Default is "%d.%b %Y %H:%M:%S".
+
+    Returns:
+        datetime.timedelta: The time difference between start and end timestamps.
+    """
+    start_datetime = datetime.datetime.strptime(start_time, format)
+    end_datetime = datetime.datetime.strptime(end_time, format)
+    return end_datetime - start_datetime

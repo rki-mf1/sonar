@@ -1,7 +1,8 @@
 import json
 import subprocess
+from typing import Optional
 
-import pandas as pd
+from sonar_cli.cache import sonarCache
 from sonar_cli.logging import LoggingConfigurator
 
 
@@ -16,12 +17,14 @@ class Annotator:
         SNPSIFT_exe_path=None,
         VCF_ONEPERLINE_PATH=None,
         config_path=None,
+        cache: Optional[sonarCache] = None,
     ) -> None:
         # "snpEff/SnpSift.jar"
         self.annotator = annotator_exe_path
         self.SNPSIFT = SNPSIFT_exe_path
         self.VCF_ONEPERLINE_TOOL = VCF_ONEPERLINE_PATH
         self.config_path = config_path
+        self.sonar_cache = cache
 
     def snpeff_annotate(self, input_vcf, output_vcf, database_name):
         if not self.annotator:
@@ -43,80 +46,84 @@ class Annotator:
             if result.returncode != 0:
                 LOGGER.error("Output failed with exit code: %s", result.returncode)
                 print(command)
-                print("Error output:", result.stderr.decode("utf-8"))
+
+                with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+                    writer.write("Fail anno:" + command + "\n")
+
+                print("Error output:", result.stderr.decode("utf-8").splitlines()[2])
 
         except subprocess.CalledProcessError as e:
             LOGGER.error("Annotation failed: %s", e)
 
-    def snpeff_transform_output(self, annotated_vcf, output_tsv):
-        if not self.SNPSIFT:
-            raise ValueError("SNPSIFT executable path is not provided.")
+    # def snpeff_transform_output(self, annotated_vcf, output_tsv):
+    #     if not self.SNPSIFT:
+    #         raise ValueError("SNPSIFT executable path is not provided.")
 
-        # Command to transform SnpEff-annotated VCF to TSV
-        transform_command = [
-            f"cat {annotated_vcf} | perl {self.VCF_ONEPERLINE_TOOL} | java -jar {self.SNPSIFT} extractFields  -e '.' - 'CHROM' 'POS' 'REF' 'ANN[*].ALLELE' 'ANN[*].EFFECT' 'ANN[*].IMPACT' "
-        ]
+    #     # Command to transform SnpEff-annotated VCF to TSV
+    #     transform_command = [
+    #         f"cat {annotated_vcf} | perl {self.VCF_ONEPERLINE_TOOL} | java -jar {self.SNPSIFT} extractFields  -e '.' - 'CHROM' 'POS' 'REF' 'ANN[*].ALLELE' 'ANN[*].EFFECT' 'ANN[*].IMPACT' "
+    #     ]
 
-        try:
-            # Run the transformation command
-            with open(output_tsv, "w") as output_file:
-                result = subprocess.run(
-                    transform_command,
-                    shell=True,
-                    stdout=output_file,
-                    stderr=subprocess.PIPE,
-                )
-            if result.returncode != 0:
-                LOGGER.error("Output failed with exit code: %s", result.returncode)
-                print("Error output:", result.stderr.decode("utf-8"))
-        except subprocess.CalledProcessError as e:
-            LOGGER.error("Output transformation failed: %s", e)
+    #     try:
+    #         # Run the transformation command
+    #         with open(output_tsv, "w") as output_file:
+    #             result = subprocess.run(
+    #                 transform_command,
+    #                 shell=True,
+    #                 stdout=output_file,
+    #                 stderr=subprocess.PIPE,
+    #             )
+    #         if result.returncode != 0:
+    #             LOGGER.error("Output failed with exit code: %s", result.returncode)
+    #             print("Error output:", result.stderr.decode("utf-8"))
+    #     except subprocess.CalledProcessError as e:
+    #         LOGGER.error("Output transformation failed: %s", e)
 
 
-def read_tsv_snpSift(file_path: str) -> pd.DataFrame:
-    """
-    Process the TSV file from SnpSift, deduplicate the ANN[*].EFFECT column,
-    remove values in ANN[*].IMPACT column, and split the records
-    to have one effect per row.
-    Returns the modified DataFrame.
+# def read_tsv_snpSift(file_path: str) -> pd.DataFrame:
+#     """
+#     Process the TSV file from SnpSift, deduplicate the ANN[*].EFFECT column,
+#     remove values in ANN[*].IMPACT column, and split the records
+#     to have one effect per row.
+#     Returns the modified DataFrame.
 
-    Parameters:
-        file_path (str): Path to the input TSV file.
+#     Parameters:
+#         file_path (str): Path to the input TSV file.
 
-    Returns:
-        pd.DataFrame: Modified DataFrame with deduplicated ANN[*].EFFECT column and one effect per row.
+#     Returns:
+#         pd.DataFrame: Modified DataFrame with deduplicated ANN[*].EFFECT column and one effect per row.
 
-    Note:
+#     Note:
 
-    """
-    try:
-        # Read the TSV file into a DataFrame
-        df = pd.read_csv(file_path, delimiter="\t")
-        df = df.drop(["ANN[*].IMPACT"], axis=1, errors="ignore")
-        df.rename(
-            columns={"ANN[*].EFFECT": "EFFECT", "ANN[*].ALLELE": "ALT"},
-            errors="raise",
-            inplace=True,
-        )
-        # Deduplicate the values in the ANN[*].EFFECT column
-        # df["EFFECT"] = df["EFFECT"].str.split(",").apply(set).str.join(",")
-        # df['ANN[*].IMPACT'] = ''
+#     """
+#     try:
+#         # Read the TSV file into a DataFrame
+#         df = pd.read_csv(file_path, delimiter="\t")
+#         df = df.drop(["ANN[*].IMPACT"], axis=1, errors="ignore")
+#         df.rename(
+#             columns={"ANN[*].EFFECT": "EFFECT", "ANN[*].ALLELE": "ALT"},
+#             errors="raise",
+#             inplace=True,
+#         )
+#         # Deduplicate the values in the ANN[*].EFFECT column
+#         # df["EFFECT"] = df["EFFECT"].str.split(",").apply(set).str.join(",")
+#         # df['ANN[*].IMPACT'] = ''
 
-        # Split the records into one effect per row
-        # df = df.explode('ANN[*].EFFECT')
-        df.drop_duplicates(inplace=True)
+#         # Split the records into one effect per row
+#         # df = df.explode('ANN[*].EFFECT')
+#         df.drop_duplicates(inplace=True)
 
-        # Reset the index
-        df = df.reset_index(drop=True)
-        # print(df)
-        return df
-    except KeyError as e:
-        LOGGER.error(e)
-        LOGGER.error(df.columns)
-        raise
-    except Exception as e:
-        LOGGER.error(e)
-        raise
+#         # Reset the index
+#         df = df.reset_index(drop=True)
+#         # print(df)
+#         return df
+#     except KeyError as e:
+#         LOGGER.error(e)
+#         LOGGER.error(df.columns)
+#         raise
+#     except Exception as e:
+#         LOGGER.error(e)
+#         raise
 
 
 def read_sonar_hash(file_path: str):

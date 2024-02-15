@@ -1,6 +1,5 @@
 import collections
 import csv
-import datetime
 from io import BytesIO
 import json
 import os
@@ -26,7 +25,9 @@ from sonar_cli.config import BASE_URL
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils_1 import _files_exist
 from sonar_cli.utils_1 import _get_csv_colnames
+from sonar_cli.utils_1 import calculate_time_difference
 from sonar_cli.utils_1 import flatten_json_output
+from sonar_cli.utils_1 import get_current_time
 from sonar_cli.utils_1 import open_file_autodetect
 from sonar_cli.utils_1 import out_autodetect
 from sonar_cli.utils_1 import read_var_file
@@ -88,19 +89,18 @@ class sonarUtils:
             quiet: Whether to suppress logging.
         """
         _log_import_mode(update, quiet)
-
+        LOGGER.info("Check reference")
+        sonarUtils._check_reference(reference)
+        start_import_time = get_current_time()
         # checks
         fasta = fasta or []
         tsv_files = tsv_files or []
         csv_files = csv_files or []
 
         _files_exist(*fasta, *tsv_files, *csv_files)
-
         if not _is_import_required(fasta, tsv_files, csv_files, update):
             LOGGER.info("Nothing to import.")
             sys.exit(0)
-
-        sonarUtils._check_reference(reference)
 
         # property handling
         # NOTE:
@@ -133,10 +133,13 @@ class sonarUtils:
                 sys.exit(1)
 
         # setup cache
+        start_cache_time = get_current_time()
         cache = sonarUtils._setup_cache(
             reference=reference, cachedir=cachedir, update=update, progress=progress
         )
-
+        cache.logfile_obj.write(
+            f"Caching usage time: {calculate_time_difference(start_cache_time, get_current_time())}\n"
+        )
         # importing sequences
         if fasta:
             sonarUtils._import_fasta(
@@ -161,9 +164,18 @@ class sonarUtils:
                 progress=progress,
             )
 
-        current_time = datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S")
-        LOGGER.info(f"---- Done: {current_time} ----\n")
-        cache.logfile_obj.write(f"---- Done: {current_time} ----\n")
+        end_import_time = get_current_time()
+        LOGGER.info(
+            f"\nImport Runtime: {calculate_time_difference(start_import_time, end_import_time)}"
+        )
+        LOGGER.info(f"---- Done: {end_import_time} ----\n")
+        cache.logfile_obj.write(
+            f"Import Runtime: {calculate_time_difference(start_import_time, end_import_time)}\n"
+        )
+        cache.logfile_obj.write(f"---- Done: {end_import_time} ----\n")
+        cache.logfile_obj.close()
+        cache.error_logfile_obj.write(f"---- Done: {end_import_time} ----\n")
+        cache.error_logfile_obj.close()
 
     @staticmethod
     def _setup_cache(
@@ -211,9 +223,11 @@ class sonarUtils:
         """
         if not fasta_files:
             return
-
+        start_seqcheck_time = get_current_time()
         cache.add_fasta_v2(*fasta_files, properties=properties, method=method)
-
+        cache.logfile_obj.write(
+            f"Sequence check usage time: {calculate_time_difference(start_seqcheck_time, get_current_time())}\n"
+        )
         LOGGER.info(f"Total input samples: {len(cache._samplefiles)}")
 
         # Align sequences and process
@@ -222,6 +236,8 @@ class sonarUtils:
         )
         l = len(cache._samplefiles_to_profile)
         LOGGER.info(f"Total samples that need to be processed: {l}")
+
+        start_align_time = get_current_time()
         with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
             desc="Profiling sequences...",
             total=l,
@@ -233,11 +249,19 @@ class sonarUtils:
                 aligner.process_cached_sample, cache._samplefiles_to_profile
             ):
                 pbar.update(1)
+        cache.logfile_obj.write(
+            f"Seq alignment usage time: {calculate_time_difference(start_align_time, get_current_time())}\n"
+        )
 
+        start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples()
+        cache.logfile_obj.write(
+            f"Paranoid test usage time: {calculate_time_difference(start_paranoid_time, get_current_time())}\n"
+        )
 
         if auto_anno:
             # paired_anno_samples_list = [ {'db_path': self.db, 'sample_data': sample} for sample in anno_samples_list]
+            start_anno_time = get_current_time()
             with WorkerPool(
                 n_jobs=threads,
                 start_method="fork",
@@ -257,11 +281,16 @@ class sonarUtils:
                     sonarUtils.annotate_sample, passed_samples_list
                 ):
                     pbar.update(1)
+            cache.logfile_obj.write(
+                f"Sample anno usage time: {calculate_time_difference(start_anno_time, get_current_time())}\n"
+            )
+
         else:
             LOGGER.info("Disable annotation step.")
 
         # Send Result over network.
         if not no_upload_sample:
+            start_upload_time = get_current_time()
             with WorkerPool(
                 n_jobs=threads, start_method="fork", shared_objects=cache
             ) as pool, tqdm(
@@ -278,11 +307,15 @@ class sonarUtils:
                     sonarUtils.zip_import_upload, passed_samples_list
                 ):
                     pbar.update(1)
+            cache.logfile_obj.write(
+                f"Sample upload usage time: {calculate_time_difference(start_upload_time, get_current_time())}\n"
+            )
+
         else:
             LOGGER.info("Disable sending samples.")
 
         if method == 1:
-            # LOGGER.info("Clean uncessary cache")
+            LOGGER.info("Clean uncessary files")
             cache.clear_unnecessary_cache(passed_samples_list)
 
     @staticmethod
@@ -606,6 +639,7 @@ class sonarUtils:
                 properties=properties,
                 defined_props=defined_props,
                 with_sublineage=with_sublineage,
+                samples=samples,
             )
         )
         params["reference_accession"] = reference
@@ -614,7 +648,7 @@ class sonarUtils:
         params["limit"] = -1
         params["offset"] = 0
 
-        LOGGER.verbose(params["filters"])
+        LOGGER.debug(params["filters"])
 
         json_response = APIClient(
             base_url=BASE_URL
@@ -667,7 +701,7 @@ class sonarUtils:
         """
 
         annotator = Annotator(
-            annotator_exe_path=ANNO_TOOL_PATH, config_path=ANNO_CONFIG_FILE
+            annotator_exe_path=ANNO_TOOL_PATH, config_path=ANNO_CONFIG_FILE, cache=cache
         )
         annotator.snpeff_annotate(
             kwargs["vcffile"],
@@ -861,7 +895,7 @@ class sonarUtils:
             LOGGER.info("Nothing to delete.")
 
         json_response = APIClient(base_url=BASE_URL).post_delete_sample(
-            reference, list(samples)
+            reference, samples=samples
         )
         if json_response["status"] == "success":
             deleted = json_response["data"]["deleted_samples_count"]
