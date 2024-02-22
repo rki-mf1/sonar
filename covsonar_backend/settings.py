@@ -46,7 +46,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+#DEBUG = env('DEBUG')
+DEBUG = True
 
 if not DEBUG:
     ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
@@ -196,3 +197,18 @@ if not os.path.exists(IMPORTED_DATA_DIR):
     os.makedirs(IMPORTED_DATA_DIR)
 
 PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://redis:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# Celery settings
+CELERY_BROKER_URL = "redis://redis:6379/0"
+#CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+#CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'

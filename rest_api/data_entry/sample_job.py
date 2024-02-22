@@ -1,7 +1,7 @@
+
 from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sequence_job import clean_unused_sequences
 from rest_api.models import Alignment, Sample, Sample2Property, Sequence
-from django.db import transaction
 
 
 def delete_sample(sample_list: list):
