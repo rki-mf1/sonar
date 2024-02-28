@@ -171,6 +171,8 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
     genomic_profiles = serializers.SerializerMethodField()
     proteomic_profiles = serializers.SerializerMethodField()
+    annotation_profiles = serializers.SerializerMethodField()
+
     class Meta:
         model = models.Sample
         fields = [
@@ -181,7 +183,27 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
             "properties",
             "genomic_profiles",
             "proteomic_profiles",
+            "annotation_profiles"
         ]
+
+    def get_annotation_profiles(self, obj: models.Sample):
+        # print(obj.sequence.alignments.mutations.mutation2annotaion.all())
+        # sequence__alignments__mutations__mutation2annotation_set__annotation
+        list = []
+        for alignment in obj.sequence.alignments.all():
+            for mutation in alignment.mutations.all():
+
+                if mutation.mutation2annotation_set.exists():
+                    label = self.create_NT_format(mutation)
+                    label += "("
+                    annotations = []
+                    for mutation2annotation in mutation.mutation2annotation_set.filter(alignment_id=alignment.id).all():
+                        annotations.append(mutation2annotation.annotation.seq_ontology)
+                    label += ",".join(annotations)
+                    label += ")"
+                    list.append(label)
+
+        return list
 
     def get_properties(self, obj: models.Sample):
         custom_properties = Sample2PropertySerializer(
@@ -210,16 +232,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
         for alignment in obj.sequence.alignments.all():
             for mutation in alignment.genomic_profiles:
-                label = ""
-                # SNP and INS
-                if mutation.alt != None:
-                    label = f"{mutation.ref}{mutation.end}{mutation.alt}"
-                    
-                else : # DEL
-                    if mutation.end - mutation.start == 1:
-                        label = "del:" + str(mutation.start + 1) 
-                    else:
-                        label = "del:" + str(mutation.start + 1) + "-" + str(mutation.end)
+                label = self.create_NT_format(mutation)
                 list.append(label)
             
         return list
@@ -247,6 +260,19 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     continue  
         return list
 
+    def create_NT_format(self, mutation: models.Mutation):
+        label = ""
+        # SNP and INS
+        if mutation.alt != None:
+            label = f"{mutation.ref}{mutation.end}{mutation.alt}"
+            
+        else : # DEL
+            if mutation.end - mutation.start == 1:
+                label = "del:" + str(mutation.start + 1) 
+            else:
+                label = "del:" + str(mutation.start + 1) + "-" + str(mutation.end)
+                
+        return label
 
 class SampleGenomesSerializerVCF(serializers.ModelSerializer):
     genomic_profiles = serializers.SerializerMethodField()
