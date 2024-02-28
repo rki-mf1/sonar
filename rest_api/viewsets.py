@@ -268,7 +268,6 @@ class MutationViewSet(
             queryset = queryset.filter(element__replicon__reference__accession=ref)
         return Response({"alts": [item["alt"] for item in queryset]})
 
-
 class ReferenceViewSet(
     viewsets.GenericViewSet,
     generics.mixins.ListModelMixin,
