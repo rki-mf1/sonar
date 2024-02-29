@@ -75,7 +75,7 @@ Once these steps are completed, proceed to the next section.
 
 ## Setup sonar-backend (development server)
 
-There is a ".env.template" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+There is a "template.env" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
 
 1. Check if the application and django are set up and running correctly.
     ```bash
@@ -148,9 +148,39 @@ We provide the test datasets under the `test-data` directory. These datasets can
 ### Without Docker
 ...
 
-### With Docker
-...
+### Deploy sonar-backend with Docker in Linux environment (experimental)
+Prerequisite is you have to [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+These commands and Docker files are tested on Docker version 25.0.2.
 
+1. Build the sonar-backend image
+```bash
+docker build -t backend_dev:local -f Dockerfile .
+```
+2. Start Docker compose
+```bash
+docker compose -f "docker-compose-dev.yml" up  --build 
+```
+OR use -d to detach the command. For example:
+```bash
+docker-compose -f "docker-compose-dev.yml" up --build -d
+```
+3. List the containers
+```bash
+docker ps
+```
+you should see something like:
+```bash
+CONTAINER ID   IMAGE                         COMMAND                  CREATED          STATUS          PORTS                            NAMES
+efae00c34d0b   sonar-backend-backend-nginx   "/docker-entrypoint.…"   11 minutes ago   Up 11 minutes   80/tcp, 0.0.0.0:8000->8000/tcp   sonar-backend-backend-nginx-1     
+d721ec159ec8   backend_dev:local             "python manage.py ru…"   11 minutes ago   Up 11 minutes   0.0.0.0:59571->9080/tcp          dev-covsonar-django
+fbc301efe63d   postgres:alpine               "docker-entrypoint.s…"   11 minutes ago   Up 11 minutes   0.0.0.0:59574->5432/tcp          dev-covsonar-db
+8b125b974c65   redis:7                       "docker-entrypoint.s…"   11 minutes ago   Up 11 minutes   127.0.0.1:6379->6379/tcp         dev-covsonar-cache
+```
+4. Set up Database
+```bash
+docker compose -f docker-compose-dev.yml exec  dev-django python manage.py migrate
+```
+Once the containers are up and running, you can access the backend via http://127.0.0.1:8000/api for sonar-cli or http://127.0.0.1:8000/admin through a web browser.
 
 ----
 

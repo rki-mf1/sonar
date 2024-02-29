@@ -1,5 +1,5 @@
 from rest_framework import routers
-from rest_api import viewsets
+from rest_api import viewsets, viewsets_sample
 
 router = routers.SimpleRouter()
 router.register(r"mutations", viewsets.MutationViewSet, basename="mutation")
@@ -9,9 +9,9 @@ router.register(
     viewsets.MutationSignatureViewSet,
     basename="mutation_signature",
 )
-router.register(r"samples", viewsets.SampleViewSet, basename="sample")
+router.register(r"samples", viewsets_sample.SampleViewSet, basename="sample")
 router.register(
-    r"sample_genomes", viewsets.SampleGenomeViewSet, basename="sample_genome"
+    r"sample_genomes", viewsets_sample.SampleGenomeViewSet, basename="sample_genome"
 )
 router.register(r"references", viewsets.ReferenceViewSet, basename="reference")
 router.register(r"replicons", viewsets.RepliconViewSet, basename="replicon")

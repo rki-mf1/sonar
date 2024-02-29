@@ -49,8 +49,8 @@ SECRET_KEY = env("SECRET_KEY")
 #DEBUG = env('DEBUG')
 DEBUG = True
 
-if not DEBUG:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+
 # Application definition
 
 INSTALLED_APPS = [
