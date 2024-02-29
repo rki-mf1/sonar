@@ -16,7 +16,6 @@ import os
 
 # Initialise environment variables
 env = environ.Env(
-    # set casting, default value
     DEBUG=(bool, False),
     POSTGRES_USER=str,
     POSTGRES_PASSWORD=str,
@@ -25,6 +24,8 @@ env = environ.Env(
     POSTGRES_PORT=str,
     SECRET_KEY=str,
     IMPORTED_DATA_DIR=(str, None),
+    REDIS_URL=str,
+    ALLOWED_HOSTS=(str, None),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -36,7 +37,7 @@ STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
 STATIC_URL = "/static/"
 
 # Take environment variables from .env file
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -46,9 +47,10 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+# DEBUG = env('DEBUG')
+DEBUG = True
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = env("ALLOWED_HOSTS", "").split(",")
 
 # Application definition
 
@@ -69,7 +71,6 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
     "PAGE_SIZE": 100,
-
 }
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -130,9 +131,7 @@ else:
     print("Using the provided database.")
     database_connection = env.db("DATABASE_URL")
 
-DATABASES = {
-    "default": database_connection
-}
+DATABASES = {"default": database_connection}
 
 
 # Password validation
@@ -189,10 +188,27 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
 
-IMPORTED_DATA_DIR = env("IMPORTED_DATA_DIR") if env("IMPORTED_DATA_DIR") else os.path.join(BASE_DIR,"import_data")
+IMPORTED_DATA_DIR = (
+    env("IMPORTED_DATA_DIR")
+    if env("IMPORTED_DATA_DIR")
+    else os.path.join(BASE_DIR, "import_data")
+)
 
 # Check if the directory already exists
 if not os.path.exists(IMPORTED_DATA_DIR):
     os.makedirs(IMPORTED_DATA_DIR)
 
 PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"{env('REDIS_URL')}1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
+# Celery settings
+CELERY_BROKER_URL = f"{env('REDIS_URL')}0"

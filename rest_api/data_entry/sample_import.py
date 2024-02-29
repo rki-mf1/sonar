@@ -4,6 +4,7 @@ import re
 import typing
 from dataclasses import dataclass
 from typing import Any
+from django.core.cache import cache
 
 from django.db.models import Q
 
@@ -213,25 +214,26 @@ class SampleImport:
         return sample_mutations
 
     def get_mutation2alignment_objs(self) -> list:
-        self.alignment = Alignment.objects.get(
-            sequence=self.sequence, replicon=self.replicon
-        )
-        db_mutations_query = Q()
-        for mutation in self.mutation_query_data:
-            db_mutations_query |= Q(**mutation)
-        self.db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
-            "id",
-            "start",
-            "ref",
-            "alt",
-            "replicon__accession",
-        )
-        return [
-            Mutation.alignments.through(
-                alignment=self.alignment, mutation_id=mutation["id"]
+        with cache.lock("read_mutation"):
+            self.alignment = Alignment.objects.get(
+                sequence=self.sequence, replicon=self.replicon
             )
-            for mutation in self.db_sample_mutations
-        ]
+            db_mutations_query = Q()
+            for mutation in self.mutation_query_data:
+                db_mutations_query |= Q(**mutation)
+            self.db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
+                "id",
+                "start",
+                "ref",
+                "alt",
+                "replicon__accession",
+            )
+            return [
+                Mutation.alignments.through(
+                    alignment=self.alignment, mutation_id=mutation["id"]
+                )
+                for mutation in self.db_sample_mutations
+            ]
 
     def get_annotation_objs(self) -> list[AnnotationType]:
         if self.db_sample_mutations is None:
@@ -330,20 +332,6 @@ class SampleImport:
 
             return annotations
         return None
-
-    def _find_or_create_sample(self, sequence):
-        try:
-            return Sample.objects.get(name=self.sample_raw.name, sequence=sequence)
-        except Sample.DoesNotExist:
-            sample_serializer = SampleSerializer(
-                data={
-                    "name": self.sample_raw.name,
-                    "sequence": sequence.id,
-                    "properties": self.sample_raw.properties,
-                }
-            )
-            sample_serializer.is_valid(raise_exception=True)
-            return sample_serializer.save()
 
     def _import_pickle(self, path: str):
         with open(path, "rb") as f:
