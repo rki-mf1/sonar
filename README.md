@@ -23,6 +23,8 @@ The current version has been tested on the following system configurations:
 
 ## Prerequisites
 
+ - [Install Redis on Linux](https://redis.io/docs/install/install-redis/install-redis-on-linux/)
+
  - Install PostgreSQL using the following example command on Ubuntu/Debian systems: 
     ```bash
     sudo apt-get install postgresql 

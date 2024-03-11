@@ -22,7 +22,7 @@ logger = get_task_logger(__name__)
 
 
 # NOTE: This variable need to be adjustable.
-default_batch_size = 5
+default_batch_size = 10
 
 
 class SampleEntryJob:
