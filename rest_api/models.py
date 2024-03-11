@@ -1,4 +1,3 @@
-from datetime import datetime
 from django.db import models
 from django.db.models import UniqueConstraint, Q
 
@@ -217,7 +216,7 @@ class Sample(models.Model):
     name = models.CharField(max_length=100, unique=True, blank=True, null=True)
     datahash = models.CharField(max_length=50, blank=True, null=True)
     sequence = models.ForeignKey(
-        Sequence, models.DO_NOTHING, blank=True, null=True, related_name="samples"
+        Sequence, models.DO_NOTHING, blank=True, null=True
     )
     sequencing_tech = models.CharField(max_length=50, blank=True, null=True)
     processing_date = models.DateField(blank=True, null=True)

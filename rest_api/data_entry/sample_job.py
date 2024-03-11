@@ -59,7 +59,7 @@ def delete_sample_old(reference_accession, sample_list: list):
         return data
 
     # delete sample alignment
-    aligns = Alignment.objects.filter(sequence__samples__id__in=sample_ids)
+    aligns = Alignment.objects.filter(sequence__sample__id__in=sample_ids)
     if DEBUG:
         print("------------")
         print("Query Alignment:",aligns.query)

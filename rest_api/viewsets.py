@@ -123,7 +123,7 @@ class AlignmentViewSet(
                 "replicon_id",
                 "alignement_id",
                 "sequence_id",
-                "sequence__samples__name",  # Adjust based on your actual model structure
+                "sequence__sample_set__name",  # needs to be checked since the sample_set is a many to many field
                 # Add other fields you need from the joined tables
             )
         )
@@ -385,7 +385,7 @@ class MutationSignatureViewSet(
     queryset = (
         models.Mutation.objects.filter(ref__in=["C", "T"], alt__in=["C", "T", "G", "A"])
         .exclude(ref=F("alt"))
-        .annotate(count=Count("alignments__sequence__samples"))
+        .annotate(count=Count("alignments__sequence__sample_set"))
     )
     serializer_class = MutationSignatureSerializer
     filter_backends = [DjangoFilterBackend]
@@ -626,9 +626,9 @@ class AAMutationViewSet(
             models.Mutation.objects.filter(
                 element__molecule__reference__accession=reference_value
             )
-            .filter(alignments__sequence__samples__in=samples_query)
+            .filter(alignments__sequence__sample_set__in=samples_query)
             .filter(element__symbol__in=gene_list)
-            .annotate(mutation_count=Count("alignments__sequence__samples"))
+            .annotate(mutation_count=Count("alignments__sequence__sample_set"))
             .filter(mutation_count__gte=min_nb_freq)
             .order_by("-mutation_count")
         )

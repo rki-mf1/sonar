@@ -32,12 +32,10 @@ from rest_api.utils import (
 )
 from rest_framework import status
 from .serializers import (
-
     Sample2PropertyBulkCreateOrUpdateSerializer,
     SampleGenomesSerializer,
     SampleGenomesSerializerVCF,
     SampleSerializer,
-
 )
 from covsonar_backend.settings import DEBUG
 
@@ -87,8 +85,8 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
-        
-        TODO:  
+
+        TODO:
         1. Optimize the query (reduce the database hit)
         2. add accession of reference at the output
         3. add annotation info at the output
@@ -96,8 +94,8 @@ class SampleViewSet(
 
         try:
             # we try to use bool(), but it is not working as expected.
-            showNX  = strtobool(request.query_params.get("showNX","False"))
-            vcf_format = strtobool(request.query_params.get("vcf_format","False"))
+            showNX = strtobool(request.query_params.get("showNX", "False"))
+            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
             ref = request.query_params.get("reference_accession")
 
             self.has_property_filter = False
@@ -138,7 +136,9 @@ class SampleViewSet(
                 .order_by("start")
             )
 
-            annotation_qs = models.Mutation2Annotation.objects.filter(alignment__replicon__reference__accession=ref)
+            annotation_qs = models.Mutation2Annotation.objects.filter(
+                alignment__replicon__reference__accession=ref
+            )
 
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
@@ -159,14 +159,13 @@ class SampleViewSet(
                     queryset=annotation_qs,
                     to_attr="annotation_profiles",
                 ),
-
             )
 
             if DEBUG:
                 print("Final query:")
                 print(queryset.query)
 
-            # TODO: output in  VCF 
+            # TODO: output in  VCF
             # if VCF
             # for obj in queryset.all():
             #    print(obj.name)
@@ -176,7 +175,7 @@ class SampleViewSet(
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializerVCF(queryset, many=True)
                 return self.get_paginated_response(serializer.data)
-            else:                
+            else:
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializer(queryset, many=True)
                 # inspect the performance
@@ -196,8 +195,6 @@ class SampleViewSet(
                 q_obj &= self.eval_basic_filter(q_obj, filter)
         if "label" in filters:
             q_obj &= self.eval_basic_filter(q_obj, filters)
-
-        #
         for or_filter in filters.get("orFilter", []):
             q_obj |= self.resolve_genome_filter(or_filter)
 
@@ -441,8 +438,8 @@ class SampleViewSet(
         exclude: bool = False,
         *args,
         **kwargs,
-    ):   
-        if isinstance(value, str): 
+    ):
+        if isinstance(value, str):
             sample_list = ast.literal_eval(value)
         else:
             sample_list = value
@@ -483,7 +480,6 @@ class SampleViewSet(
         )
         return self.filter_property("lineage", "in", sublineages, exclude)
 
-
     def _convert_date(self, date: str):
         datetime_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
         return datetime_obj.date()
@@ -501,9 +497,10 @@ class SampleViewSet(
             return create_error_response(
                 message="No sample_id_column.", return_status=400
             )
-        if   not column_mapping: 
+        if not column_mapping:
             return create_success_response(
-                message="No column_mapping is provided, nothing to import.", return_status=200
+                message="No column_mapping is provided, nothing to import.",
+                return_status=200,
             )
         if not request.FILES or "properties_tsv" not in request.FILES:
             return Response("No file uploaded.", status=400)
@@ -660,7 +657,7 @@ class SampleViewSet(
     def get_bulk_sample_data(self, request: Request, *args, **kwargs):
         try:
             # Parse the JSON data from the request body
-            data = json.loads(request.body.decode('utf-8'))
+            data = json.loads(request.body.decode("utf-8"))
             # example to be parsed data: {"sample_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
             sample_data_list = data.get("sample_data", [])
             sample_model = (
@@ -668,22 +665,29 @@ class SampleViewSet(
                 .extra(select={"sample_id": "sample.id"})
                 .values("sample_id", "name", "sequence__seqhash")
             )
-             # Convert the QuerySet to a list of dictionaries
+            # Convert the QuerySet to a list of dictionaries
             sample_data = list(sample_model)
 
             # Check for missing samples and add them to the result
-            missing_samples = set(sample_data_list) - set(item["name"] for item in sample_data)
+            missing_samples = set(sample_data_list) - set(
+                item["name"] for item in sample_data
+            )
             for missing_sample in missing_samples:
-                sample_data.append({
-                    "sample_id": None,
-                    "name": missing_sample,
-                    "sequence__seqhash": None
-                })
+                sample_data.append(
+                    {
+                        "sample_id": None,
+                        "name": missing_sample,
+                        "sequence__seqhash": None,
+                    }
+                )
 
-            return create_success_response(message="Request processed successfully",data=sample_data)
+            return create_success_response(
+                message="Request processed successfully", data=sample_data
+            )
         except json.JSONDecodeError:
-            return create_error_response("Invalid JSON data / structure", return_status=400)
-
+            return create_error_response(
+                "Invalid JSON data / structure", return_status=400
+            )
 
     @action(detail=False, methods=["post"])
     def delete_sample_data(self, request: Request, *args, **kwargs):
@@ -697,6 +701,7 @@ class SampleViewSet(
         sample_data = delete_sample(sample_list=sample_list)
 
         return create_success_response(data=sample_data)
+
 
 class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin):
     queryset = models.Sample.objects.all()

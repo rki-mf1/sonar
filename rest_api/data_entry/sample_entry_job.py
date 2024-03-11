@@ -1,7 +1,7 @@
 import pathlib
-import time
 from datetime import datetime
 from rest_api.data_entry.sample_import import SampleImport
+from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.data_entry.sequence_job import clean_unused_sequences
 from rest_api.models import (
     Alignment,
@@ -12,10 +12,10 @@ from rest_api.models import (
     Mutation2Annotation,
 )
 from django.db import DataError
-from django.db.utils import OperationalError
-from celery import shared_task
+from celery import shared_task, group
 from celery.utils.log import get_task_logger
 from django.core.cache import cache
+from django.db import transaction
 import environ
 
 logger = get_task_logger(__name__)
@@ -29,25 +29,36 @@ class SampleEntryJob:
     def run_data_entry(self):
         env = environ.Env(REDIS_URL=(str, None))
         print("--- running data entry ---")
-        files = list(
+        sample_files = list(
             pathlib.Path("import_data").joinpath("samples").glob("**/*.sample")
         )
-        print(f"{len(files)} files found")
+        anno_files = list(pathlib.Path("import_data").joinpath("anno").glob("**/*.vcf"))
+        print(f"{len(sample_files)} files found")
         timer = datetime.now()
         batch_size = env("sample_batch_size", default=default_batch_size, cast=int)
-        number_of_batches = len(files) // batch_size
+        number_of_batches = len(sample_files) // batch_size
         print("Batch size:", batch_size)
         print(f"Total number of batches: {number_of_batches}")
-        files = [str(file) for file in files]
+        sample_files = [str(file) for file in sample_files]
         if batch_size:
             replicon_cache = {}
             gene_cache = {}
             if env("REDIS_URL"):
-                print("setting up celery jobs..")
-                for i in range(0, len(files), batch_size):
-                    batch = files[i : i + batch_size]
-                    process_batch.delay(batch, replicon_cache, gene_cache)
+                print("setting up sample import celery jobs..")
+                jobs = []
+                for i in range(0, len(sample_files), batch_size):
+                    batch = sample_files[i : i + batch_size]
+                    jobs.append(process_batch.s(batch, replicon_cache, gene_cache))
+                job_group = group(jobs)
+                result = job_group.apply_async()
                 print(f"{number_of_batches} jobs sent to celery")
+                print("waiting for sample import to finish..")
+                print(result.get())
+                print("sample import done")
+                print("setting up annotation import celery jobs..")
+                for file in anno_files:
+                    process_annotation.delay(str(file))
+
             else:
                 print("--------------- WARNING -----------------")
                 print("REDIS_URL not set, running without celery.")
@@ -55,14 +66,14 @@ class SampleEntryJob:
                 print("--------------- ------- -----------------")
                 replicon_cache = {}
                 gene_cache = {}
-                for i in range(0, len(files), batch_size):
+                for i in range(0, len(sample_files), batch_size):
                     try:
                         batchtimer = datetime.now()
-                        batch = files[i : i + batch_size]
+                        batch = sample_files[i : i + batch_size]
                         print(
                             f"processing batch {(i//batch_size) + 1} of {number_of_batches}"
                         )
-                        self.process_batch(batch, replicon_cache, gene_cache)
+                        process_batch_single_thread(batch, replicon_cache, gene_cache)
                         print(
                             f"batch {(i//batch_size) + 1} done in {datetime.now() - batchtimer}"
                         )
@@ -104,7 +115,6 @@ def process_batch(batch: list[str], replicon_cache, gene_cache):
             mutations.extend(sample_import_obj.get_mutation_objs(gene_cache))
         with cache.lock("mutation"):
             Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
-
         mutations2alignments = []
         for sample_import_obj in sample_import_objs:
             mutations2alignments.extend(sample_import_obj.get_mutation2alignment_objs())
@@ -112,26 +122,9 @@ def process_batch(batch: list[str], replicon_cache, gene_cache):
             Mutation.alignments.through.objects.bulk_create(
                 mutations2alignments, ignore_conflicts=True
             )
-        annotations = []
 
-        for sample_import_obj in sample_import_objs:
-            annotations.extend(sample_import_obj.get_annotation_objs())
-        with cache.lock("annotation"):
-            AnnotationType.objects.bulk_create(
-                annotations,
-                ignore_conflicts=True,
-            )
-        annotation2mutations = []
-        for sample_import_obj in sample_import_objs:
-            annotation2mutations.extend(
-                sample_import_obj.get_annotation2mutation_objs()
-            )
-        with cache.lock("annotation2mutation"):
-            Mutation2Annotation.objects.bulk_create(
-                annotation2mutations, ignore_conflicts=True
-            )
         # Filter sequences without associated samples
-        clean_unused_sequences()
+        # clean_unused_sequences() #why?
 
     except DataError as data_error:
         # Handle the DataError exception here
@@ -146,68 +139,88 @@ def process_batch(batch: list[str], replicon_cache, gene_cache):
         logger.error(f"An unexpected error occurred: {e}")
         raise
 
-def process_batch_single_thread(self, batch, replicon_cache, gene_cache):
-        try:
-            sample_import_objs = [SampleImport(file) for file in batch]
-            with transaction.atomic():
-                sequences = [
-                    sample_import_obj.get_sequence_obj()
-                    for sample_import_obj in sample_import_objs
-                ]
-               
-                Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
-                samples = [
-                    sample_import_obj.get_sample_obj()
-                    for sample_import_obj in sample_import_objs
-                ]
-                Sample.objects.bulk_create(samples, update_conflicts=True, unique_fields=['name'], update_fields=['sequence'])
-                [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
-                alignments = [
-                    sample_import_obj.get_alignment_obj()
-                    for sample_import_obj in sample_import_objs
-                ]
-                Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
-                mutations = []
-                for sample_import_obj in sample_import_objs:
-                    mutations.extend(sample_import_obj.get_mutation_objs(gene_cache))
-                Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
-                mutations2alignments = []
-                for sample_import_obj in sample_import_objs:
-                    mutations2alignments.extend(
-                        sample_import_obj.get_mutation2alignment_objs()
-                    )
-                Mutation.alignments.through.objects.bulk_create(
-                    mutations2alignments, ignore_conflicts=True
-                )
-                annotations = []
 
-                for sample_import_obj in sample_import_objs:
-                    annotations.extend(sample_import_obj.get_annotation_objs())
-                AnnotationType.objects.bulk_create(
-                    annotations,
-                    ignore_conflicts=True,
-                )
-                annotation2mutations = []
-                for sample_import_obj in sample_import_objs:
-                    annotation2mutations.extend(
-                        sample_import_obj.get_annotation2mutation_objs()
-                    )
-                Mutation2Annotation.objects.bulk_create(
-                    annotation2mutations, ignore_conflicts=True
-                )
+@shared_task
+def process_annotation(file_name):
+    annotation_import = AnnotationImport(file_name)    
+    with cache.lock("annotation"):
+        AnnotationType.objects.bulk_create(
+            annotation_import.get_annotation_objs(),
+            ignore_conflicts=True,
+        )
+    with cache.lock("annotation2mutation"):
+        Mutation2Annotation.objects.bulk_create(
+            annotation_import.get_annotation2mutation_objs(), ignore_conflicts=True
+        )
 
-                # Filter sequences without associated samples    
-                clean_unused_sequences()
-                
-        except DataError as data_error:
-            # Handle the DataError exception here
-            print(f"DataError: {data_error}")
-            # Perform additional error handling or logging as needed
-            print("Error happens on this batch")
+
+def process_batch_single_thread(batch, replicon_cache, gene_cache):
+    try:
+        sample_import_objs = [SampleImport(file) for file in batch]
+        with transaction.atomic():
+            sequences = [
+                sample_import_obj.get_sequence_obj()
+                for sample_import_obj in sample_import_objs
+            ]
+
+            Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
+            samples = [
+                sample_import_obj.get_sample_obj()
+                for sample_import_obj in sample_import_objs
+            ]
+            Sample.objects.bulk_create(
+                samples,
+                update_conflicts=True,
+                unique_fields=["name"],
+                update_fields=["sequence"],
+            )
+            [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
+            alignments = [
+                sample_import_obj.get_alignment_obj()
+                for sample_import_obj in sample_import_objs
+            ]
+            Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
+            mutations = []
             for sample_import_obj in sample_import_objs:
-                print(sample_import_obj.sample_file_path)
-            raise
-        except Exception as e:
-            # Handle other exceptions if necessary
-            print(f"An unexpected error occurred: {e}")
-            raise
+                mutations.extend(sample_import_obj.get_mutation_objs(gene_cache))
+            Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
+            mutations2alignments = []
+            for sample_import_obj in sample_import_objs:
+                mutations2alignments.extend(
+                    sample_import_obj.get_mutation2alignment_objs()
+                )
+            Mutation.alignments.through.objects.bulk_create(
+                mutations2alignments, ignore_conflicts=True
+            )
+            annotations = []
+
+            for sample_import_obj in sample_import_objs:
+                annotations.extend(sample_import_obj.get_annotation_objs())
+            AnnotationType.objects.bulk_create(
+                annotations,
+                ignore_conflicts=True,
+            )
+            annotation2mutations = []
+            for sample_import_obj in sample_import_objs:
+                annotation2mutations.extend(
+                    sample_import_obj.get_annotation2mutation_objs()
+                )
+            Mutation2Annotation.objects.bulk_create(
+                annotation2mutations, ignore_conflicts=True
+            )
+
+            # Filter sequences without associated samples
+            # clean_unused_sequences()
+
+    except DataError as data_error:
+        # Handle the DataError exception here
+        print(f"DataError: {data_error}")
+        # Perform additional error handling or logging as needed
+        print("Error happens on this batch")
+        for sample_import_obj in sample_import_objs:
+            print(sample_import_obj.sample_file_path)
+        raise
+    except Exception as e:
+        # Handle other exceptions if necessary
+        print(f"An unexpected error occurred: {e}")
+        raise

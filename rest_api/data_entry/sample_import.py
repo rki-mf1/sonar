@@ -5,7 +5,6 @@ import typing
 from dataclasses import dataclass
 from typing import Any
 from django.core.cache import cache
-
 from django.db.models import Q
 
 if typing.TYPE_CHECKING:
@@ -27,12 +26,9 @@ from typing import Optional
 
 @dataclass
 class SampleRaw:
-    algn_file: str
-    anno_tsv_file: str
     anno_vcf_file: str
     cds_file: str
     header: str
-    lift_file: str
     mafft_seqfile: str
     name: str
     properties: dict
@@ -50,6 +46,9 @@ class SampleRaw:
     sampleid: Optional[int] = None
     refseq_id: Optional[int] = None
     source_acc: Optional[str] = None
+    algn_file: Optional[str] = None
+    anno_tsv_file: Optional[str] = None
+    lift_file: Optional[str] = None
 
 
 @dataclass
@@ -60,41 +59,6 @@ class VarRaw:
     alt: str | None
     replicon_or_cds_accession: str
     type: str
-
-
-@dataclass
-class VCFRaw:
-    chrom: str  # mutation__replicon__accession
-    pos: int  # mutation__start
-    id: str
-    ref: str  # mutation__ref
-    alt: str | None
-    qual: str
-    filter: str
-    info: str
-    format: str
-    sample: str
-
-
-@dataclass
-class VCFInfoANNRaw:
-    # Functional annotations
-    allele: str
-    annotation: str
-    annotation_impact: str
-    gene_name: str
-    gene_id: str
-    feature_type: str
-    feature_id: str
-    transcript_bio_type: str
-    rank: str
-    hgvs_c: str
-    hgvs_p: str
-    c_dna_pos_length: str
-    cds_pos_length: str
-    aa_pos_length: str
-    distance: str
-    errors_warnings_info: str
 
 
 class VCFInfoLOFRaw:
@@ -127,7 +91,7 @@ class SampleImport:
         self.replicon: None | Replicon = None
         self.alignment: None | Alignment = None
         self.mutation_query_data: list[dict] = []
-        self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {} 
+        self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
         self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
 
         # NOTE: We probably won't need it
@@ -141,11 +105,7 @@ class SampleImport:
         if self.sample_raw.var_file:
             self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
         else:
-            raise Exception("No var file found")
-        if self.sample_raw.anno_vcf_file:
-            self.anno_vcf_raw = [
-                vcf_line for vcf_line in self._import_vcf(self.sample_raw.anno_vcf_file)
-            ]
+            raise Exception("No var file found")        
 
     def get_sequence_obj(self):
         self.sequence = Sequence(seqhash=self.sample_raw.seqhash)
@@ -214,26 +174,25 @@ class SampleImport:
         return sample_mutations
 
     def get_mutation2alignment_objs(self) -> list:
-        with cache.lock("read_mutation"):
-            self.alignment = Alignment.objects.get(
-                sequence=self.sequence, replicon=self.replicon
+        self.alignment = Alignment.objects.get(
+            sequence=self.sequence, replicon=self.replicon
+        )
+        db_mutations_query = Q()
+        for mutation in self.mutation_query_data:
+            db_mutations_query |= Q(**mutation)
+        self.db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
+            "id",
+            "start",
+            "ref",
+            "alt",
+            "replicon__accession",
+        )
+        return [
+            Mutation.alignments.through(
+                alignment=self.alignment, mutation_id=mutation["id"]
             )
-            db_mutations_query = Q()
-            for mutation in self.mutation_query_data:
-                db_mutations_query |= Q(**mutation)
-            self.db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
-                "id",
-                "start",
-                "ref",
-                "alt",
-                "replicon__accession",
-            )
-            return [
-                Mutation.alignments.through(
-                    alignment=self.alignment, mutation_id=mutation["id"]
-                )
-                for mutation in self.db_sample_mutations
-            ]
+            for mutation in self.db_sample_mutations
+        ]
 
     def get_annotation_objs(self) -> list[AnnotationType]:
         if self.db_sample_mutations is None:
@@ -258,7 +217,7 @@ class SampleImport:
                     mut_lookup_data["start"] += 1
                     mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
                     mut_lookup_data["alt"] = None
-                
+
                 try:
                     db_mutation = next(
                         x
@@ -273,7 +232,10 @@ class SampleImport:
                 for a in annotations:
                     if a:  # skip None type
                         for ontology in a.annotation.split("&"):
-                            if not db_mutation["id"] in self.annotation_query_data.keys():
+                            if (
+                                not db_mutation["id"]
+                                in self.annotation_query_data.keys()
+                            ):
                                 self.annotation_query_data[db_mutation["id"]] = []
                             self.annotation_query_data[db_mutation["id"]].append(
                                 {
@@ -287,7 +249,6 @@ class SampleImport:
         return annotation_types
 
     def get_annotation2mutation_objs(self) -> list[Mutation2Annotation]:
-
         db_annotations_query = Q()
         for annotation_list in self.annotation_query_data.values():
             for annotation in annotation_list:
@@ -301,7 +262,6 @@ class SampleImport:
                         annotation_data["seq_ontology"] == annotation.seq_ontology
                         and annotation_data["impact"] == annotation.impact
                     ):
-
                         mutation2annotation_objs.append(
                             Mutation2Annotation(
                                 mutation_id=mutation_id,
@@ -311,27 +271,6 @@ class SampleImport:
                         )
 
         return mutation2annotation_objs
-
-    def _parse_vcf_info(self, info) -> list[VCFInfoANNRaw]:
-        # only ANN= is parsed
-        if info.startswith("ANN="):
-            # r = re.compile(r"\(([^()]*|(?R))*\)")
-            r = re.compile(r"\(([^()]*|(R))*\)")
-            info = info[4:]
-            annotations = []
-            for annotation in info.split(","):
-                # replace pipes inside paranthesis
-                annotation = r.sub(lambda x: x.group().replace("|", "-"), annotation)
-                annotation = annotation.split("|")
-                try:
-                    annotations.append(VCFInfoANNRaw(*annotation))
-                except Exception:
-                    print(
-                        f"Failed to parse annotation: {annotation}, from file {self.vcf_file_path}"
-                    )
-
-            return annotations
-        return None
 
     def _import_pickle(self, path: str):
         with open(path, "rb") as f:
@@ -358,35 +297,6 @@ class SampleImport:
                     var_raw[4],  # replicon_or_cds_accession
                     var_raw[6],  # type
                 )
-
-    def _import_vcf(self, path):
-        file_name = pathlib.Path(path).name
-        self.vcf_file_path = (
-            pathlib.Path(self.import_folder)
-            .joinpath("anno")
-            .joinpath(file_name[:2])
-            .joinpath(file_name)
-        )
-        try:
-            with open(self.vcf_file_path, "r") as handle:
-                for line in handle:
-                    if line.startswith("#"):
-                        continue
-                    vcf_raw = line.strip("\r\n").split("\t")
-                    yield VCFRaw(
-                        chrom=vcf_raw[0],
-                        pos=int(vcf_raw[1]),
-                        id=vcf_raw[2],
-                        ref=vcf_raw[3],
-                        alt=None if vcf_raw[4] == "." else vcf_raw[4],
-                        qual=vcf_raw[5],
-                        filter=vcf_raw[6],
-                        info=vcf_raw[7],
-                        format=vcf_raw[8],
-                        sample=vcf_raw[9],
-                    )
-        except FileNotFoundError:
-            return
 
     def _import_seq(self, path):
         file_name = pathlib.Path(path).name

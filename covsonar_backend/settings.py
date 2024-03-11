@@ -212,3 +212,4 @@ CACHES = {
 
 # Celery settings
 CELERY_BROKER_URL = f"{env('REDIS_URL')}0"
+CELERY_RESULT_BACKEND = f"{env('REDIS_URL')}0"
