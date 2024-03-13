@@ -3,7 +3,6 @@ import csv
 from io import BytesIO
 import json
 import os
-import pickle
 import sys
 from typing import Any
 from typing import Dict
@@ -18,21 +17,17 @@ import pandas as pd
 from sonar_cli.align import sonarAligner
 from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
-from sonar_cli.basic import _check_reference
-from sonar_cli.basic import _is_import_required
 from sonar_cli.basic import _log_import_mode
 from sonar_cli.basic import construct_query
 from sonar_cli.cache import sonarCache
 from sonar_cli.common_utils import _files_exist
 from sonar_cli.common_utils import _get_csv_colnames
 from sonar_cli.common_utils import calculate_time_difference
-from sonar_cli.common_utils import clear_unnecessary_cache
 from sonar_cli.common_utils import flatten_json_output
 from sonar_cli.common_utils import get_current_time
-from sonar_cli.common_utils import get_fname
+from sonar_cli.common_utils import open_file_autodetect
 from sonar_cli.common_utils import out_autodetect
 from sonar_cli.common_utils import read_var_file
-from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
@@ -41,7 +36,6 @@ from tqdm import tqdm
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
-bar_format = "{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]"
 
 
 class sonarUtils:
@@ -62,7 +56,6 @@ class sonarUtils:
         )
 
     # DATA IMPORT
-
     @staticmethod
     def import_data(
         db: str,
@@ -97,7 +90,8 @@ class sonarUtils:
             quiet: Whether to suppress logging.
         """
         _log_import_mode(update, quiet)
-        _check_reference(db, reference)
+        LOGGER.info("Check reference")
+        sonarUtils._check_reference(reference)
         start_import_time = get_current_time()
         # checks
         fasta = fasta or []
@@ -123,6 +117,8 @@ class sonarUtils:
                 csv_files=csv_files,
                 tsv_files=tsv_files,
             )
+            # extract properties form csv/tsv files (this done by backend)
+            # properties = sonarUtils._extract_props(csv_files, tsv_files, prop_names, quiet)
             sample_id_column = properties["sample"]
             del properties["sample"]
             if len(properties) == 0:
@@ -138,6 +134,7 @@ class sonarUtils:
                 sys.exit(1)
 
         # setup cache
+        start_cache_time = get_current_time()
         cache = sonarUtils._setup_cache(
             db=db,
             reference=reference,
@@ -145,7 +142,9 @@ class sonarUtils:
             update=update,
             progress=progress,
         )
-
+        cache.logfile_obj.write(
+            f"Caching usage time: {calculate_time_difference(start_cache_time, get_current_time())}\n"
+        )
         # importing sequences
         if fasta:
             sonarUtils._import_fasta(
@@ -161,6 +160,7 @@ class sonarUtils:
 
         # importing properties
         if csv_files or tsv_files:
+
             sonarUtils._import_properties(
                 sample_id_column,
                 properties,
@@ -226,16 +226,14 @@ class sonarUtils:
             progress: Whether to show progress bar.
             method: Alignment method 1 MAFFT , 2 Parasail
         """
-
         if not fasta_files:
             return
         start_seqcheck_time = get_current_time()
-        sample_data_dict_list = cache.add_fasta_v2(*fasta_files, method=method)
-
+        cache.add_fasta_v2(*fasta_files, properties=properties, method=method)
         cache.logfile_obj.write(
             f"Sequence check usage time: {calculate_time_difference(start_seqcheck_time, get_current_time())}\n"
         )
-        LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
+        LOGGER.info(f"Total input samples: {len(cache._samplefiles)}")
 
         # Align sequences and process
         aligner = sonarAligner(
@@ -243,8 +241,7 @@ class sonarUtils:
         )
         l = len(cache._samplefiles_to_profile)
         LOGGER.info(f"Total samples that need to be processed: {l}")
-        if l == 0:
-            return
+
         start_align_time = get_current_time()
         with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
             desc="Profiling sequences...",
@@ -254,50 +251,41 @@ class sonarUtils:
             disable=not progress,
         ) as pbar:
             for _ in pool.imap_unordered(
-                aligner.process_cached_sample, sample_data_dict_list
+                aligner.process_cached_sample, cache._samplefiles_to_profile
             ):
                 pbar.update(1)
-
         cache.logfile_obj.write(
-            f"Seq. alignment usage time: {calculate_time_difference(start_align_time, get_current_time())}\n"
+            f"Seq alignment usage time: {calculate_time_difference(start_align_time, get_current_time())}\n"
         )
 
         start_paranoid_time = get_current_time()
-        passed_samples_list = cache.perform_paranoid_cached_samples(
-            sample_data_dict_list
-        )
+        passed_samples_list = cache.perform_paranoid_cached_samples()
         cache.logfile_obj.write(
             f"Paranoid test usage time: {calculate_time_difference(start_paranoid_time, get_current_time())}\n"
         )
-        n = ANNO_CHUNK_SIZE
-        passed_samples_chunk_list = [
-            tuple(
-                list(passed_samples_list[i : i + n]),
-            )
-            for i in range(0, len(passed_samples_list), n)
-        ]
+
         if auto_anno:
-            anno_result_list = []
+            # paired_anno_samples_list = [ {'db_path': self.db, 'sample_data': sample} for sample in anno_samples_list]
             start_anno_time = get_current_time()
             with WorkerPool(
                 n_jobs=threads,
                 start_method="fork",
                 shared_objects=cache,
-                pass_worker_id=True,
                 use_worker_state=False,
-            ) as pool:
+            ) as pool, tqdm(
+                position=0,
+                leave=True,
+                desc="Annotate samples...",
+                total=len(passed_samples_list),
+                unit="samples",
+                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+                disable=not progress,
+            ) as pbar:
                 pool.set_shared_objects(cache)
-                anno_result_list = pool.map_unordered(
-                    sonarUtils.annotate_sample,
-                    passed_samples_chunk_list,
-                    progress_bar=True,
-                    progress_bar_options={
-                        "position": 0,
-                        "desc": "Annotate samples...",
-                        "unit": "chunks",
-                        "bar_format": bar_format,
-                    },
-                )
+                for _ in pool.imap_unordered(
+                    sonarUtils.annotate_sample, passed_samples_list
+                ):
+                    pbar.update(1)
             cache.logfile_obj.write(
                 f"Sample anno usage time: {calculate_time_difference(start_anno_time, get_current_time())}\n"
             )
@@ -308,43 +296,22 @@ class sonarUtils:
         # Send Result over network.
         if not no_upload_sample:
             start_upload_time = get_current_time()
-            # NOTE: reuse the chunk size from anno
-            # n = 500
-
-            with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
+            with WorkerPool(
+                n_jobs=threads, start_method="fork", shared_objects=cache
+            ) as pool, tqdm(
                 position=0,
                 leave=True,
-                desc="Sending sample/variant...",
-                total=len(passed_samples_chunk_list),
-                unit="chunks",
-                bar_format=bar_format,
+                desc="Sending sample...",
+                total=len(passed_samples_list),
+                unit="samples",
+                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
                 disable=not progress,
             ) as pbar:
-
+                pool.set_shared_objects(cache)
                 for _ in pool.imap_unordered(
-                    sonarUtils.zip_import_upload_multithread,
-                    passed_samples_chunk_list,
+                    sonarUtils.zip_import_upload, passed_samples_list
                 ):
                     pbar.update(1)
-
-            if auto_anno:
-                with WorkerPool(
-                    n_jobs=threads,
-                    start_method="fork",
-                    use_worker_state=False,
-                ) as pool:
-                    pool.map_unordered(
-                        sonarUtils.zip_import_upload_annotaion,
-                        anno_result_list,
-                        progress_bar=True,
-                        progress_bar_options={
-                            "position": 0,
-                            "desc": "Sending annotated variant...",
-                            "unit": "chunks",
-                            "bar_format": bar_format,
-                        },
-                    )
-
             cache.logfile_obj.write(
                 f"Sample upload usage time: {calculate_time_difference(start_upload_time, get_current_time())}\n"
             )
@@ -352,73 +319,53 @@ class sonarUtils:
         else:
             LOGGER.info("Disable sending samples.")
 
-        clear_unnecessary_cache(passed_samples_list)
+        if method == 1:
+            LOGGER.info("Clean uncessary files")
+            cache.clear_unnecessary_cache(passed_samples_list)
 
     @staticmethod
-    def zip_import_upload_annotaion(file_path):
-        # Create a zip file without writing to disk
-        compressed_data = BytesIO()
-        with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
-            # Find the index of 'var'
-            path_parts = file_path.split("/")
-            _index = path_parts.index("anno")
-            # Join the parts starting from 'var'
-            rel_path = "/".join(path_parts[_index:])
+    def _import_upload(shared_objects, **kwargs):
+        """
+        (Deplecated)
+        No compression is applied,
+        """
+        cache = shared_objects
 
-            zipf.write(file_path, arcname=rel_path)
-
-        compressed_data.seek(0)
-
+        anno_vcf_file = open(kwargs["anno_vcf_file"], "rb")
+        var_file = open(kwargs["var_file"], "rb")
+        sample_file = open(cache.get_sample_fname(sample_name=kwargs["name"]), "rb")
         files = {
-            "zip_file": compressed_data,
+            "anno_file": anno_vcf_file,
+            "var_file": var_file,
+            "sample_file": sample_file,
         }
 
         APIClient(base_url=BASE_URL).post_import_upload(files)
 
     @staticmethod
-    def zip_import_upload_multithread(*sample_list):
-
-        files_to_compress = []
-        for kwargs in sample_list:
-            var_file = kwargs["var_file"]
-            sample_dict = kwargs
-
-            # Serialize the sample dictionary to bytes
-            sample_bytes = pickle.dumps(sample_dict)
-
-            # Append the serialized sample dictionary to the files to compress
-            files_to_compress.append(
-                (
-                    f"samples/{get_fname(kwargs['name'], extension='.sample',enable_parent_dir=True)}",
-                    sample_bytes,
-                )
-            )
-            files_to_compress.append(var_file)
-
+    def zip_import_upload(shared_objects, **kwargs):
+        cache = shared_objects
+        var_file = kwargs["var_file"]
+        sample_file = cache.get_sample_fname(sample_name=kwargs["name"])
+        files_to_compress = [var_file, sample_file]
+        if "anno_vcf_file" in kwargs:
+            anno_vcf_file = kwargs["anno_vcf_file"]
+            files_to_compress.append(anno_vcf_file)
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
             for file_path in files_to_compress:
-
-                if isinstance(file_path, tuple):
-                    # Add the dictionary data to the archive with pickle extension
-                    zipf.writestr(file_path[0], file_path[1])
-                else:
-
-                    # Find the index of 'var'
-                    path_parts = file_path.split("/")
-                    var_index = path_parts.index("var")
-                    # Join the parts starting from 'var'
-                    rel_path = "/".join(path_parts[var_index:])
-
-                    zipf.write(file_path, arcname=rel_path)
-
+                if not os.path.exists(file_path):
+                    continue
+                # Get the relative path without the common prefix
+                rel_path = os.path.relpath(
+                    file_path, os.path.commonprefix(files_to_compress)
+                )
+                zipf.write(file_path, arcname=rel_path)
         compressed_data.seek(0)
-
         files = {
             "zip_file": compressed_data,
         }
-
         APIClient(base_url=BASE_URL).post_import_upload(files)
 
     @staticmethod
@@ -445,7 +392,7 @@ class sonarUtils:
         all_files = tsv_files + csv_files
         for _file in tqdm(
             all_files,
-            desc="Sending property...",
+            desc="Sending property (tsv data)...",
             total=len(all_files),
             unit="files",
             bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
@@ -560,83 +507,90 @@ class sonarUtils:
         return propnames
 
     @staticmethod
-    def annotate_sample(
-        worker_id, shared_objects: sonarCache, *sample_list
-    ):  # **kwargs):
+    def _extract_props(
+        csv_files: List[str],
+        tsv_files: List[str],
+        prop_names: Dict[str, str],
+        quiet: bool,
+    ) -> Dict:
+        """Process the CSV and TSV files."""
+        properties = collections.defaultdict(dict)
+        # check if necessary
+        if not csv_files and not tsv_files:
+            return properties
+
+        # process files
+        file_tuples = [(x, ",") for x in csv_files] + [(x, "\t") for x in tsv_files]
+        for fname, delim in file_tuples:
+            if not quiet:
+                LOGGER.info("linking data from " + fname + "...")
+            col_names = _get_csv_colnames(fname, delim)
+            col_to_prop_links = _link_columns_to_props(col_names, prop_names, quiet)
+            with open_file_autodetect(fname) as handle:
+                csvreader = csv.DictReader(handle, delimiter=delim)
+                for row in csvreader:
+                    sample = row[col_to_prop_links["sample"]]
+                    for x, v in col_to_prop_links.items():
+                        if x != "sample":
+                            properties[sample][x] = row[v]
+
+        return properties
+
+    def _check_reference(reference):
+        accession_list = APIClient(base_url=BASE_URL).get_distinct_reference()
+        if reference is not None and reference not in accession_list:
+            LOGGER.error(f"The reference {reference} does not exist.")
+            sys.exit(1)
+
+    @staticmethod
+    def _export_query_results(
+        cursor: object,
+        format: str,
+        reference: str,
+        outfile: Optional[str],
+        output_column: Optional[List[str]] = [],
+    ):
         """
+        Export results depending on the specified format.
 
-        kwargs are sample dict object
+        Args:
+            cursor: Cursor object.
+            format: Output format.
+            reference: Reference accession.
+            outfile: Output file path.
+
+        Returns:
+            None
         """
+        if format in ["csv", "tsv"]:
+            tsv = format == "tsv"
 
-        cache = shared_objects
-        refmol = cache.default_refmol_acc
-        input_vcf_list = []
-        # map_name_annovcf_dict = {}
-        _unique_name = ""
+            cursor = flatten_json_output(cursor["results"])
 
-        # export_vcf:
-        for kwargs in sample_list:
-            _unique_name = _unique_name + kwargs["name"]
-            input_vcf_list.append(kwargs["vcffile"])
-            if cache.allow_updates is False:
-                if os.path.exists(kwargs["vcffile"]):
-                    continue
-
-            sonarUtils.export_vcf(
-                cursor=kwargs,
-                cache=cache,
-                reference=kwargs["refmol"],
-                outfile=kwargs["vcffile"],
-                from_var_file=True,
+            sonarUtils.export_csv(
+                cursor,
+                output_column=output_column,
+                outfile=outfile,
+                na="*** no match ***",
+                tsv=tsv,
             )
-            # for split vcf
-            # map_name_annovcf_dict[kwargs["name"]] = kwargs["anno_vcf_file"]
-
-        annotator = Annotator(
-            annotator_exe_path=ANNO_TOOL_PATH, config_path=ANNO_CONFIG_FILE, cache=cache
-        )
-        merged_vcf = os.path.join(
-            cache.anno_dir, get_fname(_unique_name, extension=".vcf")
-        )
-        merged_anno_vcf = os.path.join(
-            cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
-        )
-        filtered_vcf = os.path.join(
-            cache.anno_dir, get_fname(_unique_name, extension=".filtered.anno.vcf")
-        )
-        if cache.allow_updates is False:
-            if os.path.exists(filtered_vcf):
-                return filtered_vcf
-        # merge vcf:
-        if len(input_vcf_list) == 1:
-            merged_vcf = input_vcf_list[0]
+        elif format == "count":
+            count = cursor["count"]
+            if outfile:
+                with open(outfile, "w") as handle:
+                    handle.write(str(count))
+            else:
+                print(count)
+        elif format == "vcf":
+            sonarUtils.export_vcf(
+                cursor,
+                reference=reference,
+                outfile=outfile,
+                na="*** no match ***",
+            )
         else:
-            annotator.bcftools_merge(input_vcfs=input_vcf_list, output_vcf=merged_vcf)
-
-        # #  check if it is already exist
-        # # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
-        # if cache.allow_updates is False:
-        #     if os.path.exists(kwargs["anno_vcf_file"]):
-        #         return
-
-        annotator.snpeff_annotate(
-            merged_vcf,
-            merged_anno_vcf,
-            refmol,
-        )
-        annotator.bcftools_filter(merged_anno_vcf, filtered_vcf)
-        # dont forget to change the name
-        # split vcf back
-        # annotator.bcftools_split(
-        #     input_vcf=merged_anno_vcf,
-        #     map_name_annovcf_dict=map_name_annovcf_dict,
-        # )
-        # clean unncessery file
-        if os.path.exists(merged_vcf):
-            os.remove(merged_vcf)
-        if os.path.exists(merged_anno_vcf):
-            os.remove(merged_anno_vcf)
-        return filtered_vcf
+            LOGGER.error(f"'{format}' is not a valid output format")
+            sys.exit(1)
 
     # MATCHING
     @staticmethod
@@ -720,54 +674,48 @@ class sonarUtils:
         )
 
     @staticmethod
-    def _export_query_results(
-        cursor: object,
-        format: str,
-        reference: str,
-        outfile: Optional[str],
-        output_column: Optional[List[str]] = [],
-    ):
+    def annotate_sample(shared_objects, **kwargs):
         """
-        Export results depending on the specified format.
 
-        Args:
-            cursor: Cursor object.
-            format: Output format.
-            reference: Reference accession.
-            outfile: Output file path.
-
-        Returns:
-            None
+        kwargs are sample dict object
         """
-        if format in ["csv", "tsv"]:
-            tsv = format == "tsv"
+        cache = shared_objects
 
-            cursor = flatten_json_output(cursor["results"])
+        #  check if it is already exist
+        # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
+        if cache.allow_updates is False:
+            if os.path.exists(kwargs["anno_vcf_file"]):
+                return
+        # export_vcf
+        sonarUtils.export_vcf(
+            cursor=kwargs,
+            cache=cache,
+            reference=kwargs["refmol"],
+            outfile=kwargs["vcffile"],
+            from_var_file=True,
+        )
 
-            sonarUtils.export_csv(
-                cursor,
-                output_column=output_column,
-                outfile=outfile,
-                na="*** no match ***",
-                tsv=tsv,
-            )
-        elif format == "count":
-            count = cursor["count"]
-            if outfile:
-                with open(outfile, "w") as handle:
-                    handle.write(str(count))
-            else:
-                print(count)
-        elif format == "vcf":
-            sonarUtils.export_vcf(
-                cursor,
-                reference=reference,
-                outfile=outfile,
-                na="*** no match ***",
-            )
-        else:
-            LOGGER.error(f"'{format}' is not a valid output format")
-            sys.exit(1)
+        """
+        sonarUtils.match(
+            db=db_path,
+            reference=sample_data["refmol"],
+            samples=[sample_data["name"]],
+            outfile=sample_data["vcffile"],
+            format="vcf",
+        )
+        """
+
+        annotator = Annotator(
+            annotator_exe_path=ANNO_TOOL_PATH, config_path=ANNO_CONFIG_FILE, cache=cache
+        )
+        annotator.snpeff_annotate(
+            kwargs["vcffile"],
+            kwargs["anno_vcf_file"],
+            kwargs["refmol"],
+        )
+        # annotator.snpeff_transform_output(
+        #    sample_data["anno_vcf_file"], sample_data["anno_tsv_file"]
+        # )
 
     @staticmethod
     def export_csv(
@@ -821,8 +769,8 @@ class sonarUtils:
     # vcf
     @staticmethod
     def export_vcf(
-        cursor: Optional[Union[dict, Any]] = None,
-        reference: str = None,
+        cursor,
+        reference: str,
         cache: sonarCache = None,
         outfile: Optional[str] = None,
         na: str = "*** no match ***",
@@ -998,14 +946,8 @@ class sonarUtils:
         else:
             LOGGER.error(json_response["message"])
 
-    def _check_reference(reference):
-        accession_list = APIClient(base_url=BASE_URL).get_distinct_reference()
-        if reference is not None and reference not in accession_list:
-            LOGGER.error(f"The reference {reference} does not exist.")
-            sys.exit(1)
 
-
-def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
+def _get_vcf_data_form_var_file(cursor, selected_ref_seq, showNX) -> Dict:
     """
     Creates a data structure with records from a database cursor.
 
@@ -1126,7 +1068,7 @@ def _write_vcf_header(handle, reference: str, all_samples: List[str]):
     )
 
 
-def _write_vcf_records(handle, records: Dict, all_samples: List[str]):  # noqa: C901
+def _write_vcf_records(handle, records: Dict, all_samples: List[str]):
     """
     Writes the VCF file records to the given file handle.
 
@@ -1187,3 +1129,54 @@ def _write_vcf_records(handle, records: Dict, all_samples: List[str]):  # noqa: 
                         "GT",
                     ] + ["0/1" if x in samples else "./." for x in all_samples]
                 handle.write("\t".join(record) + "\n")
+
+
+def _is_import_required(
+    fasta: List[str], tsv_files: List[str], csv_files: List[str], update: bool
+) -> bool:
+    """Check if import is required."""
+    if not fasta:
+        if tsv_files or csv_files or update:
+            return True
+        else:
+            return False
+    return True
+
+
+def _link_columns_to_props(
+    col_names: List[str], prop_names: Dict[str, str], quiet: bool
+) -> Dict[str, str]:
+    """
+    Link property columns to their corresponding database properties.
+
+    Args:
+        fields: List of column names in the metadata file.
+        prop_names: Dictionary mapping database property names to column names in the metadata file.
+        quiet: Boolean indicating whether to suppress print statements.
+
+    Returns:
+        Dictionary linking file columns (values) to database properties (keys).
+    """
+    links = {}
+    props = sorted(prop_names.keys())
+    for prop in props:
+        prop_name = prop_names[prop]
+        c = col_names.count(prop_name)
+        if c == 1:
+            links[prop] = prop_name
+        elif c > 1:
+            LOGGER.error(f"'{prop_name}' is not a unique column.")
+            sys.exit(1)
+    if "sample" not in links:
+        LOGGER.error("Missing 'sample' column assignment.")
+        sys.exit(1)
+    elif len(links) == 1:
+        LOGGER.error("The meta file does not provide any informative column.")
+        sys.exit(1)
+    if not quiet:
+        for prop in props:
+            if prop in links:
+                LOGGER.info("  " + prop + " <- " + links[prop])
+            else:
+                LOGGER.info("  " + prop + " missing")
+    return links

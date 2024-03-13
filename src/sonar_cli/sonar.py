@@ -3,9 +3,9 @@ import sys
 from typing import Optional
 
 from sonar_cli import config
+from sonar_cli.common_utils import combine_sample_argument
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils import sonarUtils
-from sonar_cli.utils_1 import combine_sample_argument
 from tabulate import tabulate
 
 from . import DESCRIPTION
@@ -397,8 +397,8 @@ def create_subparser_import(
         action="store_true",
     )
     parser.add_argument(
-        "--update",
-        help="skip samples already existing in the database (default: False (no skip))",
+        "--no-skip",
+        help="use '--no-skip' to not skip samples already existing in the database (default: (skip))",
         action="store_true",
     )
     parser.add_argument(
@@ -616,7 +616,7 @@ def handle_import(args: argparse.Namespace):
         exit(1)
 
     sonarUtils.import_data(
-        # db=args.db,
+        db=args.db,
         fasta=args.fasta,
         csv_files=args.csv,
         tsv_files=args.tsv,
@@ -625,7 +625,7 @@ def handle_import(args: argparse.Namespace):
         autolink=args.auto_link,
         auto_anno=args.auto_anno,
         progress=not args.no_progress,
-        update=args.update,
+        update=args.no_skip,
         threads=args.threads,
         quiet=args.debug,
         reference=args.reference,

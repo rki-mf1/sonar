@@ -1,10 +1,14 @@
+import base64
 from contextlib import contextmanager
 import datetime
 import gzip
+import hashlib
 from hashlib import sha256
+from itertools import islice
 import lzma
 import os
 import sys
+import traceback
 from typing import List
 from typing import Union
 import zipfile
@@ -208,7 +212,9 @@ def flatten_json_output(result_data: list):
         flattened_entry["proteomic_profiles"] = " ".join(
             result.get("proteomic_profiles", [])
         )
-
+        flattened_entry["annotation_profiles"] = " ".join(
+            result.get("annotation_profiles", [])
+        )
         flattened_data.append(flattened_entry)
 
     return flattened_data
@@ -276,3 +282,61 @@ def calculate_time_difference(start_time, end_time, format="%d.%b %Y %H:%M:%S"):
     start_datetime = datetime.datetime.strptime(start_time, format)
     end_datetime = datetime.datetime.strptime(end_time, format)
     return end_datetime - start_datetime
+
+
+def slugify(string):
+    return base64.urlsafe_b64encode(string.encode("UTF-8")).decode("UTF-8").rstrip("=")
+
+
+def file_collision(fname, data):
+    with open(fname, "r") as handle:
+        if handle.read() != data:
+            return True
+    return False
+
+
+def chunk(arr_range, arr_size):
+    arr_range = iter(arr_range)
+    return iter(lambda: tuple(islice(arr_range, arr_size)), ())
+
+
+def clear_unnecessary_cache(samples):
+    for sample in samples:
+        # clear uncessary file
+        try:
+            if sample["mafft_seqfile"] is not None and os.path.exists(
+                sample["mafft_seqfile"]
+            ):
+                os.remove(sample["mafft_seqfile"])
+            # if os.path.exists(sample["vcffile"]):
+            #     os.remove(sample["vcffile"])
+            if os.path.exists(sample["vcffile"] + ".gz"):
+                os.remove(sample["vcffile"] + ".gz")
+            if os.path.exists(sample["vcffile"] + ".gz.tbi"):
+                os.remove(sample["vcffile"] + ".gz.tbi")
+            # if sample["anno_vcf_file"]:
+            #    os.remove(sample["anno_vcf_file"])
+            # if sample["anno_tsv_file"]:
+            #    os.remove(sample["anno_tsv_file"])
+        except TypeError as te:
+            # Code to handle TypeError
+            print(traceback.format_exc())
+            print("\nDebugging Information:")
+            print(te)
+            print("-----------")
+            print(sample)
+        except OSError as ose:
+            print(traceback.format_exc())
+            print("\nDebugging Information:")
+            print(ose)
+            print("-----------")
+            print(sample)
+
+
+def get_fname(name, extension="", enable_parent_dir=False):
+    fn = slugify(hashlib.sha1(str(name).encode("utf-8")).hexdigest())
+
+    if enable_parent_dir:
+        return os.path.join(fn[:2], fn + extension)
+    else:
+        return fn + extension

@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_URL = os.getenv("DB_URL")
-
 # (access token?)
 SECRET_KEY = os.getenv("SECRET_KEY") or "development-secret"
 
@@ -14,7 +12,9 @@ DEBUG = False
 
 # 10 = DEBUG, 20 = INFO, 30 = WARNING
 LOG_LEVEL = os.getenv("LOG_LEVEL") or 20
-CHUNK_SIZE = os.getenv("CHUNK_SIZE") or 10000
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE")) or 10000
+ANNO_CHUNK_SIZE = int(os.getenv("ANNO_CHUNK_SIZE")) or 500
+
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))
 
 ANNO_TOOL_PATH = os.getenv("ANNO_TOOL_PATH", "snpEff")

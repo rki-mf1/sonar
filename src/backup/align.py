@@ -1,4 +1,6 @@
+import logging
 import os
+import pickle
 import re
 import sys
 from typing import Generator
@@ -7,11 +9,13 @@ from typing import Tuple
 import warnings
 
 from Bio import BiopythonWarning
+from Bio.Align.Applications import MafftCommandline
+from Bio.Emboss.Applications import StretcherCommandline
 from Bio.Seq import Seq
-import numpy as np
 import pandas as pd
-from sonar_cli.common_aligns import align_MAFFT
-from sonar_cli.common_aligns import align_Parasail
+import parasail
+import psutil
+from pywfa import WavefrontAligner
 from sonar_cli.common_utils import read_seqcache
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
@@ -30,30 +34,144 @@ class sonarAligner:
         self.aa_n_profile = []
         self.cigar_pattern = re.compile(r"(\d+)(\D)")
         self.outdir = TMP_CACHE if not cache_outdir else os.path.abspath(cache_outdir)
+        self.logfile = open(os.path.join(self.outdir, "align.debug.log"), "a")
         self.method = method
         self.allow_updates = allow_updates
 
-    def process_cached_sample(self, **sample_data: dict):
-        if self.method == 1:  # MAFFT
-            self.process_cached_v1(sample_data)
-        elif self.method == 2:  # Parasail
-            self.process_cached_v2(sample_data)
-        return
+    def align_WFA(self, qryseq, refseq, gapopen=16, gapextend=4):
+        """Method for WFA2-lib run"""
+        # wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
+        # attributes.alignment_form.span = alignment_endsfree;
+        # attributes.alignment_form.pattern_begin_free = 0;
+        # attributes.alignment_form.pattern_end_free = 0;
+        # attributes.alignment_form.text_begin_free = text_begin_free;
+        # attributes.alignment_form.text_end_free = text_end_free;
+        #
+        # From WFA2-lib:
+        # WFA2lib follows the convention that describes how to transform the (1) Pattern/Query into the (2) Text/Database/Reference used in classic pattern matching papers. However, the SAM CIGAR specification describes the transformation from (2) Reference to (1) Query. If you want CIGAR-compliant alignments, swap the pattern and text sequences argument when calling the WFA2lib's align functions (to convert all the Ds into Is and vice-versa).
+        # so there is a chance that the query and ref (pattern and text in WFA language) need to be swapped
+        a = WavefrontAligner(refseq, gap_opening=gapopen, gap_extension=gapextend)
+        a.wavefront_align(qryseq)
+        if a.status != 0:  # alignment was not successful
+            LOGGER.error("An error occurred in align_WFA")
+            LOGGER.error(f"Input sequence: {qryseq}")
+            sys.exit("--stop--")
+        cigar = a.cigarstring
+        traceback_ref = a.aligned_pattern
+        traceback_query = a.aligned_text
 
-    def process_cached_v1(self, data: dict):
+        return (
+            traceback_ref,
+            traceback_query,
+            cigar,
+        )
+
+    # gapopen=16, gapextend=4
+    # gapopen=10, gapextend=1
+    def align_Parasail(self, qryseq, refseq, gapopen=16, gapextend=4):
+        """Method for parasail run"""
+        result = parasail.sg_trace(
+            qryseq, refseq, gapopen, gapextend, parasail.blosum62
+        )
+        return (
+            result.traceback.ref,
+            result.traceback.query,
+            result.get_cigar().decode.decode(),
+        )
+
+    def align_MAFFT(self, input_fasta):
+
+        try:
+            mafft_exe = "mafft"
+            mafft_cline = MafftCommandline(
+                mafft_exe, input=input_fasta, inputorder=True, auto=True
+            )
+            stdout, stderr = mafft_cline()
+            # find the fist position of '\n' to get seq1
+            s1 = stdout.find("\n") + 1
+            # find the start of second sequence position
+            e = stdout[1:].find(">") + 1
+            # find the '\n' of the second sequence to get seq2
+            s2 = stdout[e:].find("\n") + e
+            ref = stdout[s1:e].replace("\n", "").upper()
+            qry = stdout[s2:].replace("\n", "").upper()
+        except Exception as e:
+            LOGGER.error(f"An error occurred in align_MAFFT: {e}")
+            LOGGER.error(f"Input filename: {input_fasta}")
+            sys.exit("--stop--")
+        return qry, ref
+
+    def align_Stretcher(self, qry, ref, gapopen=16, gapextend=4):
+        """Method for handling emboss stretcher run
+
+        Return:
+        """
+        try:
+            cline = StretcherCommandline(
+                asequence=qry,
+                bsequence=ref,
+                gapopen=gapopen,
+                gapextend=gapextend,
+                outfile="stdout",
+                aformat="fasta",
+                # datafile="EDNAFULL", auto set by strecher
+            )
+            stdout, stderr = cline()
+            # self.cal_seq_length(stdout[0:20], msg="stdout")
+            # find the fist position of '\n' to get seq1
+            s1 = stdout.find("\n") + 1
+            # find the start of second sequence position
+            e = stdout[1:].find(">") + 1
+            # find the '\n' of the second sequence to get seq2
+            s2 = stdout[e:].find("\n") + e
+            qry = stdout[s1:e].replace("\n", "")
+            ref = stdout[s2:].replace("\n", "")
+            # self.cal_seq_length(qry, msg="qry")
+            # self.cal_seq_length(ref, msg="ref")
+        except Exception:
+            try:
+                for proc in psutil.process_iter():
+                    # Get process name & pid from process object.
+                    processName = proc.name()
+                    processID = proc.pid
+                    if (
+                        "stretcher" in processName or "stretcher" in proc.cmdline()
+                    ):  # adapt this line to your needs
+                        logging.info(
+                            f"Kill {processName}[{processID}] : {''.join(proc.cmdline())})"
+                        )
+                        proc.terminate()
+                        proc.kill()
+            except psutil.NoSuchProcess:
+                pass
+            LOGGER.error(
+                "Stop process during alignment; to rerun again, you may need to provide a new cache directory."
+            )
+            sys.exit("exited after ctrl-c")
+
+        return qry, ref
+
+    def process_cached_sample(self, fname):
+        if self.method == 1:  # MAFFT
+            process_flag = self.process_cached_v1(fname)
+        elif self.method == 2:  # Parasail
+            process_flag = self.process_cached_v2(fname)
+        return process_flag
+
+    def process_cached_v1(self, fname):
         """
         Work with: Emboss Stretcher, MAFFT
         This function takes a sample file and processes it.
         create var file with NT and AA mutations
         """
+        with open(fname, "rb") as handle:
+            data = pickle.load(handle, encoding="bytes")
 
-        # if not self.allow_updates:
+        # If updates are not allowed:
         # SKIP aligning sequences and call var_file again (i.e., skipping existing files in the cache).
-        # else: overwrite.
+        # Otherwise: overwrite.
         # NOTE: If the file contents change, the hash file name will also change.
-
         if not self.allow_updates:
-
             if data["var_file"] is None:
                 return True
             elif os.path.isfile(data["var_file"]):
@@ -66,14 +184,12 @@ class sonarAligner:
         source_acc = str(data["source_acc"])
         # self.log("data:" + str(data))
         # alignment = self.align(data["seq_file"], data["ref_file"])
-        alignment = align_MAFFT(data["mafft_seqfile"])
+        alignment = self.align_MAFFT(data["mafft_seqfile"])
         # print(alignment[0][0:20]) qry
         # print(alignment[1][0:20]) ref
 
-        # NOTE: this line was already performant
         nuc_vars = [x for x in self.extract_vars(*alignment, elem_acc=source_acc)]
-
-        # NOTE: uncomment the code below to change the varaint extraction to the Cigar stlye
+        # TODO: uncomment the code below to change the varaint extraction to the Cigar stlye
         # cigar = self.gen_cigar(alignment[0], alignment[1])
         # nuc_vars = [
         #    x
@@ -81,20 +197,16 @@ class sonarAligner:
         #        alignment[0], alignment[1], cigar, source_acc, data["cds_file"]
         #    )
         # ]
-
         vars = "\n".join(["\t".join(x) for x in nuc_vars])
-
         if nuc_vars:
             # create AA mutation
             aa_vars = "\n".join(
-                # NOTE: this line is actually cause the the slow performance
                 ["\t".join(x) for x in self.lift_vars(nuc_vars, data["lift_file"])]
             )
             if aa_vars:
                 # concatinate to the same file of NT variants
                 vars += "\n" + aa_vars
             vars += "\n"
-
         try:
             with open(data["var_file"], "w") as handle:
                 handle.write(vars + "//")
@@ -102,31 +214,40 @@ class sonarAligner:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
                 handle.write(vars + "//")
-        return
+        return True
 
-    def process_cached_v2(self, data: dict):
+    def process_cached_v2(self, fname):
         """
         Work with: Cigar format
         This function takes a sample file and processes it.
         create var file with NT and AA mutations
         """
 
-        if not self.allow_updates:
-            if data["var_file"] is None:
+        with open(fname, "rb") as handle:
+            data = pickle.load(handle, encoding="bytes")
+
+        # SKIP if the file was already there
+        if data["var_file"] is None:
+            return True
+        elif os.path.isfile(data["var_file"]):
+            with open(data["var_file"], "r") as handle:
+                for line in handle:
+                    pass
+            if line == "//":
                 return True
-            elif os.path.isfile(data["var_file"]):
-                with open(data["var_file"], "r") as handle:
-                    for line in handle:
-                        pass
-                if line == "//":
-                    return True
+
+        # sourceid = str(data["sourceid"])
+        # alignment = self.align(data["seq_file"], data["ref_file"])
+        # self.cal_seq_length(alignment[0][0:20], msg="qry")
+        # self.cal_seq_length(alignment[1][0:20], msg="ref")
+        # nuc_vars = [x for x in self.extract_vars(*alignment, sourceid)]
 
         # elemid = str(data["sourceid"])
         source_acc = str(data["source_acc"])
         qryseq = read_seqcache(data["seq_file"])
         refseq = read_seqcache(data["ref_file"])
 
-        _, __, cigar = align_Parasail(qryseq, refseq)
+        _, __, cigar = self.align_Parasail(qryseq, refseq)
         nuc_vars = [
             x
             for x in self.extract_vars_from_cigar(
@@ -151,7 +272,7 @@ class sonarAligner:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
                 handle.write(vars + "//")
-        return
+        return True
 
     def extract_vars(self, qry_seq, ref_seq, elem_acc):
         """
@@ -216,7 +337,7 @@ class sonarAligner:
 
     def translate(self, seq):
         """
-        aa = []
+                aa = []
         while len(seq) % 3 != 0:
             seq = seq[: len(seq) - 1]
         for codon in [seq[i : i + 3] for i in range(0, len(seq), 3)]:
@@ -245,7 +366,7 @@ class sonarAligner:
     def lift_vars(  # noqa: C901
         self,
         nuc_vars: List[Tuple],
-        df: pd.DataFrame,
+        lift_file: str,
     ) -> Generator[Tuple[str, str, str, str, str, str, str], None, None]:
         """
         Lift over nucleotide variants to protein (amino acid) variants.
@@ -259,6 +380,7 @@ class sonarAligner:
         lift_file : str
             File path to a pickled DataFrame with genomic information.
 
+
         Yields
         -------
         Tuple
@@ -266,61 +388,40 @@ class sonarAligner:
             AA_ref Start_pos END_pos AA_alt Reference   Label   Mutation_Type
             H       39      40      X       QHD43422.1      H40X    cds
         """
+        df = pd.read_pickle(lift_file)
         # print(df[df["symbol"] == "ORF1ab"])
         # print(df)
         # with open(tt_file, "rb") as handle:
         #    tt = pickle.load(handle, encoding="bytes")
         # print(tt)
-        # updating the DF with alternate nucleotides (alt)
+
+        # udating the DF with alternate nucleotides (alt)
         # for positions specified in the nuc_var range.
-        # ------------ this part of the code is the major problem that cause the slow performance
-
-        # for nuc_var in nuc_vars:
-        #     if nuc_var[3] == ".":
-        #         continue  # ignore uncovered terminal regions
-        #     alt = "-" if nuc_var[3] == " " else nuc_var[3]
-        #     start, end = map(int, (nuc_var[1], nuc_var[2]))
-        #     for i in range(start, end):
-        #         for j in range(1, 4):  # iterate over nucPos1, nucPos2, nucPos3
-        #             col_name = f"alt{j}"
-        #             df.loc[df[f"nucPos{j}"] == i, col_name] = alt
-
         for nuc_var in nuc_vars:
-            if nuc_var[3] != ".":
+            if nuc_var[3] == ".":
+                continue  # ignore uncovered terminal regions
+            for i in range(int(nuc_var[1]), int(nuc_var[2])):
                 alt = "-" if nuc_var[3] == " " else nuc_var[3]
-                start, end = map(int, (nuc_var[1], nuc_var[2]))
-                positions = np.arange(start, end)
-                mask = np.isin(df["nucPos1"], positions)
-                df.loc[mask, "alt1"] = alt
-                mask = np.isin(df["nucPos2"], positions)
-                df.loc[mask, "alt2"] = alt
-                mask = np.isin(df["nucPos3"], positions)
-                df.loc[mask, "alt3"] = alt
-        # ------------------------------------------------------------
-        # keep rows where there is a change in the nucleotide.
-        # by dropping rows that dont get changed
-        df.drop(
-            df.loc[
-                (df["ref1"] == df["alt1"])
-                & (df["ref2"] == df["alt2"])
-                & (df["ref3"] == df["alt3"])
-            ].index,
-            inplace=True,
-        )
+                df.loc[df["nucPos1"] == i, "alt1"] = alt
+                df.loc[df["nucPos2"] == i, "alt2"] = alt
+                df.loc[df["nucPos3"] == i, "alt3"] = alt
+
+        # filters out rows where there is a change in the nucleotide.
+        df = df.loc[
+            (df["ref1"] != df["alt1"])
+            | (df["ref2"] != df["alt2"])
+            | (df["ref3"] != df["alt3"])
+        ]
         prev_row = None
         if not df.empty:
 
             # translates the updated nucleotide positions
             # to amino acid changes using the translation table (tt)
-            # df['altAa'] = [self.translate(df.loc[idx,"alt1"] + df.loc[idx,"alt2"] + df.loc[idx,"alt3"]) for idx in range(len(df))]
-            # for idx in df.index:
-            #    df.loc[idx,"altAa"] =  self.translate(df.loc[idx,"alt1"] + df.loc[idx,"alt2"] + df.loc[idx,"alt3"])
             df["altAa"] = df.apply(
                 lambda x: self.translate(x["alt1"] + x["alt2"] + x["alt3"]), axis=1
             )
-            # get only rows where there is a change in amino acid.
-            # by dropping rows that dont get changed
-            df.drop(df[df["aa"] == df["altAa"]].index, inplace=True)
+            # filters out rows where there is a change in amino acid.
+            df = df.loc[df["aa"] != df["altAa"]]
 
             # for snps or inserts
             for index, row in df.loc[
@@ -423,7 +524,7 @@ class sonarAligner:
                             refseq[refpos : refpos + varlen],
                             str(refpos),
                             str(refpos + varlen),
-                            " ",
+                            ".",
                             elemid,
                             "del:" + str(refpos + 1) + "-" + str(refpos + varlen),
                             "nt",

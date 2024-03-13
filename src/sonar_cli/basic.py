@@ -43,6 +43,9 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from sonar_cli.api_interface import APIClient
+from sonar_cli.config import BASE_URL
+
 from .logging import LoggingConfigurator
 
 
@@ -559,3 +562,35 @@ def remove_empty_lists(d):
         return [remove_empty_lists(v) for v in d if v and remove_empty_lists(v)]
     else:
         return d
+
+
+def _check_reference(db=None, reference=None):
+    base_url = db if db else BASE_URL
+    accession_list = APIClient(base_url=base_url).get_distinct_reference()
+    if reference is not None and reference not in accession_list:
+        LOGGER.error(f"Check reference: The reference {reference} does not exist.")
+        sys.exit(1)
+    else:
+        LOGGER.info(f"Check reference: The reference {reference} does exist.")
+
+
+def _log_import_mode(update: bool, quiet: bool):
+    """Log the current import mode."""
+    if not quiet:
+        LOGGER.info(
+            "Import mode: add/update existing samples in the database and cache directory."
+            if update
+            else "Import mode: skip existing samples in the database and cache directory."
+        )
+
+
+def _is_import_required(
+    fasta: List[str], tsv_files: List[str], csv_files: List[str], update: bool
+) -> bool:
+    """Check if import is required."""
+    if not fasta:
+        if tsv_files or csv_files or update:
+            return True
+        else:
+            return False
+    return True

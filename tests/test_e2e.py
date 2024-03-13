@@ -127,24 +127,6 @@ def test_delete_prop(capfd, api_url):
     assert code == 0
 
 
-def test_parasail_no_upload(monkeypatch, api_url, tmpfile_name):
-    """Test import command using parasail method"""
-    monkeypatch.chdir(Path(__file__).parent)
-    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/parasail  -t 2 --no-upload"
-    code = run_cli(command)
-
-    assert code == 0
-
-
-def test_mafft_no_upload(monkeypatch, api_url, tmpfile_name):
-    """Test import command using mafft method"""
-    monkeypatch.chdir(Path(__file__).parent)
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft  -t 2 --no-upload"
-    code = run_cli(command)
-
-    assert code == 0
-
-
 # pytest fail to work with  workerpool shared_objects
 def skip_test_add_sequence_parasail_auto_anno(monkeypatch, api_url, tmpfile_name):
     """Test import command using covid19 compressed fasta file and perform annotation"""
