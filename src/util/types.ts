@@ -44,15 +44,15 @@ export type SNPProfileAAFilter = {
 export type DelProfileNtFilter = {
     label: string,
     geneSymbol: string,
-    firstDeletedNt: string,
-    lastDeletedNt: string,
+    firstDeleted: string,
+    lastDeleted: string,
     exclude: boolean
 }
 export type DelProfileAAFilter = {
     label: string,
     proteinSymbol: string,
-    firstDeletedAA: string,
-    lastDeletedAA: string,
+    firstDeleted: string,
+    lastDeleted: string,
     exclude: boolean
 }
 export type InsProfileNtFilter = {
@@ -60,7 +60,7 @@ export type InsProfileNtFilter = {
     geneSymbol: string,
     refNuc: string,
     refPos: string,
-    altNucs: string,
+    altNuc: string,
     exclude: boolean
 }
 export type InsProfileAAFilter = {
@@ -68,7 +68,7 @@ export type InsProfileAAFilter = {
     proteinSymbol: string,
     refAA: string,
     refPos: string,
-    altAAs: string,
+    altAA: string,
     exclude: boolean
 }
 
@@ -87,6 +87,12 @@ export type ProfileFilter =
     | InsProfileNtFilter
     | InsProfileAAFilter
 
+export type RepliconFilter = {
+    label: string;
+    accession: string;
+    exclude: boolean;
+}
+
 export type GenomeFilter =
     | PropertyFilter
     | ProfileFilter
@@ -104,7 +110,8 @@ export type FilterGroupRoot = {
 
 export type AndFilters = {
     propertyFilters: PropertyFilter[];
-    profileFilters: ProfileFilter[]
+    profileFilters: ProfileFilter[];
+    repliconFilters: RepliconFilter[];
 }
 
 export type FilterGroup = {

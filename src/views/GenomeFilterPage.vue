@@ -5,6 +5,7 @@
         style="width: fit-content; margin: auto"
         :filterGroup="filterGroup"
         :propertyOptions="propertyOptions"
+        :repliconAccessionOptions="repliconAccessionOptions"
         :symbolOptions="symbolOptions"
         :operators="Object.values(DjangoFilterType)"
         :propertyValueOptions="propertyValueOptions"
@@ -72,7 +73,7 @@ export default {
   name: 'GenomeFilterPage',
   data() {
     return {
-      perPage: 1000,
+      perPage: 10,
       firstRow: 0,
       page: 1,
       pages: 1,
@@ -80,11 +81,12 @@ export default {
       samples: [],
       loading: false,
       propertyOptions: [],
+      repliconAccessionOptions: [],
       propertyValueOptions: {} as { [key: string]: { options: string[]; loading: boolean } },
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [] }
+        filters: { propertyFilters: [], profileFilters: [], repliconFilters: []}
       } as FilterGroup,
       DjangoFilterType
     }
@@ -94,7 +96,6 @@ export default {
       this.loading = true
       const res = await API.getInstance().getSampleGenomes(this.filters)
       this.samples = res.results
-      console.log(res.results)
       this.sampleCount = res.count
       this.pages = res.count / this.perPage
       this.loading = false
@@ -106,8 +107,13 @@ export default {
       const res = await API.getInstance().getSampleGenomePropertyOptions()
       this.propertyOptions = res.property_names
     },
+    async updateRepliconAccessionOptions() {
+      const res = await API.getInstance().getRepliconAccessionOptions()
+      this.repliconAccessionOptions = res.accessions
+    },
     async updateSymbolOptions() {
       const res = await API.getInstance().getGeneSymbolOptions()
+      console.log(res)
       this.symbolOptions = res.gene_symbols
     },
     getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
@@ -147,6 +153,15 @@ export default {
           summary.andFilter.push(translatedFilter)
         }
       }
+      for (const filter of filterGroup.filters.repliconFilters) {
+        if (filter.accession) {
+          summary.andFilter.push({
+            label: filter.label,
+            accession: filter.accession,
+            exclude: filter.exclude
+          })
+        }
+      }
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup))
       }
@@ -176,6 +191,7 @@ export default {
   mounted() {
     this.updatePropertyOptions()
     this.updateSymbolOptions()
+    this.updateRepliconAccessionOptions()
   }
 }
 </script>

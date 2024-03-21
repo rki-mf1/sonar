@@ -17,7 +17,7 @@ export default class API {
     CODE_INTERNAL_SERVER_ERROR = 500
 
     TIMEOUT = 50000;
-    BACKEND_ADDRESS = "http://127.0.0.1:8000/"
+    BACKEND_ADDRESS = "http://localhost:8000/api/"
 
     static instance: API
     static getInstance(): API {
@@ -77,21 +77,22 @@ export default class API {
         const url = `samples/download_genomes_export/${queryString}`
         this.getRequest(url, {}, false).then(
             response => {
-                console.log(response)
                 FileSaver.saveAs(response.blob, "export.csv");
             }
         )
     }
     getSampleGenomePropertyOptions() {
-        return this.getRequest(`property/distinct_property_names`, {}, false)
+        return this.getRequest(`properties/distinct_property_names`, {}, false)
     }
     getSampleGenomePropertyValueOptions(propertyName: string) {
-        return this.getRequest(`property/distinct_properties/?property_name=${propertyName}`, {}, false)
-
-
+        return this.getRequest(`properties/distinct_properties/?property_name=${propertyName}`, {}, false)
+    }
+    getRepliconAccessionOptions() {
+        const url = `replicons/distinct_accessions/`
+        return this.getRequest(url, {}, false)
     }
     getGeneSymbolOptions() {
-        return this.getRequest(`gene/distinct_gene_symbols`, {}, false)
+        return this.getRequest(`genes/distinct_gene_symbols`, {}, false)
     }
     parseQueryString(query) {
         if (Object.keys(query).length > 0) {
