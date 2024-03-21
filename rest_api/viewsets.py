@@ -33,7 +33,7 @@ from rest_framework import status
 
 
 from rest_api.data_entry.gbk_import import import_gbk_file
-from rest_api.data_entry.sample_entry_job import SampleEntryJob
+from rest_api.data_entry.sample_entry_job import check_for_new_data
 
 from . import models
 from .serializers import (
@@ -385,7 +385,7 @@ class MutationSignatureViewSet(
     queryset = (
         models.Mutation.objects.filter(ref__in=["C", "T"], alt__in=["C", "T", "G", "A"])
         .exclude(ref=F("alt"))
-        .annotate(count=Count("alignments__sequence__sample_set"))
+        .annotate(count=Count("alignments__sequence__sample"))
     )
     serializer_class = MutationSignatureSerializer
     filter_backends = [DjangoFilterBackend]
@@ -702,7 +702,7 @@ class FileUploadViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"])
     def start_file_import(self, request, *args, **kwargs):
-        SampleEntryJob().run_data_entry()
+        check_for_new_data()
         return create_success_response(
             message="File uploaded successfully", return_status=status.HTTP_201_CREATED
         )

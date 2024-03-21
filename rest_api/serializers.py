@@ -190,18 +190,17 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         # print(obj.sequence.alignments.mutations.mutation2annotaion.all())
         # sequence__alignments__mutations__mutation2annotation_set__annotation
         list = []
-        for alignment in obj.sequence.alignments.all():
-            for mutation in alignment.mutations.all():
-
-                if mutation.mutation2annotation_set.exists():
-                    label = self.create_NT_format(mutation)
-                    label += "("
-                    annotations = []
-                    for mutation2annotation in mutation.mutation2annotation_set.filter(alignment_id=alignment.id).all():
-                        annotations.append(mutation2annotation.annotation.seq_ontology)
-                    label += ",".join(annotations)
-                    label += ")"
-                    list.append(label)
+        # for alignment in obj.sequence.alignments.all():
+        #     for mutation in alignment.mutations.all():
+        #         if mutation.mutation2annotation_set.exists():
+        #             label = self.create_NT_format(mutation)
+        #             label += "("
+        #             annotations = []
+        #             for mutation2annotation in mutation.mutation2annotation_set.filter(alignment_id=alignment.id).all():
+        #                 annotations.append(mutation2annotation.annotation.seq_ontology)
+        #             label += ",".join(annotations)
+        #             label += ")"
+        #             list.append(label)
 
         return list
 

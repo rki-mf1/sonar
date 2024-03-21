@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import UniqueConstraint, Q
-
+from django.utils.translation import gettext_lazy as _
 
 class Sequence(models.Model):
     seqhash = models.CharField(unique=True, max_length=200)
@@ -319,16 +319,32 @@ class Mutation2Annotation(models.Model):
         ]
 
 
-class EnteredData(models.Model):
-    type = models.CharField(max_length=50, blank=True, null=True)
+class ImportLog(models.Model):
+
+    class ImportType(models.TextChoices):
+        UNKNOWN = "NUL", _("Unknown")
+        SAMPLE = "SMP", _("Sample")
+        ANNOTATION = "ANN", _("Annotation")        
+        GENEBANK = "GBK", _("Genebank")
+        SAMPLE_ANNOTATION_ARCHIVE = "SAA", _("Sample Annotation Archive")
+
+    type = models.CharField(
+        max_length=3,
+        choices=ImportType.choices,
+        default=ImportType.UNKNOWN,
+    )
     name = models.CharField(max_length=400, blank=True, null=True)
-    date = models.DateField(blank=True, null=True)
+    file = models.CharField(max_length=400)
+    updated = models.DateTimeField(auto_now=True)
+    success = models.BooleanField()
+    exception_text = models.TextField(blank=True, null=True)
+    stack_trace = models.TextField(blank=True, null=True)
 
     class Meta:
-        db_table = "entered_data"
+        db_table = "import_log"
         constraints = [
             UniqueConstraint(
-                name="unique_entered_data",
-                fields=["type", "name"],
+                name="unique_import_log",
+                fields=["type", "name", "updated"],
             ),
         ]

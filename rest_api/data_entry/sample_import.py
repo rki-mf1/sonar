@@ -14,6 +14,7 @@ from rest_api.models import (
     Alignment,
     AnnotationType,
     Gene,
+    ImportLog,
     Mutation,
     Mutation2Annotation,
     Replicon,
@@ -93,7 +94,7 @@ class SampleImport:
         self.mutation_query_data: list[dict] = []
         self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
         self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
-
+        self.success = False
         # NOTE: We probably won't need it
         # if self.sample_raw.seq_file:
         #    self.seq = "".join(
@@ -106,6 +107,9 @@ class SampleImport:
             self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
         else:
             raise Exception("No var file found")        
+
+    def get_sample_name(self):
+        return self.sample_raw.name
 
     def get_sequence_obj(self):
         self.sequence = Sequence(seqhash=self.sample_raw.seqhash)
@@ -309,26 +313,3 @@ class SampleImport:
         with open(self.seq_file_path, "r") as handle:
             for line in handle:
                 yield line.strip("\r\n")
-
-    def move_files(self, success):
-        # dont move files for now
-        # return
-        for file in [
-            self.sample_file_path,
-            self.var_file_path,
-            self.seq_file_path,
-        ]:
-            import_data_location = pathlib.Path(file).parent.parent.parent
-            folder_structure = pathlib.Path(file).relative_to(import_data_location)
-            if success:
-                target_folder = pathlib.Path(import_data_location).joinpath(
-                    "imported_successfully"
-                )
-            else:
-                target_folder = pathlib.Path(import_data_location).joinpath(
-                    "failed_import"
-                )
-            target_folder.joinpath(folder_structure.parent).mkdir(
-                parents=True, exist_ok=True
-            )
-            pathlib.Path(file).rename(target_folder.joinpath(folder_structure))

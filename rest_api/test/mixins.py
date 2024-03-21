@@ -19,7 +19,6 @@ from rest_framework.test import (
 
 class FixtureModelTestCase(TestCase):
     fixtures = [
-        "initial_data",
         "initial_auth",
         "test_data",
     ]
@@ -57,7 +56,7 @@ class FixtureApiMixin(object):
 
 
 class FixtureAPITestCase(APITestCase, FixtureApiMixin):
-    fixtures = ["initial_data", "initial_auth", "test_data"]
+    fixtures = ["initial_auth", "test_data"]
 
     factory = APIRequestFactory()
     request_user_name = None
@@ -65,7 +64,7 @@ class FixtureAPITestCase(APITestCase, FixtureApiMixin):
 
 
 class FixtureAPITransactionTestCase(APITransactionTestCase, FixtureApiMixin):
-    fixtures = ["initial_data", "initial_auth", "test_data"]
+    fixtures = ["initial_auth", "test_data"]
 
     factory = APIRequestFactory()
     request_user_name = None

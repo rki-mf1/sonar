@@ -48,6 +48,14 @@
       ]
     }
   },
+  "alignment-get-bulk-alignment-data": {
+    "pattern": "^alignments/get_bulk_alignment_data/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": []
+    }
+  },
   "alignment-list": {
     "pattern": "^alignments/$",
     "test_kwargs": {},
@@ -132,6 +140,43 @@
       ]
     }
   },
+  "lineage-detail": {
+    "pattern": "^lineages/(?P<pk>[^/.]+)/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "lineage-get-sublineages": {
+    "pattern": "^lineages/(?P<pk>[^/.]+)/get_sublineages/$",
+    "test_kwargs": {
+      "pk": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "lineage-list": {
+    "pattern": "^lineages/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
   "mutation-detail": {
     "pattern": "^mutations/(?P<pk>[^/.]+)/$",
     "test_kwargs": {
@@ -202,6 +247,26 @@
       ]
     }
   },
+  "property-add-property": {
+    "pattern": "^properties/add_property/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "admin_user"
+      ]
+    }
+  },
+  "property-delete-property": {
+    "pattern": "^properties/delete_property/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "admin_user"
+      ]
+    }
+  },
   "property-detail": {
     "pattern": "^properties/(?P<pk>[^/.]+)/$",
     "test_kwargs": {
@@ -228,6 +293,17 @@
   },
   "property-distinct-property-names": {
     "pattern": "^properties/distinct_property_names/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "property-get-all-properties": {
+    "pattern": "^properties/get_all_properties/$",
     "test_kwargs": {},
     "test_format": "json",
     "methods": {
@@ -281,6 +357,16 @@
       ]
     }
   },
+  "reference-delete-reference": {
+    "pattern": "^references/delete_reference/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "admin_user"
+      ]
+    }
+  },
   "reference-detail": {
     "pattern": "^references/(?P<pk>[^/.]+)/$",
     "test_kwargs": {
@@ -296,6 +382,17 @@
   },
   "reference-distinct-accessions": {
     "pattern": "^references/distinct_accessions/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "reference-get-all-references": {
+    "pattern": "^references/get_all_references/$",
     "test_kwargs": {},
     "test_format": "json",
     "methods": {
@@ -340,6 +437,17 @@
       "put": [],
       "patch": [],
       "delete": []
+    }
+  },
+  "replicon-distinct-accessions": {
+    "pattern": "^replicons/distinct_accessions/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
     }
   },
   "replicon-distinct-genes": {
@@ -411,6 +519,16 @@
       ]
     }
   },
+  "sample-delete-sample-data": {
+    "pattern": "^samples/delete_sample_data/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "admin_user"
+      ]
+    }
+  },
   "sample-detail": {
     "pattern": "^samples/(?P<name>[^/.]+)/$",
     "test_kwargs": {
@@ -443,6 +561,29 @@
       "get": [
         "admin_user",
         "reading_user"
+      ]
+    }
+  },
+  "sample-get-all-sample-data": {
+    "pattern": "^samples/(?P<name>[^/.]+)/get_all_sample_data/$",
+    "test_kwargs": {
+      "name": 1
+    },
+    "test_format": "json",
+    "methods": {
+      "get": [
+        "admin_user",
+        "reading_user"
+      ]
+    }
+  },
+  "sample-get-bulk-sample-data": {
+    "pattern": "^samples/get_bulk_sample_data/$",
+    "test_kwargs": {},
+    "test_format": "json",
+    "methods": {
+      "post": [
+        "admin_user"
       ]
     }
   },

@@ -1,8 +1,11 @@
+.coverage
 *.pyc
 */*.pyc
 import_data/
 static/
-
+htmlcov/
+archive_data/
+processing_data/
 # Environments
 .env
 .venv

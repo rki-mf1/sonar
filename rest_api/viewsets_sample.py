@@ -96,25 +96,18 @@ class SampleViewSet(
             # we try to use bool(), but it is not working as expected.
             showNX = strtobool(request.query_params.get("showNX", "False"))
             vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
-            ref = request.query_params.get("reference_accession")
 
             self.has_property_filter = False
             queryset = models.Sample.objects.all()
 
             if filter_params := request.query_params.get("filters"):
                 filters = json.loads(filter_params)
+                print(filters)
                 queryset = models.Sample.objects.filter(
                     self.resolve_genome_filter(filters)
                 )
                 if self.has_property_filter:
-                    queryset.prefetch_related("properties__property")
-            # TODO: improve reference filter:
-            # it would be better if we can use ref filter at the mutation level (in resolve_genome_filter)
-            # to reduce unnecessary join
-            reference_query = Q(
-                sequence__alignments__replicon__reference__accession=ref
-            )
-            queryset = queryset.filter(reference_query)
+                    queryset.prefetch_related("properties__property")           
 
             # NOTE: I put replicon__reference__accession=ref  at the filter, but, at the end of final query
             # I didnt see WHERE cause of reference. However, I am not sure that because we have only one reference
@@ -135,10 +128,7 @@ class SampleViewSet(
                 .only("ref", "alt", "start", "end")
                 .order_by("start")
             )
-
-            annotation_qs = models.Mutation2Annotation.objects.filter(
-                alignment__replicon__reference__accession=ref
-            )
+            
 
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
@@ -154,11 +144,11 @@ class SampleViewSet(
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
                 ),
-                Prefetch(
-                    "sequence__alignments__mutations__mutation2annotation_set__annotation",
-                    queryset=annotation_qs,
-                    to_attr="annotation_profiles",
-                ),
+                # Prefetch(
+                #     "sequence__alignments__mutations__mutation2annotation_set__annotation",
+                #     queryset=annotation_qs,
+                #     to_attr="annotation_profiles",
+                # ),
             )
 
             if DEBUG:
@@ -334,7 +324,6 @@ class SampleViewSet(
         self,
         first_deleted: str,
         last_deleted: str,
-        qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
         **kwargs,
