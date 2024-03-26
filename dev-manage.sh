@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker compose -f ./docker-compose-dev.yml run --rm dev-django poetry run python ./manage.py $@
