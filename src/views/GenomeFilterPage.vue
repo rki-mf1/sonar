@@ -125,7 +125,8 @@ export default {
         if (filter.propertyName && filter.filterType && filter.value) {
           var value = filter.value
           if (filter.propertyName.includes('date')) {
-            value = new Date(value).toISOString().split('T')[0]
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            value = new Date(new Date(value).getTime() - tzoffset).toISOString().split('T')[0]
           }
           summary.andFilter.push({
             label: filter.label,
