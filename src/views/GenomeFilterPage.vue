@@ -1,6 +1,9 @@
 <template>
   <div style="height: 90vh; width: 90vw; display: flex; flex-direction: column">
     <div>
+      <Statistics></Statistics>
+    </div>
+    <div>
       <FilterGroup
         style="width: fit-content; margin: auto"
         :filterGroup="filterGroup"

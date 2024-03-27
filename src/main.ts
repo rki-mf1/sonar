@@ -15,10 +15,12 @@ import Card from 'primevue/card'
 import InputSwitch from "primevue/inputswitch";
 import SplitButton from "primevue/splitbutton";
 import Calendar from "primevue/calendar";
-import App from './App.vue'
+import App from './App.vue';
 import router from './router'
 
 import FilterGroup from "./components/FilterGroup.vue";
+import Statistics from "./components/Statistics.vue";
+
 const app = createApp(App)
 
 app.use(createPinia())
@@ -36,5 +38,6 @@ app.component('ProgressSpinner', ProgressSpinner)
 app.component('InputSwitch', InputSwitch)
 app.component('SplitButton', SplitButton)
 app.component('FilterGroup', FilterGroup)
+app.component('Statistics', Statistics)
 app.component('Calendar', Calendar)
 app.mount('#app')
