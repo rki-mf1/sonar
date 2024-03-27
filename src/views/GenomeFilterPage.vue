@@ -1,22 +1,14 @@
 <template>
   <div style="height: 90vh; width: 90vw; display: flex; flex-direction: column">
     <div>
-      <FilterGroup
-        style="width: fit-content; margin: auto"
-        :filterGroup="filterGroup"
-        :propertyOptions="propertyOptions"
-        :repliconAccessionOptions="repliconAccessionOptions"
-        :symbolOptions="symbolOptions"
-        :operators="Object.values(DjangoFilterType)"
-        :propertyValueOptions="propertyValueOptions"
-        v-on:update-property-value-options="updatePropertyValueOptions"
-      />
+      <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
+        :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
+        :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
+        :propertyValueOptions="propertyValueOptions" v-on:update-property-value-options="updatePropertyValueOptions" />
     </div>
     <div style="flex-direction: column; display: flex">
       <div style="flex: auto; margin: auto">
-        <Button size="small" @click="updateSamples()"
-          ><i class="pi pi-list" /> &nbsp; Request Data</Button
-        >
+        <Button size="small" @click="updateSamples()"><i class="pi pi-list" /> &nbsp; Request Data</Button>
         <!-- <Button size="small" @click="requestExport()">
           <i class="pi pi-cloud-download" />Request export</Button
         > -->
@@ -24,13 +16,9 @@
       <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
       <div v-if="samples" style="flex: auto">
         <h4>{{ sampleCount }} Results</h4>
-        <Paginator
-          :totalRecords="sampleCount"
-          :rows="perPage"
-          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
-          v-model:first="firstRow"
-          @update:first="updateSamples()"
-        />
+        <Paginator :totalRecords="sampleCount" :rows="perPage"
+          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
+          @update:first="updateSamples()" />
         <DataTable :value="samples" style="max-width: 90vw;">
           <Column field="name" header="Name"></Column>
           <Column field="properties" header="Properties">
@@ -51,8 +39,8 @@
           <Column field="proteomic_profiles" header="Proteomic Profiles">
             <template #body="slotProps">
               {{ slotProps.data.proteomic_profiles }}
-            </template></Column
-          >
+            </template>
+          </Column>
         </DataTable>
       </div>
     </div>
@@ -86,7 +74,7 @@ export default {
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [], repliconFilters: []}
+        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [] }
       } as FilterGroup,
       DjangoFilterType
     }
@@ -125,7 +113,8 @@ export default {
         if (filter.propertyName && filter.filterType && filter.value) {
           var value = filter.value
           if (filter.propertyName.includes('date')) {
-            value = new Date(value).toISOString().split('T')[0]
+            const tzoffset = (new Date(value)).getTimezoneOffset() * 60000;
+            value = new Date(new Date(value).getTime() - tzoffset).toISOString().split('T')[0]
           }
           summary.andFilter.push({
             label: filter.label,
