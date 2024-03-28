@@ -75,7 +75,7 @@ The current version has been tested on the following system configurations:
     ```
 Once these steps are completed, proceed to the next section.
 
-## Setup sonar-backend (development server)
+## Start sonar-backend (development server)
 
 There is a "template.env" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
 
@@ -89,8 +89,21 @@ There is a "template.env" file in the root directory. This file contains variabl
     ```bash
     python manage.py migrate
     ```
+3. Start Redis server
+    ```bash
+    redis-server
+    ```
+4. Start Celery
 
-3. Start application
+    Navigate to the import folder. By default, if you do not specify in the .env file, the import_data folder will be created at the root level of snoar-backend.
+
+    Then you have to run the following command in the terminal:
+    ```bash
+    celery -A covsonar_backend worker --loglevel=info --without-gossip --without-mingle --without-heartbeat -Ofair --concurrency=2 -E
+    ```
+    To access more detailed information about Celery, please visit the official Celery website at https://docs.celeryproject.org/en/latest/.
+
+5. Start application
     ```bash
     python manage.py runserver
     ```

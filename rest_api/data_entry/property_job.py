@@ -24,10 +24,7 @@ def find_or_create_property(name, datatype="value_varchar", querytype=None, desc
 def delete_property(name):
     try:
         count, _ = Property.objects.filter(name=name).delete()
-        if count > 0:
-            return True  # Deletion successful
-        else:
-            return False  # No matching objects found for deletion
+        return count
     except Exception as e:
         print(f"Error occurred: {e}")
         return False
