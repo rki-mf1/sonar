@@ -130,7 +130,7 @@ def _put_gene_from_feature(
     gene_base_data = {
         "start": int(feature.location.start),
         "end": int(feature.location.end),
-        "strand": feature.strand,
+        "strand": feature.location.strand,
         "replicon": replicon_id,
     }
     gene_update_data = {}
