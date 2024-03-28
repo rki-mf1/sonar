@@ -6,6 +6,7 @@ from django.db.models import Model as DjangoModel
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 
+
 def find_or_create(
     data, model: Type[DjangoModel], serializer_class: Type[serializers.Serializer]
 ) -> DjangoModel:
@@ -16,11 +17,13 @@ def find_or_create(
         serializer.is_valid(raise_exception=True)
         return serializer.save()
 
+
 class PropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Property
         fields = "__all__"
         filter_backends = [DjangoFilterBackend]
+
 
 class MutationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -171,7 +174,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
     genomic_profiles = serializers.SerializerMethodField()
     proteomic_profiles = serializers.SerializerMethodField()
-    annotation_profiles = serializers.SerializerMethodField()
+    # annotation_profiles = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Sample
@@ -183,18 +186,8 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
             "properties",
             "genomic_profiles",
             "proteomic_profiles",
-            "annotation_profiles"
+            # "annotation_profiles",
         ]
-
-    def get_annotation_profiles(self, obj: models.Sample):
-        #sequence__alignments__mutations__mutation2annotation_set__annotation
-        list = []
-        for alignment in obj.sequence.alignments.all():
-            for mutation2annotation in alignment.alignment_annotations:
-                repr = str(mutation2annotation.mutation)
-                repr += f" {mutation2annotation.annotation.impact}, {mutation2annotation.annotation.seq_ontology} {mutation2annotation.annotation.region}"
-                list.append(repr)
-        return list
 
     def get_properties(self, obj: models.Sample):
         custom_properties = Sample2PropertySerializer(
@@ -219,63 +212,73 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
     def get_genomic_profiles(self, obj: models.Sample):
         # genomic_profiles are prefetched for genomes endpoint
-        list = []
+        dict = {}
 
         for alignment in obj.sequence.alignments.all():
             for mutation in alignment.genomic_profiles:
-                label = self.create_NT_format(mutation)
-                list.append(label)
-            
-        return list
+
+                dict[self.create_NT_format(mutation)] = [
+                    str(annotation2mutation.annotation)
+                    for annotation2mutation in alignment.alignment_annotations
+                    if annotation2mutation.mutation == mutation
+                ]
+
+        return dict
 
     def get_proteomic_profiles(self, obj: models.Sample):
         # proteomic_profiles are prefetched
-        list = []
+        dict = {}
         for alignment in obj.sequence.alignments.all():
             for mutation in alignment.proteomic_profiles:
                 try:
                     label = ""
                     # SNP and INS
                     if mutation.alt != None:
-
                         label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
-                    else : # DEL
+                    else:  # DEL
                         if mutation.end - mutation.start == 1:
-                            label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) 
+                            label = f"{mutation.gene.gene_symbol}:del:" + str(
+                                mutation.start + 1
+                            )
                         else:
-                            label = f"{mutation.gene.gene_symbol}:del:" + str(mutation.start + 1) + "-" + str(mutation.end)
-                    list.append(label)
-                except AttributeError as e: 
+                            label = (
+                                f"{mutation.gene.gene_symbol}:del:"
+                                + str(mutation.start + 1)
+                                + "-"
+                                + str(mutation.end)
+                            )
+                    dict[label] = [
+                        str(annotation2mutation.annotation)
+                        for annotation2mutation in alignment.alignment_annotations
+                        if annotation2mutation.mutation == mutation
+                    ]
+                except AttributeError as e:
                     print(e)
-                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")   
-                    continue  
-        return list
+                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")
+                    continue
+        return dict
 
     def create_NT_format(self, mutation: models.Mutation):
         label = ""
         # SNP and INS
         if mutation.alt != None:
             label = f"{mutation.ref}{mutation.end}{mutation.alt}"
-            
-        else : # DEL
+
+        else:  # DEL
             if mutation.end - mutation.start == 1:
-                label = "del:" + str(mutation.start + 1) 
+                label = "del:" + str(mutation.start + 1)
             else:
                 label = "del:" + str(mutation.start + 1) + "-" + str(mutation.end)
-                
+
         return label
+
 
 class SampleGenomesSerializerVCF(serializers.ModelSerializer):
     genomic_profiles = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Sample
-        fields = [
-            "id",
-            "name",
-
-            "genomic_profiles"
-        ]
+        fields = ["id", "name", "genomic_profiles"]
 
     def get_genomic_profiles(self, obj: models.Sample):
         list = []
@@ -283,13 +286,14 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
 
             for mutation in alignment.genomic_profiles:
                 variant = {}
-                variant['variant.id'] = mutation.id
-                variant['variant.ref'] = mutation.ref
-                variant['variant.alt'] = mutation.alt
-                variant['variant.start'] = mutation.start
-                variant['variant.end'] = mutation.end
-                list.append(variant)   
+                variant["variant.id"] = mutation.id
+                variant["variant.ref"] = mutation.ref
+                variant["variant.alt"] = mutation.alt
+                variant["variant.start"] = mutation.start
+                variant["variant.end"] = mutation.end
+                list.append(variant)
         return list
+
 
 class LineagesSerializer(serializers.ModelSerializer):
     class Meta:

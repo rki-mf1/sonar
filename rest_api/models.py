@@ -54,6 +54,9 @@ class AnnotationType(models.Model):
     region = models.CharField(max_length=50, blank=True, null=True)
     impact = models.CharField(max_length=20, blank=True, null=True)
 
+    def __str__(self) -> str:
+        return f"{self.seq_ontology} {self.impact} {self.region if self.region else ''}".strip()
+
     class Meta:
         db_table = "annotation_type"
         constraints = [

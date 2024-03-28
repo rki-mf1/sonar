@@ -43,8 +43,7 @@ services:
       - conf/dev_secrets.env
     container_name: dev-covsonar-django-apscheduler
     restart: on-failure
-    command: echo "Disabled! comment this line in docker-compose-dev.yml and uncomment the next one to enable" && exit 0
-    #command: python manage.py runapscheduler
+    command: python manage.py runapscheduler
     volumes:
       - .:/code
     depends_on:
