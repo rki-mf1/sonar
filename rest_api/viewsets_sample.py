@@ -119,14 +119,18 @@ class SampleViewSet(
                 )
 
             genomic_profiles_qs = (
-                models.Mutation.objects.filter(type="nt")
-                .only("ref", "alt", "start", "end", "gene")
+                models.Mutation.objects.filter(type="nt").only(
+                    "ref", "alt", "start", "end", "gene"
+                )
             ).prefetch_related("gene")
             proteomic_profiles_qs = (
-                models.Mutation.objects.filter(type="cds")
-                .only("ref", "alt", "start", "end", "gene")
+                models.Mutation.objects.filter(type="cds").only(
+                    "ref", "alt", "start", "end", "gene"
+                )
             ).prefetch_related("gene")
-            annotation_qs = models.Mutation2Annotation.objects.prefetch_related("mutation", "annotation")
+            annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
+                "mutation", "annotation"
+            )
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
                 proteomic_profiles_qs = proteomic_profiles_qs.filter(~Q(alt="X"))
@@ -141,7 +145,7 @@ class SampleViewSet(
                     "sequence__alignments__mutations",
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
-                ),        
+                ),
                 Prefetch(
                     "sequence__alignments__mutation2annotation_set",
                     queryset=annotation_qs,
