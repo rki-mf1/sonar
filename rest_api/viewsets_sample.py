@@ -66,6 +66,20 @@ class SampleViewSet(
         }
 
     @action(detail=False, methods=["get"])
+    def statistics(self, request: Request, *args, **kwargs):
+        response_dict={}
+        response_dict['samples_total'] = (
+            models.Sample.objects.all().count()
+
+        )
+        response_dict['newest_sample_date'] = (
+            models.Sample.objects.all().order_by("-collection_date").first().collection_date
+
+        )
+
+        return Response(data=response_dict, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
         # TODO-smc abklären ob das so richtig ist
         queryset = (
