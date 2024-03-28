@@ -269,6 +269,9 @@ class Mutation(models.Model):
         max_length=50, blank=True, null=True
     )  # cds / nt / intergenic
 
+    def __str__(self) -> str:
+        return f"{self.start}-{self.end} {self.ref}>{self.alt}"
+
     class Meta:
         db_table = "mutation"
         indexes = [

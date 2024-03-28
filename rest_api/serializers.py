@@ -187,21 +187,13 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         ]
 
     def get_annotation_profiles(self, obj: models.Sample):
-        #print(obj.sequence.alignments.mutations.mutation2annotaion.all())
         #sequence__alignments__mutations__mutation2annotation_set__annotation
         list = []
-        # for alignment in obj.sequence.alignments.all():
-        #     for mutation in alignment.mutations.all():
-        #         if mutation.mutation2annotation_set.exists():
-        #             label = self.create_NT_format(mutation)
-        #             label += "("
-        #             annotations = []
-        #             for mutation2annotation in mutation.mutation2annotation_set.filter(alignment_id=alignment.id).all():
-        #                 annotations.append(mutation2annotation.annotation.seq_ontology)
-        #             label += ",".join(annotations)
-        #             label += ")"
-        #             list.append(label)
-
+        for alignment in obj.sequence.alignments.all():
+            for mutation2annotation in alignment.alignment_annotations:
+                repr = str(mutation2annotation.mutation)
+                repr += f" {mutation2annotation.annotation.impact}, {mutation2annotation.annotation.seq_ontology} {mutation2annotation.annotation.region}"
+                list.append(repr)
         return list
 
     def get_properties(self, obj: models.Sample):

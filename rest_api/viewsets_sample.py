@@ -67,14 +67,13 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
-        response_dict={}
-        response_dict['samples_total'] = (
-            models.Sample.objects.all().count()
-
-        )
-        response_dict['newest_sample_date'] = (
-            models.Sample.objects.all().order_by("-collection_date").first().collection_date
-
+        response_dict = {}
+        response_dict["samples_total"] = models.Sample.objects.all().count()
+        response_dict["newest_sample_date"] = (
+            models.Sample.objects.all()
+            .order_by("-collection_date")
+            .first()
+            .collection_date
         )
 
         return Response(data=response_dict, status=status.HTTP_200_OK)
@@ -118,24 +117,21 @@ class SampleViewSet(
                 queryset = models.Sample.objects.filter(
                     self.resolve_genome_filter(filters)
                 )
-                queryset.prefetch_related("properties__property") 
 
             genomic_profiles_qs = (
                 models.Mutation.objects.filter(type="nt")
                 .only("ref", "alt", "start", "end", "gene")
-                .order_by("start")
-            )
+            ).prefetch_related("gene")
             proteomic_profiles_qs = (
                 models.Mutation.objects.filter(type="cds")
                 .only("ref", "alt", "start", "end", "gene")
-                .order_by("start")
-            )
-            
-
+            ).prefetch_related("gene")
+            annotation_qs = models.Mutation2Annotation.objects.prefetch_related("mutation", "annotation")
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
                 proteomic_profiles_qs = proteomic_profiles_qs.filter(~Q(alt="X"))
             queryset = queryset.select_related("sequence").prefetch_related(
+                "properties__property",
                 Prefetch(
                     "sequence__alignments__mutations",
                     queryset=genomic_profiles_qs,
@@ -145,14 +141,14 @@ class SampleViewSet(
                     "sequence__alignments__mutations",
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
+                ),        
+                Prefetch(
+                    "sequence__alignments__mutation2annotation_set",
+                    queryset=annotation_qs,
+                    to_attr="alignment_annotations",
                 ),
-                # Prefetch(
-                #     "sequence__alignments__mutations__mutation2annotation_set__annotation",
-                #     queryset=annotation_qs,
-                #     to_attr="annotation_profiles",
-                # ),
             )
-            
+
             # TODO: output in  VCF
             # if VCF
             # for obj in queryset.all():
@@ -591,13 +587,11 @@ class SampleViewSet(
                 if name in self.property_cache.keys():
                     property["property"] = self.property_cache[name]
                 else:
-                    property["property"] = self.property_cache[
-                        name
-                    ] = models.Property.objects.get_or_create(
-                        name=name, datatype=value["datatype"]
-                    )[
-                        0
-                    ].id
+                    property["property"] = self.property_cache[name] = (
+                        models.Property.objects.get_or_create(
+                            name=name, datatype=value["datatype"]
+                        )[0].id
+                    )
             else:
                 property["property__name"] = name
             property_objects.append(property)
