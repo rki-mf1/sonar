@@ -159,6 +159,7 @@ class SampleViewSet(
             #    print(obj.name)
             #    for alignment in obj.sequence.alignments.all():
             #        print(alignment)
+            # output only count
             if vcf_format:
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializerVCF(queryset, many=True)
@@ -172,7 +173,7 @@ class SampleViewSet(
         except Exception as e:
             print(e)
             traceback.print_exc()
-            return create_error_response(message=str(e))
+            return create_error_response(message=str(e),return_status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()
@@ -482,13 +483,14 @@ class SampleViewSet(
         )
         if not sample_id_column:
             return create_error_response(
-                message="No sample_id_column.", return_status=400
+                message="No sample_id_column is provided", return_status=400
             )
         if not column_mapping:
             return create_success_response(
                 message="No column_mapping is provided, nothing to import.",
                 return_status=200,
             )
+
         if not request.FILES or "properties_tsv" not in request.FILES:
             return Response("No file uploaded.", status=400)
         # TODO: what if it is csv?
@@ -500,7 +502,10 @@ class SampleViewSet(
             dtype=object,
             keep_default_na=False,
         )
-
+        if sample_id_column not in properties_df.columns:
+            return create_error_response(
+                message=f"Incorrect mapping column: '{sample_id_column}', please check property file.", return_status=400
+            )
         sample_property_names = []
         custom_property_names = []
         for property_name in properties_df.columns:
@@ -543,9 +548,12 @@ class SampleViewSet(
             )
 
         print("Saving...")
-
         with transaction.atomic():
-            models.Sample.objects.bulk_update(sample_updates, sample_property_names)
+            # update based prop. for Sample
+            if len(sample_property_names) > 0:  # when there is no update/add to based prop.
+                models.Sample.objects.bulk_update(sample_updates, sample_property_names)
+
+            # update custom prop. for Sample 
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
                 data=property_updates, many=True
             )

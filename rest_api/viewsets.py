@@ -123,7 +123,7 @@ class AlignmentViewSet(
                 "replicon_id",
                 "alignement_id",
                 "sequence_id",
-                "sequence__sample_set__name",  # needs to be checked since the sample_set is a many to many field
+                "sequence__sample__name",  # needs to be checked since the sample_set is a many to many field
                 # Add other fields you need from the joined tables
             )
         )
@@ -510,17 +510,22 @@ class PropertyViewSet(
         name = request.data.get("name")
         deleted = delete_property(name)
 
-        if deleted:
+        if deleted is not False:
+            if deleted == 0:
+                return create_success_response(
+                    message="No matching property found for deletion",
+                    return_status=status.HTTP_200_OK,
+                )
             return create_success_response(
                 message="Property deleted successfully",
                 return_status=status.HTTP_200_OK,
             )
         else:
             return create_error_response(
-                message="No matching property found for deletion",
-                return_status=status.HTTP_404_NOT_FOUND,
-            )
-
+                    message="Error occurred, please inform the admin.",
+                    return_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
         """
