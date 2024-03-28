@@ -34,7 +34,7 @@ class FixtureModelTestCase(TestCase):
 class FixtureApiMixin(object):
     def get_request_user(self, *args):
         if self.request_user_name is None:
-            self.request_user_name = "request_user"
+            self.request_user_name = "root" # see test_data.json
         return django_models.User.objects.get(username=self.request_user_name)
 
     def get_user(self, username, password=None, *args):

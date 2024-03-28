@@ -34,7 +34,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = os.path.normpath(os.path.dirname(__file__))
 
 STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
-STATIC_URL = "/static/"
 
 # Take environment variables from .env file
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
@@ -85,7 +84,7 @@ MIDDLEWARE = [
 ]
 ROOT_URLCONF = "covsonar_backend.urls"
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5174",
+    "http://localhost:5173",
 ]
 TEMPLATES = [
     {
@@ -175,13 +174,6 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if DEBUG:
-    MIDDLEWARE += ("debug_toolbar.middleware.DebugToolbarMiddleware",)
-    INSTALLED_APPS += ("debug_toolbar",)
-    INTERNAL_IPS = ("127.0.0.1",)
-    DEBUG_TOOLBAR_CONFIG = {
-        "INTERCEPT_REDIRECTS": False,
-    }
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = None
 
@@ -213,3 +205,11 @@ CACHES = {
 # Celery settings
 CELERY_BROKER_URL = f"{env('REDIS_URL')}0"
 CELERY_RESULT_BACKEND = f"{env('REDIS_URL')}0"
+
+if DEBUG:
+    INTERNAL_IPS = ("127.0.0.1",)
+    INSTALLED_APPS += ["debug_toolbar"]
+    MIDDLEWARE.insert(5, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    DEBUG_TOOLBAR_CONFIG = {
+        "SHOW_TOOLBAR_CALLBACK": lambda request: True,
+    }

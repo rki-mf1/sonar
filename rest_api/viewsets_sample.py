@@ -99,33 +99,21 @@ class SampleViewSet(
 
             self.has_property_filter = False
             queryset = models.Sample.objects.all()
-
             if filter_params := request.query_params.get("filters"):
                 filters = json.loads(filter_params)
-                print(filters)
                 queryset = models.Sample.objects.filter(
                     self.resolve_genome_filter(filters)
                 )
-                if self.has_property_filter:
-                    queryset.prefetch_related("properties__property")           
+                queryset.prefetch_related("properties__property") 
 
-            # NOTE: I put replicon__reference__accession=ref  at the filter, but, at the end of final query
-            # I didnt see WHERE cause of reference. However, I am not sure that because we have only one reference
-            # in the database so the Query generator or optimizer will not generate this statement.
-            # genomic_profiles_qs = models.Mutation.objects.filter(replicon__reference__accession=ref, type="nt").only(
-            #     "ref", "alt", "start", "end"
-            # ).order_by("start")
-            # proteomic_profiles_qs = models.Mutation.objects.filter(replicon__reference__accession=ref, type="cds").only(
-            #     "ref", "alt", "start", "end"
-            # ).order_by("start")
             genomic_profiles_qs = (
                 models.Mutation.objects.filter(type="nt")
-                .only("ref", "alt", "start", "end")
+                .only("ref", "alt", "start", "end", "gene")
                 .order_by("start")
             )
             proteomic_profiles_qs = (
                 models.Mutation.objects.filter(type="cds")
-                .only("ref", "alt", "start", "end")
+                .only("ref", "alt", "start", "end", "gene")
                 .order_by("start")
             )
             
@@ -150,11 +138,7 @@ class SampleViewSet(
                 #     to_attr="annotation_profiles",
                 # ),
             )
-
-            if DEBUG:
-                print("Final query:")
-                print(queryset.query)
-
+            
             # TODO: output in  VCF
             # if VCF
             # for obj in queryset.all():

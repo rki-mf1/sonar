@@ -187,8 +187,8 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         ]
 
     def get_annotation_profiles(self, obj: models.Sample):
-        # print(obj.sequence.alignments.mutations.mutation2annotaion.all())
-        # sequence__alignments__mutations__mutation2annotation_set__annotation
+        #print(obj.sequence.alignments.mutations.mutation2annotaion.all())
+        #sequence__alignments__mutations__mutation2annotation_set__annotation
         list = []
         # for alignment in obj.sequence.alignments.all():
         #     for mutation in alignment.mutations.all():
