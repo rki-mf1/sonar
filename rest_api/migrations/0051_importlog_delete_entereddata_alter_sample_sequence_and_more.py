@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rest_api', '0049_alter_mutation_alt'),
+        ('rest_api', '0050_alter_sample_sequence'),
     ]
 
     operations = [
