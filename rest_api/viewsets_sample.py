@@ -7,6 +7,7 @@ import csv
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import StreamingHttpResponse
 from datetime import datetime
 
 import pandas as pd
@@ -39,6 +40,9 @@ from .serializers import (
 )
 from covsonar_backend.settings import DEBUG
 
+class Echo:
+    def write(self, value):
+        return value
 
 class SampleViewSet(
     viewsets.GenericViewSet,
@@ -109,7 +113,7 @@ class SampleViewSet(
             # we try to use bool(), but it is not working as expected.
             showNX = strtobool(request.query_params.get("showNX", "False"))
             vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
-
+            csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
             self.has_property_filter = False
             queryset = models.Sample.objects.all()
             if filter_params := request.query_params.get("filters"):
@@ -160,15 +164,24 @@ class SampleViewSet(
             #    for alignment in obj.sequence.alignments.all():
             #        print(alignment)
             # output only count
+            if csv_stream:
+                #TODO write output format
+                echo_buffer = Echo()
+                csv_writer = csv.writer(echo_buffer)
+                rows = (csv_writer.writerow(row) for row in queryset.values_list(
+                    "name",
+                    "sequence__seqhash",                    
+                ))
+                response = StreamingHttpResponse(rows, content_type="text/csv")
+                response["Content-Disposition"] = 'attachment; filename="export.csv"'
+                return response
             if vcf_format:
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializerVCF(queryset, many=True)
                 return self.get_paginated_response(serializer.data)
-            else:
-                queryset = self.paginate_queryset(queryset)
-                serializer = SampleGenomesSerializer(queryset, many=True)
-                # inspect the performance
-                return self.get_paginated_response(serializer.data)
+            queryset = self.paginate_queryset(queryset)
+            serializer = SampleGenomesSerializer(queryset, many=True)
+            return self.get_paginated_response(serializer.data)
         except Exception as e:
             print(e)
             traceback.print_exc()
@@ -194,16 +207,7 @@ class SampleViewSet(
             q_obj = method(qs=q_obj, **filter)
         else:
             raise Exception(f"filter_method not found for:{filter.get('label')}")
-        return q_obj
-
-    # WIP - not working yet
-    @action(detail=False, methods=["get"])
-    def download_genomes_export(self, request: Request, *args, **kwargs):
-        queryset = models.Sample.objects.all()
-        if filter_params := request.query_params.get("filters"):
-            filters = json.loads(filter_params)
-            queryset = self.resolve_genome_filter(filters)
-        response = HttpResponse(content=queryset, content_type="text/csv")
+        return q_obj    
 
     @action(detail=True, methods=["get"])
     def get_all_sample_data(self, request: Request, *args, **kwargs):
