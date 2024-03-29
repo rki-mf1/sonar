@@ -1,10 +1,19 @@
 <template>
   <div style="height: 90vh; width: 90vw; display: flex; flex-direction: column">
     <div>
-      <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
-        :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
-        :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
-        :propertyValueOptions="propertyValueOptions" v-on:update-property-value-options="updatePropertyValueOptions" />
+      <Statistics></Statistics>
+    </div>
+    <div>
+      <FilterGroup
+        style="width: fit-content; margin: auto"
+        :filterGroup="filterGroup"
+        :propertyOptions="propertyOptions"
+        :repliconAccessionOptions="repliconAccessionOptions"
+        :symbolOptions="symbolOptions"
+        :operators="Object.values(DjangoFilterType)"
+        :propertyValueOptions="propertyValueOptions"
+        v-on:update-property-value-options="updatePropertyValueOptions"
+      />
     </div>
     <div style="flex-direction: column; display: flex">
       <div style="flex: auto; margin: auto">

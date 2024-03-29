@@ -92,6 +92,11 @@ export default class API {
     getSampleGenomePropertyOptions() {
         return this.getRequest(`properties/distinct_property_names`, {}, false)
     }
+
+    getSampleStatistics() {
+        return this.getRequest(`samples/statistics`, {}, false)
+    }
+
     getSampleGenomePropertyValueOptions(propertyName: string) {
         return this.getRequest(`properties/distinct_properties/?property_name=${propertyName}`, {}, false)
     }
