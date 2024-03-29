@@ -1,7 +1,6 @@
 import type { FilterGroupFilters, FilterGroupRoot } from '@/util/types'
 import Axios from 'axios'
 import qs from 'qs'
-import FileSaver from 'file-saver';
 
 export default class API {
     CODE_OK = 200
@@ -73,11 +72,20 @@ export default class API {
         return this.getRequest(url, {}, false)
     }
     async getSampleGenomesExport(params: FilterGroupRoot) {
+        params["csv_stream"] = true
         const queryString = this.parseQueryString(params)
-        const url = `samples/download_genomes_export/${queryString}`
+        const url = `samples/genomes/${queryString}`
         this.getRequest(url, {}, false).then(
             response => {
-                FileSaver.saveAs(response.blob, "export.csv");
+                const url = window.URL.createObjectURL(new Blob([response], { type: "text/csv" }));
+                const link = document.createElement("a");
+                link.href = url;
+                link.setAttribute(
+                    "download",
+                    "export.csv"
+                );
+                document.body.appendChild(link);
+                link.click();
             }
         )
     }

@@ -9,9 +9,8 @@
     <div style="flex-direction: column; display: flex">
       <div style="flex: auto; margin: auto">
         <Button size="small" @click="updateSamples()"><i class="pi pi-list" /> &nbsp; Request Data</Button>
-        <!-- <Button size="small" @click="requestExport()">
-          <i class="pi pi-cloud-download" />Request export</Button
-        > -->
+        <Button size="small" @click="requestExport()">
+          <i class="pi pi-cloud-download" />Request export</Button>
       </div>
       <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
       <div v-if="samples" style="flex: auto">
@@ -33,7 +32,9 @@
           </Column>
           <Column field="genomic_profiles" header="Genomic Profiles">
             <template #body="slotProps">
-              {{ slotProps.data.genomic_profiles }}
+              <span v-for="profile in Object.keys(slotProps.data.genomic_profiles)" :key="profile">
+                {{ profile }} -
+              </span>
             </template>
           </Column>
           <Column field="proteomic_profiles" header="Proteomic Profiles">
