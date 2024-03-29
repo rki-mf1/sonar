@@ -142,7 +142,6 @@ export default {
       profileFilterTypes: {
         SNPProfileNt: {
           label: 'SNP Nt',
-          geneSymbol: '',
           refNuc: '',
           refPos: '',
           altNuc: '',
@@ -158,7 +157,6 @@ export default {
         } as SNPProfileAAFilter,
         DelProfileNt: {
           label: 'Del Nt',
-          geneSymbol: '',
           firstDeleted: '',
           lastDeleted: '',
           exclude: false
@@ -172,7 +170,6 @@ export default {
         } as DelProfileAAFilter,
         InsProfileNt: {
           label: 'Ins Nt',
-          geneSymbol: '',
           refNuc: '',
           refPos: '',
           altNuc: '',
