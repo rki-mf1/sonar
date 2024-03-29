@@ -168,7 +168,6 @@ class SampleViewSet(
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializer(queryset, many=True)
                 # inspect the performance
-                print("Database hit:", len(connection.queries))
                 return self.get_paginated_response(serializer.data)
         except Exception as e:
             print(e)

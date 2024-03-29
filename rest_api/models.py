@@ -309,10 +309,10 @@ class Mutation(models.Model):
 
 
 class Mutation2Annotation(models.Model):
-    mutation = models.ForeignKey(Mutation, models.DO_NOTHING, blank=True, null=True)
-    alignment = models.ForeignKey(Alignment, models.CASCADE, blank=True, null=True)
+    mutation = models.ForeignKey(Mutation, models.DO_NOTHING)
+    alignment = models.ForeignKey(Alignment, models.CASCADE)
     annotation = models.ForeignKey(
-        AnnotationType, models.DO_NOTHING, blank=True, null=True
+        AnnotationType, models.DO_NOTHING
     )
 
     class Meta:

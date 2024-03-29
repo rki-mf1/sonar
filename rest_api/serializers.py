@@ -227,7 +227,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
     def get_proteomic_profiles(self, obj: models.Sample):
         # proteomic_profiles are prefetched
-        dict = {}
+        list = []
         for alignment in obj.sequence.alignments.all():
             for mutation in alignment.proteomic_profiles:
                 try:
@@ -247,16 +247,12 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                                 + "-"
                                 + str(mutation.end)
                             )
-                    dict[label] = [
-                        str(annotation2mutation.annotation)
-                        for annotation2mutation in alignment.alignment_annotations
-                        if annotation2mutation.mutation == mutation
-                    ]
+                    list.append(label)
                 except AttributeError as e:
                     print(e)
                     print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue
-        return dict
+        return list
 
     def create_NT_format(self, mutation: models.Mutation):
         label = ""

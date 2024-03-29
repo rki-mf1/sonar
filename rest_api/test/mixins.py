@@ -5,8 +5,6 @@ from urllib.parse import urlencode
 from django.contrib.auth import models as django_models
 from django.test import TestCase
 from django.urls import reverse
-from fastjsonschema import JsonSchemaException
-from fastjsonschema import validate as json_validate
 from rest_api import models
 from rest_framework import status
 from rest_framework.test import (
@@ -20,7 +18,7 @@ from rest_framework.test import (
 class FixtureModelTestCase(TestCase):
     fixtures = [
         "initial_auth",
-        "test_data",
+        "test_data_sm",
     ]
     model = None
     obj = None
@@ -56,7 +54,7 @@ class FixtureApiMixin(object):
 
 
 class FixtureAPITestCase(APITestCase, FixtureApiMixin):
-    fixtures = ["initial_auth", "test_data"]
+    fixtures = ["initial_auth", "test_data_sm"]
 
     factory = APIRequestFactory()
     request_user_name = None
@@ -64,7 +62,7 @@ class FixtureAPITestCase(APITestCase, FixtureApiMixin):
 
 
 class FixtureAPITransactionTestCase(APITransactionTestCase, FixtureApiMixin):
-    fixtures = ["initial_auth", "test_data"]
+    fixtures = ["initial_auth", "test_data_sm"]
 
     factory = APIRequestFactory()
     request_user_name = None
@@ -101,7 +99,6 @@ class ListViewSetTestMixin(CustomTestMixin):
     def test_list(self, *args):
         response = self.get_list_response("")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # count based on fixtures/test_data
         self.assertEqual(response.data["count"], self.expected_list_count)
 
     def _test_list_filtering(self, filter, *args):

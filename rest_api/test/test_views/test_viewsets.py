@@ -1,4 +1,5 @@
 import json
+from django.test import TransactionTestCase
 from parameterized import parameterized
 from rest_framework import status
 from rest_framework.test import force_authenticate
@@ -16,10 +17,10 @@ class AlignmentViewSetTest(
 ):
     model = models.Alignment
     viewset = viewsets.AlignmentViewSet
-    expected_list_count = 180
+    expected_list_count = 15
 
     def test_get_alignment_data(self):
-        pass #TODO
+        pass  # TODO
 
 
 class SampleViewSetTest(
@@ -30,7 +31,7 @@ class SampleViewSetTest(
 ):
     model = models.Sample
     viewset = SampleViewSet
-    expected_list_count = 180
+    expected_list_count = 15
 
     @parameterized.expand(
         [
@@ -38,23 +39,23 @@ class SampleViewSetTest(
                 "Property",
                 {
                     "label": "Property",
-                    "property_name": "sample_type",
+                    "property_name": "zip_code",
                     "filter_type": "exact",
-                    "value": "X",
+                    "value": "40210.0",
                     "exclude": False,
                 },
-                48,
+                2,
             ),
             (
                 "SNP Nt",
                 {
                     "label": "SNP Nt",
-                    "ref_nuc": "A",
-                    "ref_pos": 1,
-                    "alt_nuc": 1,
+                    "ref_nuc": "T",
+                    "ref_pos": 670,
+                    "alt_nuc": "G",
                     "exclude": False,
                 },
-                1,
+                6,
             ),
             (
                 "SNP AA",
@@ -66,14 +67,14 @@ class SampleViewSetTest(
                     "alt_aa": "P",
                     "exclude": False,
                 },
-                26,
+                1,
             ),
             (
                 "Del Nt",
                 {
                     "label": "Del Nt",
-                    "first_deleted": 69,
-                    "last_deleted": 69,
+                    "first_deleted": 1,
+                    "last_deleted": 245,
                     "exclude": False,
                 },
                 1,
@@ -87,7 +88,7 @@ class SampleViewSetTest(
                     "last_deleted": 69,
                     "exclude": False,
                 },
-                81,
+                1,
             ),
             (
                 "Ins Nt",
@@ -98,27 +99,24 @@ class SampleViewSetTest(
                     "alt_nuc": "C",
                     "exclude": False,
                 },
-                26,
+                1,
             ),
             (
                 "Ins AA",
                 {
                     "label": "Ins AA",
                     "protein_symbol": "orf1ab",
-                    "ref_nuc": "T",
+                    "ref_aa": "T",
                     "ref_pos": 2196,
-                    "alt_nuc": "E",
+                    "alt_aa": "E",
                 },
-                1,
+                2,
             ),
-            ("Replicon", {"label": "filter_replicon", "accession": "MN908947.3"}, 180),
-            # ("Sample", "filter_sample", {}, 1),
-            # ("Sublineages", "filter_sublineages", {}, 1),
+            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 15),
         ]
     )
-    def test_genome_filters(self, _, filter, expected):
-        print(_)
-        view = self.viewset.as_view({'get': 'genomes'})        
+    def test_genome_filters(self, _, filter, expected_count):
+        view = self.viewset.as_view({"get": "genomes"})
         request = self.factory.get(
             "/api/samples/genomes/", {"filters": json.dumps({"andFilter": [filter]})}
         )
@@ -126,4 +124,4 @@ class SampleViewSetTest(
         force_authenticate(request, user=user)
         response = view(request)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], expected)
+        self.assertEqual(response.data["count"], expected_count)

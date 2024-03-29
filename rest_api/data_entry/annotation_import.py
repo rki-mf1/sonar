@@ -103,16 +103,23 @@ class AnnotationImport:
             q_obj |= Q(name=sample)
         self.sample_to_sequence = {}
         for sample in Sample.objects.filter(q_obj).prefetch_related("sequence"):
-            self.sample_to_sequence[sample.name] = sample.sequence
+            try:
+                self.sample_to_sequence[sample.name] = sample.sequence
+            except KeyError:
+                continue                
+                
 
     def fetch_alignments(self):
         q_obj = Q()
         for replicon in self.replicon_to_sample_to_alignment.keys():
             for sample in self.replicon_to_sample_to_alignment[replicon]:
-                q_obj |= Q(
-                    sequence=self.sample_to_sequence[sample],
-                    replicon__accession=replicon,
-                )
+                try:
+                    q_obj |= Q(
+                        sequence=self.sample_to_sequence[sample],
+                        replicon__accession=replicon,
+                    )
+                except KeyError:
+                    continue  
         alignments = Alignment.objects.filter(q_obj).prefetch_related(
             "sequence__sample_set"
         )
@@ -228,7 +235,6 @@ class AnnotationImport:
                                 ][sample],
                             }
                         )
-
                     annotation_objs.append(annotation_obj)
         self.annotation_q_obj = annotation_q_obj
         self.relation_info = relation_info
@@ -243,11 +249,12 @@ class AnnotationImport:
             ]:
                 mutation = relation["mutation"]
                 alignment = relation["alignment"]
-                mutation2annotation_objs.append(
-                    Mutation2Annotation(
-                        annotation=annotation,
-                        mutation=mutation,
-                        alignment=alignment,
+                if alignment:
+                    mutation2annotation_objs.append(
+                        Mutation2Annotation(
+                            annotation=annotation,
+                            mutation=mutation,
+                            alignment=alignment,
+                        )
                     )
-                )
         return mutation2annotation_objs

@@ -48,7 +48,7 @@ if [ "$NoTestData" = true ]; then
     bash dev-manage.sh loaddata initial_auth
 else
     echo "######### loading fixtures with test data ############"
-    bash dev-manage.sh loaddata initial_auth test_data
+    bash dev-manage.sh loaddata initial_auth test_data_sm
 fi
 
 if [ $? -ne 0 ]; then

@@ -30,7 +30,7 @@ if ($NoTestData) {
 }
 else {
     echo "######### loading fixtures with test data ############"    
-    .\dev-manage.ps1 loaddata initial_auth test_data
+    .\dev-manage.ps1 loaddata initial_auth test_data_sm
 }
 if ($LASTEXITCODE -ne 0) {
     exit($LASTEXITCODE)
