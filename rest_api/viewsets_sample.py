@@ -25,8 +25,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from django.db import connection
 from rest_api.utils import (
-    create_error_response,
-    create_success_response,
+    Response,
+    Response,
     resolve_ambiguous_NT_AA,
     strtobool,
     write_to_file,
@@ -40,9 +40,11 @@ from .serializers import (
 )
 from covsonar_backend.settings import DEBUG
 
+
 class Echo:
     def write(self, value):
         return value
+
 
 class SampleViewSet(
     viewsets.GenericViewSet,
@@ -165,13 +167,16 @@ class SampleViewSet(
             #        print(alignment)
             # output only count
             if csv_stream:
-                #TODO write output format
+                # TODO write output format
                 echo_buffer = Echo()
                 csv_writer = csv.writer(echo_buffer)
-                rows = (csv_writer.writerow(row) for row in queryset.values_list(
-                    "name",
-                    "sequence__seqhash",                    
-                ))
+                rows = (
+                    csv_writer.writerow(row)
+                    for row in queryset.values_list(
+                        "name",
+                        "sequence__seqhash",
+                    )
+                )
                 response = StreamingHttpResponse(rows, content_type="text/csv")
                 response["Content-Disposition"] = 'attachment; filename="export.csv"'
                 return response
@@ -185,7 +190,9 @@ class SampleViewSet(
         except Exception as e:
             print(e)
             traceback.print_exc()
-            return create_error_response(message=str(e),return_status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                message=str(e), return_status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()
@@ -207,7 +214,7 @@ class SampleViewSet(
             q_obj = method(qs=q_obj, **filter)
         else:
             raise Exception(f"filter_method not found for:{filter.get('label')}")
-        return q_obj    
+        return q_obj
 
     @action(detail=True, methods=["get"])
     def get_all_sample_data(self, request: Request, *args, **kwargs):
@@ -485,13 +492,14 @@ class SampleViewSet(
             json.loads(request.data.get("column_mapping"))
         )
         if not sample_id_column:
-            return create_error_response(
-                message="No sample_id_column is provided", return_status=400
+            return Response(
+                {"detail": "No sample_id_column is provided"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         if not column_mapping:
-            return create_success_response(
-                message="No column_mapping is provided, nothing to import.",
-                return_status=200,
+            return Response(
+                {"detail": "No column_mapping is provided, nothing to import."},
+                status=status.HTTP_200_OK,
             )
 
         if not request.FILES or "properties_tsv" not in request.FILES:
@@ -506,8 +514,11 @@ class SampleViewSet(
             keep_default_na=False,
         )
         if sample_id_column not in properties_df.columns:
-            return create_error_response(
-                message=f"Incorrect mapping column: '{sample_id_column}', please check property file.", return_status=400
+            return Response(
+                {
+                    "detail": f"Incorrect mapping column: '{sample_id_column}', please check property file."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
         sample_property_names = []
         custom_property_names = []
@@ -553,10 +564,12 @@ class SampleViewSet(
         print("Saving...")
         with transaction.atomic():
             # update based prop. for Sample
-            if len(sample_property_names) > 0:  # when there is no update/add to based prop.
+            if (
+                len(sample_property_names) > 0
+            ):  # when there is no update/add to based prop.
                 models.Sample.objects.bulk_update(sample_updates, sample_property_names)
 
-            # update custom prop. for Sample 
+            # update custom prop. for Sample
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
                 data=property_updates, many=True
             )
@@ -578,8 +591,8 @@ class SampleViewSet(
 
         print("Done.")
         print(f"Import done in {datetime.now() - timer}")
-        return create_success_response(
-            message="File uploaded successfully", return_status=status.HTTP_201_CREATED
+        return Response(
+            {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
 
     def _convert_property_column_mapping(
@@ -632,7 +645,9 @@ class SampleViewSet(
     def get_sample_data(self, request: Request, *args, **kwargs):
         sample_name = request.GET.get("sample_data")
         if not sample_name:
-            return create_error_response(message="Sample name is missing")
+            return Response(
+                {"detail": "Sample name is missing"}, status=status.HTTP_400_BAD_REQUEST
+            )
         sample_model = (
             models.Sample.objects.filter(name=sample_name)
             .extra(select={"sample_id": "sample.id"})
@@ -647,7 +662,7 @@ class SampleViewSet(
             print("Cannot find:", sample_name)
             sample_data = {}
 
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data)
 
     @action(detail=False, methods=["post"])
     def get_bulk_sample_data(self, request: Request, *args, **kwargs):
@@ -677,12 +692,11 @@ class SampleViewSet(
                     }
                 )
 
-            return create_success_response(
-                message="Request processed successfully", data=sample_data
-            )
+            return Response(sample_data, status=status.HTTP_200_OK)
         except json.JSONDecodeError:
-            return create_error_response(
-                "Invalid JSON data / structure", return_status=400
+            return Response(
+                {"detail": "Invalid JSON data / structure"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
     @action(detail=False, methods=["post"])
@@ -696,7 +710,7 @@ class SampleViewSet(
 
         sample_data = delete_sample(sample_list=sample_list)
 
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data)
 
 
 class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin):

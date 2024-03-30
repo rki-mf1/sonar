@@ -1,4 +1,3 @@
-
 from functools import reduce
 import json
 import operator
@@ -20,8 +19,6 @@ from rest_api.data_entry.property_job import delete_property, find_or_create_pro
 from rest_api.data_entry.reference_job import delete_reference
 
 from rest_api.utils import (
-    create_error_response,
-    create_success_response,
     write_to_file,
 )
 from rest_framework import generics, serializers, viewsets
@@ -81,18 +78,14 @@ class AlignmentViewSet(
         url_path="get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)",
     )
     def get_alignment_data(self, request: Request, seqhash=None, replicon_id=None):
-        # if seq_id is None  or element_id is None:
-        #    return create_error_response(message='Some parameters are missing in URL')
-        # already taking care by Django
         sample_data = {}
-        # replicon_id = element_id
         queryset = self.queryset.filter(
             sequence__seqhash=seqhash, replicon_id=replicon_id
         )
         sample_data = queryset.values()
         if sample_data:
             sample_data = sample_data[0]
-        return create_success_response(data=sample_data)
+        return Response(sample_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
     def get_bulk_alignment_data(self, request: Request, *args, **kwargs):
@@ -123,11 +116,10 @@ class AlignmentViewSet(
                 "replicon_id",
                 "alignement_id",
                 "sequence_id",
-                "sequence__sample__name",  # needs to be checked since the sample_set is a many to many field
-                # Add other fields you need from the joined tables
+                "sequence__sample__name",
             )
         )
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
 class RepliconViewSet(viewsets.ModelViewSet):
@@ -139,14 +131,19 @@ class RepliconViewSet(viewsets.ModelViewSet):
         queryset = models.Replicon.objects.distinct("symbol").values("symbol")
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(molecule__reference__accession=ref)
-        return Response({"genes": [item["symbol"] for item in queryset]})
+        return Response(
+            {"genes": [item["symbol"] for item in queryset]}, status=status.HTTP_200_OK
+        )
 
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
         queryset = models.Replicon.objects.distinct("accession").values("accession")
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(molecule__reference__accession=ref)
-        return Response({"accessions": [item["accession"] for item in queryset]})
+        return Response(
+            {"accessions": [item["accession"] for item in queryset]},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["get"])
     def get_molecule_data(self, request: Request, *args, **kwargs):
@@ -157,7 +154,10 @@ class RepliconViewSet(viewsets.ModelViewSet):
         elif ref := request.query_params.get("reference_accession"):
             queryset_obj = self.queryset.filter(reference__accession=ref)
         else:
-            return create_error_response(message="Accession ID is missing")
+            return Response(
+                {"detail": "Accession ID is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if queryset_obj.exists():
             # NOTE: Fixed value for translation ID
@@ -166,7 +166,7 @@ class RepliconViewSet(viewsets.ModelViewSet):
             sample_data = queryset_obj.values()
             for obj in sample_data:
                 obj["translation_id"] = 1
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def get_source_data(self, request: Request, *args, **kwargs):
@@ -186,8 +186,11 @@ class RepliconViewSet(viewsets.ModelViewSet):
             queryset = self.queryset.filter(reference__accession=molecule_id)
             sample_data = queryset.values()
         else:
-            return create_error_response(message="Accession ID is missing")
-        return create_success_response(data=sample_data)
+            return Response(
+                {"detail": "Accession ID is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
 class GeneViewSet(viewsets.ModelViewSet):
@@ -199,7 +202,10 @@ class GeneViewSet(viewsets.ModelViewSet):
         queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(molecule__reference__accession=ref)
-        return Response({"gene_symbols": [item["gene_symbol"] for item in queryset]})
+        return Response(
+            {"gene_symbols": [item["gene_symbol"] for item in queryset]},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["get"])
     def get_gene_data(self, request: Request):
@@ -214,7 +220,10 @@ class GeneViewSet(viewsets.ModelViewSet):
         elif replicon_id := request.query_params.get("replicon_id"):
             queryset = self.queryset.filter(replicon_id=replicon_id)
         else:
-            return create_error_response(message="Searchable field is missing")
+            return Response(
+                {"detail": "Searchable field is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         sample_data = []
         for item in queryset.all():
@@ -250,7 +259,7 @@ class GeneViewSet(viewsets.ModelViewSet):
 
         # sample_data =queryset.values()
 
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
 class MutationViewSet(
@@ -266,7 +275,10 @@ class MutationViewSet(
         queryset = models.Mutation.objects.distinct("alt").values("alt")
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(element__replicon__reference__accession=ref)
-        return Response({"alts": [item["alt"] for item in queryset]})
+        return Response(
+            {"alts": [item["alt"] for item in queryset]}, status=status.HTTP_200_OK
+        )
+
 
 class ReferenceViewSet(
     viewsets.GenericViewSet,
@@ -279,39 +291,44 @@ class ReferenceViewSet(
     @action(detail=False, methods=["post"])
     def import_gbk(self, request: Request, *args, **kwargs):
         if not request.FILES or "gbk_file" not in request.FILES:
-            return create_error_response(message="No file uploaded.")
+            return Response(
+                {"detail": "No file uploaded."}, status=status.HTTP_400_BAD_REQUEST
+            )
         if "translation_id" not in request.data:
-            return create_error_response(message="No translation_id provided.")
+            return Response(
+                {"detail": "No translation_id provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         translation_id = int(request.data.get("translation_id"))
         gbk_file = request.FILES.get("gbk_file")
-        try:
-            import_gbk_file(gbk_file, translation_id)
-        except Exception as e:
-            print(e)
-            return create_error_response(message=str(e))
-        return create_success_response(message="OK")
+        import_gbk_file(gbk_file, translation_id)
+        return Response(
+            {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
+        )
 
     @action(detail=False, methods=["post"])
     def delete_reference(self, request: Request, *args, **kwargs):
         if "accession" not in request.data:
-            return create_error_response(message="No accession provided.")
+            return Response(
+                {"detail": "No accession provided."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         accession = request.data.get("accession")
 
         data = delete_reference(accession)
-        return create_success_response(message="OK", data=data)
+        return Response(data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
         queryset = models.Reference.objects.all()
         accession = [item.accession for item in queryset]
-        return create_success_response(data=accession)
+        return Response(data=accession, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def get_all_references(self, request: Request, *args, **kwargs):
         queryset = models.Reference.objects.all()
         sample_data = queryset.values()
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data, status=status.HTTP_200_OK)
 
     # multilple get in one.
 
@@ -416,7 +433,9 @@ class PropertyViewSet(
     @action(detail=False, methods=["get"])
     def distinct_properties(self, request: Request, *args, **kwargs):
         if not (property_name := request.query_params.get("property_name")):
-            return Response("No property_name provided.")
+            return Response(
+                "No property_name provided.", status=status.HTTP_400_BAD_REQUEST
+            )
         sample_property_fields = [
             field.name for field in models.Sample._meta.get_fields()
         ]
@@ -424,12 +443,16 @@ class PropertyViewSet(
             queryset = models.Sample.objects.all()
             queryset = queryset.distinct(property_name)
             return Response(
-                {"values": [getattr(item, property_name) for item in queryset]}
+                {"values": [getattr(item, property_name) for item in queryset]},
+                status=status.HTTP_200_OK,
             )
         queryset = models.Sample2Property.objects.filter(property__name=property_name)
         datatype = queryset[0].property.datatype
         queryset = queryset.distinct(datatype)
-        return Response({"values": [getattr(item, datatype) for item in queryset]})
+        return Response(
+            {"values": [getattr(item, datatype) for item in queryset]},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["get"])
     def unique_collection_dates(self, request: Request, *args, **kwargs):
@@ -442,7 +465,7 @@ class PropertyViewSet(
             )
         queryset = queryset.distinct("value_text")
         date_list = [item.value_date for item in queryset]
-        return Response(data={"collection_dates": date_list})
+        return Response(data={"collection_dates": date_list}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def unique_countries(self, request: Request, *args, **kwargs):
@@ -455,7 +478,7 @@ class PropertyViewSet(
             )
         queryset = queryset.distinct("value_text")
         country_list = [item.value_text for item in queryset]
-        return Response(data={"countries": country_list})
+        return Response(data={"countries": country_list}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def unique_sequencing_techs(self, request: Request, *args, **kwargs):
@@ -468,7 +491,9 @@ class PropertyViewSet(
             )
         queryset = queryset.distinct("value_text")
         sequencing_tech_list = [item.value_text for item in queryset]
-        return Response(data={"sequencing_techs": sequencing_tech_list})
+        return Response(
+            data={"sequencing_techs": sequencing_tech_list}, status=status.HTTP_200_OK
+        )
 
     @action(detail=False, methods=["get"])
     def distinct_property_names(self, request: Request, *args, **kwargs):
@@ -477,7 +502,9 @@ class PropertyViewSet(
         property_names = [item.name for item in queryset]
         sample_properties = models.Sample._meta.get_fields()
         property_names += [item.name for item in sample_properties]
-        return Response(data={"property_names": property_names})
+        return Response(
+            data={"property_names": property_names}, status=status.HTTP_200_OK
+        )
 
     @action(detail=False, methods=["post"])
     def add_property(self, request: Request, *args, **kwargs):
@@ -491,17 +518,17 @@ class PropertyViewSet(
         )
 
         if created:
-            return create_success_response(
-                message="Property added successfully",
+            return Response(
+                {"detail": "Property added successfully"},
                 return_status=status.HTTP_201_CREATED,
             )
         elif obj:
-            return create_success_response(
-                message="Property already exists", return_status=status.HTTP_200_OK
+            return Response(
+                {"detail": "Property already exists"}, status=status.HTTP_200_OK
             )
         else:
-            return create_error_response(
-                message="Failed to add property",
+            return Response(
+                {"detail": "Failed to add property"},
                 return_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -512,20 +539,20 @@ class PropertyViewSet(
 
         if deleted is not False:
             if deleted == 0:
-                return create_success_response(
-                    message="No matching property found for deletion",
-                    return_status=status.HTTP_200_OK,
+                return Response(
+                    {"detail": "No matching property found for deletion"},
+                    status=status.HTTP_200_OK,
                 )
-            return create_success_response(
-                message="Property deleted successfully",
-                return_status=status.HTTP_200_OK,
+            return Response(
+                {"detail": "Property deleted successfully"},
+                status=status.HTTP_200_OK,
             )
         else:
-            return create_error_response(
-                    message="Error occurred, please inform the admin.",
-                    return_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-        
+            return Response(
+                {"detail": "Error occurred, please inform the admin."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
         """
@@ -585,7 +612,7 @@ class PropertyViewSet(
                 }
             )
         data = {"keys": cols, "values": data_list}
-        return create_success_response(data=data)
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 class MutationFrequencySerializer(serializers.HyperlinkedModelSerializer):
@@ -646,7 +673,8 @@ class AAMutationViewSet(
             for mutation in mutation_query
         ]
 
-        return Response(data=response)
+        return Response(data=response, status=status.HTTP_200_OK)
+
 
 class ResourceViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"])
@@ -658,13 +686,10 @@ class ResourceViewSet(viewsets.ViewSet):
             with open(file_path, "rb") as file:
                 translation_table = pickle.load(file)
         except FileNotFoundError:
-            return create_error_response(
-                message="error: File not found", return_status=404
+            return Response(
+                {"detail": "error: File not found"}, status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
-            return create_error_response({"error": str(e)}, return_status=500)
-
-        return create_success_response(data=translation_table)
+        return Response(data=translation_table)
 
 
 class FileUploadViewSet(viewsets.ViewSet):
@@ -672,11 +697,11 @@ class FileUploadViewSet(viewsets.ViewSet):
     def import_upload(self, request, *args, **kwargs):
         """
         if "sample_file" not in request.FILES:
-            return create_error_response(message="No sample file uploaded.", return_status=400)
+            return Response({"detail":"No sample file uploaded."}, status=status.=400)
         if "anno_file" not in request.FILES:
-            return create_error_response(message="No ann file uploaded.", return_status=400)
+            return Response({"detail":"No ann file uploaded."}, status=status.=400)
         if "var_file" not in request.FILES:
-            return create_error_response(message="No var file uploaded.", return_status=400)
+            return Response({"detail":"No var file uploaded."}, status=status.=400)
         sample_file = request.FILES.get("sample_file")
         anno_file = request.FILES.get("anno_file")
         var_file = request.FILES.get("var_file")
@@ -689,8 +714,8 @@ class FileUploadViewSet(viewsets.ViewSet):
         """
 
         if "zip_file" not in request.FILES:
-            return create_error_response(
-                message="No zip file uploaded.", return_status=400
+            return Response(
+                {"detail": "No zip file uploaded."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         zip_file = request.FILES.get("zip_file")
@@ -701,22 +726,16 @@ class FileUploadViewSet(viewsets.ViewSet):
             # for file_info in zip_ref.infolist():
             #    print(file_info)
 
-        return create_success_response(
-            message="File uploaded successfully", return_status=status.HTTP_201_CREATED
+        return Response(
+            {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
 
     @action(detail=False, methods=["get"])
     def start_file_import(self, request, *args, **kwargs):
         check_for_new_data()
-        return create_success_response(
-            message="File uploaded successfully", return_status=status.HTTP_201_CREATED
+        return Response(
+            {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
-
-
-class FuctionsViewSet(viewsets.ViewSet):
-    @action(detail=False, methods=["get"])
-    def match(self, request: Request):
-        return create_success_response(return_status=status.HTTP_200_OK)
 
 
 class LineageViewSet(
@@ -734,4 +753,4 @@ class LineageViewSet(
         sublineages = lineage.get_sublineages()
         list = [str(lineage) for lineage in sublineages]
         list.sort()
-        return create_success_response(data={"sublineages": list})
+        return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
