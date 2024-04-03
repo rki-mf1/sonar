@@ -69,6 +69,7 @@ class SampleViewSet(
             "Replicon": self.filter_replicon,
             "Sample": self.filter_sample,
             "Sublineages": self.filter_sublineages,
+            "Annotation": self.filter_annotation,
         }
 
     @action(detail=False, methods=["get"])
@@ -108,7 +109,6 @@ class SampleViewSet(
         TODO:
         1. Optimize the query (reduce the database hit)
         2. add accession of reference at the output
-        3. add annotation info at the output
         """
 
         try:
@@ -116,6 +116,8 @@ class SampleViewSet(
             showNX = strtobool(request.query_params.get("showNX", "False"))
             vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
             csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
+            get_all = strtobool(request.query_params.get("get_all", "False"))
+
             self.has_property_filter = False
             queryset = models.Sample.objects.all()
             if filter_params := request.query_params.get("filters"):
@@ -188,10 +190,10 @@ class SampleViewSet(
             serializer = SampleGenomesSerializer(queryset, many=True)
             return self.get_paginated_response(serializer.data)
         except Exception as e:
-            print(e)
             traceback.print_exc()
             return Response(
-                message=str(e), return_status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                data={"detail": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     def resolve_genome_filter(self, filters) -> Q:
@@ -221,6 +223,29 @@ class SampleViewSet(
         sample = self.get_object()
         serializer = SampleGenomesSerializer(sample)
         return Response(serializer.data)
+
+    def filter_annotation(
+            self,
+            property_name,
+            filter_type,
+            value,
+            exclude: bool = False,
+            *args,
+            **kwargs,
+        ) -> Q: 
+        # if property_name == "impact":
+        #     mutation_condition = Q(annotations__impact__{filter_type}"=ref_pos)
+        # elif property_name == "seq_ontology":
+        #     mutation_condition = Q(annotations__seq_ontology__{filter_type}"=ref_pos)
+        query ={}
+        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = value
+
+        alignment_qs = models.Alignment.objects.filter(**query)
+        filters = {"sequence__alignments__in": alignment_qs}   
+
+        if exclude:
+            return ~Q(**filters)
+        return Q(**filters)
 
     def filter_property(
         self,
@@ -484,6 +509,10 @@ class SampleViewSet(
 
     @action(detail=False, methods=["post"])
     def import_properties_tsv(self, request: Request, *args, **kwargs):
+        """
+        NOTE: 
+        1. if prop is not exist in the database, it will be created automatically
+        """
         print("Importing properties...")
         timer = datetime.now()
         sample_id_column = request.data.get("sample_id_column")
@@ -520,6 +549,7 @@ class SampleViewSet(
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         sample_property_names = []
         custom_property_names = []
         for property_name in properties_df.columns:
