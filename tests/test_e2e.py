@@ -34,7 +34,8 @@ def test_get_list_ref(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=1)
+@pytest.mark.xdist_group(name="group_prop")
+@pytest.mark.order(1)
 def test_add_prop_varchar(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_varchar --dtype value_varchar --descr 'test-varchar' "
@@ -44,7 +45,8 @@ def test_add_prop_varchar(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=2)
+@pytest.mark.xdist_group(name="group_prop")
+@pytest.mark.order(2)
 def test_add_prop_int(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_integer --dtype value_integer --descr 'test-integer' "
@@ -54,7 +56,8 @@ def test_add_prop_int(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=3)
+@pytest.mark.xdist_group(name="group_prop")
+@pytest.mark.order(3)
 def test_add_prop_float(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_float --dtype value_float --descr 'test-floating-point-number' "
@@ -64,7 +67,8 @@ def test_add_prop_float(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=4)
+@pytest.mark.xdist_group(name="group_prop")
+@pytest.mark.order(4)
 def test_add_prop_text(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_text --dtype value_text --descr 'test-text' "
@@ -74,7 +78,8 @@ def test_add_prop_text(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=5)
+@pytest.mark.xdist_group(name="group_prop")
+@pytest.mark.order(5)
 def test_add_prop_zip(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_zip --dtype value_zip --descr 'test-zip' "
@@ -84,7 +89,8 @@ def test_add_prop_zip(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=6)
+@pytest.mark.xdist_group(name="group_prop")
+@pytest.mark.order(6)
 def test_add_prop_date(capfd, api_url):
     code = run_cli(
         f" add-prop --db {api_url} --name test_date --dtype value_date --descr 'test-date' "
@@ -94,8 +100,9 @@ def test_add_prop_date(capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.run(order=7)
-def test_delete_prop(capfd, api_url):
+@pytest.mark.xdist_group(name="group_prop")
+@pytest.mark.order(8)
+def test_delete_prop_varchar(capfd, api_url):
     code = run_cli(f" delete-prop --db {api_url} --name test_varchar --force ")
     out, err = capfd.readouterr()
     assert "successfully" in out
@@ -127,25 +134,6 @@ def test_delete_prop(capfd, api_url):
     assert code == 0
 
 
-# pytest fail to work with  workerpool shared_objects
-def skip_test_add_sequence_parasail_auto_anno(monkeypatch, api_url, tmpfile_name):
-    """Test import command using covid19 compressed fasta file and perform annotation"""
-    monkeypatch.chdir(Path(__file__).parent)
-    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}  -t 2 --auto-anno --update"
-    code = run_cli(command)
-
-    assert code == 0
-
-
-# pytest fail to work with  workerpool shared_objects
-def skip_test_add_sequence_mafft_prop_auto_link(monkeypatch, api_url, tmpfile_name):
-    monkeypatch.chdir(Path(__file__).parent)
-    code = run_cli(
-        f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz  --tsv covid19/meta.tsv --cache {tmpfile_name}  --cols sample=IMS_ID -t 1 --auto-link --update"
-    )
-    assert code == 0
-
-
 def test_add_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     # new_ref_file = "mpox/NC_063383.1.gb"
@@ -164,8 +152,14 @@ def test_delete_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-def skip_test_delete_sample():
-    pass
+def test_delete_sample_fromfile(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    code = run_cli(
+        f"delete-sample --db {api_url} --sample-file covid19/sample_list.2.txt --force"
+    )
+    out, err = capfd.readouterr()
+    assert "0 of 2 samples found and deleted." in out
+    assert code == 0
 
 
 def test_output_csv_format(capfd, api_url, tmpfile_name):

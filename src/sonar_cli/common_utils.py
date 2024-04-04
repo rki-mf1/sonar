@@ -194,7 +194,7 @@ def read_var_file(var_file: str, exclude_var_type: str = "", showNX: bool = Fals
     return iter_dna_list
 
 
-def flatten_json_output(result_data: list):
+def flatten_json_output(result_data: list, exclude_annotation=False):
     flattened_data = []
     # Load JSON data
 
@@ -206,14 +206,20 @@ def flatten_json_output(result_data: list):
         for prop in result.get("properties", []):
             flattened_entry[prop["name"]] = prop["value"]
 
-        flattened_entry["genomic_profiles"] = " ".join(
-            result.get("genomic_profiles", [])
-        )
+        if exclude_annotation:
+            flattened_entry["genomic_profiles"] = " ".join(
+                result.get("genomic_profiles", [])
+            )
+        else:
+            flattened_entry["genomic_profiles"] = " ".join(
+                [
+                    f"{key}'({', '.join(value)})'" if value else f"{key}"
+                    for key, value in result["genomic_profiles"].items()
+                ]
+            )
+
         flattened_entry["proteomic_profiles"] = " ".join(
             result.get("proteomic_profiles", [])
-        )
-        flattened_entry["annotation_profiles"] = " ".join(
-            result.get("annotation_profiles", [])
         )
         flattened_data.append(flattened_entry)
 

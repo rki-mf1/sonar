@@ -169,7 +169,7 @@ class sonarCache:
                 "sample_id": sample_info["sample_id"],
                 "sequence_seqhash": sample_info["sequence__seqhash"],
             }
-            for sample_info in json_response["data"]
+            for sample_info in json_response
         }
 
         # fecth Alignment
@@ -183,7 +183,7 @@ class sonarCache:
         )
         alignemnt_dict = {
             data["sequence__sample__name"]: data["alignement_id"]
-            for data in json_response["data"]
+            for data in json_response
         }
 
         for i, data in enumerate(batch_data):
@@ -544,24 +544,24 @@ class sonarCache:
             sys.exit(1)
         return fname
 
-    def cache_translation_table(self, translation_id):
-        """
-        If the translation table
-        is not in the cache, it is retrieved from the database and written to a file
+    # def cache_translation_table(self, translation_id):
+    #     """
+    #     If the translation table
+    #     is not in the cache, it is retrieved from the database and written to a file
 
-        :param translation_id: The id of the translation table
-        :param dbm: the database manager
-        :return: A file name.
-        """
-        fname = self.get_tt_fname(translation_id)  # write under /cache/ref/
-        if translation_id not in self._tt:
-            self.write_pickle(
-                fname,
-                APIClient(base_url=self.base_url).get_translation_dict(translation_id),
-            )
-            # self.write_pickle(fname, dbm.get_translation_dict(translation_id))
-            self._tt.add(translation_id)
-        return fname
+    #     :param translation_id: The id of the translation table
+    #     :param dbm: the database manager
+    #     :return: A file name.
+    #     """
+    #     fname = self.get_tt_fname(translation_id)  # write under /cache/ref/
+    #     if translation_id not in self._tt:
+    #         self.write_pickle(
+    #             fname,
+    #             APIClient(base_url=self.base_url).get_translation_dict(translation_id),
+    #         )
+    #         # self.write_pickle(fname, dbm.get_translation_dict(translation_id))
+    #         self._tt.add(translation_id)
+    #     return fname
 
     def cache_cds(self, refid, refmol_acc):
         """

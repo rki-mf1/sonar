@@ -818,14 +818,8 @@ class sonarUtils:
 
     @staticmethod
     def get_all_properties():
-
         json_response = APIClient(base_url=BASE_URL).get_all_properties()
-        if json_response["status"] != "success":
-            LOGGER.error(json_response["message"])
-            sys.exit(0)
-        data = json_response["data"]
-
-        return data["keys"], data["values"]
+        return json_response["keys"], json_response["values"]
 
     @staticmethod
     def get_all_references():

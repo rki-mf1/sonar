@@ -120,7 +120,11 @@ def test_match_prop_text(capfd, api_url):
 
 
 def test_match_prop_text_NULL(capfd, api_url):
-    pass
+    code = run_cli(f'match --db {api_url} -r MN908947.3 --comments "" --count')
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "0" == lines[-1]
+    assert code == 0
 
 
 def test_match_prop_int(capfd, api_url):
@@ -365,4 +369,52 @@ def test_match_prop_varchar(capfd, api_url):
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "5" == lines[-1]
+    assert code == 0
+
+
+def test_match_anno_type(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --anno-type disruptive_inframe_insertion --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
+
+
+def test_match_anno_impact(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "2" == lines[-1]
+    assert code == 0
+
+
+def test_match_anno_impact_and_profile(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --anno-impact HIGH  --profile C24503T --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_anno_impact_and_prop(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --anno-impact MODERATE  --age '>50' --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "9" == lines[-1]
+    assert code == 0
+
+
+def test_match_anno_impact_and_type(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --anno-type stop_gained --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
     assert code == 0

@@ -70,7 +70,7 @@ def parse_args(args=None):
         subparsers, database_parser, thread_parser, reference_parser
     )
 
-    subparsers, _ = create_subparser_delete(subparsers, sample_parser)
+    subparsers, _ = create_subparser_delete(subparsers, database_parser, sample_parser)
 
     # property
     subparsers, _ = create_subparser_list_prop(subparsers, database_parser)
@@ -570,13 +570,32 @@ def create_subparser_match(
     #     help="match only mutation profiles with frameshift mutations",
     #     action="store_true",
     # )
-
+    parser.add_argument(
+        "--ex-anno",
+        help="exclude annotation information in output",
+        action="store_true",
+    )
     parser.add_argument(
         "--with-sublineage",
         help="recursively get all sublineages from a given lineage (--lineage) (only child) ",
         action="store_true",
     )
-
+    parser.add_argument(
+        "--anno-impact",
+        metavar="STR",
+        help="filter by effect impact; HIGH, MODERATE, LOW, MODIFIER",
+        type=str,
+        nargs="+",
+        default=[],
+    )
+    parser.add_argument(
+        "--anno-type",
+        metavar="STR",
+        help="filter by annotation (a.k.a. effect) using sequence ontology terms; frameshift_variant, missense_variant, synonymous_variant etc.",
+        type=str,
+        nargs="+",
+        default=[],
+    )
     parser.add_argument(
         "--out-cols",
         metavar="STR",
@@ -664,9 +683,9 @@ def handle_match(args: argparse.Namespace):
 
     # Set output format
     output_format = "count" if args.count else args.format
-
     # Perform matching
     sonarUtils.match(
+        db=args.db,
         profiles=args.profile,
         reference=args.reference,
         samples=samples,
@@ -675,7 +694,10 @@ def handle_match(args: argparse.Namespace):
         output_column=args.out_cols,
         format=output_format,
         showNX=args.showNX,
+        annotation_type=args.anno_type,
+        annotation_impact=args.anno_impact,
         # frameshifts_only=args.frameshifts_only,
+        exclude_annotation=args.ex_anno,
         with_sublineage=args.with_sublineage,
         defined_props=values_listofdict,
     )
@@ -690,12 +712,7 @@ def handle_list_ref(args: argparse.Namespace):
 
 
 def handle_add_ref(args: argparse.Namespace):
-    flag = sonarUtils.add_ref_by_genebank_file(reference_gb=args.gb, debug=args.debug)
-
-    if flag:
-        LOGGER.info("The reference has been added successfully.")
-    else:
-        LOGGER.error("The reference failed to be added.")
+    sonarUtils.add_ref_by_genebank_file(reference_gb=args.gb, debug=args.debug)
 
 
 def handle_delete_ref(args: argparse.Namespace):

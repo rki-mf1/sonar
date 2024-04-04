@@ -325,12 +325,41 @@ def get_operator(op: Optional[str] = None, inverse: bool = False) -> str:
     # return OPERATORS["inverse"][op] if inverse else OPERATORS["standard"][op]
 
 
+def create_annotaiton_query(
+    annotation_type: List[str] = [],
+    annotation_impact: List[str] = [],
+):
+    _query = {"andFilter": []}
+    if annotation_type:
+        _tmp_query = {
+            "label": "Annotation",
+            "property_name": "seq_ontology",
+            "filter_type": "in",
+            "value": annotation_type,
+            "exclude": False,
+        }
+        _query["andFilter"].append(_tmp_query)
+    if annotation_impact:
+        _tmp_query = {
+            "label": "Annotation",
+            "property_name": "impact",
+            "filter_type": "in",
+            "value": annotation_impact,
+            "exclude": False,
+        }
+        _query["andFilter"].append(_tmp_query)
+
+    return _query
+
+
 def construct_query(  # noqa: C901
     properties: Optional[Dict[str, List[str]]] = None,
     profiles: Optional[Dict[str, List[str]]] = None,
     defined_props: Optional[List[Dict[str, str]]] = [],
     with_sublineage: bool = False,
     samples: Optional[List[str]] = [],
+    annotation_type: List[str] = [],
+    annotation_impact: List[str] = [],
 ):
 
     int_pattern_single = re.compile(r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*)$")
@@ -352,12 +381,19 @@ def construct_query(  # noqa: C901
     LOGGER.debug(f"Input Profiles:{profiles}")
     LOGGER.debug(f"Input Properties:{properties}")
     LOGGER.debug(f"Enable Sublineage:{with_sublineage}")
+    LOGGER.debug(f"Input Annotation Impact:{annotation_impact}")
+    LOGGER.debug(f"Input Annotation Type:{annotation_type}")
 
     if samples:
         final_query["andFilter"].append(create_sample_query(samples))
 
     if profiles:
         final_query["andFilter"].append(create_profile_query(profiles))
+
+    if annotation_type or annotation_impact:
+        final_query["andFilter"].append(
+            create_annotaiton_query(annotation_type, annotation_impact)
+        )
 
     if properties:
         if defined_props:
@@ -570,8 +606,8 @@ def _check_reference(db=None, reference=None):
     if reference is not None and reference not in accession_list:
         LOGGER.error(f"Check reference: The reference {reference} does not exist.")
         sys.exit(1)
-    else:
-        LOGGER.info(f"Check reference: The reference {reference} does exist.")
+    # else:
+    #     LOGGER.info(f"Check reference: The reference {reference} does exist.")
 
 
 def _log_import_mode(update: bool, quiet: bool):

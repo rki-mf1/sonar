@@ -61,14 +61,15 @@ class APIClient:
                 params=params,
                 files=files,
                 verify=True,
+                # timeout=300,
             )
             return_json = response.json()
             #   response.raise_for_status() for HTTP errors (4xx, 5xx)
             if 400 <= response.status_code < 500:
                 # Handle client-side errors (e.g., bad request)
-                message = return_json["message"] if "message" in return_json else ""
+                # message = return_json["message"] if "message" in return_json else ""
                 LOGGER.error(
-                    f"{response.status_code} Client Error: {response.reason}: {message} "
+                    f"{response.status_code} Client Error: {response.reason}: {return_json} "
                 )
                 LOGGER.error("Immediately stop running and exit")
                 sys.exit(1)
@@ -78,13 +79,19 @@ class APIClient:
                 )
                 LOGGER.error("Immediately stop running and exit")
                 sys.exit(1)
-
+        except requests.exceptions.ConnectionError as errc:
+            LOGGER.error(f"Error Connecting: {errc}")
+            sys.exit(1)
+        except requests.exceptions.Timeout as errt:
+            LOGGER.error(f"Timeout Error: {errt}")
+            # LOGGER.warn("We set timeout 300 secs")
+            sys.exit(1)
         except requests.exceptions.HTTPError as errh:
             LOGGER.error(f"HTTP Error: {errh}")
-            response.raise_for_status()
             sys.exit(1)
         except requests.exceptions.RequestException as err:
             LOGGER.error(f"Request Exception: {err}")
+            LOGGER.error(f"at request: {url}")
             response.raise_for_status()
             sys.exit(1)
 
@@ -98,17 +105,7 @@ class APIClient:
         json_response = self._make_request(
             "GET", endpoint=self.get_all_references_endpoint
         )
-        try:
-            data = json_response["data"]
-            # if not data:
-            #    raise ValueError("No data found in the response.")
-            return data
-
-        # TODO: can we move this except to the def _make_request, so we dont repeat the code
-        except KeyError:
-            raise ValueError("Invalid JSON response. 'data' key not found.")
-        except Exception as e:
-            raise ValueError(f"Error processing JSON response: {str(e)}")
+        return json_response
 
     def get_all_properties(self):
         """
@@ -134,15 +131,7 @@ class APIClient:
         json_response = self._make_request(
             "GET", endpoint=self.get_distinct_accession_endpoint
         )
-        try:
-            data = json_response["data"]
-            # if not data:
-            #    raise ValueError("No data found in the response.")
-            return data
-        except KeyError:
-            raise ValueError("Invalid JSON response. 'data' key not found.")
-        except Exception as e:
-            raise ValueError(f"Error processing JSON response: {str(e)}")
+        return json_response
 
     def get_bulk_sample_data(self, sample_name_list: List[str]):
         data = {"sample_data": sample_name_list}
@@ -175,9 +164,8 @@ class APIClient:
         json_response = self._make_request(
             "GET", endpoint=self.get_sample_data_endpoint, params=params
         )
-        if json_response["data"]:
-            data = json_response["data"]
-            return (data["sample_id"], data["sequence__seqhash"])
+        if len(json_response) > 0:
+            return (json_response["sample_id"], json_response["sequence__seqhash"])
         else:
             return (None, None)
 
@@ -204,9 +192,9 @@ class APIClient:
         params = {}
         url = f"{self.get_alignment_endpoint}/{seqhash}/{element_id}/"
         json_response = self._make_request("GET", endpoint=url, params=params)
-        if json_response["data"]:
-            data = json_response["data"]
-            return data["id"]
+
+        if len(json_response) > 0:
+            return json_response["id"]
         else:
             return None
 
@@ -242,10 +230,9 @@ class APIClient:
         json_response = self._make_request(
             "GET", endpoint=self.get_replicon_endpoint, params=params
         )
-        if json_response["data"]:
-            row = json_response["data"]
-
-            return {x["accession"]: x for x in row}
+        if len(json_response) > 0:
+            list_of_dict = json_response
+            return {x["accession"]: x for x in list_of_dict}
         else:
             return {}
 
@@ -271,8 +258,8 @@ class APIClient:
         json_response = self._make_request(
             "GET", endpoint=self.get_replicon_endpoint, params=params
         )
-        if json_response["data"]:
-            data = json_response["data"][0]
+        if len(json_response) > 0:
+            data = json_response[0]
             return data
         else:
             return None
@@ -300,29 +287,29 @@ class APIClient:
         json_response = self._make_request(
             "GET", endpoint=self.get_gene_endpoint, params=params
         )
-        if json_response["data"]:
-            data = json_response["data"]
-            return data
+        if len(json_response) > 0:
+            return json_response
         else:
             return None
 
-    def get_translation_dict(self, translation_id):
-        """
-        Returns all elements based on given molecule id
+    # def get_translation_dict(self, translation_id):
+    #     NOTE: no longer use, will be removed
+    #     """
+    #     Returns all elements based on given molecule id
 
-        Returns:
-            Optional[list]: The list of element if it exists, None otherwise.
-        """
-        params = {}
-        params["translation_id"] = translation_id
-        json_response = self._make_request(
-            "GET", endpoint=self.get_translation_table_endpoint, params=params
-        )
-        if json_response["data"]:
-            data = json_response["data"]
-            return data
-        else:
-            return None
+    #     Returns:
+    #         Optional[list]: The list of element if it exists, None otherwise.
+    #     """
+    #     params = {}
+    #     params["translation_id"] = translation_id
+    #     json_response = self._make_request(
+    #         "GET", endpoint=self.get_translation_table_endpoint, params=params
+    #     )
+    #     if json_response["data"]:
+    #         data = json_response["data"]
+    #         return data
+    #     else:
+    #         return None
 
     def post_import_upload(self, files):
         """
@@ -331,11 +318,7 @@ class APIClient:
         json_response = self._make_request(
             "POST", endpoint=self.post_import_upload_endpoint, files=files
         )
-        if json_response["status"] == "success":
-
-            return True
-        else:
-            return False
+        return json_response
 
     def post_add_reference(self, reference_gb_obj):
         """
@@ -349,7 +332,7 @@ class APIClient:
         json_response = self._make_request(
             "POST", endpoint=self.post_add_reference_endpoint, data=data, files=file
         )
-        if json_response["status"] == "success":
+        if json_response["detail"] == "File uploaded successfully":
             return True
         else:
             return False
@@ -370,17 +353,13 @@ class APIClient:
             data=data,
             files=file,
         )
-        if json_response["status"] == "success":
-            return True, ""
-        else:
-            return False, json_response["message"]
+        return json_response
 
     def get_variant_profile_bymatch_command(self, params: dict):
 
         json_response = self._make_request(
             "GET", endpoint=self.get_match_endpoint, params=params
         )
-
         return json_response
 
     def post_delete_sample(self, reference_accession, samples: List[str] = []):

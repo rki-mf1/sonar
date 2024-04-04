@@ -373,7 +373,10 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
 
-        APIClient(base_url=BASE_URL).post_import_upload(files)
+        json_response = APIClient(base_url=BASE_URL).post_import_upload(files)
+        msg = json_response["detail"]
+        if msg != "File uploaded successfully":
+            LOGGER.error(msg)
 
     @staticmethod
     def zip_import_upload_multithread(*sample_list):
@@ -419,7 +422,10 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
 
-        APIClient(base_url=BASE_URL).post_import_upload(files)
+        json_response = APIClient(base_url=BASE_URL).post_import_upload(files)
+        msg = json_response["detail"]
+        if msg != "File uploaded successfully":
+            LOGGER.error(msg)
 
     @staticmethod
     def _import_properties(
@@ -461,11 +467,12 @@ class sonarUtils:
                 "sample_id_column": sample_id_column,
                 "column_mapping": json.dumps(properties),
             }
-            passed, message = APIClient(base_url=BASE_URL).post_import_property_upload(
+            json_response = APIClient(base_url=BASE_URL).post_import_property_upload(
                 data=data, file=file
             )
-            if not passed:
-                LOGGER.error(message)
+            msg = json_response["detail"]
+            if msg != "File uploaded successfully":
+                LOGGER.error(msg)
 
         LOGGER.info("Sending Complete")
 
@@ -641,6 +648,7 @@ class sonarUtils:
     # MATCHING
     @staticmethod
     def match(
+        db: str = None,
         profiles: List[str] = [],
         samples: List[str] = [],
         properties: Dict[str, str] = {},
@@ -649,8 +657,11 @@ class sonarUtils:
         output_column: Optional[List[str]] = [],
         format: str = "csv",
         showNX: bool = False,
+        annotation_type: List[str] = [],
+        annotation_impact: List[str] = [],
         ignore_terminal_gaps: bool = True,
         frameshifts_only: bool = False,
+        exclude_annotation: bool = False,
         with_sublineage: bool = False,
         defined_props: Optional[List[Dict[str, str]]] = [],
     ):
@@ -673,7 +684,7 @@ class sonarUtils:
         Returns:
             None.
         """
-        sonarUtils._check_reference(reference)
+        _check_reference(db, reference)
 
         # if not reference:
         #    reference = dbm.get_default_reference_accession()
@@ -691,12 +702,16 @@ class sonarUtils:
                 defined_props=defined_props,
                 with_sublineage=with_sublineage,
                 samples=samples,
+                annotation_type=annotation_type,
+                annotation_impact=annotation_impact,
             )
         )
         params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
-        params["limit"] = -1
+        params[
+            "limit"
+        ] = 999999999999999999  # hack (to get all result by using max bigint)
         params["offset"] = 0
 
         LOGGER.debug(params["filters"])
@@ -715,8 +730,9 @@ class sonarUtils:
             rows,
             format,
             reference,
-            outfile,
-            output_column,
+            outfile=outfile,
+            exclude_annotation=exclude_annotation,
+            output_column=output_column,
         )
 
     @staticmethod
@@ -725,6 +741,7 @@ class sonarUtils:
         format: str,
         reference: str,
         outfile: Optional[str],
+        exclude_annotation: bool = False,
         output_column: Optional[List[str]] = [],
     ):
         """
@@ -741,9 +758,7 @@ class sonarUtils:
         """
         if format in ["csv", "tsv"]:
             tsv = format == "tsv"
-
-            cursor = flatten_json_output(cursor["results"])
-
+            cursor = flatten_json_output(cursor["results"], exclude_annotation)
             sonarUtils.export_csv(
                 cursor,
                 output_column=output_column,
@@ -792,6 +807,7 @@ class sonarUtils:
             data_iter = iter(data)
         else:
             data_iter = data
+        print(data_iter)
 
         try:
             first_row = next(data_iter)
@@ -870,14 +886,8 @@ class sonarUtils:
 
     @staticmethod
     def get_all_properties():
-
         json_response = APIClient(base_url=BASE_URL).get_all_properties()
-        if json_response["status"] != "success":
-            LOGGER.error(json_response["message"])
-            sys.exit(0)
-        data = json_response["data"]
-
-        return data["keys"], data["values"]
+        return json_response["keys"], json_response["values"]
 
     @staticmethod
     def get_all_references():
@@ -906,7 +916,12 @@ class sonarUtils:
         _files_exist(reference_gb)
         reference_gb_obj = open(reference_gb, "rb")
         try:
-            return APIClient(base_url=BASE_URL).post_add_reference(reference_gb_obj)
+            flag = APIClient(base_url=BASE_URL).post_add_reference(reference_gb_obj)
+
+            if flag:
+                LOGGER.info("The reference has been added successfully.")
+            else:
+                LOGGER.error("The reference failed to be added.")
         except Exception as e:
             LOGGER.exception(e)
             LOGGER.error("Fail to process GeneBank file")
@@ -928,13 +943,10 @@ class sonarUtils:
                 )
         """
         json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
-        if json_response["status"] == "success":
-            LOGGER.info(
-                f"{json_response['data']['samples_count']} alignments that are linked to the reference will also be deleted."
-            )
-        else:
-            LOGGER.Error("Cannot delete the reference")
-            LOGGER.Error(f"Message: {json_response['status']}")
+
+        LOGGER.info(
+            f"{json_response['samples_count']} alignments that are linked to the reference will also be deleted."
+        )
 
     @staticmethod
     def delete_sample(reference: str = None, samples: List[str] = []) -> None:
@@ -954,11 +966,10 @@ class sonarUtils:
         json_response = APIClient(base_url=BASE_URL).post_delete_sample(
             reference, samples=samples
         )
-        if json_response["status"] == "success":
-            deleted = json_response["data"]["deleted_samples_count"]
-            LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
-        else:
-            LOGGER.error(f"{json_response['message']}")
+
+        deleted = json_response["deleted_samples_count"]
+        LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
+
         """
 
         LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
@@ -982,27 +993,14 @@ class sonarUtils:
             "description": description,
         }
         json_response = APIClient(base_url=BASE_URL).post_add_property(data)
-
-        if json_response["status"] == "success":
-            LOGGER.info(json_response["message"])
-        else:
-            LOGGER.error(json_response["message"])
+        LOGGER.info(json_response["detail"])
 
     @staticmethod
     def delete_property(
         name: str,
     ) -> int:
         json_response = APIClient(base_url=BASE_URL).post_delete_property(name)
-        if json_response["status"] == "success":
-            LOGGER.info(json_response["message"])
-        else:
-            LOGGER.error(json_response["message"])
-
-    def _check_reference(reference):
-        accession_list = APIClient(base_url=BASE_URL).get_distinct_reference()
-        if reference is not None and reference not in accession_list:
-            LOGGER.error(f"The reference {reference} does not exist.")
-            sys.exit(1)
+        LOGGER.info(json_response["detail"])
 
 
 def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
