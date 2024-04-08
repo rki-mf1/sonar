@@ -31,11 +31,11 @@ jobs:
       - name: ReportGenerator
         uses: danielpalme/ReportGenerator-GitHub-Action@4.8.12
         with:
-        reports: 'coverage.xml'
-        targetdir: 'coveragereport'
-        reporttypes: 'HtmlInline;Cobertura;MarkdownSummary' 
+          reports: 'coverage.xml'
+          targetdir: 'coveragereport'
+          reporttypes: 'HtmlInline;Cobertura;MarkdownSummary' 
 
       - name: Publish coverage summary
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-        path: coveragereport/Summary.md
+          path: coveragereport/Summary.md
