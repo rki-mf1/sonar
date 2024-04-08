@@ -1,0 +1,29 @@
+name: Run tests
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+
+      - name: Build the backend container
+        run: |
+          cp template.env .env
+          docker build -t backend_dev:local -f Dockerfile .
+
+      - name: Bring up containers
+        run: docker compose -f docker-compose-dev.yml up -d
+
+      - name: Install testing dependencies
+        run: docker compose -f docker-compose-dev.yml exec -t dev-django pip install --no-cache-dir --disable-pip-version-check -r requirements-testing.txt
+          
+      - name: Run tests
+        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage run ./manage.py test --no-input
+
+      - name: Generate reports
+        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage report
