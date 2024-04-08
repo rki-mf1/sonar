@@ -3,10 +3,13 @@ name: Run tests
 on:
   workflow_dispatch:
   push:
+  pull-requests:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
