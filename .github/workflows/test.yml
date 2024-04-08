@@ -1,7 +1,7 @@
 name: Run tests
 
 on:
-  pull_request:
+  push:
 
 jobs:
   test:
@@ -11,9 +11,6 @@ jobs:
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: Build the backend container
         run: |
@@ -32,6 +29,9 @@ jobs:
       - name: Generate reports
         run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage xml
 
+      - uses: jwalton/gh-find-current-pr@v1
+        id: finder
+
       - name: ReportGenerator
         uses: danielpalme/ReportGenerator-GitHub-Action@4.8.12
         with:
@@ -42,4 +42,5 @@ jobs:
       - name: Publish coverage summary
         uses: marocchino/sticky-pull-request-comment@v2
         with:
+          number: ${{ steps.finder.outputs.pr }}
           path: coveragereport/Summary.md
