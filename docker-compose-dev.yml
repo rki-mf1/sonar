@@ -11,7 +11,7 @@ services:
       - conf/dev_db.env
       - conf/dev_django.env
     ports:
-      - 5432
+      - "5432"
 
   dev-django:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
@@ -36,6 +36,7 @@ services:
     ports:
       # to access directly, normally can use localhost:8000 via the nginx proxy
       - "9080"
+
   dev-django-apscheduler:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
     env_file:
@@ -48,6 +49,7 @@ services:
       - .:/code
     depends_on:
       - "postgres"
+
   backend-nginx:
     build:
       context: ./nginx
@@ -58,10 +60,11 @@ services:
       - "8000:8000"
     depends_on:
       - "dev-django"
+
   redis:
     image: redis:7
     container_name: dev-covsonar-cache
     restart: unless-stopped
     ports:
-      - 6379
-      
+      - "6379"
+
