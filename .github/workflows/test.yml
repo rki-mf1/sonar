@@ -16,7 +16,7 @@ jobs:
           docker build -t backend_dev:local -f Dockerfile .
 
       - name: Bring up containers
-        run: docker compose -f docker-compose-dev.yml up --detach ---quiet-pull
+        run: docker compose -f docker-compose-dev.yml up --detach --quiet-pull
 
       - name: Install testing dependencies
         run: docker compose -f docker-compose-dev.yml exec -t dev-django pip install --no-cache-dir --disable-pip-version-check -r requirements-testing.txt
