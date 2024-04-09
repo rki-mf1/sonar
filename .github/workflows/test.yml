@@ -31,7 +31,7 @@ jobs:
         id: finder
 
       - name: ReportGenerator
-        uses: danielpalme/ReportGenerator-GitHub-Action@4.8.12
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
         with:
           reports: 'coverage.xml'
           targetdir: 'coveragereport'
