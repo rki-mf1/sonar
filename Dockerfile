@@ -11,12 +11,14 @@ ENV PIP_ROOT_USER_ACTION=ignore
 # install poetry and dependencies
 RUN pip install poetry
 
-# Copy only requirements to cache them in docker layer
+# Copy only requirements to cache them in the docker layer
 WORKDIR /code
-COPY pyproject.toml poetry.lock ./
+
+COPY permission_model/ /code/permission_model
+COPY covsonar_backend/ /code/covsonar_backend
+COPY rest_api/  /code/rest_api
+
+COPY manage.py README.md pyproject.toml poetry.lock ./
 
 RUN poetry config virtualenvs.create false
-RUN poetry install --only main --no-interaction --no-ansi --no-root
-
-ADD . /code
-
+RUN poetry install --only main --no-interaction
