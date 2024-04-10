@@ -1,10 +1,22 @@
-name: Run tests
+name: test
 
 on:
   push:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   test:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out pipeline code
@@ -25,20 +37,25 @@ jobs:
         run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage run ./manage.py test --no-input
 
       - name: Generate reports
-        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage xml
-
+        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage html
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'coverage'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
       - uses: jwalton/gh-find-current-pr@v1
         id: finder
-
-      - name: ReportGenerator
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
-        with:
-          reports: 'coverage.xml'
-          targetdir: 'coveragereport'
-          reporttypes: 'HtmlInline;Cobertura;MarkdownSummary' 
 
       - name: Publish coverage summary
         uses: marocchino/sticky-pull-request-comment@v2
         with:
+          header: Coverage Report
+          message: '[Report]( ${{ steps.deployment.outputs.page_url }})'
           number: ${{ steps.finder.outputs.pr }}
-          path: coveragereport/Summary.md
