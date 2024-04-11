@@ -30,7 +30,7 @@ please visit [sonar-backend](https://github.com/rki-mf1/sonar-backend) for downl
 ### 2.1 Download sonar-cli
 
 ```sh
-https://github.com/rki-mf1/sonar-cli.git
+git clone https://github.com/rki-mf1/sonar-cli.git
 cd sonar-cli
 ```
 
