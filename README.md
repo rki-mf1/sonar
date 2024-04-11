@@ -41,7 +41,7 @@ cd sonar-cli
 ### 2.3 Create python environment
 
 ```sh
-conda create -n sonar-cli python=3.11 poetry snpeff mafft bcftools
+conda create -n sonar-cli python=3.11 poetry snpeff mafft bcftools --channel conda-forge --channel bioconda
 conda activate sonar-cli
 ```
 
