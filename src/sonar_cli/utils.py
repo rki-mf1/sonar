@@ -224,7 +224,7 @@ class sonarUtils:
             cache: Instance of sonarCache.
             threads: Number of threads to use for processing.
             progress: Whether to show progress bar.
-            method: Alignment method 1 MAFFT , 2 Parasail
+            method: Alignment method 1 MAFFT, 2 Parasail, 3 WFA2-lib
         """
 
         if not fasta_files:
@@ -807,7 +807,6 @@ class sonarUtils:
             data_iter = iter(data)
         else:
             data_iter = data
-        print(data_iter)
 
         try:
             first_row = next(data_iter)

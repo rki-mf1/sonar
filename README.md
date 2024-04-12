@@ -1,6 +1,8 @@
 # sonar-cli
 Sonar command line tool to interface with the [sonar-backend](https://github.com/rki-mf1/sonar-backend) (API version; DjangoREST+PostgreSQL). Allows you to import new sequences and metadata.
 
+[![Test&Check](https://github.com/rki-mf1/sonar-cli/actions/workflows/dev.workflow.yml/badge.svg?branch=dev)](https://github.com/rki-mf1/sonar-cli/actions/workflows/dev.workflow.yml)
+
 ![Static Badge](https://img.shields.io/badge/Lifecycle-Experimental-ff7f2a)
 
 ![Static Badge](https://img.shields.io/badge/Maintenance%20status-actively%20developed-brightgreen)

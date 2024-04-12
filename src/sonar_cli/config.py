@@ -12,8 +12,9 @@ DEBUG = False
 
 # 10 = DEBUG, 20 = INFO, 30 = WARNING
 LOG_LEVEL = os.getenv("LOG_LEVEL") or 20
-CHUNK_SIZE = os.getenv("CHUNK_SIZE") or 10000
-ANNO_CHUNK_SIZE = os.getenv("ANNO_CHUNK_SIZE") or 500
+
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 10000)
+ANNO_CHUNK_SIZE = int(os.getenv("ANNO_CHUNK_SIZE") or 500)
 
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))
 

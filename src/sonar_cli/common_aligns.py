@@ -14,7 +14,7 @@ LOGGER = LoggingConfigurator.get_logger()
 cigar_pattern = re.compile(r"(\d+)(\D)")
 
 
-def align_WFA(self, qryseq, refseq, gapopen=16, gapextend=4):
+def align_WFA(qryseq, refseq, gapopen=16, gapextend=4):
     """Method for WFA2-lib run"""
     # wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
     # attributes.alignment_form.span = alignment_endsfree;
@@ -33,9 +33,9 @@ def align_WFA(self, qryseq, refseq, gapopen=16, gapextend=4):
         LOGGER.error(f"Input sequence: {qryseq}")
         sys.exit("--stop--")
     cigar = a.cigarstring
-    traceback_ref = a.aligned_pattern
-    traceback_query = a.aligned_text
-
+    # res = a(qryseq)
+    traceback_ref = ""  # res.aligned_pattern
+    traceback_query = ""  # res.aligned_text
     return (
         traceback_ref,
         traceback_query,

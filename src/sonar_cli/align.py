@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sonar_cli.common_aligns import align_MAFFT
 from sonar_cli.common_aligns import align_Parasail
+from sonar_cli.common_aligns import align_WFA
 from sonar_cli.common_utils import read_seqcache
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
@@ -36,8 +37,8 @@ class sonarAligner:
     def process_cached_sample(self, **sample_data: dict):
         if self.method == 1:  # MAFFT
             self.process_cached_v1(sample_data)
-        elif self.method == 2:  # Parasail
-            self.process_cached_v2(sample_data)
+        elif self.method == 2 or self.method == 3:  # Parasail,WFA2-lib
+            self.process_cached_v2(sample_data, self.method)
         return
 
     def process_cached_v1(self, data: dict):
@@ -104,13 +105,12 @@ class sonarAligner:
                 handle.write(vars + "//")
         return
 
-    def process_cached_v2(self, data: dict):
+    def process_cached_v2(self, data: dict, method: int):  # noqa: C901
         """
         Work with: Cigar format
         This function takes a sample file and processes it.
         create var file with NT and AA mutations
         """
-
         if not self.allow_updates:
             if data["var_file"] is None:
                 return True
@@ -126,7 +126,14 @@ class sonarAligner:
         qryseq = read_seqcache(data["seq_file"])
         refseq = read_seqcache(data["ref_file"])
 
-        _, __, cigar = align_Parasail(qryseq, refseq)
+        if method == 2:
+            _, __, cigar = align_Parasail(qryseq, refseq)
+        elif method == 3:
+            _, __, cigar = align_WFA(qryseq, refseq)
+        else:
+            LOGGER.error(f"Alignment method not recognized (method = {method})")
+            sys.exit(1)
+
         nuc_vars = [
             x
             for x in self.extract_vars_from_cigar(
@@ -387,7 +394,7 @@ class sonarAligner:
             vartype = match.group(2)
             varlen = int(match.group(1))
             # identical sites
-            if vartype == "=":
+            if vartype == "=" or vartype == "M":
                 refpos += varlen
                 qrypos += varlen
             # snp handling

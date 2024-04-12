@@ -351,7 +351,7 @@ def create_subparser_import(
 
     parser.add_argument(
         "--method",
-        help="Select alignment tools: 1. MAFFT 2. Parasail (default 1)",
+        help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default 1)",
         type=int,
         default=1,
     )
@@ -630,8 +630,10 @@ def handle_import(args: argparse.Namespace):
         LOGGER.info("Alignment Tool: MAFFT")
     elif args.method == 2:
         LOGGER.info("Alignment Tool: Parasail")
+    elif args.method == 3:
+        LOGGER.info("Alignment Tool: WFA2-lib")
     else:
-        print("Invalid method. Please choose 1 for MAFFT or 2 for Parasail.")
+        print("Invalid --method. Please use -h to see available methods")
         exit(1)
 
     sonarUtils.import_data(
