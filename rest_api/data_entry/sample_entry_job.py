@@ -1,8 +1,10 @@
+import os
 import pathlib
 from datetime import datetime
 import shutil
 import zipfile
 import traceback
+from covsonar_backend.settings import REDIS_URL, SAMPLE_BATCH_SIZE, SONAR_DATA_ARCHIVE, SONAR_DATA_ENTRY_FOLDER, SONAR_DATA_PROCESSING_FOLDER
 from rest_api.data_entry.sample_import import SampleImport
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.models import (
@@ -24,52 +26,51 @@ import environ
 logger = get_task_logger(__name__)
 
 
-# NOTE: This variable need to be adjustable.
-default_batch_size = 10
-
 
 def check_for_new_data():
-    env = environ.Env(
-        SONAR_DATA_ENTRY_FOLDER=(str, "import_data"),
-        SONAR_DATA_PROCESSING_FOLDER=(str, "processing"),
-    )
-    processing_dir = pathlib.Path(env("SONAR_DATA_PROCESSING_FOLDER"))
-    processing_dir.mkdir(parents=True, exist_ok=True)
-    zip_files = list(pathlib.Path(env("SONAR_DATA_ENTRY_FOLDER")).glob("*.zip"))
+    processing_dir = pathlib.Path(SONAR_DATA_PROCESSING_FOLDER)
+    # processing_dir.mkdir(parents=True, exist_ok=True)
+
+    zip_files = list(pathlib.Path(SONAR_DATA_ENTRY_FOLDER).glob("*.zip"))
+
     if zip_files:
-        print("New data found")
+        print("# New data found")
         for file in zip_files:
-            print(f"Processing {file}")
+            print(f"## Processing {file}")
+            # create name file with processing dir (move to SONAR_DATA_PROCESSING_FOLDER)
             new_path = file.rename(processing_dir.joinpath(file.name))
             import_archive(new_path)
         check_for_new_data()
 
-
-def import_archive(archive_file_path: pathlib.Path):
+def import_archive(process_file_path: pathlib.Path):
     try:
-        env = environ.Env(REDIS_URL=(str, None), SONAR_DATA_ARCHIVE=(str, "archive"))
-        # unzip the file
         temp_dir = (
-            pathlib.Path(env("SONAR_DATA_ARCHIVE"))
+            pathlib.Path(SONAR_DATA_ARCHIVE)
             .joinpath("temp")
-            .joinpath(archive_file_path.stem)
+            .joinpath(process_file_path.stem)
         )
-        with zipfile.ZipFile(archive_file_path, "r") as zip_ref:
+        print(f"## Unzip to {temp_dir}")
+        # unzip the zip file to SONAR_DATA_ARCHIVE
+        with zipfile.ZipFile(process_file_path, "r") as zip_ref:
             zip_ref.extractall(temp_dir)
-        print(f"--- running data entry for {archive_file_path} ---")
+
+        print(f"--- running data entry for {temp_dir} ---")
         sample_files = list(temp_dir.joinpath("samples").glob("**/*.sample"))
         anno_files = list(temp_dir.joinpath("anno").glob("**/*.vcf"))
-        print(f"{len(sample_files)} files found")
+        print(f"Sample: {len(sample_files)} files found")
+        print(f"Annotation (vcfs): {len(anno_files)} files found")
         timer = datetime.now()
-        batch_size = env("sample_batch_size", default=default_batch_size, cast=int)
-        number_of_batches = len(sample_files) // batch_size
+        batch_size = SAMPLE_BATCH_SIZE
+
+        number_of_batches = (len(sample_files) + batch_size - 1 )// batch_size if sample_files else (len(anno_files)+ batch_size - 1) // batch_size
+
         print("Batch size:", batch_size)
         print(f"Total number of batches: {number_of_batches}")
         sample_files = [str(file) for file in sample_files]
         if batch_size:
             replicon_cache = {}
             gene_cache = {}
-            if env("REDIS_URL"):
+            if REDIS_URL:
                 print("setting up sample import celery jobs..")
                 sample_jobs = []
                 for i in range(0, len(sample_files), batch_size):
@@ -120,23 +121,23 @@ def import_archive(archive_file_path: pathlib.Path):
         print(f"import done in {datetime.now() - timer}")
     except Exception as e:
         print(f"Error in import_archive: {e}")
-        error_dir = pathlib.Path(env("SONAR_DATA_ARCHIVE")).joinpath("error")
+        error_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("error")
         error_dir.mkdir(parents=True, exist_ok=True)
-        archive_file_path.rename(error_dir.joinpath(archive_file_path.name))
+        process_file_path.rename(error_dir.joinpath(process_file_path.name))
         ImportLog.objects.create(
             type=ImportLog.ImportType.SAMPLE_ANNOTATION_ARCHIVE,
-            file=archive_file_path,
+            file=process_file_path,
             success=False,
             exception_text=e,
             stack_trace=traceback.format_exc(),
         )
     else:
-        completed_dir = pathlib.Path(env("SONAR_DATA_ARCHIVE")).joinpath("completed")
+        completed_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("completed")
         completed_dir.mkdir(parents=True, exist_ok=True)
-        archive_file_path.rename(completed_dir.joinpath(archive_file_path.name))
+        process_file_path.rename(completed_dir.joinpath(process_file_path.name))
         ImportLog.objects.create(
             type=ImportLog.ImportType.SAMPLE_ANNOTATION_ARCHIVE,
-            file=archive_file_path,
+            file=process_file_path,
             success=True,
         )
     finally:

@@ -2,18 +2,18 @@ from functools import reduce
 import json
 import operator
 import os
-
+import uuid
 import pickle
 
 from dataclasses import dataclass
 
 from rest_framework import generics
 import zipfile
-
+from datetime import datetime
 
 from django.db import transaction
 from django.db.models import Count, F, Q
-from covsonar_backend.settings import IMPORTED_DATA_DIR
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_api.data_entry.property_job import delete_property, find_or_create_property
 from rest_api.data_entry.reference_job import delete_reference
@@ -520,7 +520,7 @@ class PropertyViewSet(
         if created:
             return Response(
                 {"detail": "Property added successfully"},
-                return_status=status.HTTP_201_CREATED,
+                status=status.HTTP_201_CREATED,
             )
         elif obj:
             return Response(
@@ -529,7 +529,7 @@ class PropertyViewSet(
         else:
             return Response(
                 {"detail": "Failed to add property"},
-                return_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["post"])
@@ -695,23 +695,6 @@ class ResourceViewSet(viewsets.ViewSet):
 class FileUploadViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
-        """
-        if "sample_file" not in request.FILES:
-            return Response({"detail":"No sample file uploaded."}, status=status.=400)
-        if "anno_file" not in request.FILES:
-            return Response({"detail":"No ann file uploaded."}, status=status.=400)
-        if "var_file" not in request.FILES:
-            return Response({"detail":"No var file uploaded."}, status=status.=400)
-        sample_file = request.FILES.get("sample_file")
-        anno_file = request.FILES.get("anno_file")
-        var_file = request.FILES.get("var_file")
-        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "samples", sample_file.name[0:2], sample_file.name)
-        write_to_file(_save_path, sample_file)
-        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "anno", anno_file.name[0:2], anno_file.name)
-        write_to_file(_save_path, anno_file)
-        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "var", var_file.name[0:2], var_file.name)
-        write_to_file(_save_path, var_file)
-        """
 
         if "zip_file" not in request.FILES:
             return Response(
@@ -719,9 +702,15 @@ class FileUploadViewSet(viewsets.ViewSet):
             )
 
         zip_file = request.FILES.get("zip_file")
+        filename = datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S.%f')[:-3]+"."+str(uuid.uuid4().hex)[:6]+".zip"
+        save_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, filename)
+        with open(save_path, 'wb') as destination:
+            for chunk in zip_file.chunks():
+                destination.write(chunk)
+
         # Extract files from the BytesIO
-        with zipfile.ZipFile(zip_file, "r") as zip_ref:
-            zip_ref.extractall(IMPORTED_DATA_DIR)
+        # with zipfile.ZipFile(zip_file, "r") as zip_ref:
+        #     zip_ref.extractall(SONAR_DATA_ENTRY_FOLDER)
             # to view list of files and file details in ZIP
             # for file_info in zip_ref.infolist():
             #    print(file_info)

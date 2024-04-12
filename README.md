@@ -177,7 +177,7 @@ docker compose -f "docker-compose-dev.yml" up  --build
 ```
 OR use -d to detach the command. For example:
 ```bash
-docker-compose -f "docker-compose-dev.yml" up --build -d
+docker compose -f "docker-compose-dev.yml" up --build -d
 ```
 3. List the containers
 ```bash
