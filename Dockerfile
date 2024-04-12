@@ -11,14 +11,10 @@ RUN pip install poetry
 
 # Copy only requirements to cache them in docker layer
 WORKDIR /code
-
-COPY permission_model/ /code/permission_model
-COPY covsonar_backend/ /code/covsonar_backend
-COPY rest_api/  /code/rest_api
-
-COPY manage.py README.md pyproject.toml poetry.lock ./
+COPY pyproject.toml poetry.lock ./
 
 RUN poetry config virtualenvs.create false
 RUN poetry install --only main --no-interaction
 
+ADD . /code
 
