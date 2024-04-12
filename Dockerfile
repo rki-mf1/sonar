@@ -11,7 +11,7 @@ RUN pip install poetry
 
 # Copy only requirements to cache them in docker layer
 WORKDIR /code
-COPY pyproject.toml poetry.lock ./
+COPY README.md pyproject.toml poetry.lock ./
 
 RUN poetry config virtualenvs.create false
 RUN poetry install --only main --no-interaction
