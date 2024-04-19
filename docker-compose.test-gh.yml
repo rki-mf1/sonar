@@ -10,7 +10,7 @@ services:
     env_file:
       - conf/test-gh.env
     ports:
-      - 5432
+      - "5433:5432"
 
   dev-django:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
@@ -23,11 +23,12 @@ services:
     # also create the ./profiler directory in project root
     #command: python manage.py runprofileserver --use-cprofile --prof-path=/code/profiler 0.0.0.0:9080
     volumes:
-      - .:/code
+      # - .:/code # for code develepment purpose
       - ./covsonar2_server/test/media:/covsonarmedia
       - ./covsonar2_server/test/static:/staticfiles
       - './logs/:/covsonarlogs'
       - ./input-logs/:/input-logs
+      - /mnt/c/works/tmp/sonar-backend-docker:/tmp/sonar-backend # working directory of import process
     depends_on:
       - "postgres"
       - "redis"
@@ -64,4 +65,29 @@ services:
     restart: unless-stopped
     ports:
       - 6379
-      
+  celery-workers:
+    container_name: celery-workers
+    image: backend_dev:local
+    # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
+    # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 2 --time-limit 180
+    # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
+    command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=2 -E --max-tasks-per-child 2 --time-limit 180 -n Bob
+    volumes:
+      - /mnt/c/works/tmp/sonar-backend-docker:/tmp/sonar-backend # working directory of import process
+    env_file:
+      - conf/test-gh.env
+    depends_on:
+      - redis
+      - dev-django
+  celery-mornitor:
+    container_name: celery-mornitor
+    image: backend_dev:local
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456
+    env_file:
+      - conf/test-gh.env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - dev-django
+      - celery-workers

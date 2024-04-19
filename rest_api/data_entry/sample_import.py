@@ -140,7 +140,7 @@ class SampleImport:
     def get_mutation_objs(self, gene_cache: dict[str, Gene | None]) -> list[Mutation]:
         sample_mutations = []
         self.mutation_query_data = []
-        for var_raw in self.vars_raw[:100]:
+        for var_raw in self.vars_raw:
             gene = None
             replicon = None
             if var_raw.type == "nt":

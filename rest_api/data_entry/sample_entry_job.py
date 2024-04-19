@@ -188,7 +188,7 @@ def process_batch(batch: list[str], replicon_cache, gene_cache, temp_dir):
             )
 
         # Filter sequences without associated samples
-        # clean_unused_sequences() #why?
+        # clean_unused_sequences() # why?
         return (True, None, None)
 
     except Exception as e:
