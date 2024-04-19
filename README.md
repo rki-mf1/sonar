@@ -15,7 +15,9 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 3. Support multiple alignment tools.
 4. Cluster machine compatibility.
 
-# Installation 🧬
+### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar-cli/wiki/) 🏃‍♂️
+
+# QuickStart 🧬
 
 ## 1. Prerequisite software
 
@@ -39,6 +41,9 @@ cd sonar-cli
 ### 2.2 Configuration
 
 🤓 There is a "env.template" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+```sh
+cp env.template .env
+```
 
 ### 2.3 Create python environment
 
@@ -46,68 +51,7 @@ cd sonar-cli
 conda create -n sonar-cli python=3.11 poetry snpeff mafft bcftools --channel conda-forge --channel bioconda
 conda activate sonar-cli
 ```
-
-### 2.4 SnpEff: configuration and custom database
-
-#### 🤓By default, snpEff will download a SnpEff database if it is not available locally. The downloaded database will be stored under the same current activated python environment, for example, "/miniconda3/envs/sonar-cli/share/snpeff-5.2-0/data", so we can skip this section and ([go to next step 2.5-install-application](#25-install-application)) .
-
-However, if we want to store the SnpEff database elsewhere, please follow the steps below.
-
-
-1. Configure SnpEff: there is a default configuration file that comes with snpEff that we will customize. First, make a copy of that example config file in the sonar-cli directory. Make sure you are in the sonar-cli directory, and that the sonar-cli conda environment is active, then run:
-
-```sh
-cp $CONDA_PREFIX/share/snpeff-5.2-0/snpEff.config .
-```
-
-Open the `snpEff.config` file, which will contain various configuration options. Look for the `data.dir` parameter and specify the path where you want to store the SnpEff databases. For example, if you want to store the databases under the `/mnt/data` directory,
-
-```sh
-# snpEff.config setting, example
-data.dir = /mnt/data/
-```
-
-You need to make sure this directory exists, as snpEff will not create it for you.
-
-2. Then we need to obtain the database for annotation. We will use `buildDbNcbi.sh` script, which is also inside our sonar-cli conda environment. Unfortunately, the snpEff command used in the script is not correct for the version of snpEff installed via conda, so we need to fix that first:
-
-```sh
-$ cp $CONDA_PREFIX/share/snpeff-5.2-0/scripts/buildDbNcbi.sh .
-$ sed -i -e 's/^java -jar snpEff.jar/snpEff/' buildDbNcbi.sh
-$ tail -n 4 buildDbNcbi.sh
-
-# Build database
-snpEff build -v $ID
-
-```
-
-Be sure that line says "snpEff" and not something like "java -jar snpEff.jar ...".
-
-Now we can actaully use the script to build a database. The command fetches the required data from the NCBI and generates the necessary database files for annotation.
-
-```sh
-# command
-./buildDbNcbi.sh <genome accesion number>
-# example
-./buildDbNcbi.sh MN908947.3
-```
-
-3. After the buildDbNcbi command is done, Do not forget to copy folder name "<genome accession number>" under the "data/" folder to the designed path according to the "data.dir" variable (in snpEff.config)
-
-In our case, for example:
-```sh
-mv data/MN908947.3 /mnt/data/
-```
-
-Refer to the [SnpEff documentation](https://pcingola.github.io/SnpEff/) for more details.
-
-4. Edit ".env" file of sonar-cli, we have provide the full path of snpEff.config in the ANNO_CONFIG_FILE variable within the ".env" file.
-```sh
-# example
-ANNO_CONFIG_FILE=/path/to/snpEff.config
-```
-
-### 2.5 Install application
+### 2.4 Install sonar-cli
 
 Navigate to the root directory of `sonar-cli`.
 ```sh
@@ -136,10 +80,6 @@ We provide the test datasets under the `test-data` directory. These datasets can
 | `MN908947.3.gbk`            | Reference genome of SARS-CoV-2 in GenBank format.                          |
 
 # Usage 🚀
-
-
-### Full Explanation 📚: [Sonar-CLI Commands - Wiki Page](https://github.com/rki-mf1/sonar-cli/wiki/Sonar%E2%80%90CLI-Commands)
-
 
 The table below shows the several commands that can be used.
 

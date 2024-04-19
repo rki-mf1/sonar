@@ -344,7 +344,7 @@ class sonarCache:
                 'properties': {}}
         """
         try:
-            sample_id = header.replace("\t", " ").replace("|", " ").split(" ")[0]
+            sample_id = header.replace("\t", " ").replace("|", " ").strip(" ")
         except AttributeError:
             # Handle the 'NoneType' object has no attribute 'replace' error
             LOGGER.error("Invalid FASTA format")

@@ -45,12 +45,12 @@ class Annotator:
             # result = subprocess.run(['java', '-version'], stderr=subprocess.STDOUT)
             if result.returncode != 0:
                 LOGGER.error("Output failed with exit code: %s", result.returncode)
-                print(command)
+                LOGGER.error("Command to reproduce the error: %s", command)
 
                 with open(self.sonar_cache.error_logfile_name, "a+") as writer:
                     writer.write("Fail anno:" + command + "\n")
 
-                print("Error output:", result.stderr.decode("utf-8").splitlines()[2])
+                LOGGER.error(result.stderr.decode("utf-8").splitlines())
 
         except subprocess.CalledProcessError as e:
             LOGGER.error("Annotation failed: %s", e)

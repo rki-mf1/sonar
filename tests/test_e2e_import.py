@@ -82,6 +82,22 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
+@pytest.mark.order(5)
+def test_wfa_anno_no_upload(monkeypatch, api_url, tmpfile_name):
+    """Test import command using parasail method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.imap_unordered",
+        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+            func(**arg) for arg in args
+        ),
+    )
+    command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/wfa -t 2 --no-upload"
+    code = run_cli(command)
+
+    assert code == 0
+
+
 def test_add_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
