@@ -1,8 +1,8 @@
+param(
+    [switch]$NoTestData,
+    [switch]$NoRebuild
+)
 try {
-    Param(
-        [switch]$NoTestData = $false,
-        [switch]$NoRebuild = $false
-    )
     scripts\win\dc-dev.ps1 down
     if ($LASTEXITCODE -ne 0) {
         exit($LASTEXITCODE)

@@ -177,26 +177,37 @@ class SampleImport:
             sample_mutations.append(mutation)
         return sample_mutations
 
-    def get_mutation2alignment_objs(self) -> list:
+    def get_mutation2alignment_objs(self, batch_size=100) -> list:
         self.alignment = Alignment.objects.get(
             sequence=self.sequence, replicon=self.replicon
         )
-        db_mutations_query = Q()
-        for mutation in self.mutation_query_data:
-            db_mutations_query |= Q(**mutation)
-        self.db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
-            "id",
-            "start",
-            "ref",
-            "alt",
-            "replicon__accession",
-        )
-        return [
-            Mutation.alignments.through(
-                alignment=self.alignment, mutation_id=mutation["id"]
+
+        mutation_alignment_objs = []
+        for i in range(0, len(self.mutation_query_data), batch_size):
+            batch_mutation_query_data = self.mutation_query_data[i:i+batch_size]
+            db_mutations_query = Q()
+            for mutation in batch_mutation_query_data:
+                db_mutations_query |= Q(**mutation)
+            
+            db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
+                "id",
+                "start",
+                "ref",
+                "alt",
+                "replicon__accession",
             )
-            for mutation in self.db_sample_mutations
-        ]
+            for j in range(0, len(db_sample_mutations), batch_size):
+                batch_mutations = db_sample_mutations[j:j+batch_size]
+                batch_alignment_objs = []
+                for mutation in batch_mutations:
+                    batch_alignment_objs.append(
+                        Mutation.alignments.through(
+                            alignment=self.alignment, mutation_id=mutation["id"]
+                        )
+                    )
+                mutation_alignment_objs.extend(batch_alignment_objs)
+
+        return mutation_alignment_objs
 
     def get_annotation_objs(self) -> list[AnnotationType]:
         if self.db_sample_mutations is None:
