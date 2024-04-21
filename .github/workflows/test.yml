@@ -1,14 +1,29 @@
-name: Run tests
+name: test
 
 on:
   push:
 
+permissions: write-all
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   test:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
+      
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
 
       - name: Build the backend container
         run: |
@@ -25,20 +40,30 @@ jobs:
         run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage run ./manage.py test --no-input
 
       - name: Generate reports
-        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage xml
-
-      - uses: jwalton/gh-find-current-pr@v1
-        id: finder
-
-      - name: ReportGenerator
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage html -d 'coverage/${{ steps.extract_branch.outputs.branch }}/'
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          reports: 'coverage.xml'
-          targetdir: 'coveragereport'
-          reporttypes: 'HtmlInline;Cobertura;MarkdownSummary' 
+          path: 'coverage'
 
-      - name: Publish coverage summary
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Deploy to GitHub Pages
+        id: pages-deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Find current PR
+        uses: jwalton/gh-find-current-pr@master
+        id: findPr
         with:
-          number: ${{ steps.finder.outputs.pr }}
-          path: coveragereport/Summary.md
+          state: open
+
+      - name: Comment coverage page link
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+              [Coverage Report]( ${{ steps.pages-deployment.outputs.page_url }}/${{ steps.extract_branch.outputs.branch }}/)
+          comment_tag: 'coverage-link'
+          pr_number: ${{ steps.findPr.outputs.pr }}
