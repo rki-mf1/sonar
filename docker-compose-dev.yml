@@ -5,7 +5,10 @@ services:
     image: postgres:alpine
     container_name: dev-covsonar-db
     restart: unless-stopped
+    command: -c config_file=/etc/postgresql/postgresql.conf
     volumes:
+      # Have to check that the configuration is actually loaded. Right now, I'm following the same approach as the official PostgreSQL Docker
+      - ./conf/customPostgresql.conf:/etc/postgresql/postgresql.conf
       - './conf/initdb/:/docker-entrypoint-initdb.d/'
     env_file:
       - conf/dev_db.env
@@ -44,7 +47,8 @@ services:
       - conf/dev_secrets.env
     container_name: dev-covsonar-django-apscheduler
     restart: on-failure
-    command: python manage.py runapscheduler
+    command: >
+      bash -c "python manage.py migrate &&  python manage.py runapscheduler"
     volumes:
       - .:/code
     depends_on:
@@ -67,4 +71,31 @@ services:
     restart: unless-stopped
     ports:
       - "6379"
-
+  celery-workers:
+    container_name: celery-workers
+    image: backend_dev:local
+    # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
+    # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 2 --time-limit 180
+    # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
+    command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=2 -E --max-tasks-per-child 2 --time-limit 600 -n Bob
+    volumes:
+      - .:/code # working directory of import process
+    env_file:
+      - conf/dev_django.env
+      - conf/dev_secrets.env
+    depends_on:
+      - redis
+      - dev-django
+  celery-mornitor:
+    container_name: celery-mornitor
+    image: backend_dev:local
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456
+    env_file:
+      - conf/dev_django.env
+      - conf/dev_secrets.env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - dev-django
+      - celery-workers

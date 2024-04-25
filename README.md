@@ -177,10 +177,15 @@ OR use -d to detach the command. For example:
 docker compose -f "docker-compose-dev.yml" up --build -d
 ```
 
-3. Start Database
+3. Create superuser for Django admin
 ```bash
-docker compose -f docker-compose-dev.yml exec dev-django python manage.py migrate
+# docker-compose exec <service_name>, not docker-compose exec <container_name>.
+docker compose -f docker-compose-dev.yml exec dev-django python manage.py createsuperuser
 ```
+Once the containers are up and running, you can access 
+- sonar-cli reach the backend via http://127.0.0.1:8000/api
+- http://127.0.0.1:8000/admin
+- http://localhost:5555 for monitoring workers (username:"note" passwrod:"123456")
 
 ### Deploy sonar-backend with pre-built database for quickstart (used in GH action) (Linux environment)
 

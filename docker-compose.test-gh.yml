@@ -5,7 +5,9 @@ services:
     image: postgres:alpine
     container_name: dev-covsonar-db
     restart: unless-stopped
+    command: -c config_file=/etc/postgresql/postgresql.conf
     volumes:
+      - ./conf/customPostgresql.conf:/etc/postgresql/postgresql.conf
       - './conf/initdb-test/:/docker-entrypoint-initdb.d/'
     env_file:
       - conf/test-gh.env
@@ -71,7 +73,7 @@ services:
     # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
     # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 2 --time-limit 180
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
-    command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=2 -E --max-tasks-per-child 2 --time-limit 180 -n Bob
+    command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=2 -E --max-tasks-per-child 2 --time-limit 600 -n Bob
     volumes:
       - /mnt/c/works/tmp/sonar-backend-docker:/tmp/sonar-backend # working directory of import process
     env_file:
