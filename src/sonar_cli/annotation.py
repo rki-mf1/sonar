@@ -126,6 +126,8 @@ class Annotator:
         if result.returncode != 0:
             LOGGER.error("Output failed with exit code: %s", result.returncode)
             LOGGER.error(result.stderr.decode("utf-8"))
+            LOGGER.error("Input file: %s", input_vcfs)
+            LOGGER.error("Output file: %s", output_vcf)
             sys.exit(1)
         return output_vcf
 

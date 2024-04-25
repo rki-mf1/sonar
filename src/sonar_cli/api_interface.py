@@ -92,6 +92,7 @@ class APIClient:
         except requests.exceptions.RequestException as err:
             LOGGER.error(f"Request Exception: {err}")
             LOGGER.error(f"at request: {url}")
+            LOGGER.error(response)
             response.raise_for_status()
             sys.exit(1)
 

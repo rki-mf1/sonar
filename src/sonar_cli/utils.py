@@ -1024,7 +1024,7 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
 
     for row in rows:
         try:
-            if row["variant.start"] - 1 <= 0:
+            if row["variant.start"] - 1 < 0:
                 pre_ref = ""
             else:
                 pre_ref = selected_ref_seq[row["variant.start"] - 1]
