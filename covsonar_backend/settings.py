@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import environ
 from pathlib import Path
 import os
+import logging
+from covsonar_backend.utils import CustomisedJSONFormatter
 
 
 # Initialise environment variables
@@ -214,7 +216,40 @@ if not os.path.exists(SONAR_DATA_ARCHIVE):
     os.makedirs(SONAR_DATA_ARCHIVE)
 
 # ------------------------------------------
-    
+
+LOGGER = logging.getLogger(__name__)
+
+LOG_PATH=env('LOG_PATH')
+LOG_LEVEL=env('LOG_LEVEL')
+if not os.path.exists(LOG_PATH):
+    os.makedirs(LOG_PATH)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        "json": {
+            '()': CustomisedJSONFormatter,
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+        'app_log_file': {
+            'level': LOG_LEVEL,
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_PATH, 'app.log.json'),
+        
+            'formatter': 'json',
+        },
+    },
+    'loggers': {
+        "": {
+            "level": LOG_LEVEL,
+            "handlers": ["console", "app_log_file" ],
+        },
+    },
+}
 
 PERMISSION_RELEVANT_USER_GROUPS = ["admin", "read_only"]
 

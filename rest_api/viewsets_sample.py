@@ -38,7 +38,7 @@ from .serializers import (
     SampleGenomesSerializerVCF,
     SampleSerializer,
 )
-from covsonar_backend.settings import DEBUG
+from covsonar_backend.settings import DEBUG, LOGGER
 
 
 class Echo:
@@ -110,7 +110,6 @@ class SampleViewSet(
         1. Optimize the query (reduce the database hit)
         2. add accession of reference at the output
         """
-
         try:
             # we try to use bool(), but it is not working as expected.
             showNX = strtobool(request.query_params.get("showNX", "False"))

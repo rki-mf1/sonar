@@ -28165,7 +28165,6 @@
             "type": "cds"
         }
     },
-    
     {
         "model": "rest_api.mutation",
         "pk": 1467,
@@ -45581,12 +45580,28 @@
         }
     },
     {
+        "model": "rest_api.processingjob",
+        "pk": 1,
+        "fields": {
+            "job_name": "07d22f38-7561-464c-a461-0665f2da1a5b",
+            "status": "IP",
+            "entry_time": "2024-03-29T03:05:47.321Z"
+        }
+    },
+    {
+        "model": "rest_api.fileprocessing",
+        "pk": 1,
+        "fields": {
+            "file_name": "test_archive_small.zip",
+            "processing_job": 1
+        }
+    },
+    {
         "model": "rest_api.importlog",
         "pk": 1,
         "fields": {
             "type": "SAA",
-            "name": null,
-            "file": "processing_data/test_archive_small.zip",
+            "file": "test_archive_small.zip",
             "updated": "2024-03-29T03:04:47.040Z",
             "success": false,
             "exception_text": "Annotation Import Error: 'AnnotationType' object is not subscriptable - Traceback (most recent call last):\n  File \"/code/rest_api/data_entry/sample_entry_job.py\", line 207, in process_annotation\n    annotation_import.get_annotation_objs(),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/code/rest_api/data_entry/annotation_import.py\", line 238, in get_annotation_objs\n    if annotation_obj[\"alignment\"]:\n       ~~~~~~~~~~~~~~^^^^^^^^^^^^^\nTypeError: 'AnnotationType' object is not subscriptable\n",
@@ -45598,8 +45613,7 @@
         "pk": 2,
         "fields": {
             "type": "SAA",
-            "name": null,
-            "file": "processing_data/test_archive_small.zip",
+            "file": "test_archive_small.zip",
             "updated": "2024-03-29T03:05:47.321Z",
             "success": false,
             "exception_text": "Annotation Import Error: 'AnnotationType' object has no attribute 'alignment' - Traceback (most recent call last):\n  File \"/code/rest_api/data_entry/sample_entry_job.py\", line 207, in process_annotation\n    annotation_import.get_annotation_objs(),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/code/rest_api/data_entry/annotation_import.py\", line 238, in get_annotation_objs\n    if annotation_obj.alignment:\n       ^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'AnnotationType' object has no attribute 'alignment'\n",
@@ -45611,8 +45625,7 @@
         "pk": 3,
         "fields": {
             "type": "SAA",
-            "name": null,
-            "file": "processing_data/test_archive_small.zip",
+            "file": "test_archive_small.zip",
             "updated": "2024-03-29T03:07:13.271Z",
             "success": true,
             "exception_text": null,

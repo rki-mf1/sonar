@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils.translation import gettext_lazy as _
 
+
 class Sequence(models.Model):
     seqhash = models.CharField(unique=True, max_length=200)
 
@@ -124,12 +125,14 @@ class Lineage(models.Model):
         if self.prefixed_alias:
             aliases = LineageAlias.objects.filter(lineage=self, parent_alias=None)
             if not include_recombinants:
-                aliases = [alias.alias for alias in aliases if not alias.is_recombinant()]
+                aliases = [
+                    alias.alias for alias in aliases if not alias.is_recombinant()
+                ]
             query |= Q(prefixed_alias__in=aliases)
-            for sublineage in Lineage.objects.filter(
-                prefixed_alias__in=aliases
-            ):
-                query |= sublineage._get_sublineages_query(include_recombinants=include_recombinants)
+            for sublineage in Lineage.objects.filter(prefixed_alias__in=aliases):
+                query |= sublineage._get_sublineages_query(
+                    include_recombinants=include_recombinants
+                )
         query |= Q(
             lineage__startswith=f"{self.lineage}.", prefixed_alias=self.prefixed_alias
         )
@@ -166,7 +169,7 @@ class LineageAlias(models.Model):
     alias = models.CharField(max_length=50)
     lineage = models.ForeignKey("Lineage", models.CASCADE, blank=True, null=True)
     parent_alias = models.CharField(max_length=50, blank=True, null=True)
-    
+
     def is_recombinant(self):
         return LineageAlias.objects.filter(alias=self.alias).count() > 1
 
@@ -218,9 +221,7 @@ class Property(models.Model):
 class Sample(models.Model):
     name = models.CharField(max_length=100, unique=True, blank=True, null=True)
     datahash = models.CharField(max_length=50, blank=True, null=True)
-    sequence = models.ForeignKey(
-        Sequence, models.DO_NOTHING, blank=True, null=True
-    )
+    sequence = models.ForeignKey(Sequence, models.DO_NOTHING, blank=True, null=True)
     sequencing_tech = models.CharField(max_length=50, blank=True, null=True)
     processing_date = models.DateField(blank=True, null=True)
     country = models.CharField(max_length=50, blank=True, null=True)
@@ -311,9 +312,7 @@ class Mutation(models.Model):
 class Mutation2Annotation(models.Model):
     mutation = models.ForeignKey(Mutation, models.DO_NOTHING)
     alignment = models.ForeignKey(Alignment, models.CASCADE)
-    annotation = models.ForeignKey(
-        AnnotationType, models.DO_NOTHING
-    )
+    annotation = models.ForeignKey(AnnotationType, models.DO_NOTHING)
 
     class Meta:
         db_table = "mutation2annotation"
@@ -325,12 +324,41 @@ class Mutation2Annotation(models.Model):
         ]
 
 
+class ProcessingJob(models.Model):
+    class ImportType(models.TextChoices):
+        QUEUED = "Q", _("Queued")
+        IN_PROGRESS = "IP", _("In Progress")
+        COMPLETED = "C", _("Completed")
+        FAILED = "F", _("Failed")
+
+    job_name = models.CharField(max_length=255, unique=True)
+    status = models.CharField(
+        max_length=2,
+        choices=ImportType.choices,
+        default=ImportType.QUEUED,
+    )
+    entry_time = models.DateTimeField(auto_now=True, unique=True)
+
+    class Meta:
+        db_table = "processing_job"
+
+
+class FileProcessing(models.Model):
+    file_name = models.CharField(max_length=255, unique=True)
+    processing_job = models.ForeignKey(
+        "ProcessingJob", on_delete=models.CASCADE, related_name="files"
+    )
+
+    class Meta:
+        db_table = "file_processing"
+
+
 class ImportLog(models.Model):
 
     class ImportType(models.TextChoices):
         UNKNOWN = "NUL", _("Unknown")
         SAMPLE = "SMP", _("Sample")
-        ANNOTATION = "ANN", _("Annotation")        
+        ANNOTATION = "ANN", _("Annotation")
         GENEBANK = "GBK", _("Genebank")
         SAMPLE_ANNOTATION_ARCHIVE = "SAA", _("Sample Annotation Archive")
 
@@ -339,8 +367,11 @@ class ImportLog(models.Model):
         choices=ImportType.choices,
         default=ImportType.UNKNOWN,
     )
-    name = models.CharField(max_length=400, blank=True, null=True)
-    file = models.CharField(max_length=400)
+    file = models.ForeignKey(
+        FileProcessing,
+        to_field="file_name",
+        on_delete=models.CASCADE,
+    )
     updated = models.DateTimeField(auto_now=True)
     success = models.BooleanField()
     exception_text = models.TextField(blank=True, null=True)
@@ -351,6 +382,6 @@ class ImportLog(models.Model):
         constraints = [
             UniqueConstraint(
                 name="unique_import_log",
-                fields=["type", "name", "updated"],
+                fields=["file", "updated"],
             ),
         ]

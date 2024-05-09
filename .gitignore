@@ -7,7 +7,7 @@ htmlcov/
 archive_data/
 processing_data/
 # Environments
-.env
+*.env
 .venv
 env/
 venv/
@@ -18,3 +18,5 @@ venv.bak/
 .coverage
 .coverage
 .coverage
+
+logs/

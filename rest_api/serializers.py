@@ -295,3 +295,28 @@ class LineagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Lineage
         fields = "__all__"
+
+
+class ProcessingJobSerializer(serializers.ModelSerializer):
+    # Map the abbreviations to their full names for the 'status' field
+    status = serializers.CharField(source="get_status_display")
+    entry_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+
+    class Meta:
+        model = models.ProcessingJob
+        fields = ["job_name", "status", "entry_time"]
+
+
+class FileProcessingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.FileProcessing
+        fields = ["file_name"]  # Add more fields if needed
+
+
+class ImportLogSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source="get_type_display")
+    updated = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+
+    class Meta:
+        model = models.ImportLog
+        fields = ["type", "updated", "success"]
