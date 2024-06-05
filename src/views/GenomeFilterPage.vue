@@ -17,26 +17,28 @@
     </div>
     <div style="flex-direction: column; display: flex">
       <div style="flex: auto; margin: auto">
-        <Button size="small" @click="updateSamples()"><i class="pi pi-list" /> &nbsp; Request Data</Button>
+        <Button size="small" @click="updateSamples()"
+          ><i class="pi pi-list" /> &nbsp; Request Data</Button
+        >
         <Button size="small" @click="requestExport()">
-          <i class="pi pi-cloud-download" />Request export</Button>
+          <i class="pi pi-cloud-download" />Request export</Button
+        >
       </div>
       <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
       <div v-if="samples" style="flex: auto">
         <h4>{{ sampleCount }} Results</h4>
-        <Paginator :totalRecords="sampleCount" :rows="perPage"
-          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
-          @update:first="updateSamples()" />
-        <DataTable :value="samples" style="max-width: 90vw;">
+        <Paginator
+          :totalRecords="sampleCount"
+          :rows="perPage"
+          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
+          v-model:first="firstRow"
+          @update:first="updateSamples()"
+        />
+        <DataTable :value="samples" style="max-width: 90vw">
           <Column field="name" header="Name"></Column>
-          <Column field="properties" header="Properties">
+          <Column v-for="property in propertyOptions" :header="property">
             <template #body="slotProps">
-              <table>
-                <tr v-for="property in slotProps.data.properties" :key="property.name">
-                  <td>{{ property.name }}</td>
-                  <td>{{ property.value }}</td>
-                </tr>
-              </table>
+              <span> {{ findProperty(slotProps.data.properties, property) }} </span>
             </template>
           </Column>
           <Column field="genomic_profiles" header="Genomic Profiles">
@@ -65,7 +67,8 @@ import {
   type GenomeFilter,
   type ProfileFilter,
   type FilterGroupFilters,
-  type FilterGroupRoot
+  type FilterGroupRoot,
+  type Property
 } from '@/util/types'
 export default {
   name: 'GenomeFilterPage',
@@ -123,7 +126,7 @@ export default {
         if (filter.propertyName && filter.filterType && filter.value) {
           var value = filter.value
           if (filter.propertyName.includes('date')) {
-            const tzoffset = (new Date(value)).getTimezoneOffset() * 60000;
+            const tzoffset = new Date(value).getTimezoneOffset() * 60000
             value = new Date(new Date(value).getTime() - tzoffset).toISOString().split('T')[0]
           }
           summary.andFilter.push({
@@ -175,6 +178,10 @@ export default {
           this.propertyValueOptions[propertyName].options = res.values
           this.propertyValueOptions[propertyName].loading = false
         })
+    },
+    findProperty(properties: Array<Property>, propertyName: string) {
+      const property = properties.find(property => property.name === propertyName);
+      return property ? property.value : undefined;
     }
   },
   computed: {
