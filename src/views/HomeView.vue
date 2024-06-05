@@ -42,9 +42,13 @@
         // pages: 1,
         sampleCount: 0,
         samples: [],
+        chartData: {},
+        chartOptions: {},
         loading: false,
         propertyOptions: [],
         repliconAccessionOptions: [],
+        allColumns: [],
+        selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code'],
         propertyValueOptions: {} as { [key: string]: { options: string[]; loading: boolean } },
         symbolOptions: [],
         filterGroup: {
@@ -59,16 +63,75 @@
         this.loading = true
         const res = await API.getInstance().getSampleGenomes(this.filters)
         this.samples = res.results
+        console.log('NOW')
+        console.log(this.samples)
         this.sampleCount = res.count
         // this.pages = res.count / this.perPage
         this.loading = false
       },
-      async requestExport() {
-        await API.getInstance().getSampleGenomesExport(this.filters)
+      exportCSV() {
+        this.$refs.dt.exportCSV();
       },
+      // async requestExport() {
+      //   await API.getInstance().getSampleGenomesExport(this.filters)
+      // },
       async updatePropertyOptions() {
         const res = await API.getInstance().getSampleGenomePropertyOptions()
-        this.propertyOptions = res.property_names
+        this.propertyOptions = res.property_names;
+        this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
+      },
+      onToggle(value) {
+            this.selectedColumns = this.allColumns.filter(col => value.includes(col));
+      },
+      setChartData() {
+        return {
+            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+            datasets: [
+                {
+                    label: 'Sales',
+                    data: [540, 325, 702, 620],
+                    backgroundColor: ['rgba(249, 115, 22, 0.2)', 'rgba(6, 182, 212, 0.2)', 'rgb(107, 114, 128, 0.2)', 'rgba(139, 92, 246, 0.2)'],
+                    borderColor: ['rgb(249, 115, 22)', 'rgb(6, 182, 212)', 'rgb(107, 114, 128)', 'rgb(139, 92, 246)'],
+                    borderWidth: 1
+                }
+            ]
+        };
+      },
+      setChartOptions() {
+        const documentStyle = getComputedStyle(document.documentElement);
+        const textColor = documentStyle.getPropertyValue('--text-color');
+        const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary');
+        const surfaceBorder = documentStyle.getPropertyValue('--surface-border');
+        return {
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    ticks: {
+                        color: textColorSecondary
+                    },
+                    grid: {
+                        color: surfaceBorder
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: textColorSecondary
+                    },
+                    grid: {
+                        color: surfaceBorder
+                    }
+                }
+            }
+        };
       },
       async updateRepliconAccessionOptions() {
         const res = await API.getInstance().getRepliconAccessionOptions()
@@ -155,9 +218,11 @@
       }
     },
     mounted() {
-      this.updatePropertyOptions()
-      this.updateSymbolOptions()
-      this.updateRepliconAccessionOptions()
+      this.updatePropertyOptions();
+      this.updateSymbolOptions();
+      this.updateRepliconAccessionOptions();
+      this.chartData = this.setChartData();
+      this.chartOptions = this.setChartOptions();
     }
   }
 
@@ -219,44 +284,53 @@
         </div>
 
         <div class="output">
-          <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
-          <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" 
-                      stripedRows scrollable scrollHeight="flex" v-model:filters="filters_table" @filter="{ filtered_table_count = $event.filteredValue.length;}">
-            <template #empty> No Results </template>
-            <template #header>
-              <div style="display: flex; justify-content: flex-end;">
-                    <IconField iconPosition="left">
-                        <InputIcon>
-                            <i class="pi pi-search" />
-                        </InputIcon>
-                        <InputText v-model="filters_table['global'].value" placeholder="Keyword Search" />
-                    </IconField>
+          <div style="height: 50%; width: 100%; display: flex; justify-content: center;">
+            <Chart type="bar" :data="chartData" :options="chartOptions" style="width: 80%;"/>
+          </div>
+          <div style="height: 50%; overflow: auto;">
+            <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+            <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" 
+                        stripedRows removableSort scrollable scrollHeight="flex" v-model:filters="filters_table" @filter="{ filtered_table_count = $event.filteredValue.length;}">
+              <template #empty> No Results </template>
+              <template #header>
+                <div style="display: flex; justify-content: flex-end;">
+                  <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="onToggle"> 
+                    <template #value>
+                      <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected</div>
+                    </template>
+                  </MultiSelect>
+                  <IconField iconPosition="left">
+                      <InputIcon>
+                          <i class="pi pi-search" />
+                      </InputIcon>
+                      <InputText v-model="filters_table['global'].value" placeholder="Keyword Search" />
+                  </IconField>
                 </div>
-            </template>
-            <Column field="name" header="Name"></Column>
-            <Column v-for="property in propertyOptions" :header="property">
-              <template #body="slotProps">
-                <span> {{ findProperty(slotProps.data.properties, property) }} </span>
               </template>
-            </Column>
-            <Column field="genomic_profiles" header="Genomic Profiles">
-              <template #body="slotProps">
-                {{ slotProps.data.genomic_profiles }}
+              <Column field="name" header="ID" sortable ></Column>
+              <Column v-for="column in selectedColumns" :header="column" sortable>
+                <template #body="slotProps">
+                  <span v-if="column === 'genomic_profiles'">
+                    {{ slotProps.data.genomic_profiles }}
+                  </span>
+                  <span v-else-if="column === 'proteomic_profiles'">
+                    {{ slotProps.data.proteomic_profiles }}
+                  </span>
+                  <span v-else>
+                    {{ findProperty(slotProps.data.properties, column) }}
+                  </span>
+                </template>
+              </Column>
+              <template #footer> 
+                <div style="display: flex; justify-content: space-between;">
+                  Total: {{ sampleCount }} Samples 
+                  <!-- Total: {{ filtered_table_count }} Samples  -->
+                  <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="exportCSV($event)" />
+                  <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
+                </div>
               </template>
-            </Column>
-            <Column field="proteomic_profiles" header="Proteomic Profiles">
-              <template #body="slotProps">
-                {{ slotProps.data.proteomic_profiles }}
-              </template>
-            </Column>
-            <template #footer> 
-              <div style="display: flex; justify-content: space-between;">
-                Total: {{ sampleCount }} Samples 
-                <!-- Total: {{ filtered_table_count }} Samples  -->
-                <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" />
-              </div>
-            </template>
-          </DataTable>
+            </DataTable>
+          </div>
         </div>
       </div>
     </main>
@@ -377,6 +451,7 @@
     width: 97%;
     margin: 0 auto; 
     display: flex; 
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     background-color: white;
