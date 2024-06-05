@@ -47,7 +47,7 @@ $SCRIPTPATH/dc-dev.sh up -d
 $SCRIPTPATH/dev-manage.sh migrate
 
 if [ $TEST_DATA -eq 0 ]; then
-  $SCRIPTPATH/dev-manage.sh loaddata initial_data initial_auth test_data
+  $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_sm
 else
-  $SCRIPTPATH/dev-manage.sh loaddata initial_data initial_auth
+  $SCRIPTPATH/dev-manage.sh loaddata initial_auth
 fi

@@ -437,7 +437,7 @@ class PropertyViewSet(
                 "No property_name provided.", status=status.HTTP_400_BAD_REQUEST
             )
         sample_property_fields = [
-            field.name for field in models.Sample._meta.get_fields()
+            field.name for field in models.Sample._meta.get_fields() 
         ]
         if property_name in sample_property_fields:
             queryset = models.Sample.objects.all()
@@ -499,9 +499,10 @@ class PropertyViewSet(
     def distinct_property_names(self, request: Request, *args, **kwargs):
         queryset = models.Property.objects.all()
         queryset = queryset.distinct("name")
+        filter_list = ['id', 'datahash']
         property_names = [item.name for item in queryset]
-        sample_properties = models.Sample._meta.get_fields()
-        property_names += [item.name for item in sample_properties]
+        sample_properties = [field.name for field in models.Sample._meta.get_fields() if field.name not in filter_list]
+        property_names += sample_properties
         return Response(
             data={"property_names": property_names}, status=status.HTTP_200_OK
         )
