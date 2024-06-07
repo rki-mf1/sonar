@@ -7,6 +7,7 @@ import csv
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
 from django.http import StreamingHttpResponse
 from datetime import datetime
 
@@ -53,7 +54,7 @@ class SampleViewSet(
 ):
     queryset = models.Sample.objects.all().order_by("id")
     serializer_class = SampleSerializer
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
 
     @property
@@ -74,6 +75,11 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
         response_dict = {}
+        response_dict["distinct_mutations_count"] = (
+            models.Mutation.objects.values("ref", "alt", "start", "end")
+            .distinct()
+            .count()
+        )
         response_dict["samples_total"] = models.Sample.objects.all().count()
         response_dict["newest_sample_date"] = (
             models.Sample.objects.all()
@@ -83,6 +89,29 @@ class SampleViewSet(
         )
 
         return Response(data=response_dict, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"])
+    def samples_per_day(self, request: Request, *args, **kwargs):
+        queryset = (
+            models.Sample.objects.values("collection_date")
+            .annotate(count=Count("id"))
+            .order_by("collection_date")
+        )
+        dict = {str(item["collection_date"]): item["count"] for item in queryset}
+        return Response(data=dict)
+    
+    @action(detail=False, methods=["get"])
+    def samples_per_week(self, request: Request, *args, **kwargs):        
+        #calculate year and calendar week
+        queryset = (
+            models.Sample.objects.extra(
+                select={'week': "EXTRACT(WEEK FROM collection_date)", 'year': "EXTRACT(YEAR FROM collection_date)"}
+            ).values("year","week")
+            .annotate(count=Count("id"))
+            .order_by("year", "week")
+        )
+        dict = {f"{item['year']}-{item['week']}": item["count"] for item in queryset}
+        return Response(data=dict)
 
     @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
@@ -111,88 +140,80 @@ class SampleViewSet(
         3. add annotation info at the output
         """
 
-        try:
-            # we try to use bool(), but it is not working as expected.
-            showNX = strtobool(request.query_params.get("showNX", "False"))
-            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
-            csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
-            self.has_property_filter = False
-            queryset = models.Sample.objects.all()
-            if filter_params := request.query_params.get("filters"):
-                filters = json.loads(filter_params)
-                queryset = models.Sample.objects.filter(
-                    self.resolve_genome_filter(filters)
-                )
+        # we try to use bool(), but it is not working as expected.
+        showNX = strtobool(request.query_params.get("showNX", "False"))
+        vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
+        csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
+        self.has_property_filter = False
+        queryset = models.Sample.objects.all()
+        if filter_params := request.query_params.get("filters"):
+            filters = json.loads(filter_params)
+            print(filters)
+            queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
 
-            genomic_profiles_qs = (
-                models.Mutation.objects.filter(type="nt").only(
-                    "ref", "alt", "start", "end", "gene"
-                )
-            ).prefetch_related("gene")
-            proteomic_profiles_qs = (
-                models.Mutation.objects.filter(type="cds").only(
-                    "ref", "alt", "start", "end", "gene"
-                )
-            ).prefetch_related("gene")
-            annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
-                "mutation", "annotation"
+        genomic_profiles_qs = (
+            models.Mutation.objects.filter(type="nt").only(
+                "ref", "alt", "start", "end", "gene"
             )
-            if not showNX:
-                genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
-                proteomic_profiles_qs = proteomic_profiles_qs.filter(~Q(alt="X"))
-            queryset = queryset.select_related("sequence").prefetch_related(
-                "properties__property",
-                Prefetch(
-                    "sequence__alignments__mutations",
-                    queryset=genomic_profiles_qs,
-                    to_attr="genomic_profiles",
-                ),
-                Prefetch(
-                    "sequence__alignments__mutations",
-                    queryset=proteomic_profiles_qs,
-                    to_attr="proteomic_profiles",
-                ),
-                Prefetch(
-                    "sequence__alignments__mutation2annotation_set",
-                    queryset=annotation_qs,
-                    to_attr="alignment_annotations",
-                ),
+        ).prefetch_related("gene")
+        proteomic_profiles_qs = (
+            models.Mutation.objects.filter(type="cds").only(
+                "ref", "alt", "start", "end", "gene"
             )
+        ).prefetch_related("gene")
+        annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
+            "mutation", "annotation"
+        )
+        if not showNX:
+            genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
+            proteomic_profiles_qs = proteomic_profiles_qs.filter(~Q(alt="X"))
+        queryset = queryset.select_related("sequence").prefetch_related(
+            "properties__property",
+            Prefetch(
+                "sequence__alignments__mutations",
+                queryset=genomic_profiles_qs,
+                to_attr="genomic_profiles",
+            ),
+            Prefetch(
+                "sequence__alignments__mutations",
+                queryset=proteomic_profiles_qs,
+                to_attr="proteomic_profiles",
+            ),
+            Prefetch(
+                "sequence__alignments__mutation2annotation_set",
+                queryset=annotation_qs,
+                to_attr="alignment_annotations",
+            ),
+        )
 
-            # TODO: output in  VCF
-            # if VCF
-            # for obj in queryset.all():
-            #    print(obj.name)
-            #    for alignment in obj.sequence.alignments.all():
-            #        print(alignment)
-            # output only count
-            if csv_stream:
-                # TODO write output format
-                echo_buffer = Echo()
-                csv_writer = csv.writer(echo_buffer)
-                rows = (
-                    csv_writer.writerow(row)
-                    for row in queryset.values_list(
-                        "name",
-                        "sequence__seqhash",
-                    )
+        # TODO: output in  VCF
+        # if VCF
+        # for obj in queryset.all():
+        #    print(obj.name)
+        #    for alignment in obj.sequence.alignments.all():
+        #        print(alignment)
+        # output only count
+        if csv_stream:
+            # TODO write output format
+            echo_buffer = Echo()
+            csv_writer = csv.writer(echo_buffer)
+            rows = (
+                csv_writer.writerow(row)
+                for row in queryset.values_list(
+                    "name",
+                    "sequence__seqhash",
                 )
-                response = StreamingHttpResponse(rows, content_type="text/csv")
-                response["Content-Disposition"] = 'attachment; filename="export.csv"'
-                return response
-            if vcf_format:
-                queryset = self.paginate_queryset(queryset)
-                serializer = SampleGenomesSerializerVCF(queryset, many=True)
-                return self.get_paginated_response(serializer.data)
+            )
+            response = StreamingHttpResponse(rows, content_type="text/csv")
+            response["Content-Disposition"] = 'attachment; filename="export.csv"'
+            return response
+        if vcf_format:
             queryset = self.paginate_queryset(queryset)
-            serializer = SampleGenomesSerializer(queryset, many=True)
+            serializer = SampleGenomesSerializerVCF(queryset, many=True)
             return self.get_paginated_response(serializer.data)
-        except Exception as e:
-            print(e)
-            traceback.print_exc()
-            return Response(
-                message=str(e), return_status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        queryset = self.paginate_queryset(queryset)
+        serializer = SampleGenomesSerializer(queryset, many=True)
+        return self.get_paginated_response(serializer.data)
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()
@@ -205,7 +226,7 @@ class SampleViewSet(
             q_obj &= self.eval_basic_filter(q_obj, filters)
         for or_filter in filters.get("orFilter", []):
             q_obj |= self.resolve_genome_filter(or_filter)
-
+        print(q_obj)
         return q_obj
 
     def eval_basic_filter(self, q_obj, filter):
@@ -249,8 +270,10 @@ class SampleViewSet(
         if property_name in [field.name for field in models.Sample._meta.get_fields()]:
             query = {}
             query[f"{property_name}__{filter_type}"] = value
+            print(query)
         else:
             datatype = models.Property.objects.get(name=property_name).datatype
+            print(datatype)
             query = {f"properties__property__name": property_name}
             query[f"properties__{datatype}__{filter_type}"] = value
         if exclude:
