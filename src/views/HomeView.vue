@@ -81,14 +81,14 @@
                 <template #body="slotProps">
                   <div v-if="column === 'genomic_profiles'">
                     <div style="width:15rem; overflow-x: auto;">
-                    <GenomicProfileLabel v-for="variant in Object.keys(slotProps.data.genomic_profiles)"
-                      :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" />
+                      <GenomicProfileLabel v-for="variant in Object.keys(slotProps.data.genomic_profiles)"
+                        :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" />
                     </div>
                   </div>
                   <div v-else-if="column === 'proteomic_profiles'">
                     <div style="width:15rem; overflow-x: auto;">
-                    <GenomicProfileLabel v-for="variant in slotProps.data.proteomic_profiles"
-                      :variantString="variant" />
+                      <GenomicProfileLabel v-for="variant in slotProps.data.proteomic_profiles"
+                        :variantString="variant" />
                     </div>
                   </div>
                   <span v-else>
@@ -175,7 +175,7 @@ export default {
         filterGroups: [],
         filters: { propertyFilters: [], profileFilters: [], repliconFilters: [] }
       } as FilterGroup,
-      DjangoFilterType
+      DjangoFilterType,
     };
   },
   methods: {
@@ -183,8 +183,6 @@ export default {
       this.loading = true;
       const res = await API.getInstance().getSampleGenomes(this.filters);
       this.samples = res.results;
-      console.log('NOW');
-      console.log(this.samples);
       this.sampleCount = res.count;
       // this.pages = res.count / this.perPage
       this.loading = false;
@@ -225,10 +223,8 @@ export default {
       return {
         plugins: {
           legend: {
-            labels: {
-              color: textColor
-            }
-          }
+            display: false
+          },
         },
         responsive: true,
         maintainAspectRatio: false,
@@ -261,6 +257,18 @@ export default {
       const res = await API.getInstance().getGeneSymbolOptions();
       this.symbolOptions = res.gene_symbols;
     },
+    parseDateToDateRangeFilter(data) {
+      data[0] = new Date(Date.parse(data[0].toString()));
+      if (data[1]) {
+        data[1] = new Date(Date.parse(data[1].toString()));
+        const formatted = `${data[0].toISOString().split('T')[0]},${data[1].toISOString().split('T')[0]}`
+        return formatted;
+      } else {
+        return `${data[0].toISOString().split('T')[0]},${new Date(
+          Date.parse(data[0]) + 1000 * 60 * 60 * 24
+        ).toISOString().split('T')[0]}`;
+      }
+    },
     getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
       const summary = {
         andFilter: [] as GenomeFilter[],
@@ -270,7 +278,12 @@ export default {
         if (filter.propertyName && filter.filterType && filter.value) {
           var value = filter.value;
           if (filter.propertyName.includes('date')) {
-            value = new Date(value).toISOString().split('T')[0];
+            if (value[1]) {
+              filter.filterType = DjangoFilterType.RANGE;
+              value = this.parseDateToDateRangeFilter(value);
+            } else {
+              value = new Date(value[0]).toISOString().split('T')[0];
+            }
           }
           summary.andFilter.push({
             label: filter.label,
@@ -325,6 +338,29 @@ export default {
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
       return property ? property.value : undefined;
+    },
+    async loadPerWeekSampleCount() {
+      const res = await API.getInstance().getSamplesPerWeek({});
+      const labels = []
+      const data = []
+      Object.keys(res).forEach(yearWeek => {
+        labels.push(yearWeek)
+        data.push(res[yearWeek])
+
+
+      });
+      this.chartData = {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Samples',
+            data: data,
+            backgroundColor: 'rgba(249, 115, 22, 0.2)',
+            borderColor: 'rgb(249, 115, 22)',
+            borderWidth: 1
+          }
+        ]
+      }
     }
   },
   computed: {
@@ -343,6 +379,7 @@ export default {
     this.updateRepliconAccessionOptions();
     this.chartData = this.setChartData();
     this.chartOptions = this.setChartOptions();
+    this.loadPerWeekSampleCount();
   },
   components: { GenomicProfileLabel }
 }

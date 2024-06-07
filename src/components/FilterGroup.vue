@@ -179,7 +179,7 @@ export default {
           @change="updatePropertyValueOptions(filter)" />
         <Dropdown :options="operators" v-model="filter.filterType" style="flex: auto" />
         <Calendar v-if="filter.propertyName?.includes('date')" v-model="filter.value" style="flex: auto"
-          dateFormat="yy-mm-dd" />
+          dateFormat="yy-mm-dd" selectionMode="range"/>
         <Dropdown v-else-if="fetchOptionsProperties.includes(filter.propertyName)"
           :options="propertyValueOptions[filter.propertyName]?.options"
           :loading="propertyValueOptions[filter.propertyName]?.loading" v-model="filter.value" style="flex: auto" />

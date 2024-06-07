@@ -15,7 +15,7 @@
              const sample_statistics = await API.getInstance().getSampleStatistics()
              this.statistics.samples_total=sample_statistics.samples_total
              this.statistics.newest_sample_date=sample_statistics.newest_sample_date
-             console.log(sample_statistics)
+             this.statistics.distinct_mutations_count = sample_statistics.distinct_mutations_count
          }
      },
      mounted(){
@@ -24,7 +24,14 @@
      }
  </script>
 
-<template>
+<template> 
+<Card class="card" style="background-color: var(--secondary-color);">
+    <template #content>
+    <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;"/>
+    <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ statistics.distinct_mutations_count }}</div>
+    <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">distinct mutations in database</div>
+    </template>
+</Card>
     <Card class="card" style="background-color: var(--secondary-color);">
         <template #content>
         <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;"/>
