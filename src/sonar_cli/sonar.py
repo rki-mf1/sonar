@@ -6,6 +6,7 @@ from sonar_cli import config
 from sonar_cli.common_utils import combine_sample_argument
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils import sonarUtils
+from sonar_cli.utils1 import sonarUtils1
 from tabulate import tabulate
 
 from . import DESCRIPTION
@@ -74,7 +75,7 @@ def parse_args(args=None):
 
     # property
     subparsers, _ = create_subparser_list_prop(subparsers, database_parser)
-
+    # match
     subparsers, subparser_match = create_subparser_match(
         subparsers,
         database_parser,
@@ -83,6 +84,8 @@ def parse_args(args=None):
         output_parser,
         general_parser,
     )
+    # admin
+    subparsers, _ = create_subparser_tasks(subparsers, database_parser)
 
     # version parser
     parser.add_argument(
@@ -294,6 +297,42 @@ def create_parser_thread() -> argparse.ArgumentParser:
         default=1,
     )
     return parser
+
+
+def create_subparser_tasks(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+
+    # View Reference.
+    parser = subparsers.add_parser(
+        "tasks",
+        parents=parent_parsers,
+        help="Job Tracker",
+    )
+    mutually_exclusive_group = parser.add_mutually_exclusive_group()
+
+    # Option to list all job IDs
+    mutually_exclusive_group.add_argument(
+        "--list-jobs", help="List all job IDs", action="store_true"
+    )
+
+    # Option to search for a specific job ID
+    mutually_exclusive_group.add_argument(
+        "--jobid", help="Search for a specific job ID", type=str, default=None
+    )
+    # Add subparsers for jobid specific commands
+    jobid_subparsers = parser.add_subparsers(dest="jobid_command")
+    # Subcommand for running in the background
+    jobid_background_parser = jobid_subparsers.add_parser(
+        "background", help="Run background checks periodically for the specified job"
+    )
+    jobid_background_parser.add_argument(
+        "--interval",
+        help="Interval in seconds to check the job status",
+        type=int,
+        default=60,
+    )
+    return subparsers, parser
 
 
 def create_subparser_list_prop(
@@ -798,6 +837,27 @@ def handle_add_prop(args: argparse.Namespace):
     )
 
 
+def handle_tasks(args: argparse.Namespace):
+    if args.list_jobs:
+        print(
+            tabulate(sonarUtils1.get_all_jobs(), headers="keys", tablefmt="fancy_grid")
+        )
+    elif args.jobid:
+        result, status = sonarUtils1.get_job_byID(
+            job_id=args.jobid,
+            background=args.jobid_command == "background",
+            interval=args.interval,
+        )
+        print("Status:", status)
+        print(
+            tabulate(
+                result,
+                headers="keys",
+                tablefmt="grid",
+            )
+        )
+
+
 def handle_delete_prop(args: argparse.Namespace):
     """
     Handle deleting an existing property from the database.
@@ -897,6 +957,8 @@ def execute_commands(args):  # noqa: C901
             parse_args(["delete-sample", "-h"])
         else:
             handle_delete_sample(args)
+    elif args.command == "tasks":
+        handle_tasks(args)
 
 
 def main(args: Optional[argparse.Namespace] = None) -> int:

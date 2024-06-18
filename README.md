@@ -121,7 +121,7 @@ sonar-cli import -r MN908947.3 --fasta covid19.fasta --tsv covid19.meta.tsv --ca
 
 Example command: Including annotation step(`--auto-anno`)
 ```sh
-sonar-cli import -r MN908947.3 --fasta covid19.fasta --tsv covid19.meta.tsv --cache cache_folder/ -t 2 --method 1  --cols sample=ID  --auto-ano --auto-link
+sonar-cli import -r MN908947.3 --fasta covid19.fasta --tsv covid19.meta.tsv --cache cache_folder/ -t 2 --method 1  --cols sample=ID  --auto-anno --auto-link
 ```
 
 To view all available options:

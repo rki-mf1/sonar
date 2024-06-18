@@ -26,6 +26,9 @@ class APIClient:
     get_translation_table_endpoint = "resources/get_translation_table"
     get_properties_endpont = "properties/get_all_properties"
 
+    get_all_jobs_endpont = "tasks/get_all_jobs"
+    get_job_byID_endpont = "tasks/get_files_by_job_id"
+
     post_add_reference_endpoint = "references/import_gbk/"
     post_delete_reference_endpoint = "references/delete_reference/"
     post_delete_sample_endpoint = "samples/delete_sample_data/"
@@ -312,12 +315,13 @@ class APIClient:
     #     else:
     #         return None
 
-    def post_import_upload(self, files):
+    def post_import_upload(self, files, job_id):
         """
         send compressed sample, var, vcf file.
         """
+        data = {"job_id": job_id}
         json_response = self._make_request(
-            "POST", endpoint=self.post_import_upload_endpoint, files=files
+            "POST", endpoint=self.post_import_upload_endpoint, data=data, files=files
         )
         return json_response
 
@@ -390,5 +394,22 @@ class APIClient:
 
         json_response = self._make_request(
             "POST", endpoint=self.post_delete_property_endpoint, data=data
+        )
+        return json_response
+
+    def get_all_jobs(self):
+        """
+        Returns:
+            List[str]: A list of references
+        """
+        json_response = self._make_request("GET", endpoint=self.get_all_jobs_endpont)
+        return json_response
+
+    def get_job_byID(self, job_id: str):
+        """ """
+        params = {}
+        params["job_id"] = job_id
+        json_response = self._make_request(
+            "GET", endpoint=self.get_job_byID_endpont, params=params
         )
         return json_response

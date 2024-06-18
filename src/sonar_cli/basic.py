@@ -353,6 +353,7 @@ def create_annotaiton_query(
 
 
 def construct_query(  # noqa: C901
+    reference: str,
     properties: Optional[Dict[str, List[str]]] = None,
     profiles: Optional[Dict[str, List[str]]] = None,
     defined_props: Optional[List[Dict[str, str]]] = [],
@@ -376,7 +377,8 @@ def construct_query(  # noqa: C901
     float_pattern_range = re.compile(
         r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
     )
-    final_query = {"andFilter": [], "orFilter": []}
+    reference_query = {"label": "Replicon", "exclude": False, "accession": reference}
+    final_query = {"andFilter": [reference_query], "orFilter": []}
     LOGGER.debug(f"Input Samples:{samples}")
     LOGGER.debug(f"Input Profiles:{profiles}")
     LOGGER.debug(f"Input Properties:{properties}")
@@ -579,12 +581,22 @@ def construct_query(  # noqa: C901
                 _prop_query["andFilter"].append(_tmp_query)
 
     # Then merge back to the final query
-
     if len(_prop_query.get("andFilter", [])) > 0:
         final_query["andFilter"].append(_prop_query)
 
+    # Traverse to add reference.
+    add_reference_query(final_query, reference_query=reference_query)
     # final_query = remove_empty_lists(final_query)
     return final_query
+
+
+def add_reference_query(query_dict, reference_query):
+    if isinstance(query_dict, dict):
+        if "andFilter" in query_dict:
+            for and_filter in query_dict["andFilter"]:
+                add_reference_query(and_filter, reference_query)
+            if query_dict["andFilter"]:
+                query_dict["andFilter"].append(reference_query)
 
 
 def remove_empty_lists(d):

@@ -54,6 +54,8 @@ class Annotator:
 
         except subprocess.CalledProcessError as e:
             LOGGER.error("Annotation failed: %s", e)
+            with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+                writer.write("Annotation failed:" + e + "\n")
 
     def bcftools_filter(self, input_vcf, output_vcf):
         filter_command = f"bcftools view -e 'INFO/ANN=\".\"' {input_vcf} > {output_vcf}"
@@ -62,6 +64,8 @@ class Annotator:
         filter_process = subprocess.run(filter_command, shell=True)
         if filter_process.returncode != 0:
             LOGGER.error("Error occurred while filtering the VCF file.")
+            with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+                writer.write("Fail bcftools_filter:" + filter_command + "\n")
 
     def bcftools_split(
         self, input_vcf, output_vcfs=[], map_name_annovcf_dict: dict = {}
@@ -76,7 +80,8 @@ class Annotator:
         filter_process = subprocess.run(filter_command, shell=True)
         if filter_process.returncode != 0:
             LOGGER.error("Error occurred while filtering the VCF file.")
-
+            with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+                writer.write("Fail bcftools_split:" + filter_command + "\n")
         # Get the list of sample names from the command output
         sample_names_cmd = f"bcftools query -l {filtered_vcf}"
         sample_names_process = subprocess.run(
@@ -84,8 +89,8 @@ class Annotator:
         )
 
         if sample_names_process.returncode != 0:
-            print("Error occurred while getting sample names.")
-            print("Error output:", sample_names_process)
+            LOGGER.error("Error occurred while getting sample names.")
+            LOGGER.error("Error output:", sample_names_process)
             exit()
 
         sample_names = sample_names_process.stdout.strip().split()
@@ -98,7 +103,9 @@ class Annotator:
             process = subprocess.run(cmd, shell=True)
 
             if process.returncode != 0:
-                print(f"Error occurred while processing sample {sample}")
+                LOGGER.error(f"Error occurred while processing sample {sample}")
+                with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+                    writer.write("Fail bcftools_split:" + cmd + "\n")
 
         if os.path.exists(filtered_vcf):
             os.remove(filtered_vcf)
@@ -128,6 +135,11 @@ class Annotator:
             LOGGER.error(result.stderr.decode("utf-8"))
             LOGGER.error("Input file: %s", input_vcfs)
             LOGGER.error("Output file: %s", output_vcf)
+            with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+                writer.write(
+                    "Fail bcftools_merge:" + result.stderr.decode("utf-8") + "\n"
+                )
+                writer.write(command + "\n")
             sys.exit(1)
         return output_vcf
 

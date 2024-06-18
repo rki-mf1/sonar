@@ -11,6 +11,7 @@ from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Union
+import uuid
 import zipfile
 
 from mpire import WorkerPool
@@ -226,6 +227,8 @@ class sonarUtils:
             progress: Whether to show progress bar.
             method: Alignment method 1 MAFFT, 2 Parasail, 3 WFA2-lib
         """
+        if not no_upload_sample:
+            job_id = "cli_" + str(uuid.uuid4())
 
         if not fasta_files:
             return
@@ -246,13 +249,16 @@ class sonarUtils:
         if l == 0:
             return
         start_align_time = get_current_time()
-        with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
-            desc="Profiling sequences...",
-            total=l,
-            unit="seqs",
-            bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-            disable=not progress,
-        ) as pbar:
+        with (
+            WorkerPool(n_jobs=threads, start_method="fork") as pool,
+            tqdm(
+                desc="Profiling sequences...",
+                total=l,
+                unit="seqs",
+                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+                disable=not progress,
+            ) as pbar,
+        ):
             for _ in pool.imap_unordered(
                 aligner.process_cached_sample, sample_data_dict_list
             ):
@@ -310,17 +316,23 @@ class sonarUtils:
             start_upload_time = get_current_time()
             # NOTE: reuse the chunk size from anno
             # n = 500
-
-            with WorkerPool(n_jobs=threads, start_method="fork") as pool, tqdm(
-                position=0,
-                leave=True,
-                desc="Sending sample/variant...",
-                total=len(passed_samples_chunk_list),
-                unit="chunks",
-                bar_format=bar_format,
-                disable=not progress,
-            ) as pbar:
-
+            cache_dict = {"job_id": job_id}
+            with (
+                WorkerPool(
+                    n_jobs=threads,
+                    start_method="fork",
+                    shared_objects=cache_dict,
+                ) as pool,
+                tqdm(
+                    position=0,
+                    leave=True,
+                    desc="Sending sample/variant...",
+                    total=len(passed_samples_chunk_list),
+                    unit="chunks",
+                    bar_format=bar_format,
+                    disable=not progress,
+                ) as pbar,
+            ):
                 for _ in pool.imap_unordered(
                     sonarUtils.zip_import_upload_multithread,
                     passed_samples_chunk_list,
@@ -331,7 +343,7 @@ class sonarUtils:
                 with WorkerPool(
                     n_jobs=threads,
                     start_method="fork",
-                    use_worker_state=False,
+                    shared_objects=cache_dict,
                 ) as pool:
                     pool.map_unordered(
                         sonarUtils.zip_import_upload_annotaion,
@@ -348,14 +360,14 @@ class sonarUtils:
             cache.logfile_obj.write(
                 f"Sample upload usage time: {calculate_time_difference(start_upload_time, get_current_time())}\n"
             )
-
+            LOGGER.info("Job ID: %s", job_id)
         else:
             LOGGER.info("Disable sending samples.")
 
         clear_unnecessary_cache(passed_samples_list)
 
     @staticmethod
-    def zip_import_upload_annotaion(file_path):
+    def zip_import_upload_annotaion(shared_objects: dict, file_path):
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
@@ -373,13 +385,15 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
 
-        json_response = APIClient(base_url=BASE_URL).post_import_upload(files)
+        json_response = APIClient(base_url=BASE_URL).post_import_upload(
+            files, job_id=shared_objects["job_id"]
+        )
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
 
     @staticmethod
-    def zip_import_upload_multithread(*sample_list):
+    def zip_import_upload_multithread(shared_objects: dict, *sample_list):
 
         files_to_compress = []
         for kwargs in sample_list:
@@ -422,7 +436,9 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
 
-        json_response = APIClient(base_url=BASE_URL).post_import_upload(files)
+        json_response = APIClient(base_url=BASE_URL).post_import_upload(
+            files, job_id=shared_objects["job_id"]
+        )
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
@@ -697,6 +713,7 @@ class sonarUtils:
 
         params["filters"] = json.dumps(
             construct_query(
+                reference=reference,
                 profiles=profiles,
                 properties=properties,
                 defined_props=defined_props,
@@ -706,6 +723,7 @@ class sonarUtils:
                 annotation_impact=annotation_impact,
             )
         )
+
         params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
