@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 import logging
 from covsonar_backend.utils import CustomisedJSONFormatter
-
+from datetime import datetime
 
 # Initialise environment variables
 
@@ -209,11 +209,11 @@ SONAR_DATA_ARCHIVE = (
 
 # Check if the directory already exists
 if not os.path.exists(SONAR_DATA_ENTRY_FOLDER):
-    os.makedirs(SONAR_DATA_ENTRY_FOLDER)
+    os.makedirs(SONAR_DATA_ENTRY_FOLDER, exist_ok = True)
 if not os.path.exists(SONAR_DATA_PROCESSING_FOLDER):
-    os.makedirs(SONAR_DATA_PROCESSING_FOLDER)
+    os.makedirs(SONAR_DATA_PROCESSING_FOLDER, exist_ok = True)
 if not os.path.exists(SONAR_DATA_ARCHIVE):
-    os.makedirs(SONAR_DATA_ARCHIVE)
+    os.makedirs(SONAR_DATA_ARCHIVE, exist_ok = True)
 
 # ------------------------------------------
 
@@ -222,7 +222,7 @@ LOGGER = logging.getLogger(__name__)
 LOG_PATH=env('LOG_PATH')
 LOG_LEVEL=env('LOG_LEVEL')
 if not os.path.exists(LOG_PATH):
-    os.makedirs(LOG_PATH)
+    os.makedirs(LOG_PATH, exist_ok = True)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -238,7 +238,7 @@ LOGGING = {
         'app_log_file': {
             'level': LOG_LEVEL,
             'class': 'logging.FileHandler',
-            'filename': os.path.join(LOG_PATH, 'app.log.json'),
+            'filename': os.path.join(LOG_PATH, f'{datetime.today().strftime("%Y_%m_%d")}.log.json'),
         
             'formatter': 'json',
         },

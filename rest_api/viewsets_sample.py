@@ -115,8 +115,8 @@ class SampleViewSet(
             showNX = strtobool(request.query_params.get("showNX", "False"))
             vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
             csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
-            get_all = strtobool(request.query_params.get("get_all", "False"))
 
+            LOGGER.info(f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}")
             self.has_property_filter = False
             queryset = models.Sample.objects.all()
             if filter_params := request.query_params.get("filters"):
@@ -124,6 +124,7 @@ class SampleViewSet(
                 queryset = models.Sample.objects.filter(
                     self.resolve_genome_filter(filters)
                 )
+                LOGGER.info(f"Genomes Query, conditions: {filters}")
 
             genomic_profiles_qs = (
                 models.Mutation.objects.filter(type="nt").only(

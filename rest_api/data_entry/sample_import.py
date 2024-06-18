@@ -10,6 +10,7 @@ from django.db.models import Q
 if typing.TYPE_CHECKING:
     from django.db.models.query import ValuesQuerySet
 
+from covsonar_backend.settings import LOGGER
 from rest_api.models import (
     Alignment,
     AnnotationType,
@@ -211,6 +212,7 @@ class SampleImport:
 
     def get_annotation_objs(self) -> list[AnnotationType]:
         if self.db_sample_mutations is None:
+            LOGGER.error("Mutation objects not created yet")
             raise Exception("Mutation objects not created yet")
         self.annotation_query_data = {}
         for mutation in self.anno_vcf_raw:

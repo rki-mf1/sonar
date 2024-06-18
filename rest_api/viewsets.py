@@ -791,7 +791,7 @@ class TasksView(
     def get_files_by_job_id(self, request, *args, **kwargs):
         try:
             if job_id := request.query_params.get("job_id"):
-                models.ProcessingJob.objects.get(job_name=job_id)
+                jobID_obj = models.ProcessingJob.objects.get(job_name=job_id)
             else:
                 return Response(
                     {"detail": "job_id field is missing"},
@@ -806,6 +806,7 @@ class TasksView(
             # file_serializer = FileProcessingSerializer(files, many=True)
 
             # # Retrieve ImportLog instances for each file and their status
+
             files_data = []
             for file in files:
                 logs = models.ImportLog.objects.filter(file=file)
@@ -814,7 +815,7 @@ class TasksView(
                     {"file_name": file.file_name, "status_list": logs_data}
                 )
             return Response(
-                data={"jobID": job_id, "detail": files_data},
+                data={"jobID": job_id, "status": jobID_obj.status ,"detail": files_data},
                 status=status.HTTP_200_OK,
             )
         except models.ProcessingJob.DoesNotExist:

@@ -36,8 +36,8 @@ import environ
 def check_for_new_data():
     processing_dir = pathlib.Path(SONAR_DATA_PROCESSING_FOLDER)
     # processing_dir.mkdir(parents=True, exist_ok=True)
-
-    zip_files = list(pathlib.Path(SONAR_DATA_ENTRY_FOLDER).glob("*.zip"))
+    # NOTE: Order is matter 
+    zip_files = sorted(list(pathlib.Path(SONAR_DATA_ENTRY_FOLDER).glob("*.zip")))
 
     if REDIS_URL is None:
         print("--------------- WARNING -----------------")
@@ -72,8 +72,11 @@ def import_archive(process_file_path: pathlib.Path):
             LOGGER.warning("The given import files is not related to any jobID (skip this batch)")
             return
         job_ID = proJob_obj.job_name
-        print("jobID :", job_ID)
+        LOGGER.info(f"jobID : {job_ID}")
         print(f"Unzip to {temp_dir}")
+        ProcessingJob.objects.filter(job_name=job_ID).update(
+            status=ProcessingJob.ImportType.IN_PROGRESS
+        )
         # unzip the zip file to SONAR_DATA_ARCHIVE
         with zipfile.ZipFile(process_file_path, "r") as zip_ref:
             zip_ref.extractall(temp_dir)
@@ -144,9 +147,7 @@ def import_archive(process_file_path: pathlib.Path):
                     process_batch_single_thread(
                         batch, replicon_cache, gene_cache, str(temp_dir)
                     )
-
                 # annotation 
-
                 for file in anno_files:
                     process_annotation(str(file)) 
   
@@ -167,7 +168,7 @@ def import_archive(process_file_path: pathlib.Path):
             exception_text=e,
             stack_trace=traceback.format_exc(),
         )
-        LOGGER.error(f"--- Exception: move to {process_file_path} ---")
+        LOGGER.error(f"--- Exception: move to {error_dir} ---")
 
         # TODO: if fail update the ProcessingJob optional
     else:
@@ -179,7 +180,7 @@ def import_archive(process_file_path: pathlib.Path):
             file=FileProcessing.objects.get(file_name=filename_ID),
             success=True,
         )
-        LOGGER.info(f"--- Finish: move to {process_file_path} ---")
+        LOGGER.info(f"--- Finish: move to {completed_dir} ---")
     finally:
         # TODO: need to rethink about how to finalize the job status
         # The  _file_count = total_all_file - total_file is not a great idea
@@ -210,14 +211,14 @@ def import_archive(process_file_path: pathlib.Path):
                 ProcessingJob.objects.filter(job_name=job_ID).update(
                     status=ProcessingJob.ImportType.FAILED
                 )
-                print(f"### Job ID: {job_ID} \nRun status: Failed")
+                # print(f"### Job ID: {job_ID} \nRun status: Failed")
+                LOGGER.error(f"### Job ID: {job_ID} \nRun status: Failed")
             else:
                 #  "Completed"
                 ProcessingJob.objects.filter(job_name=job_ID).update(
                     status=ProcessingJob.ImportType.COMPLETED
                 )
-                print(f"### Job ID: {job_ID} \nRun status: Completed")
-
+                LOGGER.info(f"### Job ID: {job_ID} \nRun status: Completed")
 
 @shared_task
 def process_batch(batch: list[str], replicon_cache, gene_cache, temp_dir):

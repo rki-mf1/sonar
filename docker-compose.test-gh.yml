@@ -54,6 +54,7 @@ services:
     build:
       context: ./nginx
     volumes:
+      - ./nginx/covsonar.conf:/etc/nginx/conf.d/default.conf
       - ./covsonar2_server/test/static:/staticfiles
       - ./covsonar2_server/test/media:/mediafiles
     ports:
@@ -78,6 +79,7 @@ services:
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
     command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=2 -E --max-tasks-per-child 2 --time-limit 600 -n Bob
     volumes:
+      - .:/code
       - ./tmp/wkdir:/tmp/wkdir # working directory of import process
     env_file:
       - conf/test-gh.env

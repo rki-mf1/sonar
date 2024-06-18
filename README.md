@@ -161,8 +161,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 
 ## Start sonar-backend with Docker 
 
-### Deploy sonar-backend for production
-⚠️Caution: not a final version
+### Deploy sonar-backend for development
 
 1. Build the sonar-backend image
 ```bash
@@ -196,6 +195,33 @@ Once the containers are up and running, you can access
 - sonar-cli reach the backend via http://127.0.0.1:8000/api
 - http://127.0.0.1:8000/admin through a web browser (username:"note" passwrod:"123456")
 - http://localhost:5555 for monitoring workers (username:"note" passwrod:"123456")
+
+### Deploy sonar-backend for production
+⚠️Caution: not a final version
+
+1. Create an environment file.
+```bash
+cp template.env .prod.env
+```
+
+2. Create a config file for Nginx.
+```bash
+cp ./nginx/covsonar.conf ./nginx/prod.conf
+```
+3. Build local docker image
+```bash
+docker build -t backend:latest -f Dockerfile .
+```
+4. Start docker stacks
+```bash
+docker compose --env-file .prod.env  -f "docker-compose-prod.yml" up --build
+```
+5. Create super user for django admin
+```bash
+# docker-compose exec <service_name>, not docker-compose exec <container_name>.
+docker compose --env-file .prod.env -f 'docker-compose-prod.yml' exec sonar-backend-django python manage.py createsuperuser
+```
+
 
 ----
 
