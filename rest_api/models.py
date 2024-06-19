@@ -93,7 +93,7 @@ class Gene(models.Model):
     strand = models.BigIntegerField(blank=True, null=True)
     gene_symbol = models.CharField(max_length=50, blank=True, null=True)
     cds_symbol = models.CharField(max_length=50, blank=True, null=True)
-    gene_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    gene_accession = models.CharField(max_length=50, unique=False, blank=True, null=True)
     cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)

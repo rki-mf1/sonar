@@ -160,7 +160,8 @@ class SampleViewSet(
                     to_attr="alignment_annotations",
                 ),
             )
-
+            if DEBUG:
+                print(queryset.query)
             # TODO: output in  VCF
             # if VCF
             # for obj in queryset.all():
