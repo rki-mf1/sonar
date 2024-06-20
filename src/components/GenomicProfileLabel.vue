@@ -1,5 +1,5 @@
 <template>
-    <span :title="annotations?.length > 0 ? annotations : undefined">{{ variantString }},&nbsp;</span>
+    <span :title="annotations?.length > 0 ? annotations : undefined">{{ variantString }}<span v-if="!isLast">,&nbsp;</span></span>
 </template>
 <script lang="ts">
 export default {
@@ -11,6 +11,10 @@ export default {
         annotations: {
             type: Array<String>,
             required: false,
+        },
+        isLast: {
+            type: Boolean,
+            required: true,
         },
     },
 };

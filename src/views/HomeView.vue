@@ -80,15 +80,15 @@
               <Column v-for="column in selectedColumns" :header="column" sortable>
                 <template #body="slotProps">
                   <div v-if="column === 'genomic_profiles'">
-                    <div style="width:15rem; overflow-x: auto;">
-                      <GenomicProfileLabel v-for="variant in Object.keys(slotProps.data.genomic_profiles)"
-                        :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" />
+                    <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                      <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                        :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
                     </div>
                   </div>
                   <div v-else-if="column === 'proteomic_profiles'">
-                    <div style="width:15rem; overflow-x: auto;">
-                      <GenomicProfileLabel v-for="variant in slotProps.data.proteomic_profiles"
-                        :variantString="variant" />
+                    <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                      <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                        :variantString="variant" :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
                     </div>
                   </div>
                   <span v-else>
