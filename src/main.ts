@@ -20,6 +20,7 @@ import Dialog from "primevue/dialog";
 import MultiSelect from "primevue/multiselect";
 import Calendar from "primevue/calendar";
 import Chart from 'primevue/chart';
+import Tooltip from 'primevue/tooltip';
 
 import { OhVueIcon, addIcons } from 'oh-vue-icons'
 import { FaDna } from 'oh-vue-icons/icons'
@@ -70,6 +71,9 @@ app.component('Calendar', Calendar)
 app.component('Chart', Chart)
 
 app.component("v-icon", OhVueIcon);
+
+
+app.directive('tooltip', Tooltip);
 
 
 app.mount('#app')

@@ -16,6 +16,8 @@
              this.statistics.samples_total=sample_statistics.samples_total
              this.statistics.newest_sample_date=sample_statistics.newest_sample_date
              this.statistics.distinct_mutations_count = sample_statistics.distinct_mutations_count
+             this.statistics.mutation_non_empty_counts = sample_statistics.mutation_non_empty_counts
+             this.statistics.sample_non_empty_counts = sample_statistics.sample_non_empty_counts
          }
      },
      mounted(){

@@ -72,12 +72,16 @@
                     <InputIcon>
                       <i class="pi pi-search" />
                     </InputIcon>
-                    <InputText v-model="filters_table['global'].value" placeholder="Keyword Search" />
+                    <InputText v-model="filters_table['global'].value" placeholder="Keyword Search"/>
                   </IconField>
                 </div>
               </template>
-              <Column field="name" header="ID" sortable></Column>
-              <Column v-for="column in selectedColumns" :header="column" sortable>
+              <Column field="name">
+                <template #header>
+                  <span v-tooltip="'TEST'">ID</span>
+                </template>
+              </Column>
+              <Column v-for="column in selectedColumns" :header="column">
                 <template #body="slotProps">
                   <div v-if="column === 'genomic_profiles'">
                     <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
