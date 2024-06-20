@@ -5,6 +5,7 @@ from Bio.Align.Applications import MafftCommandline
 from Bio.Emboss.Applications import StretcherCommandline
 import parasail
 import psutil
+from pywfa import cigartuples_to_str
 from pywfa import WavefrontAligner
 from sonar_cli.logging import LoggingConfigurator
 
@@ -14,28 +15,54 @@ LOGGER = LoggingConfigurator.get_logger()
 cigar_pattern = re.compile(r"(\d+)(\D)")
 
 
-def align_WFA(qryseq, refseq, gapopen=16, gapextend=4):
+def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
     """Method for WFA2-lib run"""
-    # wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
-    # attributes.alignment_form.span = alignment_endsfree;
-    # attributes.alignment_form.pattern_begin_free = 0;
-    # attributes.alignment_form.pattern_end_free = 0;
-    # attributes.alignment_form.text_begin_free = text_begin_free;
-    # attributes.alignment_form.text_end_free = text_end_free;
-    #
-    # From WFA2-lib:
-    # WFA2lib follows the convention that describes how to transform the (1) Pattern/Query into the (2) Text/Database/Reference used in classic pattern matching papers. However, the SAM CIGAR specification describes the transformation from (2) Reference to (1) Query. If you want CIGAR-compliant alignments, swap the pattern and text sequences argument when calling the WFA2lib's align functions (to convert all the Ds into Is and vice-versa).
-    # so there is a chance that the query and ref (pattern and text in WFA language) need to be swapped
-    a = WavefrontAligner(refseq, gap_opening=gapopen, gap_extension=gapextend)
-    a.wavefront_align(qryseq)
-    if a.status != 0:  # alignment was not successful
+    # Scoring settings from Nextclade source code (https://github.com/nextstrain/nextclade/blob/master/packages/nextclade/src/align/params.rs#L156)
+    # penalty_gap_extend: 0,
+    # penalty_gap_open: 6,
+    # penalty_gap_open_in_frame: 7,
+    # penalty_gap_open_out_of_frame: 8,
+    # penalty_mismatch: 1,
+    # score_match: 3,
+    match = -3
+    mismatch = 1
+    left_align_indels = True
+
+    # WFA2-lib right aligns indels by default. To force left alignment we reverse our sequences before doing alignment.
+    # See: https://github.com/smarco/WFA2-lib/issues/37
+    if left_align_indels:
+        refseq = refseq[::-1]
+        qryseq = qryseq[::-1]
+
+    reference_length = len(refseq)
+    a = WavefrontAligner(
+        refseq,
+        match=match,
+        mismatch=mismatch,
+        gap_opening=gapopen,
+        gap_extension=gapextend,
+        span="ends-free",
+        pattern_begin_free=reference_length,
+        pattern_end_free=reference_length,
+        text_begin_free=0,
+        text_end_free=0,
+    )
+    alignment = a(qryseq)
+    if alignment.status != 0:  # alignment was not successful
         LOGGER.error("An error occurred in align_WFA")
+        if left_align_indels:
+            qryseq = qryseq[::-1]
         LOGGER.error(f"Input sequence: {qryseq}")
         sys.exit("--stop--")
-    cigar = a.cigarstring
-    # res = a(qryseq)
-    traceback_ref = ""  # res.aligned_pattern
-    traceback_query = ""  # res.aligned_text
+
+    cigartuple = alignment.cigartuples
+    if left_align_indels:
+        cigartuple = cigartuple[::-1]
+    cigar = cigartuples_to_str(cigartuple)
+
+    # We don't use the traceback, we can just return empty strings here
+    traceback_ref = ""
+    traceback_query = ""
     return (
         traceback_ref,
         traceback_query,
