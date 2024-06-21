@@ -19,7 +19,7 @@ from . import models
 from rest_api.serializers import SampleSerializer
 from rest_api.data_entry.sample_job import delete_sample
 from django.db import transaction
-from django.db.models import Count, F, Q, QuerySet, Prefetch
+from django.db.models import Count, F, Q, QuerySet, Prefetch, CharField, TextField
 from rest_framework.decorators import action, api_view
 from rest_framework import generics, serializers, viewsets
 from rest_framework.request import Request
@@ -130,6 +130,13 @@ class SampleViewSet(
         }
         return Response(data=dict)
 
+    def _get_filtered_queryset(self, request: Request):
+        queryset = models.Sample.objects.all()
+        if filter_params := request.query_params.get("filters"):
+            filters = json.loads(filter_params)
+            queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
+        return queryset
+
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
@@ -145,11 +152,7 @@ class SampleViewSet(
         vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
         csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
         self.has_property_filter = False
-        queryset = models.Sample.objects.all()
-        if filter_params := request.query_params.get("filters"):
-            filters = json.loads(filter_params)
-            print(filters)
-            queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
+        queryset = self._get_filtered_queryset(request)
 
         genomic_profiles_qs = (
             models.Mutation.objects.filter(type="nt").only(
@@ -214,6 +217,29 @@ class SampleViewSet(
         queryset = self.paginate_queryset(queryset)
         serializer = SampleGenomesSerializer(queryset, many=True)
         return self.get_paginated_response(serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def filtered_statistics(self, request: Request, *args, **kwargs):
+        response_dict = {}
+
+        queryset = self._get_filtered_queryset(request).annotate(
+            genomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="nt")),
+            proteomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="cds"))
+        )
+        response_dict["genomic_profiles"] = queryset.filter(genomic_profiles_count__gt=0).count()
+        response_dict["proteomic_profiles"] = queryset.filter(proteomic_profiles_count__gt=0).count()
+    
+        for field in models.Sample._meta.get_fields():
+            field_name = field.name
+            if isinstance(field, (CharField, TextField)):
+                non_empty_count = models.Sample.objects.exclude(**{field_name: ''}).exclude(**{field_name: None}).count()
+            else:
+                non_empty_count = models.Sample.objects.exclude(**{field_name: None}).count()
+            response_dict[field_name] = non_empty_count
+
+        response_dict["filtered_total_count"] = queryset.count()
+
+        return Response(data=response_dict)
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()
