@@ -78,10 +78,13 @@
               </template>
               <Column field="name">
                 <template #header>
-                  <span v-tooltip="'TEST'">ID</span>
+                  <span v-tooltip="metaDataCoverage('name')">ID</span>
                 </template>
               </Column>
-              <Column v-for="column in selectedColumns" :header="column">
+              <Column v-for="column in selectedColumns">
+                <template #header>
+                  <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
+                </template>
                 <template #body="slotProps">
                   <div v-if="column === 'genomic_profiles'">
                     <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
@@ -161,6 +164,7 @@ export default {
       // pages: 1,
       sampleCount: 0,
       samples: [],
+      filteredStatistics: {} as Record<string, number>,
       chartData: {},
       chartOptions: {},
       loading: false,
@@ -186,10 +190,19 @@ export default {
     async updateSamples() {
       this.loading = true;
       const res = await API.getInstance().getSampleGenomes(this.filters);
+      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.samples = res.results;
       this.sampleCount = res.count;
       // this.pages = res.count / this.perPage
       this.loading = false;
+    },
+    metaDataCoverage(column: string) {
+      if (this.filteredStatistics["filtered_total_count"] != undefined) {
+        const coverage = (this.filteredStatistics[column] / this.filteredStatistics["filtered_total_count"] * 100).toFixed(0);
+        return 'Coverage: ' +  coverage.toString() + ' %';
+      } else {
+          return '';
+      }
     },
     exportCSV() {
       this.$refs.dt.exportCSV();

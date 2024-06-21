@@ -71,6 +71,11 @@ export default class API {
         const url = `samples/genomes/${queryString}`
         return this.getRequest(url, {}, false)
     }
+    getFilteredStatistics(params: FilterGroupRoot) {
+        const queryString = this.parseQueryString(params)
+        const url = `samples/filtered_statistics/${queryString}`
+        return this.getRequest(url, {}, false)
+    }
     async getSampleGenomesExport(params: FilterGroupRoot) {
         params["csv_stream"] = true
         const queryString = this.parseQueryString(params)
