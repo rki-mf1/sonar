@@ -99,19 +99,6 @@ class SampleViewSet(
         )
         dict = {str(item["collection_date"]): item["count"] for item in queryset}
         return Response(data=dict)
-    
-    @action(detail=False, methods=["get"])
-    def samples_per_week(self, request: Request, *args, **kwargs):        
-        #calculate year and calendar week
-        queryset = (
-            models.Sample.objects.extra(
-                select={'week': "EXTRACT(WEEK FROM collection_date)", 'year': "EXTRACT(YEAR FROM collection_date)"}
-            ).values("year","week")
-            .annotate(count=Count("id"))
-            .order_by("year", "week")
-        )
-        dict = {f"{item['year']}-{item['week']}": item["count"] for item in queryset}
-        return Response(data=dict)
 
     @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
@@ -217,29 +204,42 @@ class SampleViewSet(
         queryset = self.paginate_queryset(queryset)
         serializer = SampleGenomesSerializer(queryset, many=True)
         return self.get_paginated_response(serializer.data)
-
-    @action(detail=False, methods=["get"])
-    def filtered_statistics(self, request: Request, *args, **kwargs):
-        response_dict = {}
-
-        queryset = self._get_filtered_queryset(request).annotate(
+    
+    def meta_data_coverage(self, queryset):
+        dict = {}
+        queryset = queryset.annotate(
             genomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="nt")),
             proteomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="cds"))
         )
-        response_dict["genomic_profiles"] = queryset.filter(genomic_profiles_count__gt=0).count()
-        response_dict["proteomic_profiles"] = queryset.filter(proteomic_profiles_count__gt=0).count()
-    
+        dict["genomic_profiles"] = queryset.filter(genomic_profiles_count__gt=0).count()
+        dict["proteomic_profiles"] = queryset.filter(proteomic_profiles_count__gt=0).count()
+
         for field in models.Sample._meta.get_fields():
             field_name = field.name
             if isinstance(field, (CharField, TextField)):
-                non_empty_count = models.Sample.objects.exclude(**{field_name: ''}).exclude(**{field_name: None}).count()
+                non_empty_count = queryset.exclude(**{field_name: ''}).exclude(**{field_name: None}).count()
             else:
-                non_empty_count = models.Sample.objects.exclude(**{field_name: None}).count()
-            response_dict[field_name] = non_empty_count
+                non_empty_count = queryset.exclude(**{field_name: None}).count()
+            dict[field_name] = non_empty_count
+        return dict
+    
+    def samples_per_week(self, queryset):
+        queryset = queryset.extra(
+                select={'week': "EXTRACT(WEEK FROM collection_date)", 'year': "EXTRACT(YEAR FROM collection_date)"}
+            ).values("year","week").annotate(count=Count("id")).order_by("year", "week")
+        dict = {f"{item['year']}-W{item['week']}": item["count"] for item in queryset}
+        return dict
 
-        response_dict["filtered_total_count"] = queryset.count()
+    @action(detail=False, methods=["get"])
+    def filtered_statistics(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+        dict = {}
 
-        return Response(data=response_dict)
+        dict["filtered_total_count"] = queryset.count()
+        dict["meta_data_coverage"] = self.meta_data_coverage(queryset)
+        dict["samples_per_week"] = self.samples_per_week(queryset)
+
+        return Response(data=dict)
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()
