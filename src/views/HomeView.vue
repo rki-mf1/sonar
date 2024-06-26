@@ -50,68 +50,79 @@
           </div>
         </div>
 
-        <div class="output">
-          <div style="height: 50%; width: 100%; display: flex; justify-content: center;">
-            <Chart type="bar" :data="chartData" :options="chartOptions" style="width: 80%;" />
-          </div>
-          <div style="height: 50%; overflow: auto;">
-            <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
-            <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
-              removableSort scrollable scrollHeight="flex" v-model:filters="filters_table"
-              @filter="{ filtered_table_count = $event.filteredValue.length; }">
-              <template #empty> No Results </template>
-              <template #header>
-                <div style="display: flex; justify-content: flex-end;">
-                  <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
-                    placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="onToggle">
-                    <template #value>
-                      <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected</div>
-                    </template>
-                  </MultiSelect>
-                  <IconField iconPosition="left">
-                    <InputIcon>
-                      <i class="pi pi-search" />
-                    </InputIcon>
-                    <InputText v-model="filters_table['global'].value" placeholder="Keyword Search"/>
-                  </IconField>
-                </div>
-              </template>
-              <Column field="name">
+        <div class="output_box">
+          <div class="output">
+            <div style="height: 100%; overflow: auto;">
+              <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+              <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
+                removableSort scrollable scrollHeight="flex" v-model:filters="filters_table"
+                @filter="{ filtered_table_count = $event.filteredValue.length; }">
+                <template #empty> No Results </template>
                 <template #header>
-                  <span v-tooltip="metaDataCoverage('name')">ID</span>
-                </template>
-              </Column>
-              <Column v-for="column in selectedColumns">
-                <template #header>
-                  <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
-                </template>
-                <template #body="slotProps">
-                  <div v-if="column === 'genomic_profiles'">
-                    <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
-                      <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                        :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
+                  <div style="display: flex; justify-content: space-between;">
+                    <div>
+                      <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="exportCSV($event)" />
+                      <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
+                    </div>
+                    <div style="display: flex; justify-content: flex-end;">
+                      <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
+                        placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="onToggle">
+                        <template #value>
+                          <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected</div>
+                        </template>
+                      </MultiSelect>
+                      <IconField iconPosition="left">
+                        <InputIcon>
+                          <i class="pi pi-search" />
+                        </InputIcon>
+                        <InputText v-model="filters_table['global'].value" placeholder="Keyword Search"/>
+                      </IconField>
                     </div>
                   </div>
-                  <div v-else-if="column === 'proteomic_profiles'">
-                    <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
-                      <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
-                        :variantString="variant" :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
-                    </div>
-                  </div>
-                  <span v-else>
-                    {{ findProperty(slotProps.data.properties, column) }}
-                  </span>
                 </template>
-              </Column>
-              <template #footer>
-                <div style="display: flex; justify-content: space-between;">
-                  Total: {{ sampleCount }} Samples
-                  <!-- Total: {{ filtered_table_count }} Samples  -->
-                  <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="exportCSV($event)" />
-                  <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
-                </div>
-              </template>
-            </DataTable>
+                <Column field="name">
+                  <template #header>
+                    <span v-tooltip="metaDataCoverage('name')">ID</span>
+                  </template>
+                  <template #body="slotProps">
+                    <div style="height: 1.5em; width:31rem; overflow-x: auto; white-space: nowrap;">
+                        {{ slotProps.data.name }}
+                    </div>
+                  </template>
+                </Column>
+                <Column v-for="column in selectedColumns">
+                  <template #header>
+                    <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
+                  </template>
+                  <template #body="slotProps">
+                    <div v-if="column === 'genomic_profiles'">
+                      <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                        <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                          :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
+                      </div>
+                    </div>
+                    <div v-else-if="column === 'proteomic_profiles'">
+                      <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                        <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                          :variantString="variant" :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
+                      </div>
+                    </div>
+                    <span v-else>
+                      {{ findProperty(slotProps.data.properties, column) }}
+                    </span>
+                  </template>
+                </Column>
+                <template #footer>
+                  <div style="display: flex; justify-content: space-between;">
+                    Total: {{ sampleCount }} Samples
+                    <!-- Total: {{ filtered_table_count }} Samples  -->
+                  </div>
+                </template>
+              </DataTable>
+            </div>
+            <div style="height: 100%; width: 40%; display: flex; justify-content: center;">
+              <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
+            </div>
           </div>
         </div>
       </div>
@@ -164,9 +175,7 @@ export default {
       // pages: 1,
       sampleCount: 0,
       samples: [],
-      filteredStatistics: {} as Record<string, number>,
-      chartData: {},
-      chartOptions: {},
+      filteredStatistics: {},
       loading: false,
       propertyOptions: [],
       repliconAccessionOptions: [],
@@ -198,41 +207,37 @@ export default {
     },
     metaDataCoverage(column: string) {
       if (this.filteredStatistics["filtered_total_count"] != undefined) {
-        const coverage = (this.filteredStatistics[column] / this.filteredStatistics["filtered_total_count"] * 100).toFixed(0);
+        const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredStatistics["filtered_total_count"] * 100).toFixed(0);
         return 'Coverage: ' +  coverage.toString() + ' %';
       } else {
           return '';
       }
     },
-    exportCSV() {
-      this.$refs.dt.exportCSV();
-    },
-    // async requestExport() {
-    //   await API.getInstance().getSampleGenomesExport(this.filters)
-    // },
-    async updatePropertyOptions() {
-      const res = await API.getInstance().getSampleGenomePropertyOptions();
-      this.propertyOptions = res.property_names;
-      this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
-    },
-    onToggle(value) {
-      this.selectedColumns = this.allColumns.filter(col => value.includes(col));
-    },
-    setChartData() {
+    chartData() {
+      const samples_per_week = this.filteredStatistics["samples_per_week"];
+      const labels: string[] = [];
+      const data: number[] = [];
+
+      if (samples_per_week != undefined) {
+        Object.keys(samples_per_week).forEach(key => {
+          labels.push(key);
+          data.push(samples_per_week[key]);
+        });
+      }
       return {
-        labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+        labels: labels,
         datasets: [
           {
-            label: 'Sales',
-            data: [540, 325, 702, 620],
-            backgroundColor: ['rgba(249, 115, 22, 0.2)', 'rgba(6, 182, 212, 0.2)', 'rgb(107, 114, 128, 0.2)', 'rgba(139, 92, 246, 0.2)'],
-            borderColor: ['rgb(249, 115, 22)', 'rgb(6, 182, 212)', 'rgb(107, 114, 128)', 'rgb(139, 92, 246)'],
+            label: 'Samples',
+            data: data,
+            backgroundColor: 'rgba(249, 115, 22, 0.2)',
+            borderColor: 'rgb(249, 115, 22)',
             borderWidth: 1
           }
         ]
-      };
+      }
     },
-    setChartOptions() {
+    chartOptions() {
       const documentStyle = getComputedStyle(document.documentElement);
       const textColor = documentStyle.getPropertyValue('--text-color');
       const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary');
@@ -265,6 +270,20 @@ export default {
           }
         }
       };
+    },
+    exportCSV() {
+      this.$refs.dt.exportCSV();
+    },
+    // async requestExport() {
+    //   await API.getInstance().getSampleGenomesExport(this.filters)
+    // },
+    async updatePropertyOptions() {
+      const res = await API.getInstance().getSampleGenomePropertyOptions();
+      this.propertyOptions = res.property_names;
+      this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
+    },
+    onToggle(value) {
+      this.selectedColumns = this.allColumns.filter(col => value.includes(col));
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions();
@@ -355,29 +374,6 @@ export default {
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
       return property ? property.value : undefined;
-    },
-    async loadPerWeekSampleCount() {
-      const res = await API.getInstance().getSamplesPerWeek({});
-      const labels = []
-      const data = []
-      Object.keys(res).forEach(yearWeek => {
-        labels.push(yearWeek)
-        data.push(res[yearWeek])
-
-
-      });
-      this.chartData = {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data: data,
-            backgroundColor: 'rgba(249, 115, 22, 0.2)',
-            borderColor: 'rgb(249, 115, 22)',
-            borderWidth: 1
-          }
-        ]
-      }
     }
   },
   computed: {
@@ -394,9 +390,6 @@ export default {
     this.updatePropertyOptions();
     this.updateSymbolOptions();
     this.updateRepliconAccessionOptions();
-    this.chartData = this.setChartData();
-    this.chartOptions = this.setChartOptions();
-    this.loadPerWeekSampleCount();
   },
   components: { GenomicProfileLabel }
 }
@@ -417,8 +410,8 @@ body {
 }
 
 main {
-  height: 95vh;
-  width: 95vw;
+  height: 97vh;
+  width: 98vw;
   display: flex;
   align-items: stretch;
   flex-direction: column;
@@ -490,7 +483,7 @@ header {
 
 .input {
   height: 15%;
-  width: 97%;
+  width: 98%;
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
@@ -519,17 +512,27 @@ header {
   align-items: center;
 }
 
-.output {
-  height: 70%;
-  width: 97%;
+.output_box {
+  height: 80%;
+  width: 98%;
   margin: 0 auto;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
   background-color: white;
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow);
+}
+
+.output {
+  height: 95%;
+  width: 98%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>

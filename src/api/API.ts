@@ -112,9 +112,6 @@ export default class API {
     getGeneSymbolOptions() {
         return this.getRequest(`genes/distinct_gene_symbols`, {}, false)
     }
-    getSamplesPerWeek(params) {
-        return this.getRequest(`samples/samples_per_week`, params, false)
-    }
     parseQueryString(query) {
         if (Object.keys(query).length > 0) {
             return (
