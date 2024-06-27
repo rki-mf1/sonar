@@ -4,6 +4,8 @@ import pathlib
 import ast
 import csv
 
+from rest_api.viewsets import PropertyViewSet
+
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django_filters.rest_framework import DjangoFilterBackend
@@ -205,25 +207,40 @@ class SampleViewSet(
         serializer = SampleGenomesSerializer(queryset, many=True)
         return self.get_paginated_response(serializer.data)
     
-    def meta_data_coverage(self, queryset):
+    def _get_meta_data_coverage(self, queryset):
         dict = {}
+        queryset = queryset.prefetch_related("properties__property")
         queryset = queryset.annotate(
             genomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="nt")),
             proteomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="cds"))
         )
+
         dict["genomic_profiles"] = queryset.filter(genomic_profiles_count__gt=0).count()
         dict["proteomic_profiles"] = queryset.filter(proteomic_profiles_count__gt=0).count()
 
+        property_names = PropertyViewSet.get_distinct_property_names()
+
         for field in models.Sample._meta.get_fields():
             field_name = field.name
+
+            if field_name not in property_names:
+                continue
+            
+            property_names.pop(property_names.index(field_name))
+
             if isinstance(field, (CharField, TextField)):
                 non_empty_count = queryset.exclude(**{field_name: ''}).exclude(**{field_name: None}).count()
             else:
                 non_empty_count = queryset.exclude(**{field_name: None}).count()
             dict[field_name] = non_empty_count
+        
+        for property_name in property_names:
+            datatype = models.Property.objects.get(name=property_name).datatype
+            dict[property_name] = queryset.exclude(**{"properties__property__name": property_name, f"properties__{datatype}": ''}).exclude(**{"properties__property__name": property_name, f"properties__{datatype}": None}).count()
+        
         return dict
     
-    def samples_per_week(self, queryset):
+    def _get_samples_per_week(self, queryset):
         queryset = queryset.extra(
                 select={'week': "EXTRACT(WEEK FROM collection_date)", 'year': "EXTRACT(YEAR FROM collection_date)"}
             ).values("year","week").annotate(count=Count("id")).order_by("year", "week")
@@ -236,8 +253,8 @@ class SampleViewSet(
         dict = {}
 
         dict["filtered_total_count"] = queryset.count()
-        dict["meta_data_coverage"] = self.meta_data_coverage(queryset)
-        dict["samples_per_week"] = self.samples_per_week(queryset)
+        dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
+        dict["samples_per_week"] = self._get_samples_per_week(queryset)
 
         return Response(data=dict)
 

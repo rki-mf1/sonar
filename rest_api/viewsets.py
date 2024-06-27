@@ -497,12 +497,7 @@ class PropertyViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_property_names(self, request: Request, *args, **kwargs):
-        queryset = models.Property.objects.all()
-        queryset = queryset.distinct("name")
-        filter_list = ['id', 'datahash']
-        property_names = [item.name for item in queryset]
-        sample_properties = [field.name for field in models.Sample._meta.get_fields() if field.name not in filter_list]
-        property_names += sample_properties
+        property_names = self.get_distinct_property_names()
         return Response(
             data={"property_names": property_names}, status=status.HTTP_200_OK
         )
@@ -615,6 +610,15 @@ class PropertyViewSet(
         data = {"keys": cols, "values": data_list}
         return Response(data=data, status=status.HTTP_200_OK)
 
+    @staticmethod
+    def get_distinct_property_names():
+        queryset = models.Property.objects.all()
+        queryset = queryset.distinct("name")
+        filter_list = ['id', 'datahash']
+        property_names = [item.name for item in queryset]
+        sample_properties = [field.name for field in models.Sample._meta.get_fields() if field.name not in filter_list]
+        property_names += sample_properties
+        return property_names
 
 class MutationFrequencySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
