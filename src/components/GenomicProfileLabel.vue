@@ -1,5 +1,5 @@
 <template>
-    <span :title="annotations?.length > 0 ? annotations : undefined"
+    <span v-tooltip.bottom="tooltip"
     :style="{ color: variantColor}">{{ variantString }}<span v-if="!isLast">,&nbsp;</span></span>
 </template>
 <script lang="ts">
@@ -31,6 +31,9 @@ export default {
             }
             return '';
         },
+        tooltip(): string {
+            return this.annotations?.length > 0 ? this.annotations.join(', ') : '';
+        }
     }
 };
 </script>
