@@ -6,6 +6,9 @@ import csv
 
 from rest_api.viewsets import PropertyViewSet
 
+from collections import OrderedDict
+from dateutil.rrule import rrule, WEEKLY
+
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django_filters.rest_framework import DjangoFilterBackend
@@ -21,7 +24,7 @@ from . import models
 from rest_api.serializers import SampleSerializer
 from rest_api.data_entry.sample_job import delete_sample
 from django.db import transaction
-from django.db.models import Count, F, Q, QuerySet, Prefetch, CharField, TextField
+from django.db.models import Count, F, Q, QuerySet, Prefetch, CharField, TextField,  Min
 from rest_framework.decorators import action, api_view
 from rest_framework import generics, serializers, viewsets
 from rest_framework.request import Request
@@ -239,12 +242,23 @@ class SampleViewSet(
             dict[property_name] = queryset.exclude(**{"properties__property__name": property_name, f"properties__{datatype}": ''}).exclude(**{"properties__property__name": property_name, f"properties__{datatype}": None}).count()
         
         return dict
-    
+
     def _get_samples_per_week(self, queryset):
+        dict = {}
         queryset = queryset.extra(
-                select={'week': "EXTRACT(WEEK FROM collection_date)", 'year': "EXTRACT(YEAR FROM collection_date)"}
-            ).values("year","week").annotate(count=Count("id")).order_by("year", "week")
-        dict = {f"{item['year']}-W{item['week']}": item["count"] for item in queryset}
+                    select={'week': "EXTRACT('week' FROM collection_date)", 'year': "EXTRACT('year' FROM collection_date)"}
+                ).values("year", "week").annotate(count=Count("id"), collection_date=Min("collection_date")
+                ).order_by("year", "week")
+        
+        start_date = queryset.first()['collection_date']
+        end_date = queryset.last()['collection_date']
+
+        for dt in rrule(WEEKLY, dtstart=start_date, until=end_date): # generate all weeks between start and end dates and assign default value 0 
+            dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
+
+        for item in queryset: # fill in count values of present weeks
+            dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
+
         return dict
 
     @action(detail=False, methods=["get"])
