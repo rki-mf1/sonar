@@ -6,9 +6,6 @@ import csv
 
 from rest_api.viewsets import PropertyViewSet
 
-from collections import OrderedDict
-from dateutil.rrule import rrule, WEEKLY
-
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django_filters.rest_framework import DjangoFilterBackend
@@ -17,6 +14,7 @@ from django.http import StreamingHttpResponse
 from datetime import datetime
 
 import pandas as pd
+from dateutil.rrule import rrule, WEEKLY
 
 from rest_api.viewsets import PropertyColumnMapping
 from django.http import HttpResponse
