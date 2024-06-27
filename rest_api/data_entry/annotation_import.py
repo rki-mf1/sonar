@@ -157,13 +157,15 @@ class AnnotationImport:
                     annotations=allele_to_annotations[alt],
                     samples=samples,
                 )
-                if alt and len(alt) < len(mutation_lookup_to_annotations.ref):
+                if len(alt) < len(mutation_lookup_to_annotations.ref):
                     # deletion and alt not null
                     mutation_lookup_to_annotations.start += 1
-                    mutation_lookup_to_annotations.ref = (
-                        mutation_lookup_to_annotations.ref[1:]
-                    )
+                    # add None here if we dont want to keep the deletion in ref
+                    # column, however the program frozen once I change to 
+                    # mutation_lookup_to_annotations.ref = None
+                    mutation_lookup_to_annotations.ref = "" #  mutation_lookup_to_annotations.ref[1:]
                     mutation_lookup_to_annotations.alt = None
+                    
                 mutation_lookups_to_annotations.append(mutation_lookup_to_annotations)
         return mutation_lookups_to_annotations
 
@@ -209,21 +211,26 @@ class AnnotationImport:
             # I think because there are no items in the filtered iterable 
             # that match the conditions specified by the lambda function 
             # But How did this can happen?, 
-            # Solution: becase there are cds and nt at the same position we should filter only NT     
+            # Solution: because there are cds and nt at the same position we should filter only NT     
 
-            mut_lookup_to_annotation = self.mutation_lookups_to_annotations.pop(
-                self.mutation_lookups_to_annotations.index(
-                    next(
-                        filter(
-                            lambda x: int(x.start) == int(mutation.start)
-                            and x.ref == mutation.ref
-                            and x.alt == mutation.alt
-                            and x.replicon__accession == mutation.replicon.accession,
-                            self.mutation_lookups_to_annotations,
+            try:
+                mut_lookup_to_annotation = self.mutation_lookups_to_annotations.pop(
+                    self.mutation_lookups_to_annotations.index(
+                        next(
+                            filter(
+                                lambda x: int(x.start) == int(mutation.start)
+                                and x.ref == mutation.ref
+                                and x.alt == mutation.alt
+                                and x.replicon__accession == mutation.replicon.accession,
+                                self.mutation_lookups_to_annotations,
+                            )
                         )
                     )
                 )
-            )
+            except (ValueError, StopIteration) as e:
+                LOGGER.error(f"Error: {e}")
+                LOGGER.error(f"Mutation details: start={mutation.start}, ref={mutation.ref}, alt={mutation.alt}, replicon__accession={mutation.replicon.accession}")
+                raise
                 
             # print(mut_lookup_to_annotation)
             # Problem 2: We have too many entries in mut_lookup_to_annotation.annotations.

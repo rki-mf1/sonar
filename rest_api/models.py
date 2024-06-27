@@ -261,8 +261,10 @@ class Sample2Property(models.Model):
 class Mutation(models.Model):
     gene = models.ForeignKey("Gene", models.CASCADE, blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
-    ref = models.CharField(max_length=5000, blank=True, null=True)
-    alt = models.CharField(max_length=5000, blank=True, null=True)
+    # ref = models.CharField(max_length=5000, blank=True, null=True)
+    # alt = models.CharField(max_length=5000, blank=True, null=True)
+    ref = models.TextField(blank=True, null=True)
+    alt = models.TextField(blank=True, null=True)
     start = models.BigIntegerField(blank=True, null=True)
     end = models.BigIntegerField(blank=True, null=True)
     parent_id = models.BigIntegerField(blank=True, null=True)
