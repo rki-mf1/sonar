@@ -27,6 +27,7 @@ export type PropertyFilter = {
 }
 export type SNPProfileNtFilter = {
     label: string,
+    geneSymbol: string,
     refNuc: string,
     refPos: string,
     altNuc: string
@@ -42,6 +43,7 @@ export type SNPProfileAAFilter = {
 }
 export type DelProfileNtFilter = {
     label: string,
+    geneSymbol: string,
     firstDeleted: string,
     lastDeleted: string,
     exclude: boolean
@@ -55,6 +57,7 @@ export type DelProfileAAFilter = {
 }
 export type InsProfileNtFilter = {
     label: string,
+    geneSymbol: string,
     refNuc: string,
     refPos: string,
     altNuc: string,
@@ -103,7 +106,6 @@ export type FilterGroupRoot = {
     limit?: number;
     offset?: number;
     filters: FilterGroupFilters;
-    csv_stream?: boolean;
 }
 
 export type AndFilters = {
@@ -116,4 +118,9 @@ export type FilterGroup = {
     marked?: boolean;
     filterGroups: FilterGroup[];
     filters: AndFilters;
+}
+
+export type Property = {
+    name: string;
+    value: string;
 }

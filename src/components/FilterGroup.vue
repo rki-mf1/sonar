@@ -1,82 +1,5 @@
-<template>
-  <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
-    <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter">
-      <span class="filter-label">Property</span>
-      <Dropdown :options="propertyOptions" v-model="filter.propertyName" style="flex: auto"
-        @change="updatePropertyValueOptions(filter)" />
-      <Dropdown :options="operators" v-model="filter.filterType" style="flex: auto" />
-      <Calendar v-if="filter.propertyName?.includes('date')" v-model="filter.value" style="flex: auto"
-        dateFormat="yy-mm-dd" />
-      <Dropdown v-else-if="fetchOptionsProperties.includes(filter.propertyName)"
-        :options="propertyValueOptions[filter.propertyName]?.options"
-        :loading="propertyValueOptions[filter.propertyName]?.loading" v-model="filter.value" style="flex: auto" />
-      <InputText v-else v-model="filter.value" style="flex: auto" />
-      <Button size="small" @click="
-        filterGroup.filters?.propertyFilters?.splice(
-          filterGroup.filters?.propertyFilters?.indexOf(filter),
-          1
-        )
-        ">
-        <i class="pi pi-trash"></i>
-      </Button>
-    </div>
-    <div v-for="filter in filterGroup.filters?.profileFilters" class="single-filter">
-      <span class="filter-label">{{ filter.label }}</span>
-      <div v-for="key in Object.keys(filter) as Array<keyof ProfileFilter>">
-        <div v-if="key == 'exclude'" class="exclude-switch">
-          Exclude?
-          <InputSwitch v-model="filter[key]" />
-        </div>
-        <Dropdown v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" :placeholder="key" :options="symbolOptions"
-          v-model="filter[key]" style="flex: auto" />
-        <InputText v-else-if="key != 'label'" v-model="filter[key]" style="flex: auto" :placeholder="key" />
-      </div>
-      <Button size="small" @click="
-        filterGroup.filters?.profileFilters?.splice(
-          filterGroup.filters?.profileFilters?.indexOf(filter),
-          1
-        )
-        ">
-        <i class="pi pi-trash"></i>
-      </Button>
-    </div>
-    <div v-for="filter in filterGroup.filters?.repliconFilters" class="single-filter">
-      <span class="filter-label">Replicon</span>
-      <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
-      <div class="exclude-switch">
-        Exclude?
-        <InputSwitch v-model="filter.exclude" />
-      </div>
-      <Button size="small" @click="
-        filterGroup.filters?.repliconFilters?.splice(
-          filterGroup.filters?.repliconFilters?.indexOf(filter),
-          1
-        )
-        ">
-        <i class="pi pi-trash"></i>
-      </Button>
-    </div>
-    <div class="button-bar">
-      <SplitButton size="small" label="Add AND Filter" :model="filterTypeMethods" icon="pi pi-filter"
-        @click="addClassicFilter()" />
-      <Button size="small" label="Add OR Group" @click="addOrFilterGroup" icon="pi pi-filter" :disabled="filterGroup.filters.propertyFilters.length + filterGroup.filters.profileFilters.length ==
-        0
-        " />
-    </div>
-    <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
-      OR
-      <FilterGroup :filterGroup="subFilterGroup" :propertyOptions="propertyOptions" :symbolOptions="symbolOptions"
-        :operators="operators" :propertyValueOptions="propertyValueOptions"
-        v-on:update-property-value-options="updatePropertyValueOptions" />
-      <Button size="small" style="float: right" @click="
-        filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)
-        " @mouseenter="markGroup(subFilterGroup, true)" @mouseleave="markGroup(subFilterGroup, false)">
-        <i class="pi pi-trash"></i>
-      </Button>
-    </div>
-  </div>
-</template>
 <script lang="ts">
+
 import {
   type FilterGroup,
   type ClassicFilter,
@@ -88,8 +11,9 @@ import {
   type InsProfileNtFilter,
   type InsProfileAAFilter,
   type ProfileFilter,
-type RepliconFilter
+  type RepliconFilter
 } from '@/util/types'
+
 import type { MenuItem } from 'primevue/menuitem'
 
 export default {
@@ -214,6 +138,14 @@ export default {
       }
       )
       return menuItems
+    },
+    cantAddOrGroup(): boolean {
+      return (
+        this.filterGroup.filters.propertyFilters.length +
+          this.filterGroup.filters.profileFilters.length +
+          this.filterGroup.filters.repliconFilters.length ==
+        0
+      )
     }
   },
   methods: {
@@ -238,37 +170,129 @@ export default {
 }
 </script>
 
+
+<template>
+    <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
+      <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter">
+        <span class="filter-label">Property</span>
+        <Dropdown :options="propertyOptions" v-model="filter.propertyName" style="flex: auto"
+          @change="updatePropertyValueOptions(filter)" />
+        <Dropdown :options="operators" v-model="filter.filterType" style="flex: auto" />
+        <Calendar v-if="filter.propertyName?.includes('date')" v-model="filter.value" style="flex: auto"
+          dateFormat="yy-mm-dd" selectionMode="range"/>
+        <Dropdown v-else-if="fetchOptionsProperties.includes(filter.propertyName)"
+          :options="propertyValueOptions[filter.propertyName]?.options"
+          :loading="propertyValueOptions[filter.propertyName]?.loading" v-model="filter.value" style="flex: auto" />
+        <InputText v-else v-model="filter.value" style="flex: auto" />
+        <Button size="small" @click="
+          filterGroup.filters?.propertyFilters?.splice(
+            filterGroup.filters?.propertyFilters?.indexOf(filter),
+            1
+          )
+          ">
+          <i class="pi pi-trash"></i>
+        </Button>
+      </div>
+      <div v-for="filter in filterGroup.filters?.profileFilters" class="single-filter">
+        <span class="filter-label">{{ filter.label }}</span>
+        <div v-for="key in Object.keys(filter) as Array<keyof ProfileFilter>">
+          <div v-if="key == 'exclude'" class="exclude-switch">
+            Exclude?
+            <InputSwitch v-model="filter[key]"/>
+          </div>
+          <Dropdown v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" :placeholder="key" :options="symbolOptions"
+            v-model="filter[key]" style="flex: auto" />
+          <InputText v-else-if="key != 'label'" v-model="filter[key]" style="flex: auto" :placeholder="key" />
+        </div> 
+        <Button size="small" @click="
+          filterGroup.filters?.profileFilters?.splice(
+            filterGroup.filters?.profileFilters?.indexOf(filter),
+            1
+          )
+          ">
+          <i class="pi pi-trash"></i>
+        </Button>
+      </div>
+      <div v-for="filter in filterGroup.filters?.repliconFilters" class="single-filter">
+        <span class="filter-label">Replicon</span>
+        <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
+        <div class="exclude-switch">
+          Exclude?
+          <InputSwitch v-model="filter.exclude" />
+        </div>
+        <Button size="small" @click="
+          filterGroup.filters?.repliconFilters?.splice(
+            filterGroup.filters?.repliconFilters?.indexOf(filter),
+            1
+          )
+          ">
+          <i class="pi pi-trash"></i>
+        </Button>
+      </div>
+      <div class="button-bar">
+        <!-- <SplitButton size="small" icon="pi pi-filter" label="Add AND Filter" :model="filterTypeMethods" @click="addClassicFilter()" /> -->
+        <SplitButton size="small" label="" :model="filterTypeMethods" @click="addClassicFilter()" >
+          <i class="pi pi-filter"></i> 
+          <span style="font-weight: 500;"> &nbsp; Add AND Filter</span>
+        </SplitButton>
+        <Button size="small" icon="pi pi-filter" label="Add OR Group" @click="addOrFilterGroup" :disabled="cantAddOrGroup"/>
+      </div>
+      <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
+        <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px;">OR</span>
+        <FilterGroup :filterGroup="subFilterGroup" :propertyOptions="propertyOptions" :symbolOptions="symbolOptions"
+          :operators="operators" :propertyValueOptions="propertyValueOptions" :repliconAccessionOptions="repliconAccessionOptions"
+          v-on:update-property-value-options="updatePropertyValueOptions" />
+        <Button size="small" style="float: right;" @click="
+          filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)
+          " @mouseenter="markGroup(subFilterGroup, true)" @mouseleave="markGroup(subFilterGroup, false)">
+          <i class="pi pi-trash"></i>
+        </Button>
+      </div>
+    </div>
+  </template>
+
+
 <style scoped>
+
 .single-filter {
   display: flex;
   flex-direction: row;
   align-items: center;
-  border: 1px solid #ccc;
+  border: 2px solid #e0e0e0;
+  border-radius: 20px;
   width: 100%;
+  padding: 5px;
+  margin: 2.5px;
   justify-content: space-between;
+}
+
+.single-filter button {
+  margin: 2.5px;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-left: 1px solid #000;
-  border-right: 1px solid #000;
-  border-radius: 2%;
+  border-left: 2px solid var(--grayish);
+  border-right: 2px solid var(--grayish);
+  border-radius: 2.5%;
   padding: 1em;
   width: 100%;
 }
 
 .filter-label {
   margin: 1em;
-  font-variant: small-caps;
+  /* font-variant: small-caps; */
   text-align: center;
 }
 
 .button-bar {
   display: flex;
   flex-direction: row;
-  margin-left: auto;
+  justify-content: space-between;
+  /* margin-left: auto; */
+  margin: 10px;
 }
 
 .button-bar button {
@@ -276,14 +300,16 @@ export default {
 }
 
 .marked {
-  border: 1px solid red;
+  border: 2px solid var(--secondary-color-lighter);
 }
 
 .exclude-switch {
-  font-variant: small-caps;
+  /* font-variant: small-caps; */
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 0.8em;
+  font-size: 0.7em;
+  margin: 2.5px;
 }
+
 </style>
