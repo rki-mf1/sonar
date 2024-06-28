@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 from django.core.cache import cache
 from django.db.models import Q
+from django.utils import timezone
 
 if typing.TYPE_CHECKING:
     from django.db.models.query import ValuesQuerySet
@@ -123,6 +124,7 @@ class SampleImport:
         self.sample = Sample(
             name=self.sample_raw.name,
             sequence=self.sequence,
+            last_update_date=timezone.now()
             # properties=self.sample_raw.properties,
         )
         return self.sample
