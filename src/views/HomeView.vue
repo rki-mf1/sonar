@@ -19,12 +19,9 @@
         <div class="input">
           <div class="input-left">
             <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
-              @click="filter_dialog_visible = true" />
-            <Dialog v-model:visible="filter_dialog_visible" modal header="Set Filters">
+              @click="displayDialogFilter = true" />
+            <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
               <div style="display: flex; gap: 10px;">
-                <!-- <Button type="button" icon="pi pi-filter" label="Add AND Filter" @click=""></Button>
-                    <Button type="button" icon="pi pi-filter" label="Add OR Group" @click=""></Button> -->
-
                 <div>
                   <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
                     :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
@@ -35,10 +32,8 @@
 
               </div>
               <div style="display: flex; justify-content: end; gap: 10px;">
-                <!-- <Button type="button" label="Cancel" severity="secondary" @click="filter_dialog_visible = false"></Button>
-                    <Button type="button" label="Save" @click="filter_dialog_visible = false"></Button> -->
                 <Button type="button" style="margin-top: 10px;" label="OK"
-                  @click="filter_dialog_visible = false; updateSamples()"></Button>
+                  @click="displayDialogFilter = false; updateSamples()"></Button>
               </div>
             </Dialog>
             <i class="pi pi-arrow-right" style="font-size: 1.5rem; color: var(--grayish);"></i>
@@ -54,9 +49,40 @@
           <div class="output">
             <div style="height: 100%; overflow: auto;">
               <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+              <!-- Dialog for displaying row details -->
+              <Dialog v-model:visible="displayDialogRow" modal header="Sample Details" :style="{ width: '60vw' }">
+                <div v-if="selectedRow">
+                  <p v-for="(value, key) in selectedRow" :key="key">
+                    <template v-if="key === 'genomic_profiles'">
+                      <strong>{{ key }}: </strong>
+                      <div style="white-space: normal; word-wrap: break-word;">
+                        <GenomicProfileLabel v-for="(variant, index) in Object.keys(value)"
+                          :variantString="variant" :annotations="value[variant]" :isLast="index === Object.keys(value).length - 1" />
+                      </div>
+                    </template>
+                    <template v-else-if="key === 'proteomic_profiles'">
+                      <strong>{{ key }}: </strong> 
+                      <div style="white-space: normal; word-wrap: break-word;">
+                        <GenomicProfileLabel v-for="(variant, index) in value"
+                          :variantString="variant" :isLast="index === Object.keys(value).length - 1" />
+                      </div>
+                    </template>
+                    <template v-else-if="key === 'properties'">
+                        <strong>{{ key }}:</strong>
+                        <div v-for="item in value" :key="item.name">
+                          <strong>{{ item.name }}:</strong> {{ item.value }}
+                        </div>
+                    </template>
+                    <template v-else>
+                      <strong>{{ key }}:</strong> {{ value }}
+                    </template>
+                  </p>
+                </div>
+              </Dialog>
               <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
                 removableSort scrollable scrollHeight="flex" v-model:filters="filters_table"
-                @filter="{ filtered_table_count = $event.filteredValue.length; }">
+                @filter="{ filtered_table_count = $event.filteredValue.length; }"
+                v-model:selection="selectedRow" selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
                 <template #empty> No Results </template>
                 <template #header>
                   <div style="display: flex; justify-content: space-between;">
@@ -85,7 +111,7 @@
                     <span v-tooltip="metaDataCoverage('name')">ID</span>
                   </template>
                   <template #body="slotProps">
-                    <div style="height: 1.5em; width:31rem; overflow-x: auto; white-space: nowrap;">
+                    <div style="height: 1.5em; width:5.5rem; overflow-x: auto; white-space: nowrap;">
                         {{ slotProps.data.name }}
                     </div>
                   </template>
@@ -120,7 +146,7 @@
                 </template>
               </DataTable>
             </div>
-            <div style="height: 100%; width: 40%; display: flex; justify-content: center;">
+            <div style="height: 100%; width: 30%; display: flex; justify-content: center;">
               <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
             </div>
           </div>
@@ -164,7 +190,7 @@ export default {
           route: '/about'
         }
       ],
-      filter_dialog_visible: false,
+      displayDialogFilter: false,
       filtered_table_count: 0,
       filters_table: {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS }
@@ -173,6 +199,8 @@ export default {
       // firstRow: 0,
       // page: 1,
       // pages: 1,
+      selectedRow: null, 
+      displayDialogRow: false, 
       sampleCount: 0,
       samples: [],
       filteredStatistics: {},
@@ -204,6 +232,14 @@ export default {
       this.sampleCount = res.count;
       // this.pages = res.count / this.perPage
       this.loading = false;
+    },
+    onRowSelect(event) {
+      this.selectedRow = event.data;
+      this.displayDialogRow = true;
+    },
+    onRowUnselect(event) {
+      this.selectedRow = null;
+      this.displayDialogRow = false;
     },
     metaDataCoverage(column: string) {
       if (this.filteredStatistics["filtered_total_count"] != undefined) {
