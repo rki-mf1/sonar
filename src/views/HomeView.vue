@@ -19,6 +19,7 @@
         <div class="input">
           <div class="input-left">
             <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
+              :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }"
               @click="displayDialogFilter = true" />
             <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
               <div style="display: flex; gap: 10px;">
@@ -212,6 +213,7 @@ export default {
       samples: [],
       filteredStatistics: {},
       loading: false,
+      isFiltersSet: false,
       propertyOptions: [],
       repliconAccessionOptions: [],
       allColumns: [],
@@ -236,8 +238,8 @@ export default {
       const res = await API.getInstance().getSampleGenomes(this.filters);
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.samples = res.results;
-      console.log(res)
       this.sampleCount = res.count;
+      this.isFiltersSet = !(this.filters['filters']['andFilter'].length === 0 && this.filters['filters']['orFilter'].length === 0);
       // this.pages = res.count / this.perPage
       this.loading = false;
     },
