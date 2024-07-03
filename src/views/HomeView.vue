@@ -215,7 +215,7 @@ export default {
       propertyOptions: [],
       repliconAccessionOptions: [],
       allColumns: [],
-      selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code'],
+      selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles'],
       propertyValueOptions: {} as {
         [key: string]: {
           options: string[];
@@ -236,6 +236,7 @@ export default {
       const res = await API.getInstance().getSampleGenomes(this.filters);
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.samples = res.results;
+      console.log(res)
       this.sampleCount = res.count;
       // this.pages = res.count / this.perPage
       this.loading = false;
@@ -326,7 +327,7 @@ export default {
       this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
     },
     onToggle(value) {
-      this.selectedColumns = this.allColumns.filter(col => value.includes(col));
+      this.selectedColumns = value.filter(v => this.allColumns.includes(v));
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions();
