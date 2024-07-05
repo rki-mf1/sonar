@@ -204,6 +204,11 @@ class SampleViewSet(
             queryset = self.paginate_queryset(queryset)
             serializer = SampleGenomesSerializerVCF(queryset, many=True)
             return self.get_paginated_response(serializer.data)
+        if ordering := request.query_params.get("ordering"):
+            property_names = PropertyViewSet.get_distinct_property_names()
+            if ordering in property_names:
+                datatype = models.Property.objects.get(name=ordering).datatype
+                queryset = queryset.order_by(f"")
         queryset = self.paginate_queryset(queryset)
         serializer = SampleGenomesSerializer(queryset, many=True)
         return self.get_paginated_response(serializer.data)
