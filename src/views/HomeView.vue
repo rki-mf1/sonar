@@ -89,6 +89,7 @@
               </Dialog>
               <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
                 removableSort scrollable scrollHeight="flex" v-model:filters="filters_table"
+                @sort="sortingChanged($event)" sortable
                 @filter="{ filtered_table_count = $event.filteredValue.length; }"
                 v-model:selection="selectedRow" selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
                 <template #empty> No Results </template>
@@ -214,6 +215,7 @@ export default {
       filteredStatistics: {},
       loading: false,
       isFiltersSet: false,
+      ordering: 'collection_date',
       propertyOptions: [],
       repliconAccessionOptions: [],
       allColumns: [],
@@ -250,6 +252,14 @@ export default {
     onRowUnselect(event) {
       this.selectedRow = null;
       this.displayDialogRow = false;
+    },
+    sortingChanged(sortBy) {
+      if (sortBy.sortOrder > 0) {
+        this.ordering = sortBy.sortField;
+      } else {
+        this.ordering = `-${sortBy.sortField}`;
+      }
+      this.updateSamples();
     },
     metaDataCoverage(column: string) {
       if (this.filteredStatistics["filtered_total_count"] != undefined) {
@@ -424,8 +434,10 @@ export default {
   },
   computed: {
     filters(): FilterGroupRoot {
+      
       const filters = {
         filters: this.getFilterGroupFilters(this.filterGroup),
+        ordering: this.ordering
         // limit: this.perPage,
         // offset: this.firstRow
       };
