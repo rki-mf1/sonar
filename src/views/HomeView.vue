@@ -19,8 +19,7 @@
         <div class="input">
           <div class="input-left">
             <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
-              :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }"
-              @click="displayDialogFilter = true" />
+              :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
             <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
               <div style="display: flex; gap: 10px;">
                 <div>
@@ -54,44 +53,46 @@
               <Dialog v-model:visible="displayDialogRow" modal header="Sequence Details" :style="{ width: '60vw' }">
                 <div v-if="selectedRow">
                   <p v-for="(value, key) in selectedRow" :key="key">
-                    <p v-if="allColumns.includes(key)">
-                      <template v-if="key === 'genomic_profiles'">
-                        <strong>{{ key }}: </strong>
-                        <div style="white-space: normal; word-wrap: break-word;">
-                          <GenomicProfileLabel v-for="(variant, index) in Object.keys(value)"
-                            :variantString="variant" :annotations="value[variant]" :isLast="index === Object.keys(value).length - 1" />
+                  <p v-if="allColumns.includes(key)">
+                    <template v-if="key === 'genomic_profiles'">
+                      <strong>{{ key }}: </strong>
+                      <div style="white-space: normal; word-wrap: break-word;">
+                        <GenomicProfileLabel v-for="(variant, index) in Object.keys(value)" :variantString="variant"
+                          :annotations="value[variant]" :isLast="index === Object.keys(value).length - 1" />
+                      </div>
+                    </template>
+                    <template v-else-if="key === 'proteomic_profiles'">
+                      <strong>{{ key }}: </strong>
+                      <div style="white-space: normal; word-wrap: break-word;">
+                        <GenomicProfileLabel v-for="(variant, index) in value" :variantString="variant"
+                          :isLast="index === Object.keys(value).length - 1" />
+                      </div>
+                    </template>
+                    <template v-else-if="key === 'properties'">
+                      <strong>{{ key }}:</strong>
+                      <div v-for="item in value" :key="item.name">
+                        <div v-if="item.name === 'lineage'">
+                          <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }} (<a
+                            :href="'https://outbreak.info/situation-reports?pango=' + item.value" target="_blank">more
+                            information</a>)
                         </div>
-                      </template>
-                      <template v-else-if="key === 'proteomic_profiles'">
-                        <strong>{{ key }}: </strong> 
-                        <div style="white-space: normal; word-wrap: break-word;">
-                          <GenomicProfileLabel v-for="(variant, index) in value"
-                            :variantString="variant" :isLast="index === Object.keys(value).length - 1" />
+                        <div v-else>
+                          <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }}
                         </div>
-                      </template>
-                      <template v-else-if="key === 'properties'">
-                          <strong>{{ key }}:</strong>
-                          <div v-for="item in value" :key="item.name">
-                            <div v-if="item.name === 'lineage'">
-                              <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }} (<a :href="'https://outbreak.info/situation-reports?pango=' + item.value" target="_blank">more information</a>)
-                            </div>
-                            <div v-else>
-                              <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }}
-                            </div>
-                          </div>
-                      </template>
-                      <template v-else>
-                        <strong>{{ key }}:</strong> {{ value }}
-                      </template>
-                    </p>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <strong>{{ key }}:</strong> {{ value }}
+                    </template>
+                  </p>
                   </p>
                 </div>
               </Dialog>
               <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
                 removableSort scrollable scrollHeight="flex" v-model:filters="filters_table"
-                @sort="sortingChanged($event)" sortable
-                @filter="{ filtered_table_count = $event.filteredValue.length; }"
-                v-model:selection="selectedRow" selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
+                @sort="sortingChanged($event)" sortable @filter="{ filtered_table_count = $event.filteredValue.length; }"
+                v-model:selection="selectedRow" selectionMode="single" @rowSelect="onRowSelect"
+                @rowUnselect="onRowUnselect">
                 <template #empty> No Results </template>
                 <template #header>
                   <div style="display: flex; justify-content: space-between;">
@@ -103,29 +104,32 @@
                       <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
                         placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="onToggle">
                         <template #value>
-                          <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected</div>
+                          <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected
+                          </div>
                         </template>
                       </MultiSelect>
                       <IconField iconPosition="left">
                         <InputIcon>
                           <i class="pi pi-search" />
                         </InputIcon>
-                        <InputText v-model="filters_table['global'].value" placeholder="Keyword Search"/>
+                        <InputText v-model="filters_table['global'].value" placeholder="Keyword Search" />
                       </IconField>
                     </div>
                   </div>
                 </template>
-                <Column field="name">
+                <Column field="name" sortable>
                   <template #header>
                     <span v-tooltip="metaDataCoverage('name')">ID</span>
                   </template>
                   <template #body="slotProps">
-                    <div style="height: 1.5em; width:5.5rem; overflow-x: auto; white-space: nowrap;">
-                        {{ slotProps.data.name }}
+                    <div
+                      style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
+                      :title="slotProps.data.name">
+                      {{ slotProps.data.name }}
                     </div>
                   </template>
                 </Column>
-                <Column v-for="column in selectedColumns">
+                <Column v-for="column in selectedColumns" sortable :field="column">
                   <template #header>
                     <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
                   </template>
@@ -133,13 +137,15 @@
                     <div v-if="column === 'genomic_profiles'">
                       <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
                         <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                          :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
+                          :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                          :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
                       </div>
                     </div>
                     <div v-else-if="column === 'proteomic_profiles'">
                       <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
                         <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
-                          :variantString="variant" :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
+                          :variantString="variant"
+                          :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
                       </div>
                     </div>
                     <span v-else>
@@ -208,8 +214,8 @@ export default {
       // firstRow: 0,
       // page: 1,
       // pages: 1,
-      selectedRow: null, 
-      displayDialogRow: false, 
+      selectedRow: null,
+      displayDialogRow: false,
       sampleCount: 0,
       samples: [],
       filteredStatistics: {},
@@ -237,7 +243,7 @@ export default {
   methods: {
     async updateSamples() {
       this.loading = true;
-      const res = await API.getInstance().getSampleGenomes(this.filters);
+      const res = await API.getInstance().getSampleGenomes(this.filters, this.ordering);
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.samples = res.results;
       this.sampleCount = res.count;
@@ -264,9 +270,9 @@ export default {
     metaDataCoverage(column: string) {
       if (this.filteredStatistics["filtered_total_count"] != undefined) {
         const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredStatistics["filtered_total_count"] * 100).toFixed(0);
-        return 'Coverage: ' +  coverage.toString() + ' %';
+        return 'Coverage: ' + coverage.toString() + ' %';
       } else {
-          return '';
+        return '';
       }
     },
     chartData() {
@@ -429,15 +435,15 @@ export default {
     },
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
+      console.log(property)
       return property ? property.value : undefined;
     }
   },
   computed: {
     filters(): FilterGroupRoot {
-      
+
       const filters = {
-        filters: this.getFilterGroupFilters(this.filterGroup),
-        ordering: this.ordering
+        filters: this.getFilterGroupFilters(this.filterGroup)
         // limit: this.perPage,
         // offset: this.firstRow
       };
@@ -592,5 +598,4 @@ header {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-}
-</style>
+}</style>

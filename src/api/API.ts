@@ -66,9 +66,9 @@ export default class API {
     getRequest(url: string, params, suppressError: boolean) {
         return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
     }
-    getSampleGenomes(params: FilterGroupRoot) {
-        const queryString = this.parseQueryString(params)
-        const url = `samples/genomes/${queryString}`
+    getSampleGenomes(filters: FilterGroupRoot, ordering: string) {
+        const queryString = this.parseQueryString(filters)
+        const url = `samples/genomes/${queryString}&ordering=${ordering}`
         return this.getRequest(url, {}, false)
     }
     getFilteredStatistics(params: FilterGroupRoot) {
