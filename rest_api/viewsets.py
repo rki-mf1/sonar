@@ -597,7 +597,6 @@ class PropertyViewSet(
                 "query_type": "value_varchar",
                 "description": "",
             },
-            {"name": "processing_date", "query_type": "value_date", "description": ""},
             {"name": "country", "query_type": "value_varchar", "description": ""},
         ]  # from SAMPLE TABLE
         cols = [
