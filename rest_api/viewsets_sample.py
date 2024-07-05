@@ -1,48 +1,46 @@
-import json
-import traceback
-import pathlib
 import ast
 import csv
-
-from rest_api.viewsets import PropertyViewSet
-
-from django.core.exceptions import FieldDoesNotExist
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import OrderingFilter
-from django.http import StreamingHttpResponse
+import json
+import pathlib
+import traceback
 from datetime import datetime
 
 import pandas as pd
-from dateutil.rrule import rrule, WEEKLY
-
-from rest_api.viewsets import PropertyColumnMapping
-from django.http import HttpResponse
-from . import models
-from rest_api.serializers import SampleSerializer
-from rest_api.data_entry.sample_job import delete_sample
-from django.db import transaction
-from django.db.models import Count, F, Q, QuerySet, Prefetch, CharField, TextField,  Min
-from rest_framework.decorators import action, api_view
-from rest_framework import generics, serializers, viewsets
+from dateutil.rrule import WEEKLY, rrule
+from django.core.exceptions import FieldDoesNotExist
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.db import connection, transaction
+from django.db.models import (
+    CharField,
+    Count,
+    Min,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    TextField,
+)
+from django.http import StreamingHttpResponse
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
-from django.db import connection
-from rest_api.utils import (
-    Response,
-    Response,
-    resolve_ambiguous_NT_AA,
-    strtobool,
-    write_to_file,
-)
-from rest_framework import status
+
+from covsonar_backend.settings import DEBUG
+from rest_api.data_entry.sample_job import delete_sample
+from rest_api.serializers import SampleSerializer
+from rest_api.utils import Response, resolve_ambiguous_NT_AA, strtobool
+from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet
+
+from . import models
 from .serializers import (
     Sample2PropertyBulkCreateOrUpdateSerializer,
     SampleGenomesSerializer,
     SampleGenomesSerializerVCF,
     SampleSerializer,
 )
-from covsonar_backend.settings import DEBUG
 
 
 class Echo:
@@ -205,24 +203,48 @@ class SampleViewSet(
             serializer = SampleGenomesSerializerVCF(queryset, many=True)
             return self.get_paginated_response(serializer.data)
         if ordering := request.query_params.get("ordering"):
-            property_names = PropertyViewSet.get_distinct_property_names()
-            if ordering in property_names:
-                datatype = models.Property.objects.get(name=ordering).datatype
-                queryset = queryset.order_by(f"")
+            property_names = PropertyViewSet.get_custom_property_names()
+            ordering_col_name = ordering
+            if ordering.startswith("-"):
+                ordering_col_name = ordering[1:]
+            if ordering_col_name in property_names:
+                datatype = models.Property.objects.get(name=ordering_col_name).datatype
+                queryset = queryset.order_by(
+                    Subquery(
+                        models.Sample2Property.objects.prefetch_related(
+                            "property", "sample"
+                        )
+                        .filter(property__name=ordering_col_name)
+                        .filter(sample=OuterRef("id"))
+                        .values(datatype)
+                    )
+                )
+                if ordering.startswith("-"):
+                    queryset = queryset.reverse()
+            else:
+                queryset = queryset.order_by(ordering)
         queryset = self.paginate_queryset(queryset)
         serializer = SampleGenomesSerializer(queryset, many=True)
         return self.get_paginated_response(serializer.data)
-    
+
     def _get_meta_data_coverage(self, queryset):
         dict = {}
         queryset = queryset.prefetch_related("properties__property")
         queryset = queryset.annotate(
-            genomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="nt")),
-            proteomic_profiles_count=Count("sequence__alignments__mutations", filter=Q(sequence__alignments__mutations__type="cds"))
+            genomic_profiles_count=Count(
+                "sequence__alignments__mutations",
+                filter=Q(sequence__alignments__mutations__type="nt"),
+            ),
+            proteomic_profiles_count=Count(
+                "sequence__alignments__mutations",
+                filter=Q(sequence__alignments__mutations__type="cds"),
+            ),
         )
 
         dict["genomic_profiles"] = queryset.filter(genomic_profiles_count__gt=0).count()
-        dict["proteomic_profiles"] = queryset.filter(proteomic_profiles_count__gt=0).count()
+        dict["proteomic_profiles"] = queryset.filter(
+            proteomic_profiles_count__gt=0
+        ).count()
 
         property_names = PropertyViewSet.get_distinct_property_names()
 
@@ -231,35 +253,62 @@ class SampleViewSet(
 
             if field_name not in property_names:
                 continue
-            
+
             property_names.pop(property_names.index(field_name))
 
             if isinstance(field, (CharField, TextField)):
-                non_empty_count = queryset.exclude(**{field_name: ''}).exclude(**{field_name: None}).count()
+                non_empty_count = (
+                    queryset.exclude(**{field_name: ""})
+                    .exclude(**{field_name: None})
+                    .count()
+                )
             else:
                 non_empty_count = queryset.exclude(**{field_name: None}).count()
             dict[field_name] = non_empty_count
-        
+
         for property_name in property_names:
             datatype = models.Property.objects.get(name=property_name).datatype
-            dict[property_name] = queryset.exclude(**{"properties__property__name": property_name, f"properties__{datatype}": ''}).exclude(**{"properties__property__name": property_name, f"properties__{datatype}": None}).count()
-        
+            dict[property_name] = (
+                queryset.exclude(
+                    **{
+                        "properties__property__name": property_name,
+                        f"properties__{datatype}": "",
+                    }
+                )
+                .exclude(
+                    **{
+                        "properties__property__name": property_name,
+                        f"properties__{datatype}": None,
+                    }
+                )
+                .count()
+            )
+
         return dict
 
     def _get_samples_per_week(self, queryset):
         dict = {}
-        queryset = queryset.extra(
-                    select={'week': "EXTRACT('week' FROM collection_date)", 'year': "EXTRACT('year' FROM collection_date)"}
-                ).values("year", "week").annotate(count=Count("id"), collection_date=Min("collection_date")
-                ).order_by("year", "week")
-        
-        start_date = queryset.first()['collection_date']
-        end_date = queryset.last()['collection_date']
+        queryset = (
+            queryset.extra(
+                select={
+                    "week": "EXTRACT('week' FROM collection_date)",
+                    "year": "EXTRACT('year' FROM collection_date)",
+                }
+            )
+            .values("year", "week")
+            .annotate(count=Count("id"), collection_date=Min("collection_date"))
+            .order_by("year", "week")
+        )
 
-        for dt in rrule(WEEKLY, dtstart=start_date, until=end_date): # generate all weeks between start and end dates and assign default value 0 
+        start_date = queryset.first()["collection_date"]
+        end_date = queryset.last()["collection_date"]
+
+        for dt in rrule(
+            WEEKLY, dtstart=start_date, until=end_date
+        ):  # generate all weeks between start and end dates and assign default value 0
             dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
 
-        for item in queryset: # fill in count values of present weeks
+        for item in queryset:  # fill in count values of present weeks
             dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
 
         return dict
