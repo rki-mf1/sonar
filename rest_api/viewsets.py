@@ -619,6 +619,13 @@ class PropertyViewSet(
         sample_properties = [field.name for field in models.Sample._meta.get_fields() if field.name not in filter_list]
         property_names += sample_properties
         return property_names
+    
+    @staticmethod
+    def get_custom_property_names():
+        queryset = models.Property.objects.all()
+        queryset = queryset.distinct("name")
+        property_names = [item.name for item in queryset]
+        return property_names
 
 class MutationFrequencySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
