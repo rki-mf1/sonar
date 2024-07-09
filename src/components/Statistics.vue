@@ -5,17 +5,19 @@
      data() {
          return {
          statistics: {
-             samples_total: 0,
-             newest_sample_date: ""
+            distinct_mutations_count: 0,
+            samples_total: 0,
+            newest_sample_date: ""
          }
      }
      },
      methods:{
          async fetchStatistics() {
              const sample_statistics = await API.getInstance().getSampleStatistics()
+             this.statistics.distinct_mutations_count = sample_statistics.distinct_mutations_count
              this.statistics.samples_total=sample_statistics.samples_total
              this.statistics.newest_sample_date=sample_statistics.newest_sample_date
-             this.statistics.distinct_mutations_count = sample_statistics.distinct_mutations_count
+             
          }
      },
      mounted(){

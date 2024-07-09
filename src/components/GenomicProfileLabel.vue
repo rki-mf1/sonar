@@ -1,5 +1,5 @@
 <template>
-    <span v-tooltip.bottom="tooltip" style="white-space: nowrap;">
+    <span v-tooltip.bottom="tooltip">
         <span :style="{ color: variantColor }">{{ variantString }}</span>
         <span v-if="!isLast">,&nbsp;</span>
     </span>

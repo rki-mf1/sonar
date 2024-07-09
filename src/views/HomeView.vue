@@ -48,9 +48,11 @@
         <div class="output_box">
           <div class="output">
             <div style="height: 100%; overflow: auto;">
-              <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+              <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
+                <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+              </Dialog>
               <!-- Dialog for displaying row details -->
-              <Dialog v-model:visible="displayDialogRow" modal header="Sequence Details" :style="{ width: '60vw' }">
+              <Dialog v-model:visible="displayDialogRow" modal dismissableMask header="Sequence Details" :style="{ width: '60vw' }">
                 <div v-if="selectedRow">
                   <p v-for="(value, key) in selectedRow" :key="key">
                   <p v-if="allColumns.includes(key)">
@@ -73,8 +75,7 @@
                       <div v-for="item in value" :key="item.name">
                         <div v-if="item.name === 'lineage'">
                           <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }} (<a
-                            :href="'https://outbreak.info/situation-reports?pango=' + item.value" target="_blank">more
-                            information</a>)
+                            :href="'https://outbreak.info/situation-reports?pango=' + item.value" target="_blank">outbreak.info</a>)
                         </div>
                         <div v-else>
                           <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }}
@@ -89,10 +90,9 @@
                 </div>
               </Dialog>
               <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
-                removableSort scrollable scrollHeight="flex" v-model:filters="filters_table"
-                @sort="sortingChanged($event)" sortable @filter="{ filtered_table_count = $event.filteredValue.length; }"
-                v-model:selection="selectedRow" selectionMode="single" @rowSelect="onRowSelect"
-                @rowUnselect="onRowUnselect">
+                scrollable scrollHeight="flex"
+                sortable removableSort @sort="sortingChanged($event)" 
+                v-model:selection="selectedRow" selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
                 <template #empty> No Results </template>
                 <template #header>
                   <div style="display: flex; justify-content: space-between;">
@@ -102,18 +102,12 @@
                     </div>
                     <div style="display: flex; justify-content: flex-end;">
                       <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
-                        placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="onToggle">
+                        placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
                         <template #value>
                           <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected
                           </div>
                         </template>
                       </MultiSelect>
-                      <IconField iconPosition="left">
-                        <InputIcon>
-                          <i class="pi pi-search" />
-                        </InputIcon>
-                        <InputText v-model="filters_table['global'].value" placeholder="Keyword Search" />
-                      </IconField>
                     </div>
                   </div>
                 </template>
@@ -155,8 +149,7 @@
                 </Column>
                 <template #footer>
                   <div style="display: flex; justify-content: space-between;">
-                    Total: {{ sampleCount }} Samples
-                    <!-- Total: {{ filtered_table_count }} Samples  -->
+                    Total: {{ filteredStatistics?.filtered_total_count ?? 0 }} Samples
                   </div>
                 </template>
               </DataTable>
@@ -197,7 +190,7 @@ export default {
         {
           label: 'Home',
           icon: 'pi pi-home',
-          route: '/home'
+          route: '/'
         },
         {
           label: 'About',
@@ -205,23 +198,18 @@ export default {
           route: '/about'
         }
       ],
-      displayDialogFilter: false,
-      filtered_table_count: 0,
-      filters_table: {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-      },
       // perPage: 10,
       // firstRow: 0,
       // page: 1,
       // pages: 1,
+      displayDialogFilter: false,
       selectedRow: null,
       displayDialogRow: false,
-      sampleCount: 0,
       samples: [],
       filteredStatistics: {},
       loading: false,
       isFiltersSet: false,
-      ordering: 'collection_date',
+      ordering: '-collection_date',
       propertyOptions: [],
       repliconAccessionOptions: [],
       allColumns: [],
@@ -246,10 +234,12 @@ export default {
       const res = await API.getInstance().getSampleGenomes(this.filters, this.ordering);
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.samples = res.results;
-      this.sampleCount = res.count;
       this.isFiltersSet = !(this.filters['filters']['andFilter'].length === 0 && this.filters['filters']['orFilter'].length === 0);
       // this.pages = res.count / this.perPage
       this.loading = false;
+    },
+    columnSelection(value) {
+      this.selectedColumns = value.filter(v => this.allColumns.includes(v));
     },
     onRowSelect(event) {
       this.selectedRow = event.data;
@@ -343,9 +333,6 @@ export default {
       const res = await API.getInstance().getSampleGenomePropertyOptions();
       this.propertyOptions = res.property_names;
       this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
-    },
-    onToggle(value) {
-      this.selectedColumns = value.filter(v => this.allColumns.includes(v));
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions();
