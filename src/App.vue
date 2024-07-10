@@ -1,19 +1,152 @@
 <template>
-  <RouterView />
+
+  <body>
+    <main>
+      <header>
+        <i class="pi pi-spinner"
+          style="font-size: 3rem; color: var(--text-color); margin-top: 10px; margin-bottom: 10px;"></i>
+        <div style="font-size: 2rem; color: var(--text-color); margin-top: 10px;">ovSonar</div>
+
+        <div class="menu">
+          <Menubar :model="menuItems">
+            <template #item="{ item, props, hasSubmenu }">
+              <router-link v-if="item.route" v-slot="{ href, navigate }" :to="item.route" custom>
+                <a :href="href" v-bind="props.action" @click="navigate">
+                  <span :class="item.icon" />
+                  <span class="ml-2">{{ item.label }}</span>
+                </a>
+              </router-link>
+              <a v-else :href="item.url" :target="item.target" v-bind="props.action">
+                <span :class="item.icon" />
+                <span class="ml-2">{{ item.label }}</span>
+                <span v-if="hasSubmenu" class="pi pi-fw pi-angle-down ml-2" />
+              </a>
+            </template>
+          </Menubar>
+        </div>
+      </header>
+
+      <div class="content">
+        <RouterView />
+      </div>
+    </main>
+  </body>
+
 </template>
 
 <script lang="ts">
+
 import { RouterView } from 'vue-router'
 import 'primeicons/primeicons.css';
+
 export default {
   name: 'App',
   components: {
     RouterView
+  },
+  data() {
+    return {
+      menuItems: [
+        {
+          label: 'Home',
+          icon: 'pi pi-home',
+          route: '/'
+        },
+        {
+          label: 'About',
+          icon: 'pi pi-star',
+          route: '/about'
+        }
+      ]
+    }
   }
 } 
 </script>
 
-<style>
+
+<style scoped>
+body {
+  height: 100vh;
+  width: 100vw;
+  margin: -0.5em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #adbed3;
+}
+
+main {
+  height: 97vh;
+  width: 98vw;
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+header {
+  height: 10%;
+  display: flex;
+  flex-direction: row;
+  align-items: left;
+  padding: 20px;
+  background-color: var(--primary-color);
+}
+
+.content {
+  width: 100%;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  background-color: white;
+}
+
+.menu {
+  margin-left: 35%;
+}
+
+/* .p-menubar {
+    background-color: transparent;
+  }
+  :deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link .p-menuitem-text) {
+    color: white;
+  } */
+
+:deep(.p-button) {
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color-darker);
+}
+
+:deep(.p-button):hover {
+  background: var(--primary-color-lighter)
+}
+
+:deep(.p-button.p-button-outlined) {
+  background: transparent;
+  color: var(--primary-color);
+}
+
+:deep(.p-button.p-button-outlined):hover {
+  background: rgb(248, 247, 247);
+}
+
+:deep(.p-button.p-button-warning) {
+  background: var(--secondary-color);
+  border: 1px solid var(--secondary-color-darker);
+}
+
+:deep(.p-button.p-button-warning):hover {
+  background: var(--secondary-color-lighter);
+}
+
+:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+  background: var(--primary-color);
+}
+
 
 /* ## Scrollbar ## */
 /* FIREFOX */
@@ -38,4 +171,5 @@ export default {
 ::-webkit-scrollbar-thumb {
   background: grey;
   border-radius: 10px;
-}</style>
+}
+</style>

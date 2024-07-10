@@ -1,175 +1,132 @@
-
 <template>
-  <body>
-    <main>
-      <header>
-        <i class="pi pi-spinner"
-          style="font-size: 3rem; color: var(--text-color); margin-top: 10px; margin-bottom: 10px;"></i>
-        <div style="font-size: 2rem; color: var(--text-color); margin-top: 10px;">ovSonar</div>
-        <div class="menu">
-          <Menubar :model="menu_items" />
-        </div>
 
-        <!-- <v-icon name="pr-spinner" scale="5" animation="float" style="color: white;"/> -->
-        <!-- <div style="margin-bottom: 100px;"></div>
-        <router-link to="/" class="nav-item">Home</router-link>
-        <router-link to="/about" class="nav-item">About</router-link> -->
-      </header>
-      <div class="content">
-        <div class="input">
-          <div class="input-left">
-            <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
-              :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
-            <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
-              <div style="display: flex; gap: 10px;">
-                <div>
-                  <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
-                    :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
-                    :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
-                    :propertyValueOptions="propertyValueOptions"
-                    v-on:update-property-value-options="updatePropertyValueOptions" />
-                </div>
-
-              </div>
-              <div style="display: flex; justify-content: end; gap: 10px;">
-                <Button type="button" style="margin-top: 10px;" label="OK"
-                  @click="displayDialogFilter = false; updateSamples()"></Button>
-              </div>
-            </Dialog>
-            <i class="pi pi-arrow-right" style="font-size: 1.5rem; color: var(--grayish);"></i>
-            <Button type="button" icon="pi pi-list" label="&nbsp;Get Data" raised @click="updateSamples()" />
+  <div class="input">
+    <div class="input-left">
+      <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
+        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
+      <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
+        <div style="display: flex; gap: 10px;">
+          <div>
+            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
+              :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
+              :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
+              :propertyValueOptions="propertyValueOptions"
+              v-on:update-property-value-options="updatePropertyValueOptions" />
           </div>
 
-          <div class="input-right">
-            <Statistics></Statistics>
-          </div>
         </div>
+        <div style="display: flex; justify-content: end; gap: 10px;">
+          <Button type="button" style="margin-top: 10px;" label="OK"
+            @click="displayDialogFilter = false; updateSamples()"></Button>
+        </div>
+      </Dialog>
+      <i class="pi pi-arrow-right" style="font-size: 1.5rem; color: var(--grayish);"></i>
+      <Button type="button" icon="pi pi-list" label="&nbsp;Get Data" raised @click="updateSamples()" />
+    </div>
 
-        <div class="output_box">
-          <div class="output">
-            <div style="height: 100%; overflow: auto;">
-              <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
-                <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
-              </Dialog>
-              <!-- Dialog for displaying row details -->
-              <Dialog v-model:visible="displayDialogRow" modal dismissableMask header="Sequence Details" :style="{ width: '60vw' }">
-                <div v-if="selectedRow">
-                  <p v-for="(value, key) in selectedRow" :key="key">
-                  <p v-if="allColumns.includes(key)">
-                    <template v-if="key === 'genomic_profiles'">
-                      <strong>{{ key }}: </strong>
-                      <div style="white-space: normal; word-wrap: break-word;">
-                        <GenomicProfileLabel v-for="(variant, index) in Object.keys(value)" :variantString="variant"
-                          :annotations="value[variant]" :isLast="index === Object.keys(value).length - 1" />
-                      </div>
-                    </template>
-                    <template v-else-if="key === 'proteomic_profiles'">
-                      <strong>{{ key }}: </strong>
-                      <div style="white-space: normal; word-wrap: break-word;">
-                        <GenomicProfileLabel v-for="(variant, index) in value" :variantString="variant"
-                          :isLast="index === Object.keys(value).length - 1" />
-                      </div>
-                    </template>
-                    <template v-else-if="key === 'properties'">
-                      <strong>{{ key }}:</strong>
-                      <div v-for="item in value" :key="item.name">
-                        <div v-if="item.name === 'lineage'">
-                          <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }} (<a
-                            :href="'https://outbreak.info/situation-reports?pango=' + item.value" target="_blank">outbreak.info</a>)
-                        </div>
-                        <div v-else>
-                          <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }}
-                        </div>
-                      </div>
-                    </template>
-                    <template v-else>
-                      <strong>{{ key }}:</strong> {{ value }}
-                    </template>
-                  </p>
-                  </p>
-                </div>
-              </Dialog>
-              <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
-                scrollable scrollHeight="flex"
-                sortable removableSort @sort="sortingChanged($event)" 
-                v-model:selection="selectedRow" selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
-                <template #empty> No Results </template>
-                <template #header>
-                  <div style="display: flex; justify-content: space-between;">
-                    <div>
-                      <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="exportCSV($event)" />
-                      <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
-                    </div>
-                    <div style="display: flex; justify-content: flex-end;">
-                      <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
-                        placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
-                        <template #value>
-                          <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected
-                          </div>
-                        </template>
-                      </MultiSelect>
-                    </div>
-                  </div>
-                </template>
-                <Column field="name" sortable>
-                  <template #header>
-                    <span v-tooltip="metaDataCoverage('name')">ID</span>
-                  </template>
-                  <template #body="slotProps">
-                    <div
-                      style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
-                      :title="slotProps.data.name">
-                      {{ slotProps.data.name }}
-                    </div>
-                  </template>
-                </Column>
-                <Column v-for="column in selectedColumns" sortable :field="column">
-                  <template #header>
-                    <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
-                  </template>
-                  <template #body="slotProps">
-                    <div v-if="column === 'genomic_profiles'">
-                      <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
-                        <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                          :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
-                          :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
-                      </div>
-                    </div>
-                    <div v-else-if="column === 'proteomic_profiles'">
-                      <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
-                        <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
-                          :variantString="variant"
-                          :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
-                      </div>
-                    </div>
-                    <span v-else>
-                      {{ findProperty(slotProps.data.properties, column) }}
-                    </span>
-                  </template>
-                </Column>
-                <template #footer>
-                  <div style="display: flex; justify-content: space-between;">
-                    Total: {{ filteredStatistics?.filtered_total_count ?? 0 }} Samples
-                  </div>
-                </template>
-              </DataTable>
+    <div class="input-right">
+      <Statistics :filteredCount="filteredStatistics?.filtered_total_count ?? 0"></Statistics>
+    </div>
+  </div>
+
+  <div class="output_box">
+    <div class="output">
+      <div style="height: 100%; overflow: auto;">
+        <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
+          <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+        </Dialog>
+
+        <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
+          <template #header>
+            <div style="display: flex; align-items: center;">
+              <strong>Sample Details</strong>
+              <router-link v-slot="{ href, navigate }" :to="`sample/${selectedRow.name}`" custom>
+                <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px;">
+                  <i class="pi pi-external-link"></i>
+                </a>
+              </router-link>
             </div>
-            <div style="height: 100%; width: 30%; display: flex; justify-content: center;">
-              <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
+          </template>
+          <SampleDetails :selectedRow="selectedRow" :allColumns="allColumns"></SampleDetails>
+        </Dialog>
+
+        <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows scrollable
+          scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
+          selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
+          <template #empty> No Results </template>
+          <template #header>
+            <div style="display: flex; justify-content: space-between;">
+              <div>
+                <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="exportCSV($event)" />
+                <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
+              </div>
+              <div style="display: flex; justify-content: flex-end;">
+                <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
+                  placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+                  <template #value>
+                    <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected
+                    </div>
+                  </template>
+                </MultiSelect>
+              </div>
             </div>
-          </div>
-        </div>
+          </template>
+          <Column field="name" sortable>
+            <template #header>
+              <span v-tooltip="metaDataCoverage('name')">ID</span>
+            </template>
+            <template #body="slotProps">
+              <div
+                style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
+                :title="slotProps.data.name">
+                {{ slotProps.data.name }}
+              </div>
+            </template>
+          </Column>
+          <Column v-for="column in selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
+            <template #header>
+              <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
+            </template>
+            <template #body="slotProps">
+              <div v-if="column === 'genomic_profiles'">
+                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                  <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                    :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
+                </div>
+              </div>
+              <div v-else-if="column === 'proteomic_profiles'">
+                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                  <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                    :variantString="variant"
+                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
+                </div>
+              </div>
+              <span v-else>
+                {{ findProperty(slotProps.data.properties, column) }}
+              </span>
+            </template>
+          </Column>
+          <template #footer>
+            <div style="display: flex; justify-content: space-between;">
+              Total: {{ filteredStatistics?.filtered_total_count ?? 0 }} Samples
+            </div>
+          </template>
+        </DataTable>
       </div>
-    </main>
-  </body>
+      <div style="height: 100%; width: 30%; display: flex; justify-content: center;">
+        <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
+      </div>
+    </div>
+  </div>
+
 </template>
 
 <script lang="ts">
 
 import API from '@/api/API'
 import { useRouter } from 'vue-router';
-import { FilterMatchMode } from 'primevue/api';
-import GenomicProfileLabel from '@/components/GenomicProfileLabel.vue';
+
 import {
   type FilterGroup,
   DjangoFilterType,
@@ -179,7 +136,6 @@ import {
   type FilterGroupRoot,
   type Property
 } from '@/util/types'
-import type GenomicProfileLabelVue from '@/components/GenomicProfileLabel.vue';
 
 export default {
   name: 'HomeView',
@@ -210,6 +166,7 @@ export default {
       loading: false,
       isFiltersSet: false,
       ordering: '-collection_date',
+      notSortable: ["genomic_profiles", "proteomic_profiles"],
       propertyOptions: [],
       repliconAccessionOptions: [],
       allColumns: [],
@@ -422,7 +379,6 @@ export default {
     },
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
-      console.log(property)
       return property ? property.value : undefined;
     }
   },
@@ -441,96 +397,12 @@ export default {
     this.updatePropertyOptions();
     this.updateSymbolOptions();
     this.updateRepliconAccessionOptions();
-  },
-  components: { GenomicProfileLabel }
+  }
 }
-
-
 
 </script>
 
 <style scoped>
-body {
-  height: 100vh;
-  width: 100vw;
-  margin: -0.5em;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #adbed3;
-}
-
-main {
-  height: 97vh;
-  width: 98vw;
-  display: flex;
-  align-items: stretch;
-  flex-direction: column;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-
-header {
-  height: 10%;
-  display: flex;
-  flex-direction: row;
-  align-items: left;
-  padding: 20px;
-  background-color: var(--primary-color);
-}
-
-.menu {
-  margin-left: 35%;
-}
-
-/* .p-menubar {
-    background-color: transparent;
-  }
-  :deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link .p-menuitem-text) {
-    color: white;
-  } */
-
-:deep(.p-button) {
-  background: var(--primary-color);
-  border: 1px solid var(--primary-color-darker);
-}
-
-:deep(.p-button):hover {
-  background: var(--primary-color-lighter)
-}
-
-:deep(.p-button.p-button-outlined) {
-  background: transparent;
-  color: var(--primary-color);
-}
-
-:deep(.p-button.p-button-outlined):hover {
-  background: rgb(248, 247, 247);
-}
-
-:deep(.p-button.p-button-warning) {
-  background: var(--secondary-color);
-  border: 1px solid var(--secondary-color-darker);
-}
-
-:deep(.p-button.p-button-warning):hover {
-  background: var(--secondary-color-lighter);
-}
-
-:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
-  background: var(--primary-color);
-}
-
-.content {
-  width: 100%;
-  height: 90%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-evenly;
-  background-color: var(--text-color);
-}
 
 .input {
   height: 15%;
@@ -585,4 +457,5 @@ header {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-}</style>
+}
+</style>

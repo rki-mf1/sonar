@@ -32,13 +32,12 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import FilterGroup from "./components/FilterGroup.vue";
+import GenomicProfileLabel from "./components/GenomicProfileLabel.vue";
+import SampleDetails from "./components/SampleDetails.vue";
 import Statistics from "./components/Statistics.vue";
-
 
 import App from './App.vue'
 import router from './router'
-import Menu from 'primevue/menu';
-
 
 const app = createApp(App)
 
@@ -49,6 +48,8 @@ app.use(PrimeVue)
 
 
 app.component('FilterGroup', FilterGroup)
+app.component('GenomicProfileLabel', GenomicProfileLabel)
+app.component('SampleDetails', SampleDetails)
 app.component('Statistics', Statistics)
 
 
