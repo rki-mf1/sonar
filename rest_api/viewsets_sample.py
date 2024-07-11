@@ -57,6 +57,7 @@ class SampleViewSet(
     serializer_class = SampleSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
+    filter_fields = ['name']
 
     @property
     def filter_label_to_methods(self):
@@ -122,6 +123,8 @@ class SampleViewSet(
         queryset = models.Sample.objects.all()
         if filter_params := request.query_params.get("filters"):
             filters = json.loads(filter_params)
+            if 'name' in filters.keys():
+                queryset = queryset.filter(name = filters.pop('name'))
             queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
         return queryset
 
@@ -199,10 +202,12 @@ class SampleViewSet(
             response = StreamingHttpResponse(rows, content_type="text/csv")
             response["Content-Disposition"] = 'attachment; filename="export.csv"'
             return response
+        
         if vcf_format:
             queryset = self.paginate_queryset(queryset)
             serializer = SampleGenomesSerializerVCF(queryset, many=True)
             return self.get_paginated_response(serializer.data)
+        
         if ordering := request.query_params.get("ordering"):
             property_names = PropertyViewSet.get_custom_property_names()
             ordering_col_name = ordering
