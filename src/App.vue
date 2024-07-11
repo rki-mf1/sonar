@@ -116,38 +116,6 @@ header {
     color: white;
   } */
 
-:deep(.p-button) {
-  background: var(--primary-color);
-  border: 1px solid var(--primary-color-darker);
-}
-
-:deep(.p-button):hover {
-  background: var(--primary-color-lighter)
-}
-
-:deep(.p-button.p-button-outlined) {
-  background: transparent;
-  color: var(--primary-color);
-}
-
-:deep(.p-button.p-button-outlined):hover {
-  background: rgb(248, 247, 247);
-}
-
-:deep(.p-button.p-button-warning) {
-  background: var(--secondary-color);
-  border: 1px solid var(--secondary-color-darker);
-}
-
-:deep(.p-button.p-button-warning):hover {
-  background: var(--secondary-color-lighter);
-}
-
-:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
-  background: var(--primary-color);
-}
-
-
 /* ## Scrollbar ## */
 /* FIREFOX */
 * {
