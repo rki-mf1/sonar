@@ -141,7 +141,8 @@ class SampleViewSet(
         csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
         self.has_property_filter = False
         queryset = self._get_filtered_queryset(request)
-
+        if name_filter := request.query_params.get("name"):
+            queryset = queryset.filter(name=name_filter)
         genomic_profiles_qs = (
             models.Mutation.objects.filter(type="nt").only(
                 "ref", "alt", "start", "end", "gene"
