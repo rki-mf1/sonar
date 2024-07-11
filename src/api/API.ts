@@ -66,11 +66,18 @@ export default class API {
     getRequest(url: string, params, suppressError: boolean) {
         return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
     }
-    getSampleGenomes(filters: FilterGroupRoot, ordering='-collection_date') {
-        const queryString = this.parseQueryString(filters)
-        const url = `samples/genomes/${queryString}&ordering=${ordering}`
+    getSampleGenomes(filters: FilterGroupRoot, ordering = '-collection_date') {
+        let url = `samples/genomes/?ordering=${ordering}`
+        if (Object.keys(filters).length == 0) {
+            url += this.parseQueryString(filters)
+        }
         return this.getRequest(url, {}, false)
     }
+
+    getSingleSampleGenome(name: string) {
+        return this.getRequest(`samples/genomes/?name=${name}`, {}, false)
+    }
+
     getFilteredStatistics(params: FilterGroupRoot) {
         const queryString = this.parseQueryString(params)
         const url = `samples/filtered_statistics/${queryString}`
