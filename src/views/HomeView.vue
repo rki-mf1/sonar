@@ -25,7 +25,7 @@
     </div>
 
     <div class="input-right">
-      <Statistics :filteredCount="filteredStatistics?.filtered_total_count ?? 0"></Statistics>
+      <Statistics :filteredCount="filteredCount"></Statistics>
     </div>
   </div>
 
@@ -76,9 +76,8 @@
               <span v-tooltip="metaDataCoverage('name')">ID</span>
             </template>
             <template #body="slotProps">
-              <div
-                style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
-                :title="slotProps.data.name">
+              <div style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
+                :title="slotProps.data.name"> 
                 {{ slotProps.data.name }}
               </div>
             </template>
@@ -109,8 +108,15 @@
           </Column>
           <template #footer>
             <div style="display: flex; justify-content: space-between;">
-              Total: {{ filteredStatistics?.filtered_total_count ?? 0 }} Samples
+              Total: {{ filteredCount }} Samples
             </div>
+            <Paginator
+              :totalRecords="filteredCount"
+              v-model:rows="perPage"
+              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
+              v-model:first="firstRow"
+              @update:first="updateSamples()"
+            />
           </template>
         </DataTable>
       </div>
@@ -125,7 +131,6 @@
 <script lang="ts">
 
 import API from '@/api/API'
-import { useRouter } from 'vue-router';
 
 import {
   type FilterGroup,
@@ -141,28 +146,16 @@ export default {
   name: 'HomeView',
   data() {
     return {
-      router: useRouter(),
-      menu_items: [
-        {
-          label: 'Home',
-          icon: 'pi pi-home',
-          route: '/'
-        },
-        {
-          label: 'About',
-          icon: 'pi pi-star',
-          route: '/about'
-        }
-      ],
-      // perPage: 10,
-      // firstRow: 0,
-      // page: 1,
-      // pages: 1,
       displayDialogFilter: false,
       selectedRow: null,
       displayDialogRow: false,
       samples: [],
       filteredStatistics: {},
+      filteredCount: 0,
+      perPage: 10,
+      firstRow: 0,
+      page: 1,
+      pages: 1,
       loading: false,
       isFiltersSet: false,
       ordering: '-collection_date',
@@ -188,11 +181,11 @@ export default {
   methods: {
     async updateSamples() {
       this.loading = true;
-      const res = await API.getInstance().getSampleGenomes(this.filters, this.ordering);
+      this.samples = (await API.getInstance().getSampleGenomes(this.filters, this.ordering)).results;
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
-      this.samples = res.results;
+      this.filteredCount = this.filteredStatistics["filtered_total_count"];
       this.isFiltersSet = !(this.filters['filters']['andFilter'].length === 0 && this.filters['filters']['orFilter'].length === 0);
-      // this.pages = res.count / this.perPage
+      this.pages = this.filteredCount / this.perPage;
       this.loading = false;
     },
     columnSelection(value) {
@@ -215,8 +208,8 @@ export default {
       this.updateSamples();
     },
     metaDataCoverage(column: string) {
-      if (this.filteredStatistics["filtered_total_count"] != undefined) {
-        const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredStatistics["filtered_total_count"] * 100).toFixed(0);
+      if (this.filteredCount != 0) {
+        const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredCount * 100).toFixed(0);
         return 'Coverage: ' + coverage.toString() + ' %';
       } else {
         return '';
@@ -386,9 +379,11 @@ export default {
     filters(): FilterGroupRoot {
 
       const filters = {
-        filters: this.getFilterGroupFilters(this.filterGroup)
-        // limit: this.perPage,
-        // offset: this.firstRow
+        filters: this.getFilterGroupFilters(this.filterGroup),
+        limit: this.perPage,
+        offset: this.firstRow,
+        page: this.firstRow / this.perPage + 1,
+        page_size: this.perPage
       };
       return filters as FilterGroupRoot;
     }
@@ -457,5 +452,36 @@ export default {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+}
+
+:deep(.p-button) {
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color-darker);
+}
+
+:deep(.p-button):hover {
+  background: var(--primary-color-lighter)
+}
+
+:deep(.p-button.p-button-outlined) {
+  background: transparent;
+  color: var(--primary-color);
+}
+
+:deep(.p-button.p-button-outlined):hover {
+  background: rgb(248, 247, 247);
+}
+
+:deep(.p-button.p-button-warning) {
+  background: var(--secondary-color);
+  border: 1px solid var(--secondary-color-darker);
+}
+
+:deep(.p-button.p-button-warning):hover {
+  background: var(--secondary-color-lighter);
+}
+
+:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+  background: var(--primary-color);
 }
 </style>

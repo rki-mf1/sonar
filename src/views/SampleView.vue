@@ -25,7 +25,7 @@ export default {
   },
   methods: {
     async updateSample() {
-      this.selectedData = (await API.getInstance().getSampleGenomes({ name: this.$route.params.id })).results[0]
+      this.selectedData = (await API.getInstance().getSampleGenomes({filters: { name: this.$route.params.id }})).results[0]
     },
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptions();

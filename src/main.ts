@@ -10,6 +10,7 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import ProgressSpinner from 'primevue/progressspinner'
 import DataTable from 'primevue/datatable'
+import Paginator from 'primevue/paginator'
 import Column from 'primevue/column'
 import Card from 'primevue/card'
 import InputSwitch from "primevue/inputswitch";
@@ -63,6 +64,7 @@ app.component('InputText', InputText)
 app.component('Dropdown', Dropdown)
 app.component('InputNumber', InputNumber)
 app.component('DataTable', DataTable)
+app.component('Paginator', Paginator)
 app.component('Column', Column)
 app.component('Card', Card)
 app.component('ProgressSpinner', ProgressSpinner)

@@ -68,7 +68,7 @@ export default class API {
     }
     getSampleGenomes(filters: FilterGroupRoot, ordering='-collection_date') {
         const queryString = this.parseQueryString(filters)
-        const url = `samples/genomes/${queryString}&ordering=${ordering}`
+        let url = `samples/genomes/${queryString}&ordering=${ordering}`
         return this.getRequest(url, {}, false)
     }
     getFilteredStatistics(params: FilterGroupRoot) {
