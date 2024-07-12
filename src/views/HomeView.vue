@@ -49,6 +49,24 @@
           <SampleDetails :selectedRow="selectedRow" :allColumns="allColumns"></SampleDetails>
         </Dialog>
 
+        <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask :style="{ width: '25vw' }">
+          
+          <div>
+            <RadioButton v-model="exportFormat" inputId="exportFormat1" value="csv" />
+            <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
+            <br><br>
+            <RadioButton v-model="exportFormat" inputId="exportFormat2" value="xlsx" />
+            <label for="exportFormat2" class="ml-2"> Excel (.xlsx)</label>
+            <br><br>
+          </div>
+
+          <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span> 
+          
+          <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px;">
+            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="exportFile(exportFormat)" />
+          </div>
+        </Dialog>
+
         <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows scrollable
           scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
           selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
@@ -56,9 +74,7 @@
           <template #header>
             <div style="display: flex; justify-content: space-between;">
               <div>
-                <Button icon="pi pi-external-link" label="&nbsp;Export XLSX" raised @click="exportFile('xlsx')" />
-                <Button icon="pi pi-external-link" label="&nbsp;Export CSV" raised @click="exportFile('csv')" />
-                <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
+                <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
               </div>
               <div style="display: flex; justify-content: flex-end;">
                 <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
@@ -145,6 +161,8 @@ export default {
       displayDialogFilter: false,
       selectedRow: null,
       displayDialogRow: false,
+      displayDialogExport: false,
+      exportFormat: 'csv',
       samples: [],
       filteredStatistics: {},
       filteredCount: 0,
@@ -207,6 +225,12 @@ export default {
         this.ordering = `-${sortBy.sortField}`;
       }
       this.updateSamples();
+    },
+    exportFile(type: string) {
+      this.displayDialogExport = false;
+      this.loading = true;
+      API.getInstance().getSampleGenomesExport(this.filters, this.selectedColumns, type == "xlsx");
+      this.loading = false;
     },
     metaDataCoverage(column: string) {
       if (this.filteredCount != 0) {
@@ -273,9 +297,6 @@ export default {
           }
         }
       };
-    },
-    exportFile(type: string) {
-      API.getInstance().getSampleGenomesExport(this.filters, this.selectedColumns, type == "xlsx");
     },
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptions();
@@ -479,6 +500,10 @@ export default {
 }
 
 :deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+  background: var(--primary-color);
+}
+
+:deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
   background: var(--primary-color);
 }
 </style>

@@ -5,6 +5,7 @@ import 'primeicons/primeicons.css'; //icons
 import PrimeVue from 'primevue/config'
 import Menubar from "primevue/menubar";
 import Button from 'primevue/button'
+import RadioButton from 'primevue/radiobutton';
 import Dropdown from 'primevue/dropdown'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
@@ -60,6 +61,7 @@ app.component('InputIcon', InputIcon)
 app.component('Dialog', Dialog)
 app.component('MultiSelect', MultiSelect)
 app.component('Button', Button)
+app.component('RadioButton', RadioButton)
 app.component('InputText', InputText)
 app.component('Dropdown', Dropdown)
 app.component('InputNumber', InputNumber)
