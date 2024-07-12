@@ -1,12 +1,13 @@
 <template>
   <div style="width: 60%;">
 
-    <strong>Sample Details</strong>
-    <br>
-    <strong> {{ $route.params.id }} </strong>
-    <br>
-
-    <SampleDetails :selectedRow="selectedData" :allColumns="allColumns"></SampleDetails>
+    <div v-if="selectedData" >
+      <strong>Sample Details</strong>
+      <br>
+      <SampleDetails :selectedRow="selectedData" :allColumns="allColumns"></SampleDetails>
+    </div>
+    
+    <strong v-else >ID does not exist</strong>
 
   </div>
 </template>

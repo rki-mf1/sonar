@@ -69,8 +69,6 @@ export default class API {
         return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
     }
     getSampleGenomes(filters: FilterGroupRoot, params) {
-        console.log(params)
-        console.log(Object.keys(params))
         let url = `samples/genomes/?`
         for (const key of Object.keys(params)) {
             url += `${key}=${params[key]}&`
@@ -92,10 +90,10 @@ export default class API {
         return this.getRequest(url, {}, false)
     }
     async getSampleGenomesExport(params: FilterGroupRoot, columns: string[], xls = true) {
-        columns.splice(0, 0, 'name')
+        const exportColumns = ['name', ...columns]
         const queryString = this.parseQueryString(params)
         let url = `${this.BACKEND_ADDRESS}samples/genomes/${queryString}`
-        url += `&columns=${columns.join(',')}`
+        url += `&columns=${exportColumns.join(',')}`
         url += `&csv_stream=true`
         const response = await axios.get(url, {
             responseType: 'stream',
@@ -104,7 +102,7 @@ export default class API {
         const stream = response.data;
         if (xls) {
             const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
-            this.saveAsXLSX(reader, columns)
+            this.saveAsXLSX(reader, exportColumns)
             return
         }
         const chunks = []
