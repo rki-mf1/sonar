@@ -1,5 +1,4 @@
 <template>
-
   <div class="input">
     <div class="input-left">
       <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
@@ -57,7 +56,8 @@
           <template #header>
             <div style="display: flex; justify-content: space-between;">
               <div>
-                <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="exportCSV($event)" />
+                <Button icon="pi pi-external-link" label="&nbsp;Export XLSX" raised @click="exportFile('xlsx')" />
+                <Button icon="pi pi-external-link" label="&nbsp;Export CSV" raised @click="exportFile('csv')" />
                 <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
               </div>
               <div style="display: flex; justify-content: flex-end;">
@@ -76,8 +76,9 @@
               <span v-tooltip="metaDataCoverage('name')">ID</span>
             </template>
             <template #body="slotProps">
-              <div style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
-                :title="slotProps.data.name"> 
+              <div
+                style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
+                :title="slotProps.data.name">
                 {{ slotProps.data.name }}
               </div>
             </template>
@@ -110,13 +111,9 @@
             <div style="display: flex; justify-content: space-between;">
               Total: {{ filteredCount }} Samples
             </div>
-            <Paginator
-              :totalRecords="filteredCount"
-              v-model:rows="perPage"
-              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
-              v-model:first="firstRow"
-              @update:first="updateSamples()"
-            />
+            <Paginator :totalRecords="filteredCount" v-model:rows="perPage"
+              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
+              @update:first="updateSamples()" />
           </template>
         </DataTable>
       </div>
@@ -125,7 +122,6 @@
       </div>
     </div>
   </div>
-
 </template>
 
 <script lang="ts">
@@ -181,7 +177,12 @@ export default {
   methods: {
     async updateSamples() {
       this.loading = true;
-      this.samples = (await API.getInstance().getSampleGenomes(this.filters, this.ordering)).results;
+      const params = {
+        limit: this.perPage,
+        offset: this.firstRow,
+        ordering: this.ordering
+      }
+      this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.filteredCount = this.filteredStatistics["filtered_total_count"];
       this.isFiltersSet = !(this.filters['filters']['andFilter'].length === 0 && this.filters['filters']['orFilter'].length === 0);
@@ -273,12 +274,9 @@ export default {
         }
       };
     },
-    exportCSV() {
-      this.$refs.dt.exportCSV();
+    exportFile(type: string) {
+      API.getInstance().getSampleGenomesExport(this.filters, this.selectedColumns, type == "xlsx");
     },
-    // async requestExport() {
-    //   await API.getInstance().getSampleGenomesExport(this.filters)
-    // },
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptions();
       this.propertyOptions = res.property_names;
@@ -398,7 +396,6 @@ export default {
 </script>
 
 <style scoped>
-
 .input {
   height: 15%;
   width: 98%;
