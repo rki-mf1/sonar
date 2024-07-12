@@ -125,8 +125,6 @@ class SampleViewSet(
         queryset = models.Sample.objects.all()
         if filter_params := request.query_params.get("filters"):
             filters = json.loads(filter_params)
-            if "name" in filters.keys():
-                queryset = queryset.filter(name=filters.pop("name"))
             queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
         return queryset
 
@@ -150,12 +148,12 @@ class SampleViewSet(
         if name_filter := request.query_params.get("name"):
             queryset = queryset.filter(name=name_filter)
         genomic_profiles_qs = (
-            models.Mutation.objects.filter(type="nt").only(
+            models.Mutation.objects.filter(type="nt").order_by("start").only(
                 "ref", "alt", "start", "end", "gene"
             )
         ).prefetch_related("gene")
         proteomic_profiles_qs = (
-            models.Mutation.objects.filter(type="cds").only(
+            models.Mutation.objects.filter(type="cds").order_by("gene", "start").only(
                 "ref", "alt", "start", "end", "gene"
             )
         ).prefetch_related("gene")

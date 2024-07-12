@@ -304,7 +304,7 @@ class SampleGenomesExportStreamSerializer(SampleGenomesSerializer):
             if column == "proteomic_profiles":
                 row.append(self.get_proteomic_profiles(obj))
             elif column == "genomic_profiles":
-                row.append(self.get_genomic_profiles(obj).keys())
+                row.append(list(self.get_genomic_profiles(obj).keys()))
             elif value := next(
                 (item["value"] for item in custom_properties if item["name"] == column),
                 None
