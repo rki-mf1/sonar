@@ -1,9 +1,9 @@
 import ast
-import csv
+import csv, _csv
 import json
 import pathlib
-import traceback
 from datetime import datetime
+from typing import Generator
 
 import pandas as pd
 from dateutil.rrule import WEEKLY, rrule
@@ -11,6 +11,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import connection, transaction
 from django.db.models import (
+    QuerySet,
     CharField,
     Count,
     Min,
@@ -27,10 +28,11 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
+from django.core.paginator import Paginator
 
 from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sample_job import delete_sample
-from rest_api.serializers import SampleSerializer
+from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
 from rest_api.utils import Response, resolve_ambiguous_NT_AA, strtobool
 from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet
 
@@ -57,7 +59,7 @@ class SampleViewSet(
     serializer_class = SampleSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
-    filter_fields = ['name']
+    filter_fields = ["name"]
 
     @property
     def filter_label_to_methods(self):
@@ -123,8 +125,8 @@ class SampleViewSet(
         queryset = models.Sample.objects.all()
         if filter_params := request.query_params.get("filters"):
             filters = json.loads(filter_params)
-            if 'name' in filters.keys():
-                queryset = queryset.filter(name = filters.pop('name'))
+            if "name" in filters.keys():
+                queryset = queryset.filter(name=filters.pop("name"))
             queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
         return queryset
 
@@ -142,6 +144,7 @@ class SampleViewSet(
         showNX = strtobool(request.query_params.get("showNX", "False"))
         vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
         csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
+        print("csv_stream", csv_stream)
         self.has_property_filter = False
         queryset = self._get_filtered_queryset(request)
         if name_filter := request.query_params.get("name"):
@@ -188,26 +191,6 @@ class SampleViewSet(
         #    for alignment in obj.sequence.alignments.all():
         #        print(alignment)
         # output only count
-        if csv_stream:
-            # TODO write output format
-            echo_buffer = Echo()
-            csv_writer = csv.writer(echo_buffer)
-            rows = (
-                csv_writer.writerow(row)
-                for row in queryset.values_list(
-                    "name",
-                    "sequence__seqhash",
-                )
-            )
-            response = StreamingHttpResponse(rows, content_type="text/csv")
-            response["Content-Disposition"] = 'attachment; filename="export.csv"'
-            return response
-        
-        if vcf_format:
-            queryset = self.paginate_queryset(queryset)
-            serializer = SampleGenomesSerializerVCF(queryset, many=True)
-            return self.get_paginated_response(serializer.data)
-        
         if ordering := request.query_params.get("ordering"):
             property_names = PropertyViewSet.get_custom_property_names()
             ordering_col_name = ordering
@@ -229,9 +212,50 @@ class SampleViewSet(
                     queryset = queryset.reverse()
             else:
                 queryset = queryset.order_by(ordering)
+        if csv_stream:
+            if not ordering:
+                queryset.order_by("-collection_date")
+            pseudo_buffer = Echo()
+            writer = csv.writer(pseudo_buffer, delimiter=";")
+            columns = request.query_params.get("columns")
+            if columns:
+                columns = columns.split(",")
+            else:
+                raise Exception("No columns provided")
+
+            filename = request.query_params.get("filename")
+            if not filename:
+                filename = "sample_genomes.csv"
+            print("returning csv")
+            return StreamingHttpResponse(
+                self._stream_serialized_data(
+                    queryset.order_by("name"), columns, writer
+                ),
+                content_type="text/csv",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+
+        if vcf_format:
+            queryset = self.paginate_queryset(queryset)
+            serializer = SampleGenomesSerializerVCF(queryset, many=True)
+            return self.get_paginated_response(serializer.data)
+
         queryset = self.paginate_queryset(queryset)
         serializer = SampleGenomesSerializer(queryset, many=True)
         return self.get_paginated_response(serializer.data)
+
+    def _stream_serialized_data(
+        self, queryset: QuerySet, columns: list[str], writer: "_csv._writer"
+    ) -> Generator:
+        serializer = SampleGenomesExportStreamSerializer
+        serializer.columns = columns
+        #yield writer.writerow(columns)
+        paginator = Paginator(queryset, 100)
+        for page in paginator.page_range:
+            for serialized in serializer(
+                paginator.page(page).object_list, many=True
+            ).data:
+                yield writer.writerow(serialized["row"])
 
     def _get_meta_data_coverage(self, queryset):
         dict = {}
@@ -341,7 +365,6 @@ class SampleViewSet(
             q_obj &= self.eval_basic_filter(q_obj, filters)
         for or_filter in filters.get("orFilter", []):
             q_obj |= self.resolve_genome_filter(or_filter)
-        print(q_obj)
         return q_obj
 
     def eval_basic_filter(self, q_obj, filter):
@@ -385,10 +408,8 @@ class SampleViewSet(
         if property_name in [field.name for field in models.Sample._meta.get_fields()]:
             query = {}
             query[f"{property_name}__{filter_type}"] = value
-            print(query)
         else:
             datatype = models.Property.objects.get(name=property_name).datatype
-            print(datatype)
             query = {f"properties__property__name": property_name}
             query[f"properties__{datatype}__{filter_type}"] = value
         if exclude:
