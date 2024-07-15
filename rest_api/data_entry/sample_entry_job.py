@@ -241,7 +241,7 @@ def process_batch(batch: list[str], replicon_cache, gene_cache, temp_dir):
                 samples,
                 update_conflicts=True,
                 unique_fields=["name"],
-                update_fields=["sequence"],
+                update_fields=["sequence","last_update_date"],
             )
         [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
         alignments = [

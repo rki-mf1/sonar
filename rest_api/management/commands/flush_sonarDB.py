@@ -10,7 +10,7 @@ class Command(BaseCommand):
                 BEGIN;
                 TRUNCATE "sample", "sample2property", "mutation2annotation", "reference", "property", "alignment",
                 "gene_segment", "sequence", "annotation_type", "mutation", "gene", "lineage", "replicon",
-                "alignment2mutation", "lineage_alias"
+                "alignment2mutation", "lineage_alias","processing_job","import_log","file_processing"
                 RESTART IDENTITY;
                 COMMIT;
             ''')

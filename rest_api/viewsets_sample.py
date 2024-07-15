@@ -3,7 +3,7 @@ import traceback
 import pathlib
 import ast
 import csv
-
+from django.utils import timezone
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django_filters.rest_framework import DjangoFilterBackend
@@ -160,7 +160,8 @@ class SampleViewSet(
                     to_attr="alignment_annotations",
                 ),
             )
-
+            if DEBUG:
+                print(queryset.query)
             # TODO: output in  VCF
             # if VCF
             # for obj in queryset.all():
@@ -533,12 +534,21 @@ class SampleViewSet(
 
         if not request.FILES or "properties_tsv" not in request.FILES:
             return Response("No file uploaded.", status=400)
-        # TODO: what if it is csv?
-        tsv_file = request.FILES.get("properties_tsv")
 
+        tsv_file = request.FILES.get("properties_tsv")
+        # Determine the separator based on the file extension
+        file_name = tsv_file.name.lower()
+        if file_name.endswith('.csv'):
+            sep = ','
+        elif file_name.endswith('.tsv'):
+            sep = '\t'
+        else:
+            # Handle unknown file type
+            raise Response("Unsupported file type. Only CSV and TSV are supported.", status=400)
+        
         properties_df = pd.read_csv(
             self._temp_save_file(tsv_file),
-            sep="\t",
+            sep=sep,
             dtype=object,
             keep_default_na=False,
         )
@@ -570,7 +580,7 @@ class SampleViewSet(
         properties_df.set_index(sample_id_column, inplace=True)
         for sample in samples:
             row = properties_df[properties_df.index == sample.name]
-
+            sample.last_update_date = timezone.now()
             for name, value in row.items():
                 if name in column_mapping.keys():
                     db_name = column_mapping[name].db_property_name
@@ -597,7 +607,7 @@ class SampleViewSet(
             if (
                 len(sample_property_names) > 0
             ):  # when there is no update/add to based prop.
-                models.Sample.objects.bulk_update(sample_updates, sample_property_names)
+                models.Sample.objects.bulk_update(sample_updates, sample_property_names+["last_update_date"])
 
             # update custom prop. for Sample
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(

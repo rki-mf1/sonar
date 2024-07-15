@@ -196,7 +196,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
         for prop in [
             "sequencing_tech",
-            "processing_date",
             "country",
             "host",
             "zip_code",

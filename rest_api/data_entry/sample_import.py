@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 from django.core.cache import cache
 from django.db.models import Q
+from django.utils import timezone
 
 if typing.TYPE_CHECKING:
     from django.db.models.query import ValuesQuerySet
@@ -123,6 +124,7 @@ class SampleImport:
         self.sample = Sample(
             name=self.sample_raw.name,
             sequence=self.sequence,
+            last_update_date=timezone.now()
             # properties=self.sample_raw.properties,
         )
         return self.sample
@@ -163,6 +165,10 @@ class SampleImport:
                         gene_cache[var_raw.replicon_or_cds_accession] = None
                 gene = gene_cache[var_raw.replicon_or_cds_accession]
                 replicon = gene.replicon if gene else None
+            # in DEL, we dont keep REF in the database.    
+            if var_raw.alt is None:
+                var_raw.ref = ""
+  
             mutation_data = {
                 "gene": gene if gene else None,
                 "ref": var_raw.ref,
@@ -209,85 +215,87 @@ class SampleImport:
                 mutation_alignment_objs.extend(batch_alignment_objs)
 
         return mutation_alignment_objs
+    
+    # deprecated function
+    # def get_annotation_objs(self) -> list[AnnotationType]:
+    #     if self.db_sample_mutations is None:
+    #         LOGGER.error("Mutation objects not created yet")
+    #         raise Exception("Mutation objects not created yet")
+    #     self.annotation_query_data = {}
+    #     for mutation in self.anno_vcf_raw:
+    #         annotations = []
+    #         for annotation in [
+    #             self._parse_vcf_info(info) for info in mutation.info.split(";") if info
+    #         ]:
+    #             if annotation:
+    #                 annotations.extend(annotation)
+    #         for alt in mutation.alt.split(",") if mutation.alt else [None]:
+    #             mut_lookup_data = {
+    #                 "start": mutation.pos - 1,
+    #                 "ref": mutation.ref,
+    #                 "alt": alt,
+    #                 "replicon__accession": mutation.chrom,
+    #             }
+    #             if alt and len(alt) < len(mutation.ref):
+    #                 # deletion and alt not null
+    #                 mut_lookup_data["start"] += 1
+    #                 mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
+    #                 mut_lookup_data["alt"] = None
 
-    def get_annotation_objs(self) -> list[AnnotationType]:
-        if self.db_sample_mutations is None:
-            LOGGER.error("Mutation objects not created yet")
-            raise Exception("Mutation objects not created yet")
-        self.annotation_query_data = {}
-        for mutation in self.anno_vcf_raw:
-            annotations = []
-            for annotation in [
-                self._parse_vcf_info(info) for info in mutation.info.split(";") if info
-            ]:
-                if annotation:
-                    annotations.extend(annotation)
-            for alt in mutation.alt.split(",") if mutation.alt else [None]:
-                mut_lookup_data = {
-                    "start": mutation.pos - 1,
-                    "ref": mutation.ref,
-                    "alt": alt,
-                    "replicon__accession": mutation.chrom,
-                }
-                if alt and len(alt) < len(mutation.ref):
-                    # deletion and alt not null
-                    mut_lookup_data["start"] += 1
-                    mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
-                    mut_lookup_data["alt"] = None
+    #             try:
+    #                 db_mutation = next(
+    #                     x
+    #                     for x in self.db_sample_mutations
+    #                     if all(x[k] == v for k, v in mut_lookup_data.items())
+    #                 )
+    #             except Mutation.DoesNotExist:
+    #                 print(
+    #                     f"Annotation Mutation not found using lookup: {mut_lookup_data}, varfile: {self.sample_raw.var_file} -skipping-"
+    #                 )
+    #                 continue
+    #             for a in annotations:
+    #                 if a:  # skip None type
+    #                     for ontology in a.annotation.split("&"):
+    #                         if (
+    #                             not db_mutation["id"]
+    #                             in self.annotation_query_data.keys()
+    #                         ):
+    #                             self.annotation_query_data[db_mutation["id"]] = []
+    #                         self.annotation_query_data[db_mutation["id"]].append(
+    #                             {
+    #                                 "seq_ontology": ontology,
+    #                                 "impact": a.annotation_impact,
+    #                             }
+    #                         )
+    #     annotation_types = []
+    #     for annotation in self.annotation_query_data.values():
+    #         annotation_types.extend([AnnotationType(**data) for data in annotation])
+    #     return annotation_types
 
-                try:
-                    db_mutation = next(
-                        x
-                        for x in self.db_sample_mutations
-                        if all(x[k] == v for k, v in mut_lookup_data.items())
-                    )
-                except Mutation.DoesNotExist:
-                    print(
-                        f"Annotation Mutation not found using lookup: {mut_lookup_data}, varfile: {self.sample_raw.var_file} -skipping-"
-                    )
-                    continue
-                for a in annotations:
-                    if a:  # skip None type
-                        for ontology in a.annotation.split("&"):
-                            if (
-                                not db_mutation["id"]
-                                in self.annotation_query_data.keys()
-                            ):
-                                self.annotation_query_data[db_mutation["id"]] = []
-                            self.annotation_query_data[db_mutation["id"]].append(
-                                {
-                                    "seq_ontology": ontology,
-                                    "impact": a.annotation_impact,
-                                }
-                            )
-        annotation_types = []
-        for annotation in self.annotation_query_data.values():
-            annotation_types.extend([AnnotationType(**data) for data in annotation])
-        return annotation_types
+    # # deprecated function
+    # def get_annotation2mutation_objs(self) -> list[Mutation2Annotation]:
+    #     db_annotations_query = Q()
+    #     for annotation_list in self.annotation_query_data.values():
+    #         for annotation in annotation_list:
+    #             db_annotations_query |= Q(**annotation)
+    #     db_annotations = AnnotationType.objects.filter(db_annotations_query)
+    #     mutation2annotation_objs = []
+    #     for annotation in db_annotations:
+    #         for mutation_id, annotation_data_list in self.annotation_query_data.items():
+    #             for annotation_data in annotation_data_list:
+    #                 if (
+    #                     annotation_data["seq_ontology"] == annotation.seq_ontology
+    #                     and annotation_data["impact"] == annotation.impact
+    #                 ):
+    #                     mutation2annotation_objs.append(
+    #                         Mutation2Annotation(
+    #                             mutation_id=mutation_id,
+    #                             alignment=self.alignment,
+    #                             annotation=annotation,
+    #                         )
+    #                     )
 
-    def get_annotation2mutation_objs(self) -> list[Mutation2Annotation]:
-        db_annotations_query = Q()
-        for annotation_list in self.annotation_query_data.values():
-            for annotation in annotation_list:
-                db_annotations_query |= Q(**annotation)
-        db_annotations = AnnotationType.objects.filter(db_annotations_query)
-        mutation2annotation_objs = []
-        for annotation in db_annotations:
-            for mutation_id, annotation_data_list in self.annotation_query_data.items():
-                for annotation_data in annotation_data_list:
-                    if (
-                        annotation_data["seq_ontology"] == annotation.seq_ontology
-                        and annotation_data["impact"] == annotation.impact
-                    ):
-                        mutation2annotation_objs.append(
-                            Mutation2Annotation(
-                                mutation_id=mutation_id,
-                                alignment=self.alignment,
-                                annotation=annotation,
-                            )
-                        )
-
-        return mutation2annotation_objs
+    #     return mutation2annotation_objs
 
     def _import_pickle(self, path: str):
         with open(path, "rb") as f:

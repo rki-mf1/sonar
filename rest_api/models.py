@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils.translation import gettext_lazy as _
-
+from django.utils import timezone
 
 class Sequence(models.Model):
     seqhash = models.CharField(unique=True, max_length=200)
@@ -93,7 +93,7 @@ class Gene(models.Model):
     strand = models.BigIntegerField(blank=True, null=True)
     gene_symbol = models.CharField(max_length=50, blank=True, null=True)
     cds_symbol = models.CharField(max_length=50, blank=True, null=True)
-    gene_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    gene_accession = models.CharField(max_length=50, unique=False, blank=True, null=True)
     cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
@@ -223,7 +223,6 @@ class Sample(models.Model):
     datahash = models.CharField(max_length=50, blank=True, null=True)
     sequence = models.ForeignKey(Sequence, models.DO_NOTHING, blank=True, null=True)
     sequencing_tech = models.CharField(max_length=50, blank=True, null=True)
-    processing_date = models.DateField(blank=True, null=True)
     country = models.CharField(max_length=50, blank=True, null=True)
     host = models.CharField(max_length=50, blank=True, null=True)
     zip_code = models.CharField(max_length=50, blank=True, null=True)
@@ -232,10 +231,16 @@ class Sample(models.Model):
     genome_completeness = models.CharField(max_length=50, blank=True, null=True)
     length = models.IntegerField(blank=True, null=True)
     collection_date = models.DateField(blank=True, null=True)
+    init_upload_date = models.DateTimeField(auto_now=True)
+    last_update_date = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = "sample"
 
+    def save(self, *args, **kwargs):
+        if self.pk:  # Check if this is an update to an existing record
+            self.last_update_date = timezone.now()
+        super().save(*args, **kwargs)
 
 class Sample2Property(models.Model):
     property = models.ForeignKey(Property, models.CASCADE)
@@ -261,8 +266,10 @@ class Sample2Property(models.Model):
 class Mutation(models.Model):
     gene = models.ForeignKey("Gene", models.CASCADE, blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
-    ref = models.CharField(max_length=5000, blank=True, null=True)
-    alt = models.CharField(max_length=5000, blank=True, null=True)
+    # ref = models.CharField(max_length=5000, blank=True, null=True)
+    # alt = models.CharField(max_length=5000, blank=True, null=True)
+    ref = models.TextField(blank=True, null=True)
+    alt = models.TextField(blank=True, null=True)
     start = models.BigIntegerField(blank=True, null=True)
     end = models.BigIntegerField(blank=True, null=True)
     parent_id = models.BigIntegerField(blank=True, null=True)
@@ -300,6 +307,11 @@ class Mutation(models.Model):
                 name="unique_mutation_null_alt",
                 fields=["ref", "start", "end", "type", "gene", "replicon"],
                 condition=models.Q(alt__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_mutation_null_ref",
+                fields=["alt", "start", "end", "type", "gene", "replicon"],
+                condition=models.Q(ref__isnull=True),
             ),
             UniqueConstraint(
                 name="unique_mutation_null_alt_null_gene",
