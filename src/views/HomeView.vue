@@ -49,8 +49,9 @@
           <SampleDetails :selectedRow="selectedRow" :allColumns="allColumns"></SampleDetails>
         </Dialog>
 
-        <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask :style="{ width: '25vw' }">
-          
+        <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
+          :style="{ width: '25vw' }">
+
           <div>
             <RadioButton v-model="exportFormat" inputId="exportFormat1" value="csv" />
             <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
@@ -60,8 +61,8 @@
             <br><br>
           </div>
 
-          <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span> 
-          
+          <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
+
           <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px;">
             <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="exportFile(exportFormat)" />
           </div>
@@ -129,7 +130,7 @@
             </div>
             <Paginator :totalRecords="filteredCount" v-model:rows="perPage"
               :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
-              @update:first="updateSamples()" />
+              @update:rows="updateSamples()" />
           </template>
         </DataTable>
       </div>
@@ -203,8 +204,7 @@ export default {
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.filteredCount = this.filteredStatistics["filtered_total_count"];
-      this.isFiltersSet = !(this.filters['filters']['andFilter'].length === 0 && this.filters['filters']['orFilter'].length === 0);
-      this.pages = this.filteredCount / this.perPage;
+      this.isFiltersSet = this.filters['filters']['andFilter'].length + this.filters['filters']['orFilter'].length > 0;
       this.loading = false;
     },
     columnSelection(value) {
@@ -399,10 +399,6 @@ export default {
 
       const filters = {
         filters: this.getFilterGroupFilters(this.filterGroup),
-        limit: this.perPage,
-        offset: this.firstRow,
-        page: this.firstRow / this.perPage + 1,
-        page_size: this.perPage
       };
       return filters as FilterGroupRoot;
     }
