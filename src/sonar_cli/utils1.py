@@ -45,10 +45,7 @@ class sonarUtils1:
     def get_job_byID(  # noqa: C901
         db: str = None, job_id=None, background=False, interval=180
     ):
-        if db is None:
-            API_URL = BASE_URL
-        else:
-            API_URL = db
+        API_URL = BASE_URL if db is None else db
         overall_status_dict = {
             "Q": "Queued",
             "IP": "In Progress",
