@@ -7,11 +7,20 @@ services:
     restart: unless-stopped
     volumes:
       - './conf/initdb/:/docker-entrypoint-initdb.d/'
+      # This exact path inside the container needs to be mapped to a volume,
+      # otherwise it will automatically be mapped to a volume inside of the
+      # host's /var/lib/docker/volumes directory
+      - ./postgres-data:/var/lib/postgresql/data
     env_file:
       - conf/dev_db.env
       - conf/dev_django.env
     ports:
       - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   dev-django:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
@@ -28,11 +37,13 @@ services:
       - .:/code
       - ./covsonar2_server/test/media:/covsonarmedia
       - ./covsonar2_server/test/static:/staticfiles
-      - './logs/:/covsonarlogs'
+      - ./logs/:/covsonarlogs
       - ./input-logs/:/input-logs
     depends_on:
-      - "postgres"
-      - "redis"
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     ports:
       # to access directly, normally can use localhost:8000 via the nginx proxy
       - "9080"
@@ -48,7 +59,8 @@ services:
     volumes:
       - .:/code
     depends_on:
-      - "postgres"
+      postgres:
+        condition: service_healthy
 
   backend-nginx:
     build:

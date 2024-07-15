@@ -39,11 +39,13 @@ done
 
 $SCRIPTPATH/dc-dev.sh down
 
+DC_ARGS=""
 if [ $REBUILD -eq 0 ]; then
   $SCRIPTPATH/build-docker-dev.sh
+  DC_ARGS="--build"
 fi
 
-$SCRIPTPATH/dc-dev.sh up -d
+$SCRIPTPATH/dc-dev.sh up -d $DC_ARGS
 $SCRIPTPATH/dev-manage.sh migrate
 
 if [ $TEST_DATA -eq 0 ]; then
