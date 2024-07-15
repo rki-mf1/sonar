@@ -3,10 +3,7 @@ name: test
 on:
   push:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: write-all
 
 concurrency:
   group: "pages"
@@ -21,6 +18,12 @@ jobs:
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
+      
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
 
       - name: Build the backend container
         run: |
@@ -37,7 +40,7 @@ jobs:
         run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage run ./manage.py test --no-input
 
       - name: Generate reports
-        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage html
+        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage html -d 'coverage/${{ steps.extract_branch.outputs.branch }}/'
         
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -46,16 +49,21 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'coverage'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        
-      - uses: jwalton/gh-find-current-pr@v1
-        id: finder
 
-      - name: Publish coverage summary
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Deploy to GitHub Pages
+        id: pages-deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Find current PR
+        uses: jwalton/gh-find-current-pr@master
+        id: findPr
         with:
-          header: Coverage Report
-          message: '[Report]( ${{ steps.deployment.outputs.page_url }})'
-          number: ${{ steps.finder.outputs.pr }}
+          state: open
+
+      - name: Comment coverage page link
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+              [Coverage Report]( ${{ steps.pages-deployment.outputs.page_url }}/${{ steps.extract_branch.outputs.branch }}/)
+          comment_tag: 'coverage-link'
+          pr_number: ${{ steps.findPr.outputs.pr }}

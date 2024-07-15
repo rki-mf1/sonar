@@ -5,13 +5,16 @@ services:
     image: postgres:alpine
     container_name: dev-covsonar-db
     restart: unless-stopped
+    command: -c config_file=/etc/postgresql/postgresql.conf
     volumes:
+      # Have to check that the configuration is actually loaded. Right now, I'm following the same approach as the official PostgreSQL Docker
+      - ./conf/customPostgresql.conf:/etc/postgresql/postgresql.conf
       - './conf/initdb/:/docker-entrypoint-initdb.d/'
     env_file:
       - conf/dev_db.env
       - conf/dev_django.env
     ports:
-      - "5432"
+      - "5432:5432"
 
   dev-django:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
@@ -20,10 +23,11 @@ services:
       - conf/dev_secrets.env
     container_name: dev-covsonar-django
     restart: unless-stopped
-    command: python manage.py runserver 0.0.0.0:9080
+    command: gunicorn  --workers 2 --threads 2 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application --timeout 300
+    # command: python manage.py runserver 0.0.0.0:9080
     # enable this and "django_extensions" in settings.dev to enable per request profiling
     # also create the ./profiler directory in project root
-    #command: python manage.py runprofileserver --use-cprofile --prof-path=/code/profiler 0.0.0.0:9080
+    # command: python manage.py runprofileserver --use-cprofile --prof-path=/code/profiler 0.0.0.0:9080
     volumes:
       - .:/code
       - ./covsonar2_server/test/media:/covsonarmedia
@@ -44,7 +48,8 @@ services:
       - conf/dev_secrets.env
     container_name: dev-covsonar-django-apscheduler
     restart: on-failure
-    command: python manage.py runapscheduler
+    command: >
+      bash -c "python manage.py migrate && python manage.py runapscheduler"
     volumes:
       - .:/code
     depends_on:
@@ -54,6 +59,7 @@ services:
     build:
       context: ./nginx
     volumes:
+      - ./nginx/covsonar.conf:/etc/nginx/conf.d/default.conf
       - ./covsonar2_server/test/static:/staticfiles
       - ./covsonar2_server/test/media:/mediafiles
     ports:
@@ -67,4 +73,34 @@ services:
     restart: unless-stopped
     ports:
       - "6379"
-
+  celery-workers:
+    container_name: celery-workers
+    image: backend_dev:local
+    # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend. For example, 
+    # if the concurrency is set too high and the SAMPLE_BATCH_SIZE is too high,
+    # this will not speed up the process. You need to lower SAMPLE_BATCH_SIZE into smaller chunks to gain the benefits
+    # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
+    # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
+    # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
+    command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
+    volumes:
+      - .:/code # working directory of import process
+    env_file:
+      - conf/dev_django.env
+      - conf/dev_secrets.env
+    depends_on:
+      - redis
+      - dev-django
+  celery-mornitor:
+    container_name: celery-mornitor
+    image: backend_dev:local
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456
+    env_file:
+      - conf/dev_django.env
+      - conf/dev_secrets.env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - dev-django
+      - celery-workers

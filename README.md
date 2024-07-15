@@ -10,10 +10,11 @@ The sonar-backend is web service that represents the API version of the Sonar to
 ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)
 ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
+#### Please visit [sonar-backend wiki](https://github.com/rki-mf1/sonar-backend/wiki) for more details
+
 # Setup
 
 #### ⚠️Caution: The setting and installation steps can vary depending on the user; this was just an example guideline.
-
 
 The current version has been tested on the following system configurations:
 * Ubuntu ^22.04
@@ -158,14 +159,9 @@ We provide the test datasets under the `test-data` directory. These datasets can
 | `dump-sonar-test-db.sql`| SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest."                    |
 
 
-## Setup sonar-backend (production)
+## Start sonar-backend with Docker 
 
-### Without Docker
-...
-
-### Deploy sonar-backend with Docker in Linux environment (experimental)
-Prerequisite is you have to [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
-These commands and Docker files are tested on Docker version 25.0.2.
+### Deploy sonar-backend for development
 
 1. Build the sonar-backend image
 ```bash
@@ -177,25 +173,55 @@ docker compose -f "docker-compose-dev.yml" up  --build
 ```
 OR use -d to detach the command. For example:
 ```bash
-docker-compose -f "docker-compose-dev.yml" up --build -d
+docker compose -f "docker-compose-dev.yml" up --build -d
 ```
-3. List the containers
+
+3. Create superuser for Django admin
 ```bash
-docker ps
+# docker-compose exec <service_name>, not docker-compose exec <container_name>.
+docker compose -f docker-compose-dev.yml exec dev-django python manage.py createsuperuser
 ```
-you should see something like:
+Once the containers are up and running, you can access 
+- sonar-cli reach the backend via http://127.0.0.1:8000/api
+- http://127.0.0.1:8000/admin
+- http://localhost:5555 for monitoring workers (username:"note" passwrod:"123456")
+
+### Deploy sonar-backend with pre-built database for quickstart (used in GH action) (Linux environment)
+
 ```bash
-CONTAINER ID   IMAGE                         COMMAND                  CREATED          STATUS          PORTS                            NAMES
-efae00c34d0b   sonar-backend-backend-nginx   "/docker-entrypoint.…"   11 minutes ago   Up 11 minutes   80/tcp, 0.0.0.0:8000->8000/tcp   sonar-backend-backend-nginx-1     
-d721ec159ec8   backend_dev:local             "python manage.py ru…"   11 minutes ago   Up 11 minutes   0.0.0.0:59571->9080/tcp          dev-covsonar-django
-fbc301efe63d   postgres:alpine               "docker-entrypoint.s…"   11 minutes ago   Up 11 minutes   0.0.0.0:59574->5432/tcp          dev-covsonar-db
-8b125b974c65   redis:7                       "docker-entrypoint.s…"   11 minutes ago   Up 11 minutes   127.0.0.1:6379->6379/tcp         dev-covsonar-cache
+docker compose -f "docker-compose.test-gh.yml" up  --build
 ```
-4. Set up Database
+Once the containers are up and running, you can access 
+- sonar-cli reach the backend via http://127.0.0.1:8000/api
+- http://127.0.0.1:8000/admin through a web browser (username:"note" passwrod:"123456")
+- http://localhost:5555 for monitoring workers (username:"note" passwrod:"123456")
+
+### Deploy sonar-backend for production
+⚠️Caution: not a final version
+
+1. Create an environment file.
 ```bash
-docker compose -f docker-compose-dev.yml exec  dev-django python manage.py migrate
+cp template.env .prod.env
 ```
-Once the containers are up and running, you can access the backend via http://127.0.0.1:8000/api for sonar-cli or http://127.0.0.1:8000/admin through a web browser.
+
+2. Create a config file for Nginx.
+```bash
+cp ./nginx/covsonar.conf ./nginx/prod.conf
+```
+3. Build local docker image
+```bash
+docker build -t backend:latest -f Dockerfile .
+```
+4. Start docker stacks
+```bash
+docker compose --env-file .prod.env  -f "docker-compose-prod.yml" up --build
+```
+5. Create super user for django admin
+```bash
+# docker-compose exec <service_name>, not docker-compose exec <container_name>.
+docker compose --env-file .prod.env -f 'docker-compose-prod.yml' exec sonar-backend-django python manage.py createsuperuser
+```
+
 
 ----
 
@@ -208,99 +234,3 @@ This project is licensed under....
 This tool is built upon the foundations of covsonar and pathosonar projects.
 
 Special thanks to all sonar contributors...
-
-## Open Tasks:
-- lineages table and filter
-- mutation annotations POS = ANN[*.EFFECT] = annotation_type
-- property exclude
-
-
-### genome querying
-
-#### URL [api]/samples/genomes/
-#### Parameters
-| Parameter     | type | description                                       |
-|---------------|------|---------------------------------------------------|
-| filters       | s.b. | filters that will we be used to query the samples |
-| showNX        | bool | tbd                                               |
-| vcf_format    | bool | tbd                                               |
-
-#### Filters 
-
-The *filters* parameter sent to the endpoint must be a valid JSON containing a basic filter (see below) or "andFilter" and/or "orFilter":
-- "andFilter" is a list of basic filters like explained below.
-- "orFilter" is a list of basic filters or objects, that must contain further "andFilter"- or "orFilter"-objects
-
-On the most basic level, a filter must contain the following parameters:
-- A "label": used to determine the type of the filter, e.g. "Property", "SNP Nt" or "SNP AA", this is used, to choose the filtering method in the viewset
-- Parameters of the filtering method: these will be used by the method as keyword arguments, so they must have the exact same names as the filtering methods
-- "*filter_type*" will most likely correspond to a [django field lookup](https://docs.djangoproject.com/en/dev/ref/models/querysets/#field-lookups), like "gte" (greater then equals)
-- NOT filters can be done by giving the "*exclude*" parameter as True
-#### Examples
-Every letter stand for a complete basic filter, e.g.: 
-```json
-{
-    "label": "Property",
-    "property_name": "collection_date",
-    "filter_type": "exact",
-    "value": "2022-01-05"
-}
-```
-
-- A:
-```json
-{
-    "andFilter": ["A"]
-}
-```
-- A && B:
-```json
-{
-    "andFilter": ["A", "B"]
-}
-```
-
-- (A && B) || C:
-```json
-{
-    "andFilter": ["A", "B"],
-    "orFilter": [
-        {"andFilter": ["C"]}
-    ]
-}
-```
-also possible:
-```json
-{
-    "andFilter": ["A", "B"],
-    "orFilter": ["C"]
-}
-```
-
-- A || B || C:
-```json
-{
-    "andFilter": ["A"],
-    "orFilter": [
-        {"andFilter": ["B"]},
-        {"andFilter": ["C"]}
-        ]
-}
-```
-also possible:
-```json
-{
-    "orFilter": [
-        "A","B","C"
-    ]
-}
-```
-- (A || B) && C
-```json
-{
-    "andFilter": [
-        { "orFilter": ["A","B"]},
-        "C"
-    ]
-}
-```
