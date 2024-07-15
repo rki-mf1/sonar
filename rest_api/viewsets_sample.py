@@ -142,9 +142,7 @@ class SampleViewSet(
             vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
             csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
 
-            LOGGER.info(
-                f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}"
-            )
+            LOGGER.info(f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}")
             self.has_property_filter = False
             queryset = models.Sample.objects.all()
             if filter_params := request.query_params.get("filters"):
@@ -164,16 +162,14 @@ class SampleViewSet(
                     "ref", "alt", "start", "end", "gene"
                 )
             ).prefetch_related("gene")
-            annotation_qs = (
-                models.Mutation2Annotation.objects.prefetch_related(
-                    "mutation", "annotation"
-                )
-            ).prefetch_related("gene")
-            proteomic_profiles_qs = (
-                models.Mutation.objects.filter(type="cds")
-                .order_by("gene", "start")
-                .only("ref", "alt", "start", "end", "gene")
-            ).prefetch_related("gene")
+            annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
+                "mutation", "annotation"
+            )
+        ).prefetch_related("gene")
+        proteomic_profiles_qs = (
+            models.Mutation.objects.filter(type="cds").order_by("gene", "start").only(
+                "ref", "alt", "start", "end", "gene"
+            )
             if DEBUG:
                 print(queryset.query)
             # TODO: output in  VCF
@@ -198,39 +194,38 @@ class SampleViewSet(
                     queryset = queryset.reverse()
             else:
                 queryset = queryset.order_by(ordering)
-            if csv_stream:
-                if not ordering:
-                    queryset.order_by("-collection_date")
-                pseudo_buffer = Echo()
-                writer = csv.writer(pseudo_buffer, delimiter=";")
-                columns = request.query_params.get("columns")
-                if columns:
-                    columns = columns.split(",")
-                else:
-                    raise Exception("No columns provided")
+        if csv_stream:
+            if not ordering:
+                queryset.order_by("-collection_date")
+            pseudo_buffer = Echo()
+            writer = csv.writer(pseudo_buffer, delimiter=";")
+            columns = request.query_params.get("columns")
+            if columns:
+                columns = columns.split(",")
+            else:
+                raise Exception("No columns provided")
 
-                filename = request.query_params.get("filename")
-                if not filename:
-                    filename = "sample_genomes.csv"
-                print("returning csv")
-                return StreamingHttpResponse(
-                    self._stream_serialized_data(
-                        queryset.order_by("name"), columns, writer
-                    ),
-                    content_type="text/csv",
-                    headers={
-                        "Content-Disposition": f'attachment; filename="{filename}"'
-                    },
-                )
+            filename = request.query_params.get("filename")
+            if not filename:
+                filename = "sample_genomes.csv"
+            print("returning csv")
+            return StreamingHttpResponse(
+                self._stream_serialized_data(
+                    queryset.order_by("name"), columns, writer
+                ),
+                content_type="text/csv",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
 
-            if vcf_format:
-                queryset = self.paginate_queryset(queryset)
-                serializer = SampleGenomesSerializerVCF(queryset, many=True)
-                return self.get_paginated_response(serializer.data)
+        if vcf_format:
+            queryset = self.paginate_queryset(queryset)
+            serializer = SampleGenomesSerializerVCF(queryset, many=True)
+            return self.get_paginated_response(serializer.data)
         except Exception as e:
             traceback.print_exc()
             return Response(
-                data={"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                data={"detail": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
         return dict
@@ -301,25 +296,23 @@ class SampleViewSet(
         return Response(serializer.data)
 
     def filter_annotation(
-        self,
-        property_name,
-        filter_type,
-        value,
-        exclude: bool = False,
-        *args,
-        **kwargs,
-    ) -> Q:
+            self,
+            property_name,
+            filter_type,
+            value,
+            exclude: bool = False,
+            *args,
+            **kwargs,
+        ) -> Q: 
         # if property_name == "impact":
         #     mutation_condition = Q(annotations__impact__{filter_type}"=ref_pos)
         # elif property_name == "seq_ontology":
         #     mutation_condition = Q(annotations__seq_ontology__{filter_type}"=ref_pos)
-        query = {}
-        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = (
-            value
-        )
+        query ={}
+        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = value
 
         alignment_qs = models.Alignment.objects.filter(**query)
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequence__alignments__in": alignment_qs}   
 
         if exclude:
             return ~Q(**filters)
@@ -588,7 +581,7 @@ class SampleViewSet(
     @action(detail=False, methods=["post"])
     def import_properties_tsv(self, request: Request, *args, **kwargs):
         """
-        NOTE:
+        NOTE: 
         1. if prop is not exist in the database, it will be created automatically
         """
         print("Importing properties...")
@@ -615,16 +608,14 @@ class SampleViewSet(
         tsv_file = request.FILES.get("properties_tsv")
         # Determine the separator based on the file extension
         file_name = tsv_file.name.lower()
-        if file_name.endswith(".csv"):
-            sep = ","
-        elif file_name.endswith(".tsv"):
-            sep = "\t"
+        if file_name.endswith('.csv'):
+            sep = ','
+        elif file_name.endswith('.tsv'):
+            sep = '\t'
         else:
             # Handle unknown file type
-            raise Response(
-                "Unsupported file type. Only CSV and TSV are supported.", status=400
-            )
-
+            raise Response("Unsupported file type. Only CSV and TSV are supported.", status=400)
+        
         properties_df = pd.read_csv(
             self._temp_save_file(tsv_file),
             sep=sep,
@@ -686,9 +677,7 @@ class SampleViewSet(
             if (
                 len(sample_property_names) > 0
             ):  # when there is no update/add to based prop.
-                models.Sample.objects.bulk_update(
-                    sample_updates, sample_property_names + ["last_update_date"]
-                )
+                models.Sample.objects.bulk_update(sample_updates, sample_property_names+["last_update_date"])
 
             # update custom prop. for Sample
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
