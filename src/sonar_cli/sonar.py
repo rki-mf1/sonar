@@ -843,11 +843,16 @@ def handle_tasks(args: argparse.Namespace):
             tabulate(sonarUtils1.get_all_jobs(), headers="keys", tablefmt="fancy_grid")
         )
     elif args.jobid:
-        result, status = sonarUtils1.get_job_byID(
-            job_id=args.jobid,
-            background=args.jobid_command == "background",
-            interval=args.interval,
-        )
+        if args.jobid_command:
+            result, status = sonarUtils1.get_job_byID(
+                job_id=args.jobid,
+                background=args.jobid_command == "background",
+                interval=args.interval,
+            )
+        else:
+            result, status = sonarUtils1.get_job_byID(
+                job_id=args.jobid,
+            )
         print("Status:", status)
         print(
             tabulate(
