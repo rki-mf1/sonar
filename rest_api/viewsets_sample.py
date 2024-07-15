@@ -142,7 +142,6 @@ class SampleViewSet(
         showNX = strtobool(request.query_params.get("showNX", "False"))
         vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
         csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
-        print("csv_stream", csv_stream)
         self.has_property_filter = False
         queryset = self._get_filtered_queryset(request)
         if name_filter := request.query_params.get("name"):
