@@ -2,18 +2,18 @@ from functools import reduce
 import json
 import operator
 import os
-
+import uuid
 import pickle
 
 from dataclasses import dataclass
 
 from rest_framework import generics
 import zipfile
+from datetime import datetime
 
-
-from django.db import transaction
+from django.db.utils  import IntegrityError
 from django.db.models import Count, F, Q
-from covsonar_backend.settings import IMPORTED_DATA_DIR
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_api.data_entry.property_job import delete_property, find_or_create_property
 from rest_api.data_entry.reference_job import delete_reference
@@ -35,7 +35,10 @@ from rest_api.data_entry.sample_entry_job import check_for_new_data
 from . import models
 from .serializers import (
     AlignmentSerializer,
+    FileProcessingSerializer,
     GeneSerializer,
+    ImportLogSerializer,
+    ProcessingJobSerializer,
     PropertySerializer,
     ReferenceSerializer,
     MutationSerializer,
@@ -516,7 +519,7 @@ class PropertyViewSet(
         if created:
             return Response(
                 {"detail": "Property added successfully"},
-                return_status=status.HTTP_201_CREATED,
+                status=status.HTTP_201_CREATED,
             )
         elif obj:
             return Response(
@@ -525,7 +528,7 @@ class PropertyViewSet(
         else:
             return Response(
                 {"detail": "Failed to add property"},
-                return_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["post"])
@@ -590,7 +593,6 @@ class PropertyViewSet(
                 "query_type": "value_varchar",
                 "description": "",
             },
-            {"name": "processing_date", "query_type": "value_date", "description": ""},
             {"name": "country", "query_type": "value_varchar", "description": ""},
         ]  # from SAMPLE TABLE
         cols = [
@@ -707,23 +709,6 @@ class ResourceViewSet(viewsets.ViewSet):
 class FileUploadViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
-        """
-        if "sample_file" not in request.FILES:
-            return Response({"detail":"No sample file uploaded."}, status=status.=400)
-        if "anno_file" not in request.FILES:
-            return Response({"detail":"No ann file uploaded."}, status=status.=400)
-        if "var_file" not in request.FILES:
-            return Response({"detail":"No var file uploaded."}, status=status.=400)
-        sample_file = request.FILES.get("sample_file")
-        anno_file = request.FILES.get("anno_file")
-        var_file = request.FILES.get("var_file")
-        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "samples", sample_file.name[0:2], sample_file.name)
-        write_to_file(_save_path, sample_file)
-        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "anno", anno_file.name[0:2], anno_file.name)
-        write_to_file(_save_path, anno_file)
-        _save_path = pathlib.Path(IMPORTED_DATA_DIR, "var", var_file.name[0:2], var_file.name)
-        write_to_file(_save_path, var_file)
-        """
 
         if "zip_file" not in request.FILES:
             return Response(
@@ -731,15 +716,43 @@ class FileUploadViewSet(viewsets.ViewSet):
             )
 
         zip_file = request.FILES.get("zip_file")
+        jobID = request.data.get("job_id", None)
+        if jobID is None or jobID == "":
+            jobID = "backend_" + str(uuid.uuid4())  # 32 chars
+
+        filename = (
+            datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
+            + "."
+            + str(uuid.uuid4().hex)[:6]
+            + ".zip"
+        )
+        save_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, filename)
+        with open(save_path, "wb") as destination:
+            for chunk in zip_file.chunks():
+                destination.write(chunk)
+
         # Extract files from the BytesIO
-        with zipfile.ZipFile(zip_file, "r") as zip_ref:
-            zip_ref.extractall(IMPORTED_DATA_DIR)
-            # to view list of files and file details in ZIP
-            # for file_info in zip_ref.infolist():
-            #    print(file_info)
+        # with zipfile.ZipFile(zip_file, "r") as zip_ref:
+        #     zip_ref.extractall(SONAR_DATA_ENTRY_FOLDER)
+        # to view list of files and file details in ZIP
+        # for file_info in zip_ref.infolist():
+        #    print(file_info)
+
+        # Register job in database.
+        try:
+            proJobID_obj, _ = models.ProcessingJob.objects.get_or_create(
+                status="Q", job_name=jobID
+            )
+        except (IntegrityError ) as e:
+            proJobID_obj = models.ProcessingJob.objects.get(job_name=jobID)
+
+        models.FileProcessing.objects.create(
+            file_name=filename, processing_job_id=proJobID_obj.id
+        )
 
         return Response(
-            {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
+            {"detail": "File uploaded successfully", "jobID": jobID},
+            status=status.HTTP_201_CREATED,
         )
 
     @action(detail=False, methods=["get"])
@@ -766,3 +779,57 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
+
+
+class TasksView(
+    viewsets.GenericViewSet,
+):
+    serializer_class = (
+        ProcessingJobSerializer  # Specify the serializer class for the model
+    )
+
+    @action(detail=False, methods=["get"])  # detail=False means it's a list action
+    def get_all_jobs(self, request, *args, **kwargs):
+        # Retrieve all ProcessingJob instances
+        jobs = models.ProcessingJob.objects.all()
+        # Serialize the queryset
+        serializer = self.get_serializer(jobs, many=True)
+        # Return serialized data in the response
+        return Response(data={"detail": serializer.data}, status=status.HTTP_200_OK)
+
+    # get by job id
+    @action(detail=False, methods=["get"])
+    def get_files_by_job_id(self, request, *args, **kwargs):
+        try:
+            if job_id := request.query_params.get("job_id"):
+                jobID_obj = models.ProcessingJob.objects.get(job_name=job_id)
+            else:
+                return Response(
+                    {"detail": "job_id field is missing"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Retrieve all FileProcessing instances associated with the job
+            files = models.FileProcessing.objects.filter(
+                processing_job__job_name=job_id
+            )
+            # Serialize the FileProcessing instances
+            # file_serializer = FileProcessingSerializer(files, many=True)
+
+            # # Retrieve ImportLog instances for each file and their status
+
+            files_data = []
+            for file in files:
+                logs = models.ImportLog.objects.filter(file=file)
+                logs_data = ImportLogSerializer(logs, many=True).data
+                files_data.append(
+                    {"file_name": file.file_name, "status_list": logs_data}
+                )
+            return Response(
+                data={"jobID": job_id, "status": jobID_obj.status ,"detail": files_data},
+                status=status.HTTP_200_OK,
+            )
+        except models.ProcessingJob.DoesNotExist:
+            return Response(
+                data={"detail": "Job not found"}, status=status.HTTP_400_BAD_REQUEST
+            )

@@ -196,7 +196,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
         for prop in [
             "sequencing_tech",
-            "processing_date",
             "country",
             "host",
             "zip_code",
@@ -291,7 +290,63 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
         return list
 
 
+class SampleGenomesExportStreamSerializer(SampleGenomesSerializer):
+    row = serializers.SerializerMethodField()
+    columns = ["name"]
+
+    def get_row(self, obj: models.Sample):
+        custom_properties = Sample2PropertySerializer(
+            obj.properties, many=True, read_only=True
+        ).data
+        row = []
+        for column in self.columns:
+            if column == "proteomic_profiles":
+                row.append(self.get_proteomic_profiles(obj))
+            elif column == "genomic_profiles":
+                row.append(list(self.get_genomic_profiles(obj).keys()))
+            elif value := next(
+                (item["value"] for item in custom_properties if item["name"] == column),
+                None
+            ):
+                row.append(value)
+            else:
+                try:
+                    row.append(getattr(obj, column))
+                except:
+                    row.append("")
+        return row
+
+    class Meta:
+        model = models.Sample
+        fields = ["row"]
+
+
 class LineagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Lineage
         fields = "__all__"
+
+
+class ProcessingJobSerializer(serializers.ModelSerializer):
+    # Map the abbreviations to their full names for the 'status' field
+    status = serializers.CharField(source="get_status_display")
+    entry_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+
+    class Meta:
+        model = models.ProcessingJob
+        fields = ["job_name", "status", "entry_time"]
+
+
+class FileProcessingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.FileProcessing
+        fields = ["file_name"]  # Add more fields if needed
+
+
+class ImportLogSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source="get_type_display")
+    updated = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+
+    class Meta:
+        model = models.ImportLog
+        fields = ["type", "updated", "success"]
