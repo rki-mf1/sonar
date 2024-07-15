@@ -6,6 +6,7 @@ static/
 htmlcov/
 archive_data/
 processing_data/
+postgres-data/
 # Environments
 *.env
 .venv
