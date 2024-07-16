@@ -140,7 +140,7 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
-        Fetch samples and genomic profiles based on provided filters and optional parameters.
+        fetch samples and genomic profiles based on provided filters and optional parameters
         
         TODO:
         1. Optimize the query (reduce the database hit)
@@ -150,8 +150,8 @@ class SampleViewSet(
             # optional query parameters
             # we try to use bool(), but it is not working as expected.
             showNX = strtobool(request.query_params.get("showNX", "False"))
-            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
             csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
+            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
 
             LOGGER.info(f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}")
 
