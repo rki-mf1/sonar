@@ -96,8 +96,8 @@ services:
     depends_on:
       - redis
       - dev-django
-  celery-mornitor:
-    container_name: celery-mornitor
+  celery-monitor:
+    container_name: celery-monitor
     image: backend_dev:local
     command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456
     env_file:

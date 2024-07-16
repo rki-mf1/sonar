@@ -85,7 +85,7 @@ services:
     container_name: sonar-apscheduler-django
     restart: on-failure
     command: >
-      bash -c "python manage.py migrate && python manage.py runapscheduler"
+      bash -c "python manage.py runapscheduler"
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,8 +108,8 @@ services:
       - redis
       - sonar-backend-django
 
-  celery-mornitor:
-    container_name: celery-mornitor
+  celery-monitor:
+    container_name: celery-monitor
     image: backend_dev:local
     command: celery -A covsonar_backend flower --port=5555 --basic_auth=${BASIC_AUTH}
     env_file:
