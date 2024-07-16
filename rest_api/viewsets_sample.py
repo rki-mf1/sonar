@@ -206,14 +206,6 @@ class SampleViewSet(
                 ),
             )
 
-            # TODO: output in  VCF
-            # if VCF
-            # for obj in queryset.all():
-            #    print(obj.name)
-            #    for alignment in obj.sequence.alignments.all():
-            #        print(alignment)
-            # output only count
-
             # apply ordering if specified
             if ordering := request.query_params.get("ordering"):
                 queryset = self._apply_ordering(queryset, ordering)
