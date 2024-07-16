@@ -202,8 +202,10 @@ class SampleViewSet(
             #    for alignment in obj.sequence.alignments.all():
             #        print(alignment)
             # output only count
+            print("ordering")
             if ordering := request.query_params.get("ordering"):
                 property_names = PropertyViewSet.get_custom_property_names()
+                print(property_names)
                 ordering_col_name = ordering
                 if ordering.startswith("-"):
                     ordering_col_name = ordering[1:]
@@ -221,8 +223,8 @@ class SampleViewSet(
                             .values(datatype)
                         )
                     )
-                if ordering.startswith("-"):
-                    queryset = queryset.reverse()
+                    if ordering.startswith("-"):
+                        queryset = queryset.reverse()
                 else:
                     queryset = queryset.order_by(ordering)
             if csv_stream:
@@ -263,18 +265,18 @@ class SampleViewSet(
                 data={"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        def _stream_serialized_data(
-            self, queryset: QuerySet, columns: list[str], writer: "_csv._writer"
-        ) -> Generator:
-            serializer = SampleGenomesExportStreamSerializer
-            serializer.columns = columns
-            # yield writer.writerow(columns)
-            paginator = Paginator(queryset, 100)
-            for page in paginator.page_range:
-                for serialized in serializer(
-                    paginator.page(page).object_list, many=True
-                ).data:
-                    yield writer.writerow(serialized["row"])
+    def _stream_serialized_data(
+        self, queryset: QuerySet, columns: list[str], writer: "_csv._writer"
+    ) -> Generator:
+        serializer = SampleGenomesExportStreamSerializer
+        serializer.columns = columns
+        # yield writer.writerow(columns)
+        paginator = Paginator(queryset, 100)
+        for page in paginator.page_range:
+            for serialized in serializer(
+                paginator.page(page).object_list, many=True
+            ).data:
+                yield writer.writerow(serialized["row"])
 
     def _get_meta_data_coverage(self, queryset):
         dict = {}
