@@ -49,7 +49,7 @@ services:
     container_name: dev-covsonar-django-apscheduler
     restart: on-failure
     command: >
-      bash -c "python manage.py migrate && python manage.py runapscheduler"
+      bash -c "python manage.py runapscheduler"
     volumes:
       - .:/code
     depends_on:
@@ -73,6 +73,7 @@ services:
     restart: unless-stopped
     ports:
       - "6379"
+
   celery-workers:
     container_name: celery-workers
     image: backend_dev:local
@@ -91,8 +92,9 @@ services:
     depends_on:
       - redis
       - dev-django
-  celery-mornitor:
-    container_name: celery-mornitor
+      
+  celery-monitor:
+    container_name: celery-monitor
     image: backend_dev:local
     command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456
     env_file:
