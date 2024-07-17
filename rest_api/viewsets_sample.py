@@ -740,11 +740,10 @@ class SampleViewSet(
         elif file_name.endswith(".tsv"):
             sep = "\t"
         else:
-            # Handle unknown file type
-            raise Response(
-                "Unsupported file type. Only CSV and TSV are supported.", status=400
+            return Response(
+                {"detail": "Unsupported file format, please upload a CSV or TSV file."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
         properties_df = pd.read_csv(
             self._temp_save_file(tsv_file),
             sep=sep,
