@@ -382,6 +382,15 @@ export default {
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
       }
+      for (const filter of filterGroup.filters.lineageFilters) {
+        if (filter.lineage) {
+          summary.andFilter.push({
+            label: filter.label,
+            lineage: filter.lineage,
+            exclude: filter.exclude
+          });
+        }
+      }
       return summary;
     },
     updatePropertyValueOptions(propertyName: string) {
