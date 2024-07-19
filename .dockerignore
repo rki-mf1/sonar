@@ -1,0 +1,11 @@
+postgres-data/
+cruft/
+import_data/
+static/
+htmlcov/
+archive_data/
+processing_data/
+.github/
+logs/
+test-data/
+tmp/
