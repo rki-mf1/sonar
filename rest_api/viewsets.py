@@ -147,16 +147,6 @@ class RepliconViewSet(viewsets.ModelViewSet):
             {"accessions": [item["accession"] for item in queryset]},
             status=status.HTTP_200_OK,
         )
-    
-    @action(detail=False, methods=["get"])
-    def distinct_lineages(self, request: Request, *args, **kwargs):
-        queryset = models.Lineage.objects.distinct("lineage").values("lineage")
-        # if ref := request.query_params.get("reference"):
-        #     queryset = queryset.filter(molecule__reference__accession=ref)
-        return Response(
-            {"lineage": [item["lineage"] for item in queryset]},
-            status=status.HTTP_200_OK,
-        )
 
     @action(detail=False, methods=["get"])
     def get_molecule_data(self, request: Request, *args, **kwargs):
@@ -781,6 +771,8 @@ class LineageViewSet(
     model = models.Lineage
     queryset = models.Lineage.objects.all()
     serializer_class = LineagesSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["lineage", "prefixed_alias"]
 
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):
@@ -789,6 +781,16 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=["get"])
+    def distinct_lineages(self, request: Request, *args, **kwargs):
+        queryset = models.Lineage.objects.values("lineage")
+        # if ref := request.query_params.get("reference"):
+        #     queryset = queryset.filter(molecule__reference__accession=ref)
+        return Response(
+            {"lineage": [item["lineage"] for item in queryset]},
+            status=status.HTTP_200_OK,
+        )
 
 
 class TasksView(
