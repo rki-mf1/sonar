@@ -147,6 +147,16 @@ class RepliconViewSet(viewsets.ModelViewSet):
             {"accessions": [item["accession"] for item in queryset]},
             status=status.HTTP_200_OK,
         )
+    
+    @action(detail=False, methods=["get"])
+    def distinct_lineages(self, request: Request, *args, **kwargs):
+        queryset = models.Lineage.objects.distinct("lineage").values("lineage")
+        # if ref := request.query_params.get("reference"):
+        #     queryset = queryset.filter(molecule__reference__accession=ref)
+        return Response(
+            {"lineage": [item["lineage"] for item in queryset]},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["get"])
     def get_molecule_data(self, request: Request, *args, **kwargs):
