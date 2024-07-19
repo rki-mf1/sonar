@@ -178,7 +178,7 @@ export default {
       notSortable: ["genomic_profiles", "proteomic_profiles"],
       propertyOptions: [],
       repliconAccessionOptions: [],
-      lineageOptions: ['BF.2', 'BA.2', 'XBB'],
+      lineageOptions: [],
       allColumns: [],
       selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles'],
       propertyValueOptions: {} as {
@@ -379,9 +379,6 @@ export default {
           });
         }
       }
-      for (const subFilterGroup of filterGroup.filterGroups) {
-        summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
-      }
       for (const filter of filterGroup.filters.lineageFilters) {
         if (filter.lineage) {
           summary.andFilter.push({
@@ -390,6 +387,9 @@ export default {
             exclude: filter.exclude
           });
         }
+      }
+      for (const subFilterGroup of filterGroup.filterGroups) {
+        summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
       }
       return summary;
     },

@@ -75,7 +75,7 @@ export default class API {
         }
         url = url.slice(0, -1)
         if (Object.keys(filters).length > 0) {
-            url += this.parseQueryString(filters)
+            url += this.parseQueryString(filters).replace('?', '&')
         }
         return this.getRequest(url, {}, false)
     }
