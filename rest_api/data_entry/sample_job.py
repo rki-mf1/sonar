@@ -1,5 +1,5 @@
 
-from covsonar_backend.settings import DEBUG
+from covsonar_backend.settings import DEBUG, LOGGER
 from rest_api.data_entry.sequence_job import clean_unused_sequences
 from rest_api.models import Alignment, Sample, Sample2Property, Sequence
 
@@ -10,12 +10,12 @@ def delete_sample(sample_list: list):
     sample_ids = list(filtered_ref_sample.values_list('id', flat=True))
     seqhash_ids = list(filtered_ref_sample.values_list('sequence_id', flat=True))
     deleted_sample = filtered_ref_sample.delete()
+    LOGGER.info(f"Sample IDs: {sample_ids}")
     if DEBUG:
         print("\n")
-        print("Sample IDs", sample_ids)
         print("Seqhash IDs", seqhash_ids)
         # number of objects deleted and a dictionary with the number of deletions per object type
-        print("Deleted sample:", deleted_sample)
+    LOGGER.info(f"Deleted sample: {deleted_sample}")
         
     # Filter sequences without associated samples    
     clean_unused_sequences()
@@ -26,7 +26,7 @@ def delete_sample(sample_list: list):
 
     return data
 
-# just for reference.
+# deprecated, just for reference.
 def delete_sample_old(reference_accession, sample_list: list):
     """
     NOTE: This function allows for the deletion of a specific
@@ -59,7 +59,7 @@ def delete_sample_old(reference_accession, sample_list: list):
         return data
 
     # delete sample alignment
-    aligns = Alignment.objects.filter(sequence__samples__id__in=sample_ids)
+    aligns = Alignment.objects.filter(sequence__sample__id__in=sample_ids)
     if DEBUG:
         print("------------")
         print("Query Alignment:",aligns.query)

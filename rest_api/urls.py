@@ -1,5 +1,7 @@
 from rest_framework import routers
 from rest_api import viewsets, viewsets_sample
+from django.urls import path, include
+from covsonar_backend import settings
 
 router = routers.SimpleRouter()
 router.register(r"mutations", viewsets.MutationViewSet, basename="mutation")
@@ -22,4 +24,5 @@ router.register(r"genes", viewsets.GeneViewSet, basename="gene")
 router.register(r"resources", viewsets.ResourceViewSet, basename="resources")
 router.register(r"file_uploads", viewsets.FileUploadViewSet, basename="import_upload")
 router.register(r"lineages", viewsets.LineageViewSet, basename="lineage")
+router.register(r"tasks", viewsets.TasksView, basename="tasks")
 urlpatterns = [*router.urls]

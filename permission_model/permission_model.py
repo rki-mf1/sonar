@@ -1,7 +1,7 @@
 from operator import attrgetter
 
 from django.urls import get_resolver
-from covsonar_backend import urls
+from rest_api import urls
 from permission_model.permission_model_access import (
     get_json_permission_model,
     save_json_permission_model,

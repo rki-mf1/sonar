@@ -1,1 +1,0 @@
-.\dev-manage.ps1 shell -c "import permission_model.permission_model as p; p.main()"

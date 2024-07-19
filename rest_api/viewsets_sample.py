@@ -3,10 +3,11 @@ import traceback
 import pathlib
 import ast
 import csv
-
+from django.utils import timezone
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import StreamingHttpResponse
 from datetime import datetime
 
 import pandas as pd
@@ -24,22 +25,25 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from django.db import connection
 from rest_api.utils import (
-    create_error_response,
-    create_success_response,
+    Response,
+    Response,
     resolve_ambiguous_NT_AA,
     strtobool,
     write_to_file,
 )
 from rest_framework import status
 from .serializers import (
-
     Sample2PropertyBulkCreateOrUpdateSerializer,
     SampleGenomesSerializer,
     SampleGenomesSerializerVCF,
     SampleSerializer,
-
 )
-from covsonar_backend.settings import DEBUG
+from covsonar_backend.settings import DEBUG, LOGGER
+
+
+class Echo:
+    def write(self, value):
+        return value
 
 
 class SampleViewSet(
@@ -65,7 +69,21 @@ class SampleViewSet(
             "Replicon": self.filter_replicon,
             "Sample": self.filter_sample,
             "Sublineages": self.filter_sublineages,
+            "Annotation": self.filter_annotation,
         }
+
+    @action(detail=False, methods=["get"])
+    def statistics(self, request: Request, *args, **kwargs):
+        response_dict = {}
+        response_dict["samples_total"] = models.Sample.objects.all().count()
+        response_dict["newest_sample_date"] = (
+            models.Sample.objects.all()
+            .order_by("-collection_date")
+            .first()
+            .collection_date
+        )
+
+        return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
@@ -87,63 +105,45 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
-        
-        TODO:  
+
+        TODO:
         1. Optimize the query (reduce the database hit)
         2. add accession of reference at the output
-        3. add annotation info at the output
         """
-
         try:
             # we try to use bool(), but it is not working as expected.
-            showNX  = strtobool(request.query_params.get("showNX","False"))
-            vcf_format = strtobool(request.query_params.get("vcf_format","False"))
-            ref = request.query_params.get("reference_accession")
+            showNX = strtobool(request.query_params.get("showNX", "False"))
+            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
+            csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
 
+            LOGGER.info(f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}")
             self.has_property_filter = False
             queryset = models.Sample.objects.all()
-
             if filter_params := request.query_params.get("filters"):
                 filters = json.loads(filter_params)
                 queryset = models.Sample.objects.filter(
                     self.resolve_genome_filter(filters)
                 )
-                if self.has_property_filter:
-                    queryset.prefetch_related("properties__property")
-            # TODO: improve reference filter:
-            # it would be better if we can use ref filter at the mutation level (in resolve_genome_filter)
-            # to reduce unnecessary join
-            reference_query = Q(
-                sequence__alignments__replicon__reference__accession=ref
-            )
-            queryset = queryset.filter(reference_query)
+                LOGGER.info(f"Genomes Query, conditions: {filters}")
 
-            # NOTE: I put replicon__reference__accession=ref  at the filter, but, at the end of final query
-            # I didnt see WHERE cause of reference. However, I am not sure that because we have only one reference
-            # in the database so the Query generator or optimizer will not generate this statement.
-            # genomic_profiles_qs = models.Mutation.objects.filter(replicon__reference__accession=ref, type="nt").only(
-            #     "ref", "alt", "start", "end"
-            # ).order_by("start")
-            # proteomic_profiles_qs = models.Mutation.objects.filter(replicon__reference__accession=ref, type="cds").only(
-            #     "ref", "alt", "start", "end"
-            # ).order_by("start")
             genomic_profiles_qs = (
-                models.Mutation.objects.filter(type="nt")
-                .only("ref", "alt", "start", "end")
-                .order_by("start")
-            )
+                models.Mutation.objects.filter(type="nt").only(
+                    "ref", "alt", "start", "end", "gene"
+                )
+            ).prefetch_related("gene")
             proteomic_profiles_qs = (
-                models.Mutation.objects.filter(type="cds")
-                .only("ref", "alt", "start", "end")
-                .order_by("start")
+                models.Mutation.objects.filter(type="cds").only(
+                    "ref", "alt", "start", "end", "gene"
+                )
+            ).prefetch_related("gene")
+            annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
+                "mutation", "annotation"
             )
-
-            annotation_qs = models.Mutation2Annotation.objects.filter(alignment__replicon__reference__accession=ref)
-
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
                 proteomic_profiles_qs = proteomic_profiles_qs.filter(~Q(alt="X"))
             queryset = queryset.select_related("sequence").prefetch_related(
+                "properties__property",
                 Prefetch(
                     "sequence__alignments__mutations",
                     queryset=genomic_profiles_qs,
@@ -155,37 +155,47 @@ class SampleViewSet(
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__mutations__mutation2annotation_set__annotation",
+                    "sequence__alignments__mutation2annotation_set",
                     queryset=annotation_qs,
-                    to_attr="annotation_profiles",
+                    to_attr="alignment_annotations",
                 ),
-
             )
-
             if DEBUG:
-                print("Final query:")
                 print(queryset.query)
-
-            # TODO: output in  VCF 
+            # TODO: output in  VCF
             # if VCF
             # for obj in queryset.all():
             #    print(obj.name)
             #    for alignment in obj.sequence.alignments.all():
             #        print(alignment)
+            # output only count
+            if csv_stream:
+                # TODO write output format
+                echo_buffer = Echo()
+                csv_writer = csv.writer(echo_buffer)
+                rows = (
+                    csv_writer.writerow(row)
+                    for row in queryset.values_list(
+                        "name",
+                        "sequence__seqhash",
+                    )
+                )
+                response = StreamingHttpResponse(rows, content_type="text/csv")
+                response["Content-Disposition"] = 'attachment; filename="export.csv"'
+                return response
             if vcf_format:
                 queryset = self.paginate_queryset(queryset)
                 serializer = SampleGenomesSerializerVCF(queryset, many=True)
                 return self.get_paginated_response(serializer.data)
-            else:                
-                queryset = self.paginate_queryset(queryset)
-                serializer = SampleGenomesSerializer(queryset, many=True)
-                # inspect the performance
-                print("Database hit:", len(connection.queries))
-                return self.get_paginated_response(serializer.data)
+            queryset = self.paginate_queryset(queryset)
+            serializer = SampleGenomesSerializer(queryset, many=True)
+            return self.get_paginated_response(serializer.data)
         except Exception as e:
-            print(e)
             traceback.print_exc()
-            return create_error_response(message=str(e))
+            return Response(
+                data={"detail": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()
@@ -196,8 +206,6 @@ class SampleViewSet(
                 q_obj &= self.eval_basic_filter(q_obj, filter)
         if "label" in filters:
             q_obj &= self.eval_basic_filter(q_obj, filters)
-
-        #
         for or_filter in filters.get("orFilter", []):
             q_obj |= self.resolve_genome_filter(or_filter)
 
@@ -211,20 +219,34 @@ class SampleViewSet(
             raise Exception(f"filter_method not found for:{filter.get('label')}")
         return q_obj
 
-    # WIP - not working yet
-    @action(detail=False, methods=["get"])
-    def download_genomes_export(self, request: Request, *args, **kwargs):
-        queryset = models.Sample.objects.all()
-        if filter_params := request.query_params.get("filters"):
-            filters = json.loads(filter_params)
-            queryset = self.resolve_genome_filter(filters)
-        response = HttpResponse(content=queryset, content_type="text/csv")
-
     @action(detail=True, methods=["get"])
     def get_all_sample_data(self, request: Request, *args, **kwargs):
         sample = self.get_object()
         serializer = SampleGenomesSerializer(sample)
         return Response(serializer.data)
+
+    def filter_annotation(
+            self,
+            property_name,
+            filter_type,
+            value,
+            exclude: bool = False,
+            *args,
+            **kwargs,
+        ) -> Q: 
+        # if property_name == "impact":
+        #     mutation_condition = Q(annotations__impact__{filter_type}"=ref_pos)
+        # elif property_name == "seq_ontology":
+        #     mutation_condition = Q(annotations__seq_ontology__{filter_type}"=ref_pos)
+        query ={}
+        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = value
+
+        alignment_qs = models.Alignment.objects.filter(**query)
+        filters = {"sequence__alignments__in": alignment_qs}   
+
+        if exclude:
+            return ~Q(**filters)
+        return Q(**filters)
 
     def filter_property(
         self,
@@ -337,7 +359,6 @@ class SampleViewSet(
         self,
         first_deleted: str,
         last_deleted: str,
-        qs: QuerySet | None = None,
         exclude: bool = False,
         *args,
         **kwargs,
@@ -441,8 +462,8 @@ class SampleViewSet(
         exclude: bool = False,
         *args,
         **kwargs,
-    ):   
-        if isinstance(value, str): 
+    ):
+        if isinstance(value, str):
             sample_list = ast.literal_eval(value)
         else:
             sample_list = value
@@ -483,13 +504,16 @@ class SampleViewSet(
         )
         return self.filter_property("lineage", "in", sublineages, exclude)
 
-
     def _convert_date(self, date: str):
         datetime_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
         return datetime_obj.date()
 
     @action(detail=False, methods=["post"])
     def import_properties_tsv(self, request: Request, *args, **kwargs):
+        """
+        NOTE: 
+        1. if prop is not exist in the database, it will be created automatically
+        """
         print("Importing properties...")
         timer = datetime.now()
         sample_id_column = request.data.get("sample_id_column")
@@ -498,24 +522,43 @@ class SampleViewSet(
             json.loads(request.data.get("column_mapping"))
         )
         if not sample_id_column:
-            return create_error_response(
-                message="No sample_id_column.", return_status=400
+            return Response(
+                {"detail": "No sample_id_column is provided"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        if   not column_mapping: 
-            return create_success_response(
-                message="No column_mapping is provided, nothing to import.", return_status=200
+        if not column_mapping:
+            return Response(
+                {"detail": "No column_mapping is provided, nothing to import."},
+                status=status.HTTP_200_OK,
             )
+
         if not request.FILES or "properties_tsv" not in request.FILES:
             return Response("No file uploaded.", status=400)
-        # TODO: what if it is csv?
-        tsv_file = request.FILES.get("properties_tsv")
 
+        tsv_file = request.FILES.get("properties_tsv")
+        # Determine the separator based on the file extension
+        file_name = tsv_file.name.lower()
+        if file_name.endswith('.csv'):
+            sep = ','
+        elif file_name.endswith('.tsv'):
+            sep = '\t'
+        else:
+            # Handle unknown file type
+            raise Response("Unsupported file type. Only CSV and TSV are supported.", status=400)
+        
         properties_df = pd.read_csv(
             self._temp_save_file(tsv_file),
-            sep="\t",
+            sep=sep,
             dtype=object,
             keep_default_na=False,
         )
+        if sample_id_column not in properties_df.columns:
+            return Response(
+                {
+                    "detail": f"Incorrect mapping column: '{sample_id_column}', please check property file."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         sample_property_names = []
         custom_property_names = []
@@ -537,7 +580,7 @@ class SampleViewSet(
         properties_df.set_index(sample_id_column, inplace=True)
         for sample in samples:
             row = properties_df[properties_df.index == sample.name]
-
+            sample.last_update_date = timezone.now()
             for name, value in row.items():
                 if name in column_mapping.keys():
                     db_name = column_mapping[name].db_property_name
@@ -559,9 +602,14 @@ class SampleViewSet(
             )
 
         print("Saving...")
-
         with transaction.atomic():
-            models.Sample.objects.bulk_update(sample_updates, sample_property_names)
+            # update based prop. for Sample
+            if (
+                len(sample_property_names) > 0
+            ):  # when there is no update/add to based prop.
+                models.Sample.objects.bulk_update(sample_updates, sample_property_names+["last_update_date"])
+
+            # update custom prop. for Sample
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
                 data=property_updates, many=True
             )
@@ -583,8 +631,8 @@ class SampleViewSet(
 
         print("Done.")
         print(f"Import done in {datetime.now() - timer}")
-        return create_success_response(
-            message="File uploaded successfully", return_status=status.HTTP_201_CREATED
+        return Response(
+            {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
 
     def _convert_property_column_mapping(
@@ -607,13 +655,11 @@ class SampleViewSet(
                 if name in self.property_cache.keys():
                     property["property"] = self.property_cache[name]
                 else:
-                    property["property"] = self.property_cache[
-                        name
-                    ] = models.Property.objects.get_or_create(
-                        name=name, datatype=value["datatype"]
-                    )[
-                        0
-                    ].id
+                    property["property"] = self.property_cache[name] = (
+                        models.Property.objects.get_or_create(
+                            name=name, datatype=value["datatype"]
+                        )[0].id
+                    )
             else:
                 property["property__name"] = name
             property_objects.append(property)
@@ -639,7 +685,9 @@ class SampleViewSet(
     def get_sample_data(self, request: Request, *args, **kwargs):
         sample_name = request.GET.get("sample_data")
         if not sample_name:
-            return create_error_response(message="Sample name is missing")
+            return Response(
+                {"detail": "Sample name is missing"}, status=status.HTTP_400_BAD_REQUEST
+            )
         sample_model = (
             models.Sample.objects.filter(name=sample_name)
             .extra(select={"sample_id": "sample.id"})
@@ -654,13 +702,13 @@ class SampleViewSet(
             print("Cannot find:", sample_name)
             sample_data = {}
 
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data)
 
     @action(detail=False, methods=["post"])
     def get_bulk_sample_data(self, request: Request, *args, **kwargs):
         try:
             # Parse the JSON data from the request body
-            data = json.loads(request.body.decode('utf-8'))
+            data = json.loads(request.body.decode("utf-8"))
             # example to be parsed data: {"sample_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
             sample_data_list = data.get("sample_data", [])
             sample_model = (
@@ -668,22 +716,28 @@ class SampleViewSet(
                 .extra(select={"sample_id": "sample.id"})
                 .values("sample_id", "name", "sequence__seqhash")
             )
-             # Convert the QuerySet to a list of dictionaries
+            # Convert the QuerySet to a list of dictionaries
             sample_data = list(sample_model)
 
             # Check for missing samples and add them to the result
-            missing_samples = set(sample_data_list) - set(item["name"] for item in sample_data)
+            missing_samples = set(sample_data_list) - set(
+                item["name"] for item in sample_data
+            )
             for missing_sample in missing_samples:
-                sample_data.append({
-                    "sample_id": None,
-                    "name": missing_sample,
-                    "sequence__seqhash": None
-                })
+                sample_data.append(
+                    {
+                        "sample_id": None,
+                        "name": missing_sample,
+                        "sequence__seqhash": None,
+                    }
+                )
 
-            return create_success_response(message="Request processed successfully",data=sample_data)
+            return Response(sample_data, status=status.HTTP_200_OK)
         except json.JSONDecodeError:
-            return create_error_response("Invalid JSON data / structure", return_status=400)
-
+            return Response(
+                {"detail": "Invalid JSON data / structure"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @action(detail=False, methods=["post"])
     def delete_sample_data(self, request: Request, *args, **kwargs):
@@ -696,7 +750,8 @@ class SampleViewSet(
 
         sample_data = delete_sample(sample_list=sample_list)
 
-        return create_success_response(data=sample_data)
+        return Response(data=sample_data)
+
 
 class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin):
     queryset = models.Sample.objects.all()

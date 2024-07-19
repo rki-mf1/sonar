@@ -205,24 +205,24 @@
           "annotationtype"
         ],
         [
-          "add_entereddata",
+          "add_importlog",
           "rest_api",
-          "entereddata"
+          "importlog"
         ],
         [
-          "change_entereddata",
+          "change_importlog",
           "rest_api",
-          "entereddata"
+          "importlog"
         ],
         [
-          "delete_entereddata",
+          "delete_importlog",
           "rest_api",
-          "entereddata"
+          "importlog"
         ],
         [
-          "view_entereddata",
+          "view_importlog",
           "rest_api",
-          "entereddata"
+          "importlog"
         ],
         [
           "add_gene",
@@ -488,9 +488,9 @@
           "annotationtype"
         ],
         [
-          "view_entereddata",
+          "view_importlog",
           "rest_api",
-          "entereddata"
+          "importlog"
         ],
         [
           "view_gene",

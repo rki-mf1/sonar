@@ -130,7 +130,7 @@ def _put_gene_from_feature(
     gene_base_data = {
         "start": int(feature.location.start),
         "end": int(feature.location.end),
-        "strand": feature.strand,
+        "strand": feature.location.strand,
         "replicon": replicon_id,
     }
     gene_update_data = {}
@@ -199,7 +199,10 @@ def _put_reference_from_record(
                 try:
                     reference[attr_name] = datetime.strptime(date_string, "%Y-%m").date()
                 except ValueError:
-                    reference[attr_name] = datetime.strptime(date_string, "%b-%Y").date()
+                    try:
+                        reference[attr_name] = datetime.strptime(date_string, "%d-%b-%Y").date()
+                    except ValueError:
+                        reference[attr_name] = datetime.strptime(date_string, "%b-%Y").date()
             else:
                 reference[attr_name] = source.qualifiers[attr_name][0]
     try:

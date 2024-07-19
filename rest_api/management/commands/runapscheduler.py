@@ -11,7 +11,7 @@ from django_apscheduler.models import DjangoJobExecution
 from django_apscheduler import util
 from apscheduler.triggers.base import BaseTrigger
 
-from rest_api.data_entry.sample_entry_job import SampleEntryJob
+from rest_api.data_entry.sample_entry_job import check_for_new_data
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ManualOnlyTrigger(BaseTrigger):
 
 
 def scheduled_data_entry():
-    SampleEntryJob().run_data_entry()
+    check_for_new_data()
 
 
 # The `close_old_connections` decorator ensures that database connections, that have become
@@ -80,3 +80,4 @@ class Command(BaseCommand):
             logger.info("Stopping scheduler...")
             scheduler.shutdown()
             logger.info("Scheduler shut down successfully!")
+        return

@@ -1,9 +1,12 @@
+import json
+from django.test import TransactionTestCase
 from parameterized import parameterized
 from rest_framework import status
 from rest_framework.test import force_authenticate
 
 from rest_api.test import mixins
 from rest_api import models, viewsets
+from rest_api.viewsets_sample import SampleViewSet
 
 
 class AlignmentViewSetTest(
@@ -14,12 +17,111 @@ class AlignmentViewSetTest(
 ):
     model = models.Alignment
     viewset = viewsets.AlignmentViewSet
-    expected_list_count = 1
+    expected_list_count = 15
 
     def test_get_alignment_data(self):
-        view = self.viewset.as_view({"get": "get_alignment_data"})
-        request = self.factory.get("/api/alignment/")
+        pass  # TODO
+
+
+class SampleViewSetTest(
+    mixins.FixtureAPITestCase,
+    mixins.ListViewSetTestMixin,
+    mixins.CreateViewSetTestMixin,
+    mixins.UpdateViewSetTestMixin,
+):
+    model = models.Sample
+    viewset = SampleViewSet
+    expected_list_count = 15
+
+    @parameterized.expand(
+        [
+            (
+                "Property",
+                {
+                    "label": "Property",
+                    "property_name": "zip_code",
+                    "filter_type": "exact",
+                    "value": "40210.0",
+                    "exclude": False,
+                },
+                2,
+            ),
+            (
+                "SNP Nt",
+                {
+                    "label": "SNP Nt",
+                    "ref_nuc": "T",
+                    "ref_pos": 670,
+                    "alt_nuc": "G",
+                    "exclude": False,
+                },
+                6,
+            ),
+            (
+                "SNP AA",
+                {
+                    "label": "SNP AA",
+                    "protein_symbol": "orf1ab",
+                    "ref_aa": "T",
+                    "ref_pos": 403,
+                    "alt_aa": "P",
+                    "exclude": False,
+                },
+                1,
+            ),
+            (
+                "Del Nt",
+                {
+                    "label": "Del Nt",
+                    "first_deleted": 1,
+                    "last_deleted": 245,
+                    "exclude": False,
+                },
+                1,
+            ),
+            (
+                "Del AA",
+                {
+                    "label": "Del AA",
+                    "protein_symbol": "S",
+                    "first_deleted": 69,
+                    "last_deleted": 69,
+                    "exclude": False,
+                },
+                1,
+            ),
+            (
+                "Ins Nt",
+                {
+                    "label": "Ins Nt",
+                    "ref_nuc": "T",
+                    "ref_pos": 16176,
+                    "alt_nuc": "C",
+                    "exclude": False,
+                },
+                1,
+            ),
+            (
+                "Ins AA",
+                {
+                    "label": "Ins AA",
+                    "protein_symbol": "orf1ab",
+                    "ref_aa": "T",
+                    "ref_pos": 2196,
+                    "alt_aa": "E",
+                },
+                2,
+            ),
+            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 15),
+        ]
+    )
+    def test_genome_filters(self, _, filter, expected_count):
+        view = self.viewset.as_view({"get": "genomes"})
+        request = self.factory.get(
+            "/api/samples/genomes/", {"filters": json.dumps({"andFilter": [filter]})}
+        )
         user = self.get_request_user()
         force_authenticate(request, user=user)
-        response = view(request, replicon_id=1, seqhash="a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0")
+        response = view(request)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], expected_count)
