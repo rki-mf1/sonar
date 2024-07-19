@@ -74,7 +74,7 @@ export default class API {
             url += `${key}=${params[key]}&`
         }
         url = url.slice(0, -1)
-        if (Object.keys(filters).length == 0) {
+        if (Object.keys(filters).length > 0) {
             url += this.parseQueryString(filters)
         }
         return this.getRequest(url, {}, false)
@@ -165,6 +165,10 @@ export default class API {
     }
     getRepliconAccessionOptions() {
         const url = `replicons/distinct_accessions/`
+        return this.getRequest(url, {}, false)
+    }
+    getLineageOptions() {
+        const url = `lineages/distinct_lineages/`
         return this.getRequest(url, {}, false)
     }
     getGeneSymbolOptions() {

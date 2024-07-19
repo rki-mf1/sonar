@@ -93,6 +93,12 @@ export type RepliconFilter = {
     exclude: boolean;
 }
 
+export type LineageFilter = {
+    label: string;
+    lineage: string;
+    exclude: boolean;
+}
+
 export type GenomeFilter =
     | PropertyFilter
     | ProfileFilter
@@ -112,6 +118,7 @@ export type AndFilters = {
     propertyFilters: PropertyFilter[];
     profileFilters: ProfileFilter[];
     repliconFilters: RepliconFilter[];
+    lineageFilters: LineageFilter[]; 
 }
 
 export type FilterGroup = {

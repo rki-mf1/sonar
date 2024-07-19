@@ -11,7 +11,8 @@ import {
   type InsProfileNtFilter,
   type InsProfileAAFilter,
   type ProfileFilter,
-  type RepliconFilter
+  type RepliconFilter,
+  type LineageFilter
 } from '@/util/types'
 
 import type { MenuItem } from 'primevue/menuitem'
@@ -32,6 +33,10 @@ export default {
       required: true
     },
     repliconAccessionOptions: {
+      type: Array as () => string[],
+      required: true
+    },
+    lineageOptions: {
       type: Array as () => string[],
       required: true
     },
@@ -63,6 +68,11 @@ export default {
         accession: '',
         exclude: false
       } as RepliconFilter,
+      LineageFilter: {
+        label: 'Sublineages',
+        lineage: '',
+        exclude: false
+      } as LineageFilter,
       profileFilterTypes: {
         SNPProfileNt: {
           label: 'SNP Nt',
@@ -135,15 +145,22 @@ export default {
         command: () => {
           this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
         }
-      }
-      )
+      })
+      menuItems.push({
+        label: 'LineageFilter',
+        icon: 'pi pi-plus',
+        command: () => {
+          this.filterGroup.filters.lineageFilters.push({ ...this.LineageFilter })
+        }
+      })
       return menuItems
     },
     cantAddOrGroup(): boolean {
       return (
-        this.filterGroup.filters.propertyFilters.length +
+          this.filterGroup.filters.propertyFilters.length +
           this.filterGroup.filters.profileFilters.length +
-          this.filterGroup.filters.repliconFilters.length ==
+          this.filterGroup.filters.repliconFilters.length + 
+          this.filterGroup.filters.lineageFilters.length ==
         0
       )
     }
@@ -152,7 +169,7 @@ export default {
     addOrFilterGroup() {
       this.filterGroup.filterGroups.push({
         filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [], repliconFilters: []}
+        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: []}
       })
     },
     markGroup(group: FilterGroup, mark: boolean) {
@@ -223,6 +240,23 @@ export default {
         <Button size="small" @click="
           filterGroup.filters?.repliconFilters?.splice(
             filterGroup.filters?.repliconFilters?.indexOf(filter),
+            1
+          )
+          ">
+          <i class="pi pi-trash"></i>
+        </Button>
+      </div>
+      <div v-for="filter in filterGroup.filters?.lineageFilters" class="single-filter">
+        <span class="filter-label">Lineage</span>
+        <!-- <Dropdown :options="lineageOptions" v-model="filter.lineage" style="flex: auto" /> -->
+        <InputText v-model="filter.lineage" style="flex: auto"/>
+        <div class="exclude-switch">
+          Exclude?
+          <InputSwitch v-model="filter.exclude" />
+        </div>
+        <Button size="small" @click="
+          filterGroup.filters?.lineageFilters?.splice(
+            filterGroup.filters?.lineageFilters?.indexOf(filter),
             1
           )
           ">

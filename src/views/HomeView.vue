@@ -8,6 +8,7 @@
           <div>
             <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
               :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
+              :lineageOptions="lineageOptions"
               :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
               :propertyValueOptions="propertyValueOptions"
               v-on:update-property-value-options="updatePropertyValueOptions" />
@@ -177,6 +178,7 @@ export default {
       notSortable: ["genomic_profiles", "proteomic_profiles"],
       propertyOptions: [],
       repliconAccessionOptions: [],
+      lineageOptions: ['BF.2', 'BA.2', 'XBB'],
       allColumns: [],
       selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles'],
       propertyValueOptions: {} as {
@@ -188,7 +190,7 @@ export default {
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [] }
+        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
       } as FilterGroup,
       DjangoFilterType,
     };
@@ -233,7 +235,7 @@ export default {
       this.loading = false;
     },
     metaDataCoverage(column: string) {
-      if (this.filteredCount != 0) {
+      if (this.filteredCount != 0 && this.filteredStatistics["meta_data_coverage"] != undefined) {
         const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredCount * 100).toFixed(0);
         return 'Coverage: ' + coverage.toString() + ' %';
       } else {
@@ -306,6 +308,10 @@ export default {
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions();
       this.repliconAccessionOptions = res.accessions;
+    },
+    async updateLineageOptions() {
+      const res = await API.getInstance().getLineageOptions();
+      this.lineageOptions = res.lineages;
     },
     async updateSymbolOptions() {
       const res = await API.getInstance().getGeneSymbolOptions();
@@ -407,6 +413,7 @@ export default {
     this.updatePropertyOptions();
     this.updateSymbolOptions();
     this.updateRepliconAccessionOptions();
+    this.updateLineageOptions();
   }
 }
 
