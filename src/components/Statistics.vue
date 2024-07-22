@@ -2,19 +2,19 @@
     <Card class="card" style="background-color: var(--secondary-color);">
         <template #content>
             <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
-            <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{
-                statistics.distinct_mutations_count }}</div>
-            <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">distinct
-                mutations in database</div>
-        </template>
-    </Card>
-    <Card class="card" style="background-color: var(--secondary-color);">
-        <template #content>
-            <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
             <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ filteredCount }} / {{
                 statistics.samples_total }}</div>
             <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">sequences
                 selected from database</div>
+        </template>
+    </Card>
+    <Card class="card">
+        <template #content>
+            <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
+            <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{
+                statistics.distinct_mutations_count }}</div>
+            <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">distinct
+                mutations in database</div>
         </template>
     </Card>
     <Card class="card">

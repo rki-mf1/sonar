@@ -1,9 +1,12 @@
 <template>
-  <div style="width: 60%;">
+  <div style="width: 90%;">
 
     <div v-if="selectedData" >
       <strong>Sample Details</strong>
       <br>
+      <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
+        <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+      </Dialog>
       <SampleDetails :selectedRow="selectedData" :allColumns="allColumns"></SampleDetails>
     </div>
     
@@ -21,12 +24,15 @@ export default {
   data() {
     return {
       selectedData: '',
-      allColumns: []
+      allColumns: [],
+      loading: true
     }
   },
   methods: {
     async updateSample() {
+      this.loading = true
       this.selectedData = (await API.getInstance().getSingleSampleGenome(this.$route.params.id)).results[0]
+      this.loading = false
     },
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptions();

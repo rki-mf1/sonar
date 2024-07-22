@@ -20,8 +20,6 @@
             @click="displayDialogFilter = false; updateSamples()"></Button>
         </div>
       </Dialog>
-      <i class="pi pi-arrow-right" style="font-size: 1.5rem; color: var(--grayish);"></i>
-      <Button type="button" icon="pi pi-list" label="&nbsp;Get Data" raised @click="updateSamples()" />
     </div>
 
     <div class="input-right">
@@ -419,6 +417,7 @@ export default {
     }
   },
   mounted() {
+    this.updateSamples();
     this.updatePropertyOptions();
     this.updateSymbolOptions();
     this.updateRepliconAccessionOptions();
@@ -447,7 +446,8 @@ export default {
   width: 30%;
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
+  justify-content: space-between;
+  margin-left: 20px;
   align-items: center;
 }
 
