@@ -369,16 +369,17 @@ class SampleViewSet(
             .order_by("year", "week")
         )
 
-        start_date = queryset.first()["collection_date"]
-        end_date = queryset.last()["collection_date"]
+        if len(queryset) != 0:
+            start_date = queryset.first()["collection_date"]
+            end_date = queryset.last()["collection_date"]
 
-        for dt in rrule(
-            WEEKLY, dtstart=start_date, until=end_date
-        ):  # generate all weeks between start and end dates and assign default value 0
-            dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
+            for dt in rrule(
+                WEEKLY, dtstart=start_date, until=end_date
+            ):  # generate all weeks between start and end dates and assign default value 0
+                dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
 
-        for item in queryset:  # fill in count values of present weeks
-            dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
+            for item in queryset:  # fill in count values of present weeks
+                dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
 
         return dict
 

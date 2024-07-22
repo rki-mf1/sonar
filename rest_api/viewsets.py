@@ -784,11 +784,15 @@ class LineageViewSet(
     
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
-        queryset = models.Lineage.objects.values("lineage")
-        # if ref := request.query_params.get("reference"):
-        #     queryset = queryset.filter(molecule__reference__accession=ref)
+        distinc_lineages = []
+        for lineage in models.Lineage.objects.all():
+            if lineage.lineage == "": # case of lineages without '.', e.g "A", "B", "XBB", etc
+                combined_lineage = f"{lineage.prefixed_alias}{lineage.lineage}"
+            else:
+                combined_lineage = f"{lineage.prefixed_alias}.{lineage.lineage}"
+            distinc_lineages.append(combined_lineage)
         return Response(
-            {"lineage": [item["lineage"] for item in queryset]},
+            {"lineages": sorted(distinc_lineages)},
             status=status.HTTP_200_OK,
         )
 
