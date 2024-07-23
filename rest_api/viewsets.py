@@ -440,7 +440,7 @@ class PropertyViewSet(
                 "No property_name provided.", status=status.HTTP_400_BAD_REQUEST
             )
         sample_property_fields = [
-            field.name for field in models.Sample._meta.get_fields()
+            field.name for field in models.Sample._meta.get_fields() 
         ]
         if property_name in sample_property_fields:
             queryset = models.Sample.objects.all()
@@ -500,11 +500,7 @@ class PropertyViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_property_names(self, request: Request, *args, **kwargs):
-        queryset = models.Property.objects.all()
-        queryset = queryset.distinct("name")
-        property_names = [item.name for item in queryset]
-        sample_properties = models.Sample._meta.get_fields()
-        property_names += [item.name for item in sample_properties]
+        property_names = self.get_distinct_property_names()
         return Response(
             data={"property_names": property_names}, status=status.HTTP_200_OK
         )
@@ -616,6 +612,22 @@ class PropertyViewSet(
         data = {"keys": cols, "values": data_list}
         return Response(data=data, status=status.HTTP_200_OK)
 
+    @staticmethod
+    def get_distinct_property_names():
+        queryset = models.Property.objects.all()
+        queryset = queryset.distinct("name")
+        filter_list = ['id', 'datahash']
+        property_names = [item.name for item in queryset]
+        sample_properties = [field.name for field in models.Sample._meta.get_fields() if field.name not in filter_list]
+        property_names += sample_properties
+        return property_names
+    
+    @staticmethod
+    def get_custom_property_names():
+        queryset = models.Property.objects.all()
+        queryset = queryset.distinct("name")
+        property_names = [item.name for item in queryset]
+        return property_names
 
 class MutationFrequencySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -759,6 +771,8 @@ class LineageViewSet(
     model = models.Lineage
     queryset = models.Lineage.objects.all()
     serializer_class = LineagesSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["lineage", "prefixed_alias"]
 
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):
@@ -767,6 +781,20 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=["get"])
+    def distinct_lineages(self, request: Request, *args, **kwargs):
+        distinc_lineages = []
+        for lineage in models.Lineage.objects.all():
+            if lineage.lineage == "": # case of lineages without '.', e.g "A", "B", "XBB", etc
+                combined_lineage = f"{lineage.prefixed_alias}{lineage.lineage}"
+            else:
+                combined_lineage = f"{lineage.prefixed_alias}.{lineage.lineage}"
+            distinc_lineages.append(combined_lineage)
+        return Response(
+            {"lineages": sorted(distinc_lineages)},
+            status=status.HTTP_200_OK,
+        )
 
 
 class TasksView(

@@ -1,6 +1,6 @@
-param(
-    [switch]$NoTestData,
-    [switch]$NoRebuild
+Param(
+    [switch]$NoTestData = $false,
+    [switch]$NoRebuild = $false
 )
 try {
     scripts\win\dc-dev.ps1 down

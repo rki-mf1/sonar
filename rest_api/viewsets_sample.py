@@ -1,37 +1,48 @@
+import ast
+import csv, _csv
 import json
-import traceback
 import pathlib
 import ast
 import csv
+from datetime import datetime
+import traceback
+from typing import Generator
+
+import pandas as pd
+from dateutil.rrule import WEEKLY, rrule
+
+from dateutil.rrule import WEEKLY, rrule
 from django.utils import timezone
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django_filters.rest_framework import DjangoFilterBackend
+from django.db import connection, transaction
+from django.db.models import (
+    QuerySet,
+    CharField,
+    Count,
+    Min,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    TextField,
+)
 from django.http import StreamingHttpResponse
-from datetime import datetime
-
-import pandas as pd
-
-from rest_api.viewsets import PropertyColumnMapping
-from django.http import HttpResponse
-from . import models
-from rest_api.serializers import SampleSerializer
-from rest_api.data_entry.sample_job import delete_sample
-from django.db import transaction
-from django.db.models import Count, F, Q, QuerySet, Prefetch
-from rest_framework.decorators import action, api_view
-from rest_framework import generics, serializers, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
-from django.db import connection
-from rest_api.utils import (
-    Response,
-    Response,
-    resolve_ambiguous_NT_AA,
-    strtobool,
-    write_to_file,
-)
-from rest_framework import status
+from django.core.paginator import Paginator
+
+from covsonar_backend.settings import DEBUG
+from rest_api.data_entry.sample_job import delete_sample
+from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
+from rest_api.utils import Response, resolve_ambiguous_NT_AA, strtobool
+from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet
+
+from . import models
 from .serializers import (
     Sample2PropertyBulkCreateOrUpdateSerializer,
     SampleGenomesSerializer,
@@ -53,8 +64,9 @@ class SampleViewSet(
 ):
     queryset = models.Sample.objects.all().order_by("id")
     serializer_class = SampleSerializer
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
+    filter_fields = ["name"]
 
     @property
     def filter_label_to_methods(self):
@@ -75,6 +87,11 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
         response_dict = {}
+        response_dict["distinct_mutations_count"] = (
+            models.Mutation.objects.values("ref", "alt", "start", "end")
+            .distinct()
+            .count()
+        )
         response_dict["samples_total"] = models.Sample.objects.all().count()
         response_dict["newest_sample_date"] = (
             models.Sample.objects.all()
@@ -84,6 +101,16 @@ class SampleViewSet(
         )
 
         return Response(data=response_dict, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"])
+    def samples_per_day(self, request: Request, *args, **kwargs):
+        queryset = (
+            models.Sample.objects.values("collection_date")
+            .annotate(count=Count("id"))
+            .order_by("collection_date")
+        )
+        dict = {str(item["collection_date"]): item["count"] for item in queryset}
+        return Response(data=dict)
 
     @action(detail=False, methods=["get"])
     def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
@@ -102,46 +129,64 @@ class SampleViewSet(
         }
         return Response(data=dict)
 
+    def _get_filtered_queryset(self, request: Request):
+        queryset = models.Sample.objects.all()
+        if filter_params := request.query_params.get("filters"):
+            filters = json.loads(filter_params)
+            queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
+            LOGGER.info(f"Genomes Query, conditions: {filters}")
+        return queryset
+
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
-
+        fetch samples and genomic profiles based on provided filters and optional parameters
+        
         TODO:
         1. Optimize the query (reduce the database hit)
         2. add accession of reference at the output
         """
         try:
+            # optional query parameters
             # we try to use bool(), but it is not working as expected.
             showNX = strtobool(request.query_params.get("showNX", "False"))
-            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
             csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
+            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
 
             LOGGER.info(f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}")
-            self.has_property_filter = False
-            queryset = models.Sample.objects.all()
-            if filter_params := request.query_params.get("filters"):
-                filters = json.loads(filter_params)
-                queryset = models.Sample.objects.filter(
-                    self.resolve_genome_filter(filters)
-                )
-                LOGGER.info(f"Genomes Query, conditions: {filters}")
 
+            self.has_property_filter = False
+            
+            queryset = self._get_filtered_queryset(request)
+
+            # apply ID ('name') filter if provided 
+            if name_filter := request.query_params.get("name"):
+                queryset = queryset.filter(name=name_filter)
+
+            # fetch genomic and proteomic profiles
             genomic_profiles_qs = (
-                models.Mutation.objects.filter(type="nt").only(
-                    "ref", "alt", "start", "end", "gene"
-                )
-            ).prefetch_related("gene")
+                models.Mutation.objects.filter(type="nt")
+                .only("ref", "alt", "start", "end", "gene")
+                .prefetch_related("gene")
+            )
             proteomic_profiles_qs = (
-                models.Mutation.objects.filter(type="cds").only(
-                    "ref", "alt", "start", "end", "gene"
-                )
-            ).prefetch_related("gene")
+                models.Mutation.objects.filter(type="cds")
+                .only("ref", "alt", "start", "end", "gene")
+                .prefetch_related("gene")
+            )
             annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
                 "mutation", "annotation"
             )
+
+            if DEBUG:
+                print(queryset.query)
+
+            # filter out ambiguous nucleotides or unspecified amino acids
             if not showNX:
-                genomic_profiles_qs = genomic_profiles_qs.filter(~Q(alt="N"))
-                proteomic_profiles_qs = proteomic_profiles_qs.filter(~Q(alt="X"))
+                genomic_profiles_qs = genomic_profiles_qs.exclude(alt="N")
+                proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
+            
+            # optimize queryset by prefetching and storing profiles as attributes
             queryset = queryset.select_related("sequence").prefetch_related(
                 "properties__property",
                 Prefetch(
@@ -160,42 +205,194 @@ class SampleViewSet(
                     to_attr="alignment_annotations",
                 ),
             )
-            if DEBUG:
-                print(queryset.query)
-            # TODO: output in  VCF
-            # if VCF
-            # for obj in queryset.all():
-            #    print(obj.name)
-            #    for alignment in obj.sequence.alignments.all():
-            #        print(alignment)
-            # output only count
+
+            # apply ordering if specified
+            if ordering := request.query_params.get("ordering"):
+                queryset = self._apply_ordering(queryset, ordering)
+
+            # return csv stream if specified
             if csv_stream:
-                # TODO write output format
-                echo_buffer = Echo()
-                csv_writer = csv.writer(echo_buffer)
-                rows = (
-                    csv_writer.writerow(row)
-                    for row in queryset.values_list(
-                        "name",
-                        "sequence__seqhash",
-                    )
-                )
-                response = StreamingHttpResponse(rows, content_type="text/csv")
-                response["Content-Disposition"] = 'attachment; filename="export.csv"'
-                return response
+                if not ordering:
+                    queryset.order_by("-collection_date")
+                return self._return_csv_stream(queryset, request)
+
+            # return vcf format if specified
             if vcf_format:
-                queryset = self.paginate_queryset(queryset)
-                serializer = SampleGenomesSerializerVCF(queryset, many=True)
-                return self.get_paginated_response(serializer.data)
+                return self._return_vcf_format(queryset)
+            
+            # default response
             queryset = self.paginate_queryset(queryset)
             serializer = SampleGenomesSerializer(queryset, many=True)
             return self.get_paginated_response(serializer.data)
+        
         except Exception as e:
             traceback.print_exc()
-            return Response(
-                data={"detail": str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            return Response(data={"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _apply_ordering(self, queryset, ordering):
+        """
+        apply given ordering to queryset 
+        """
+        property_names = PropertyViewSet.get_custom_property_names()
+        ordering_col_name = ordering.lstrip("-")
+        reverse_order = ordering.startswith("-")
+        
+        if ordering_col_name in property_names:
+            datatype = models.Property.objects.get(name=ordering_col_name).datatype
+            queryset = queryset.order_by(
+                Subquery(
+                    models.Sample2Property.objects.filter(
+                        property__name=ordering_col_name,
+                        sample=OuterRef("id")
+                    ).values(datatype)
+                )
             )
+            if reverse_order:
+                queryset = queryset.reverse()
+        else:
+            queryset = queryset.order_by(ordering)
+        
+        return queryset
+    
+    def _return_csv_stream(self, queryset, request):
+        """
+        stream queryset data as a csv file
+        """
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer, delimiter=";")
+        columns = request.query_params.get("columns")
+
+        if columns:
+            columns = columns.split(",")
+        else:
+            raise Exception("No columns provided")
+
+        filename = request.query_params.get("filename", "sample_genomes.csv") # default: "sample_genomes.csv"
+        
+        return StreamingHttpResponse(
+            self._stream_serialized_data(queryset.order_by("name"), columns, writer),
+            content_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    
+    def _return_vcf_format(self, queryset):
+        """
+        return queryset data in vcf format
+        """
+        queryset = self.paginate_queryset(queryset)
+        serializer = SampleGenomesSerializerVCF(queryset, many=True)
+        return self.get_paginated_response(serializer.data)
+    
+    def _stream_serialized_data(
+        self, queryset: QuerySet, columns: list[str], writer: "_csv._writer"
+    ) -> Generator:
+        serializer = SampleGenomesExportStreamSerializer
+        serializer.columns = columns
+        # yield writer.writerow(columns)
+        paginator = Paginator(queryset, 100)
+        for page in paginator.page_range:
+            for serialized in serializer(
+                paginator.page(page).object_list, many=True
+            ).data:
+                yield writer.writerow(serialized["row"])
+
+    def _get_meta_data_coverage(self, queryset):
+        dict = {}
+        queryset = queryset.prefetch_related("properties__property")
+        queryset = queryset.annotate(
+            genomic_profiles_count=Count(
+                "sequence__alignments__mutations",
+                filter=Q(sequence__alignments__mutations__type="nt"),
+            ),
+            proteomic_profiles_count=Count(
+                "sequence__alignments__mutations",
+                filter=Q(sequence__alignments__mutations__type="cds"),
+            ),
+        )
+
+        dict["genomic_profiles"] = queryset.filter(genomic_profiles_count__gt=0).count()
+        dict["proteomic_profiles"] = queryset.filter(
+            proteomic_profiles_count__gt=0
+        ).count()
+
+        property_names = PropertyViewSet.get_distinct_property_names()
+
+        for field in models.Sample._meta.get_fields():
+            field_name = field.name
+
+            if field_name not in property_names:
+                continue
+
+            property_names.pop(property_names.index(field_name))
+
+            if isinstance(field, (CharField, TextField)):
+                non_empty_count = (
+                    queryset.exclude(**{field_name: ""})
+                    .exclude(**{field_name: None})
+                    .count()
+                )
+            else:
+                non_empty_count = queryset.exclude(**{field_name: None}).count()
+            dict[field_name] = non_empty_count
+
+        for property_name in property_names:
+            datatype = models.Property.objects.get(name=property_name).datatype
+            dict[property_name] = (
+                queryset.exclude(
+                    **{
+                        "properties__property__name": property_name,
+                        f"properties__{datatype}": "",
+                    }
+                )
+                .exclude(
+                    **{
+                        "properties__property__name": property_name,
+                        f"properties__{datatype}": None,
+                    }
+                )
+                .count()
+            )
+
+        return dict
+
+    def _get_samples_per_week(self, queryset):
+        dict = {}
+        queryset = (
+            queryset.extra(
+                select={
+                    "week": "EXTRACT('week' FROM collection_date)",
+                    "year": "EXTRACT('year' FROM collection_date)",
+                }
+            )
+            .values("year", "week")
+            .annotate(count=Count("id"), collection_date=Min("collection_date"))
+            .order_by("year", "week")
+        )
+
+        if len(queryset) != 0:
+            start_date = queryset.first()["collection_date"]
+            end_date = queryset.last()["collection_date"]
+
+            for dt in rrule(
+                WEEKLY, dtstart=start_date, until=end_date
+            ):  # generate all weeks between start and end dates and assign default value 0
+                dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
+
+            for item in queryset:  # fill in count values of present weeks
+                dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
+
+        return dict
+
+    @action(detail=False, methods=["get"])
+    def filtered_statistics(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+        dict = {}
+
+        dict["filtered_total_count"] = queryset.count()
+        dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
+        dict["samples_per_week"] = self._get_samples_per_week(queryset)
+
+        return Response(data=dict)
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()
@@ -208,7 +405,6 @@ class SampleViewSet(
             q_obj &= self.eval_basic_filter(q_obj, filters)
         for or_filter in filters.get("orFilter", []):
             q_obj |= self.resolve_genome_filter(or_filter)
-
         return q_obj
 
     def eval_basic_filter(self, q_obj, filter):
@@ -226,23 +422,25 @@ class SampleViewSet(
         return Response(serializer.data)
 
     def filter_annotation(
-            self,
-            property_name,
-            filter_type,
-            value,
-            exclude: bool = False,
-            *args,
-            **kwargs,
-        ) -> Q: 
+        self,
+        property_name,
+        filter_type,
+        value,
+        exclude: bool = False,
+        *args,
+        **kwargs,
+    ) -> Q:
         # if property_name == "impact":
         #     mutation_condition = Q(annotations__impact__{filter_type}"=ref_pos)
         # elif property_name == "seq_ontology":
         #     mutation_condition = Q(annotations__seq_ontology__{filter_type}"=ref_pos)
-        query ={}
-        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = value
+        query = {}
+        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = (
+            value
+        )
 
         alignment_qs = models.Alignment.objects.filter(**query)
-        filters = {"sequence__alignments__in": alignment_qs}   
+        filters = {"sequence__alignments__in": alignment_qs}
 
         if exclude:
             return ~Q(**filters)
@@ -511,7 +709,7 @@ class SampleViewSet(
     @action(detail=False, methods=["post"])
     def import_properties_tsv(self, request: Request, *args, **kwargs):
         """
-        NOTE: 
+        NOTE:
         1. if prop is not exist in the database, it will be created automatically
         """
         print("Importing properties...")
@@ -538,14 +736,15 @@ class SampleViewSet(
         tsv_file = request.FILES.get("properties_tsv")
         # Determine the separator based on the file extension
         file_name = tsv_file.name.lower()
-        if file_name.endswith('.csv'):
-            sep = ','
-        elif file_name.endswith('.tsv'):
-            sep = '\t'
+        if file_name.endswith(".csv"):
+            sep = ","
+        elif file_name.endswith(".tsv"):
+            sep = "\t"
         else:
-            # Handle unknown file type
-            raise Response("Unsupported file type. Only CSV and TSV are supported.", status=400)
-        
+            return Response(
+                {"detail": "Unsupported file format, please upload a CSV or TSV file."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         properties_df = pd.read_csv(
             self._temp_save_file(tsv_file),
             sep=sep,
@@ -607,7 +806,9 @@ class SampleViewSet(
             if (
                 len(sample_property_names) > 0
             ):  # when there is no update/add to based prop.
-                models.Sample.objects.bulk_update(sample_updates, sample_property_names+["last_update_date"])
+                models.Sample.objects.bulk_update(
+                    sample_updates, sample_property_names + ["last_update_date"]
+                )
 
             # update custom prop. for Sample
             serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
