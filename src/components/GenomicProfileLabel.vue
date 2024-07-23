@@ -1,7 +1,10 @@
 <template>
-    <span v-tooltip.bottom="tooltip"
-    :style="{ color: variantColor}">{{ variantString }}<span v-if="!isLast">,&nbsp;</span></span>
+    <span v-tooltip.bottom="tooltip">
+        <span :style="{ color: variantColor }">{{ variantString }}</span>
+        <span v-if="!isLast">,&nbsp;</span>
+    </span>
 </template>
+
 <script lang="ts">
 export default {
     props: {

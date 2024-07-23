@@ -1,141 +1,149 @@
-
 <template>
-  <body>
-    <main>
-      <header>
-        <i class="pi pi-spinner"
-          style="font-size: 3rem; color: var(--text-color); margin-top: 10px; margin-bottom: 10px;"></i>
-        <div style="font-size: 2rem; color: var(--text-color); margin-top: 10px;">ovSonar</div>
-        <div class="menu">
-          <Menubar :model="menu_items" />
+  <div class="input">
+    <div class="input-left">
+      <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
+        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
+      <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
+        <div style="display: flex; gap: 10px;">
+          <div>
+            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
+              :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
+              :lineageOptions="lineageOptions"
+              :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
+              :propertyValueOptions="propertyValueOptions"
+              v-on:update-property-value-options="updatePropertyValueOptions" />
+          </div>
+
         </div>
+        <div style="display: flex; justify-content: end; gap: 10px;">
+          <Button type="button" style="margin-top: 10px;" label="OK"
+            @click="displayDialogFilter = false; updateSamples()"></Button>
+        </div>
+      </Dialog>
+    </div>
 
-        <!-- <v-icon name="pr-spinner" scale="5" animation="float" style="color: white;"/> -->
-        <!-- <div style="margin-bottom: 100px;"></div>
-        <router-link to="/" class="nav-item">Home</router-link>
-        <router-link to="/about" class="nav-item">About</router-link> -->
-      </header>
-      <div class="content">
-        <div class="input">
-          <div class="input-left">
-            <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
-              @click="filter_dialog_visible = true" />
-            <Dialog v-model:visible="filter_dialog_visible" modal header="Set Filters">
-              <div style="display: flex; gap: 10px;">
-                <!-- <Button type="button" icon="pi pi-filter" label="Add AND Filter" @click=""></Button>
-                    <Button type="button" icon="pi pi-filter" label="Add OR Group" @click=""></Button> -->
+    <div class="input-right">
+      <Statistics :filteredCount="filteredCount"></Statistics>
+    </div>
+  </div>
 
-                <div>
-                  <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
-                    :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
-                    :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
-                    :propertyValueOptions="propertyValueOptions"
-                    v-on:update-property-value-options="updatePropertyValueOptions" />
+  <div class="output_box">
+    <div class="output">
+      <div style="height: 100%; overflow: auto;">
+        <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
+          <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+        </Dialog>
+
+        <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
+          <template #header>
+            <div style="display: flex; align-items: center;">
+              <strong>Sample Details</strong>
+              <router-link v-slot="{ href, navigate }" :to="`sample/${selectedRow.name}`" custom>
+                <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px;">
+                  <i class="pi pi-external-link"></i>
+                </a>
+              </router-link>
+            </div>
+          </template>
+          <SampleDetails :selectedRow="selectedRow" :allColumns="allColumns"></SampleDetails>
+        </Dialog>
+
+        <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
+          :style="{ width: '25vw' }">
+
+          <div>
+            <RadioButton v-model="exportFormat" inputId="exportFormat1" value="csv" />
+            <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
+            <br><br>
+            <RadioButton v-model="exportFormat" inputId="exportFormat2" value="xlsx" />
+            <label for="exportFormat2" class="ml-2"> Excel (.xlsx)</label>
+            <br><br>
+          </div>
+
+          <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
+
+          <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px;">
+            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="exportFile(exportFormat)" />
+          </div>
+        </Dialog>
+
+        <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows scrollable
+          scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
+          selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
+          <template #empty> No Results </template>
+          <template #header>
+            <div style="display: flex; justify-content: space-between;">
+              <div>
+                <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
+              </div>
+              <div style="display: flex; justify-content: flex-end;">
+                <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
+                  placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+                  <template #value>
+                    <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected
+                    </div>
+                  </template>
+                </MultiSelect>
+              </div>
+            </div>
+          </template>
+          <Column field="name" sortable>
+            <template #header>
+              <span v-tooltip="metaDataCoverage('name')">ID</span>
+            </template>
+            <template #body="slotProps">
+              <div
+                style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
+                :title="slotProps.data.name">
+                {{ slotProps.data.name }}
+              </div>
+            </template>
+          </Column>
+          <Column v-for="column in selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
+            <template #header>
+              <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
+            </template>
+            <template #body="slotProps">
+              <div v-if="column === 'genomic_profiles'">
+                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                  <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                    :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
                 </div>
-
               </div>
-              <div style="display: flex; justify-content: end; gap: 10px;">
-                <!-- <Button type="button" label="Cancel" severity="secondary" @click="filter_dialog_visible = false"></Button>
-                    <Button type="button" label="Save" @click="filter_dialog_visible = false"></Button> -->
-                <Button type="button" style="margin-top: 10px;" label="OK"
-                  @click="filter_dialog_visible = false; updateSamples()"></Button>
+              <div v-else-if="column === 'proteomic_profiles'">
+                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                  <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                    :variantString="variant"
+                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
+                </div>
               </div>
-            </Dialog>
-            <i class="pi pi-arrow-right" style="font-size: 1.5rem; color: var(--grayish);"></i>
-            <Button type="button" icon="pi pi-list" label="&nbsp;Get Data" raised @click="updateSamples()" />
-          </div>
-
-          <div class="input-right">
-            <Statistics></Statistics>
-          </div>
-        </div>
-
-        <div class="output_box">
-          <div class="output">
-            <div style="height: 100%; overflow: auto;">
-              <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
-              <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows
-                removableSort scrollable scrollHeight="flex" v-model:filters="filters_table"
-                @filter="{ filtered_table_count = $event.filteredValue.length; }">
-                <template #empty> No Results </template>
-                <template #header>
-                  <div style="display: flex; justify-content: space-between;">
-                    <div>
-                      <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="exportCSV($event)" />
-                      <!-- <Button icon="pi pi-external-link" label="&nbsp;Export Data" raised @click="requestExport()" /> -->
-                    </div>
-                    <div style="display: flex; justify-content: flex-end;">
-                      <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
-                        placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="onToggle">
-                        <template #value>
-                          <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected</div>
-                        </template>
-                      </MultiSelect>
-                      <IconField iconPosition="left">
-                        <InputIcon>
-                          <i class="pi pi-search" />
-                        </InputIcon>
-                        <InputText v-model="filters_table['global'].value" placeholder="Keyword Search"/>
-                      </IconField>
-                    </div>
-                  </div>
-                </template>
-                <Column field="name">
-                  <template #header>
-                    <span v-tooltip="metaDataCoverage('name')">ID</span>
-                  </template>
-                  <template #body="slotProps">
-                    <div style="height: 1.5em; width:31rem; overflow-x: auto; white-space: nowrap;">
-                        {{ slotProps.data.name }}
-                    </div>
-                  </template>
-                </Column>
-                <Column v-for="column in selectedColumns">
-                  <template #header>
-                    <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
-                  </template>
-                  <template #body="slotProps">
-                    <div v-if="column === 'genomic_profiles'">
-                      <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
-                        <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                          :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]" :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
-                      </div>
-                    </div>
-                    <div v-else-if="column === 'proteomic_profiles'">
-                      <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
-                        <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
-                          :variantString="variant" :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
-                      </div>
-                    </div>
-                    <span v-else>
-                      {{ findProperty(slotProps.data.properties, column) }}
-                    </span>
-                  </template>
-                </Column>
-                <template #footer>
-                  <div style="display: flex; justify-content: space-between;">
-                    Total: {{ sampleCount }} Samples
-                    <!-- Total: {{ filtered_table_count }} Samples  -->
-                  </div>
-                </template>
-              </DataTable>
+              <span v-else>
+                {{ findProperty(slotProps.data.properties, column) }}
+              </span>
+            </template>
+          </Column>
+          <template #footer>
+            <div style="display: flex; justify-content: space-between;">
+              Total: {{ filteredCount }} Samples
             </div>
-            <div style="height: 100%; width: 40%; display: flex; justify-content: center;">
-              <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
-            </div>
-          </div>
-        </div>
+            <Paginator :totalRecords="filteredCount" v-model:rows="perPage"
+              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
+              @update:rows="updateSamples()" />
+          </template>
+        </DataTable>
       </div>
-    </main>
-  </body>
+      <div style="height: 100%; width: 30%; display: flex; justify-content: center;">
+        <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">
 
 import API from '@/api/API'
-import { useRouter } from 'vue-router';
-import { FilterMatchMode } from 'primevue/api';
-import GenomicProfileLabel from '@/components/GenomicProfileLabel.vue';
+
 import {
   type FilterGroup,
   DjangoFilterType,
@@ -145,42 +153,32 @@ import {
   type FilterGroupRoot,
   type Property
 } from '@/util/types'
-import type GenomicProfileLabelVue from '@/components/GenomicProfileLabel.vue';
 
 export default {
   name: 'HomeView',
   data() {
     return {
-      router: useRouter(),
-      menu_items: [
-        {
-          label: 'Home',
-          icon: 'pi pi-home',
-          route: '/home'
-        },
-        {
-          label: 'About',
-          icon: 'pi pi-star',
-          route: '/about'
-        }
-      ],
-      filter_dialog_visible: false,
-      filtered_table_count: 0,
-      filters_table: {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-      },
-      // perPage: 10,
-      // firstRow: 0,
-      // page: 1,
-      // pages: 1,
-      sampleCount: 0,
+      displayDialogFilter: false,
+      selectedRow: null,
+      displayDialogRow: false,
+      displayDialogExport: false,
+      exportFormat: 'csv',
       samples: [],
       filteredStatistics: {},
+      filteredCount: 0,
+      perPage: 10,
+      firstRow: 0,
+      page: 1,
+      pages: 1,
       loading: false,
+      isFiltersSet: false,
+      ordering: '-collection_date',
+      notSortable: ["genomic_profiles", "proteomic_profiles"],
       propertyOptions: [],
       repliconAccessionOptions: [],
+      lineageOptions: [],
       allColumns: [],
-      selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code'],
+      selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles'],
       propertyValueOptions: {} as {
         [key: string]: {
           options: string[];
@@ -190,7 +188,7 @@ export default {
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [] }
+        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
       } as FilterGroup,
       DjangoFilterType,
     };
@@ -198,19 +196,48 @@ export default {
   methods: {
     async updateSamples() {
       this.loading = true;
-      const res = await API.getInstance().getSampleGenomes(this.filters);
+      const params = {
+        limit: this.perPage,
+        offset: this.firstRow,
+        ordering: this.ordering
+      }
+      this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
-      this.samples = res.results;
-      this.sampleCount = res.count;
-      // this.pages = res.count / this.perPage
+      this.filteredCount = this.filteredStatistics["filtered_total_count"];
+      this.isFiltersSet = this.filters['filters']['andFilter'].length + this.filters['filters']['orFilter'].length > 0;
+      this.loading = false;
+    },
+    columnSelection(value) {
+      this.selectedColumns = value.filter(v => this.allColumns.includes(v));
+    },
+    onRowSelect(event) {
+      this.selectedRow = event.data;
+      this.displayDialogRow = true;
+    },
+    onRowUnselect(event) {
+      this.selectedRow = null;
+      this.displayDialogRow = false;
+    },
+    sortingChanged(sortBy) {
+      if (sortBy.sortOrder > 0) {
+        this.ordering = sortBy.sortField;
+      } else {
+        this.ordering = `-${sortBy.sortField}`;
+      }
+      this.updateSamples();
+    },
+    exportFile(type: string) {
+      this.displayDialogExport = false;
+      this.loading = true;
+      API.getInstance().getSampleGenomesExport(this.filters, this.selectedColumns, type == "xlsx");
       this.loading = false;
     },
     metaDataCoverage(column: string) {
-      if (this.filteredStatistics["filtered_total_count"] != undefined) {
-        const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredStatistics["filtered_total_count"] * 100).toFixed(0);
-        return 'Coverage: ' +  coverage.toString() + ' %';
+      if (this.filteredCount != 0 && this.filteredStatistics["meta_data_coverage"] != undefined) {
+        const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredCount * 100).toFixed(0);
+        return 'Coverage: ' + coverage.toString() + ' %';
       } else {
-          return '';
+        return '';
       }
     },
     chartData() {
@@ -271,23 +298,18 @@ export default {
         }
       };
     },
-    exportCSV() {
-      this.$refs.dt.exportCSV();
-    },
-    // async requestExport() {
-    //   await API.getInstance().getSampleGenomesExport(this.filters)
-    // },
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptions();
       this.propertyOptions = res.property_names;
       this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
     },
-    onToggle(value) {
-      this.selectedColumns = this.allColumns.filter(col => value.includes(col));
-    },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions();
       this.repliconAccessionOptions = res.accessions;
+    },
+    async updateLineageOptions() {
+      const res = await API.getInstance().getLineageOptions();
+      this.lineageOptions = res.lineages;
     },
     async updateSymbolOptions() {
       const res = await API.getInstance().getGeneSymbolOptions();
@@ -355,6 +377,15 @@ export default {
           });
         }
       }
+      for (const filter of filterGroup.filters.lineageFilters) {
+        if (filter.lineage) {
+          summary.andFilter.push({
+            label: filter.label,
+            lineage: filter.lineage,
+            exclude: filter.exclude
+          });
+        }
+      }
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
       }
@@ -378,109 +409,25 @@ export default {
   },
   computed: {
     filters(): FilterGroupRoot {
+
       const filters = {
         filters: this.getFilterGroupFilters(this.filterGroup),
-        // limit: this.perPage,
-        // offset: this.firstRow
       };
       return filters as FilterGroupRoot;
     }
   },
   mounted() {
+    this.updateSamples();
     this.updatePropertyOptions();
     this.updateSymbolOptions();
     this.updateRepliconAccessionOptions();
-  },
-  components: { GenomicProfileLabel }
+    this.updateLineageOptions();
+  }
 }
-
-
 
 </script>
 
 <style scoped>
-body {
-  height: 100vh;
-  width: 100vw;
-  margin: -0.5em;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #adbed3;
-}
-
-main {
-  height: 97vh;
-  width: 98vw;
-  display: flex;
-  align-items: stretch;
-  flex-direction: column;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-
-header {
-  height: 10%;
-  display: flex;
-  flex-direction: row;
-  align-items: left;
-  padding: 20px;
-  background-color: var(--primary-color);
-}
-
-.menu {
-  margin-left: 35%;
-}
-
-/* .p-menubar {
-    background-color: transparent;
-  }
-  :deep(.p-menubar .p-menubar-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link .p-menuitem-text) {
-    color: white;
-  } */
-
-:deep(.p-button) {
-  background: var(--primary-color);
-  border: 1px solid var(--primary-color-darker);
-}
-
-:deep(.p-button):hover {
-  background: var(--primary-color-lighter)
-}
-
-:deep(.p-button.p-button-outlined) {
-  background: transparent;
-  color: var(--primary-color);
-}
-
-:deep(.p-button.p-button-outlined):hover {
-  background: rgb(248, 247, 247);
-}
-
-:deep(.p-button.p-button-warning) {
-  background: var(--secondary-color);
-  border: 1px solid var(--secondary-color-darker);
-}
-
-:deep(.p-button.p-button-warning):hover {
-  background: var(--secondary-color-lighter);
-}
-
-:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
-  background: var(--primary-color);
-}
-
-.content {
-  width: 100%;
-  height: 90%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-evenly;
-  background-color: var(--text-color);
-}
-
 .input {
   height: 15%;
   width: 98%;
@@ -499,7 +446,8 @@ header {
   width: 30%;
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
+  justify-content: space-between;
+  margin-left: 20px;
   align-items: center;
 }
 
@@ -534,5 +482,40 @@ header {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+}
+
+:deep(.p-button) {
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color-darker);
+}
+
+:deep(.p-button):hover {
+  background: var(--primary-color-lighter)
+}
+
+:deep(.p-button.p-button-outlined) {
+  background: transparent;
+  color: var(--primary-color);
+}
+
+:deep(.p-button.p-button-outlined):hover {
+  background: rgb(248, 247, 247);
+}
+
+:deep(.p-button.p-button-warning) {
+  background: var(--secondary-color);
+  border: 1px solid var(--secondary-color-darker);
+}
+
+:deep(.p-button.p-button-warning):hover {
+  background: var(--secondary-color-lighter);
+}
+
+:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+  background: var(--primary-color);
+}
+
+:deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
+  background: var(--primary-color);
 }
 </style>

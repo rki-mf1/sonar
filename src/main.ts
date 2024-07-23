@@ -5,11 +5,13 @@ import 'primeicons/primeicons.css'; //icons
 import PrimeVue from 'primevue/config'
 import Menubar from "primevue/menubar";
 import Button from 'primevue/button'
+import RadioButton from 'primevue/radiobutton';
 import Dropdown from 'primevue/dropdown'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import ProgressSpinner from 'primevue/progressspinner'
 import DataTable from 'primevue/datatable'
+import Paginator from 'primevue/paginator'
 import Column from 'primevue/column'
 import Card from 'primevue/card'
 import InputSwitch from "primevue/inputswitch";
@@ -32,13 +34,12 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import FilterGroup from "./components/FilterGroup.vue";
+import GenomicProfileLabel from "./components/GenomicProfileLabel.vue";
+import SampleDetails from "./components/SampleDetails.vue";
 import Statistics from "./components/Statistics.vue";
-
 
 import App from './App.vue'
 import router from './router'
-import Menu from 'primevue/menu';
-
 
 const app = createApp(App)
 
@@ -49,6 +50,8 @@ app.use(PrimeVue)
 
 
 app.component('FilterGroup', FilterGroup)
+app.component('GenomicProfileLabel', GenomicProfileLabel)
+app.component('SampleDetails', SampleDetails)
 app.component('Statistics', Statistics)
 
 
@@ -58,10 +61,12 @@ app.component('InputIcon', InputIcon)
 app.component('Dialog', Dialog)
 app.component('MultiSelect', MultiSelect)
 app.component('Button', Button)
+app.component('RadioButton', RadioButton)
 app.component('InputText', InputText)
 app.component('Dropdown', Dropdown)
 app.component('InputNumber', InputNumber)
 app.component('DataTable', DataTable)
+app.component('Paginator', Paginator)
 app.component('Column', Column)
 app.component('Card', Card)
 app.component('ProgressSpinner', ProgressSpinner)
