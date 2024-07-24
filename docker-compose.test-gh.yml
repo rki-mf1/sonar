@@ -58,6 +58,7 @@ services:
       - .:/code
     depends_on:
       - "postgres"
+
   backend-nginx:
     build:
       context: ./nginx
@@ -96,10 +97,11 @@ services:
     depends_on:
       - redis
       - dev-django
+
   celery-monitor:
     container_name: celery-monitor
     image: backend_dev:local
-    command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456 --enable_events=False
     env_file:
       - conf/test-gh.env
     ports:
