@@ -855,32 +855,33 @@ class sonarCache:
                         with open(sample_data["seq_file"], "r") as handle:
                             orig_seq = handle.read()
 
-                        if seq != orig_seq:
+                        #if seq != orig_seq:
+                        if True:
 
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.
-                            # with open(
-                            #     os.path.join(
-                            #         self.error_dir, f"{sample_name}.error.var"
-                            #     ),
-                            #     "w+",
-                            # ) as handle:
-                            #     for vardata in iter_dna_list:
-                            #         handle.write(str(vardata) + "\n")
+                            with open(
+                                os.path.join(
+                                    self.error_dir, f"{sample_name}.error.var"
+                                ),
+                                "w+",
+                            ) as handle:
+                                for vardata in iter_dna_list:
+                                    handle.write(str(vardata) + "\n")
 
-                            # qryfile = os.path.join(
-                            #     self.error_dir, sample_name + ".error.restored_sam.fa"
-                            # )
-                            # reffile = os.path.join(
-                            #     self.error_dir, sample_name + ".error.original_sam.fa"
-                            # )
+                            qryfile = os.path.join(
+                                self.error_dir, sample_name + ".error.restored_sample.fa"
+                            )
+                            reffile = os.path.join(
+                                self.error_dir, sample_name + ".error.original_sample.fa"
+                            )
 
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.
-                            # with open(qryfile, "w+") as handle:
-                            #     handle.write(seq)
-                            # with open(reffile, "w+") as handle:
-                            #     handle.write(orig_seq)
+                            with open(qryfile, "w+") as handle:
+                                handle.write(seq)
+                            with open(reffile, "w+") as handle:
+                                handle.write(orig_seq)
 
                             #  ref_name = sample_data["refmol"]
                             #  output_paranoid = os.path.join(

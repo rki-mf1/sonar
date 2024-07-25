@@ -79,12 +79,9 @@ def wfa_cigar_n_match_to_mismatch(ref, query, cigar_ops):
     # pywfa's wildcard argument correctly doesn't penalize ambiguous nucleotides (N), but it incorrectly calls them matches in the resulting cigar string. This function changes all positions with an N inside mathces into mismatches.
     CIGAR_OP_MATCH = [0, 7]
     CIGAR_OP_INSERT = 2
-    CIGAR_OP_DEL = 1
     CIGAR_OP_MISMATCH = 8
     qry_pos = 0
     cigar_ops_new = []
-
-    cigar_orig = cigartuples_to_str(cigar_ops)
 
     for cigar_op in cigar_ops:
         operation = cigar_op[0]
@@ -97,7 +94,6 @@ def wfa_cigar_n_match_to_mismatch(ref, query, cigar_ops):
             for match in re.finditer("N+", query_subseq):
                 match_start = match.start()
                 match_end = match.end()
-                match_text = query_subseq[match_start:match_end]
                 # If there is anything before the match, create a new op and keep it as a match
                 if (last_match_end < match.start()):
                     cigar_ops_new.append((operation, match.start() - last_match_end))
@@ -116,7 +112,6 @@ def wfa_cigar_n_match_to_mismatch(ref, query, cigar_ops):
             if operation != CIGAR_OP_INSERT:
                 qry_pos += op_length
 
-    cigar_new = cigartuples_to_str(cigar_ops_new)
     return cigar_ops_new
 
 
