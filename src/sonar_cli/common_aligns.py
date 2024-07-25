@@ -42,10 +42,12 @@ def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
         gap_opening=gapopen,
         gap_extension=gapextend,
         span="ends-free",
+        distance="affine",
         pattern_begin_free=reference_length,
         pattern_end_free=reference_length,
         text_begin_free=0,
         text_end_free=0,
+        wildcard="N",
     )
     alignment = a(qryseq)
     if alignment.status != 0:  # alignment was not successful
@@ -56,6 +58,8 @@ def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
         sys.exit("--stop--")
 
     cigartuple = alignment.cigartuples
+    # Change wildcard positions to a mismatch in the cigar string
+    cigartuple = wfa_cigar_n_match_to_mismatch(refseq, qryseq, cigartuple)
     if left_align_indels:
         cigartuple = cigartuple[::-1]
     cigar = cigartuples_to_str(cigartuple)
@@ -68,6 +72,52 @@ def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
         traceback_query,
         cigar,
     )
+
+
+def wfa_cigar_n_match_to_mismatch(ref, query, cigar_ops):
+    """Helper method for pywfa, to change N from being a match to a mismatch in cigar strings"""
+    # pywfa's wildcard argument correctly doesn't penalize ambiguous nucleotides (N), but it incorrectly calls them matches in the resulting cigar string. This function changes all positions with an N inside mathces into mismatches.
+    CIGAR_OP_MATCH = [0, 7]
+    CIGAR_OP_INSERT = 2
+    CIGAR_OP_DEL = 1
+    CIGAR_OP_MISMATCH = 8
+    qry_pos = 0
+    cigar_ops_new = []
+
+    cigar_orig = cigartuples_to_str(cigar_ops)
+
+    for cigar_op in cigar_ops:
+        operation = cigar_op[0]
+        op_length = cigar_op[1]
+        query_subseq = query[qry_pos:qry_pos + op_length]
+
+        # We only do something special if there is an 'N' character in a match region
+        if operation in CIGAR_OP_MATCH and 'N' in query_subseq:
+            last_match_end = 0
+            for match in re.finditer("N+", query_subseq):
+                match_start = match.start()
+                match_end = match.end()
+                match_text = query_subseq[match_start:match_end]
+                # If there is anything before the match, create a new op and keep it as a match
+                if (last_match_end < match.start()):
+                    cigar_ops_new.append((operation, match.start() - last_match_end))
+                # Create an op for the "N" region, setting it to be a mismatch
+                cigar_ops_new.append((CIGAR_OP_MISMATCH, match.end() - match.start()))
+                last_match_end = match.end()
+
+            # If the match doesn't end in an N, add the remaining match operation.
+            if last_match_end < op_length:
+                cigar_ops_new.append((operation, op_length - last_match_end))
+
+            qry_pos += op_length
+
+        else:
+            cigar_ops_new.append(cigar_op)
+            if operation != CIGAR_OP_INSERT:
+                qry_pos += op_length
+
+    cigar_new = cigartuples_to_str(cigar_ops_new)
+    return cigar_ops_new
 
 
 # gapopen=16, gapextend=4
