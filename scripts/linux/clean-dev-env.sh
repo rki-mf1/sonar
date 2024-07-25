@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
 # Default to adding test data and also rebuilding the docker container
+DELETE=1
 REBUILD=0
 TEST_DATA=0
 
@@ -15,16 +16,21 @@ help()
   >&2 echo ""
   >&2 echo "./scripts/linux/build-dev-env.sh [-r] [-t]"
   >&2 echo ""
+  >&2 echo "  -d : delete current ./work directory containing mapped directories [default: disabled]"
   >&2 echo "  -r : *disable* rebuilding docker container [default: rebuilding enabled]"
   >&2 echo "  -t : *disable* adding test data [default: adding test data enabled]"
 }
 
 # Parse command line arguments into bash variables.
-while getopts "hrt" arg; do
+while getopts "hdrt" arg; do
   case $arg in
     h)
       help
       exit 0
+      ;;
+    d)
+      # Enable the deletion of ./work dir
+      DELETE=0
       ;;
     r)
       # Disable rebuilding the docker container
@@ -38,6 +44,10 @@ while getopts "hrt" arg; do
 done
 
 $SCRIPTPATH/dc-dev.sh down -v
+
+if [ $DELETE -eq 1 ]; then
+  sudo rm -rf ./work
+fi
 
 DC_ARGS=""
 if [ $REBUILD -eq 0 ]; then
@@ -53,3 +63,6 @@ if [ $TEST_DATA -eq 0 ]; then
 else
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth
 fi
+
+# This is a hack to resolve the annoying apserver log messages
+$SCRIPTPATH/dc-dev.sh restart dev-django-apscheduler

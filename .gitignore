@@ -18,7 +18,6 @@ venv.bak/
 .coverage
 log_improve
 .github/
-
-
 *prod.conf
 logs/
+work/
