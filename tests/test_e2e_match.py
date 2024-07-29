@@ -1,10 +1,26 @@
 from .conftest import run_cli
+from .conftest import run_cli_cmd
 
 
-def test_match(capfd, api_url):
+def test_match(api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3")
-    out, err = capfd.readouterr()
     assert code == 0
+
+
+def test_match_pipe(capfd, api_url):
+
+    result = run_cli_cmd(f"sonar-cli match --db {api_url} -r MN908947.3 ")
+    assert result.returncode == 0, f"Expected exit code 0 but got {result}"
+
+    # Check if the output contains the word "name"
+    result = run_cli_cmd(
+        f"sonar-cli match --db {api_url} -r MN908947.3 --out-cols name | head -n 10"
+    )
+    captured = capfd.readouterr()
+    assert "name" in captured.out
+    assert result.returncode == 0, f"Expected exit code 0 but got {result}"
+    # check for stderr to ensure there were not in output
+    assert "BrokenPipeError" not in captured.out
 
 
 def test_match_profile_count(capfd, api_url):

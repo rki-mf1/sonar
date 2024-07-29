@@ -19,6 +19,7 @@ import pandas as pd
 from sonar_cli.align import sonarAligner
 from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
+from sonar_cli.basic import _check_property
 from sonar_cli.basic import _check_reference
 from sonar_cli.basic import _is_import_required
 from sonar_cli.basic import _log_import_mode
@@ -98,7 +99,7 @@ class sonarUtils:
             quiet: Whether to suppress logging.
         """
         _log_import_mode(update, quiet)
-        _check_reference(db, reference)
+        reference = _check_reference(db, reference)
         start_import_time = get_current_time()
         # checks
         fasta = fasta or []
@@ -713,8 +714,8 @@ class sonarUtils:
         Returns:
             None.
         """
-        _check_reference(db, reference)
-
+        reference = _check_reference(db, reference)
+        _check_property(db, output_column)
         # if not reference:
         #    reference = dbm.get_default_reference_accession()
         #    LOGGER.info(f"Using Default Reference: {reference}")
@@ -849,20 +850,24 @@ class sonarUtils:
             return
 
         with out_autodetect(outfile) as handle:
-            sep = "\t" if tsv else ","
-            writer = csv.DictWriter(
-                handle,
-                fieldnames=first_row.keys(),
-                delimiter=sep,
-                lineterminator=os.linesep,
-            )
-            writer.writeheader()
-            writer.writerow(first_row)
+            try:
+                sep = "\t" if tsv else ","
+                writer = csv.DictWriter(
+                    handle,
+                    fieldnames=first_row.keys(),
+                    delimiter=sep,
+                    lineterminator=os.linesep,
+                )
+                writer.writeheader()
+                writer.writerow(first_row)
 
-            for row in data_iter:
-                if output_column:
-                    row = {k: row[k] for k in output_column}
-                writer.writerow(row)
+                for row in data_iter:
+                    if output_column:
+                        row = {k: row[k] for k in output_column}
+                    writer.writerow(row)
+
+            except BrokenPipeError:
+                pass
 
     # vcf
     @staticmethod
@@ -923,12 +928,13 @@ class sonarUtils:
     def get_all_references():
         rows = APIClient(base_url=BASE_URL).get_all_references()
         if not rows:
-            return {"accession": "", "description": "", "organism": ""}
+            return {"id": "", "accession": "", "taxon": "", "organism": ""}
         # only neccessary column
         modified_data = [
             {
+                "id": entry["id"],
                 "accession": entry["accession"],
-                "description": entry["description"],
+                "taxon": entry["db_xref"],
                 "organism": entry["organism"],
             }
             for entry in rows

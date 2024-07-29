@@ -612,14 +612,37 @@ def remove_empty_lists(d):
         return d
 
 
+def _check_property(db=None, prop_name_list: list[str] = []):
+    json_response = APIClient(base_url=BASE_URL).get_all_properties()
+    available_names = {item["name"] for item in json_response["values"]}
+    for k in prop_name_list:
+        if k == "name":
+            continue
+        if k not in available_names:
+            LOGGER.error(
+                f"Key '{k}' not found in database, please check the typo or add it (add-prop) or list all properties (list-prop)."
+            )
+            sys.exit(1)
+
+
 def _check_reference(db=None, reference=None):
     base_url = db if db else BASE_URL
-    accession_list = APIClient(base_url=base_url).get_distinct_reference()
-    if reference is not None and reference not in accession_list:
-        LOGGER.error(f"Check reference: The reference {reference} does not exist.")
-        sys.exit(1)
-    # else:
-    #     LOGGER.info(f"Check reference: The reference {reference} does exist.")
+    accession_list = APIClient(base_url=base_url).get_all_references()
+
+    # Create a mapping of IDs and accessions
+    id_to_accession = {str(entry["id"]): entry["accession"] for entry in accession_list}
+    accession_set = {entry["accession"] for entry in accession_list}
+
+    if reference is not None:
+        # Map ID to accession
+        if reference in id_to_accession:
+            reference = id_to_accession[reference]
+            LOGGER.info(f"The reference {reference} is used.")
+        elif reference not in accession_set:
+            LOGGER.error(f"Check reference: The reference {reference} does not exist.")
+            sys.exit(1)
+        # else reference is valid accession, no need to change it
+    return reference
 
 
 def _log_import_mode(update: bool, quiet: bool):

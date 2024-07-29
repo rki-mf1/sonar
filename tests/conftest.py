@@ -1,4 +1,5 @@
 import re
+import subprocess
 
 import pytest
 from sonar_cli import sonar
@@ -50,3 +51,10 @@ def split_cli(s):
 def run_cli(s):
     """Helper function to simulate running the command line ./sonar <args>"""
     return sonar.main(sonar.parse_args(split_cli(s)))
+
+
+def run_cli_cmd(command):
+    """
+    A helper function to run the CLI command over cmd or subprocess.
+    """
+    return subprocess.run(command, shell=True)
