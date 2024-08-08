@@ -855,8 +855,7 @@ class sonarCache:
                         with open(sample_data["seq_file"], "r") as handle:
                             orig_seq = handle.read()
 
-                        #if seq != orig_seq:
-                        if True:
+                        if seq != orig_seq:
 
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.

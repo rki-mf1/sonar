@@ -92,8 +92,6 @@ def wfa_cigar_n_match_to_mismatch(ref, query, cigar_ops):
         if operation in CIGAR_OP_MATCH and 'N' in query_subseq:
             last_match_end = 0
             for match in re.finditer("N+", query_subseq):
-                match_start = match.start()
-                match_end = match.end()
                 # If there is anything before the match, create a new op and keep it as a match
                 if (last_match_end < match.start()):
                     cigar_ops_new.append((operation, match.start() - last_match_end))
