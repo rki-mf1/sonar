@@ -11,7 +11,7 @@ from rest_framework import generics
 import zipfile
 from datetime import datetime
 
-from django.db.utils  import IntegrityError
+from django.db.utils import IntegrityError
 from django.db.models import Count, F, Q
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from django_filters.rest_framework import DjangoFilterBackend
@@ -440,7 +440,7 @@ class PropertyViewSet(
                 "No property_name provided.", status=status.HTTP_400_BAD_REQUEST
             )
         sample_property_fields = [
-            field.name for field in models.Sample._meta.get_fields() 
+            field.name for field in models.Sample._meta.get_fields()
         ]
         if property_name in sample_property_fields:
             queryset = models.Sample.objects.all()
@@ -568,33 +568,60 @@ class PropertyViewSet(
             {
                 "name": "collection_date",
                 "query_type": "value_date",
-                "description": "Collected date of sample",
+                "description": "Date when the sample was collected (predefined prop.)"
             },
             {
                 "name": "length",
                 "query_type": "value_integer",
-                "description": "Length of sequence",
+                "description": "Length of the genetic sequence (predefined prop.)"
             },
-            {"name": "lab", "query_type": "value_varchar", "description": ""},
-            {"name": "zip_code", "query_type": "value_varchar", "description": ""},
+            {
+                "name": "lab",
+                "query_type": "value_varchar",
+                "description": "Name of the laboratory where the sample was analyzed (predefined prop.)"
+            },
+            {
+                "name": "zip_code",
+                "query_type": "value_varchar",
+                "description": "ZIP code of the location where the sample was collected (predefined prop.)"
+            },
             {
                 "name": "host",
                 "query_type": "value_varchar",
-                "description": "A host (e.g., Human)",
+                "description": "Host organism from which the sample was taken (e.g., Human) (predefined prop.)"
             },
             {
                 "name": "genome_completeness",
                 "query_type": "value_varchar",
-                "description": "Genome completeness (partial/complete)",
+                "description": "Completeness of the genome (e.g., partial or complete) (predefined prop.)"
             },
-            {"name": "lineage", "query_type": "value_varchar", "description": ""},
+            {
+                "name": "lineage",
+                "query_type": "value_varchar",
+                "description": "Lineage (predefined prop.)"
+            },
             {
                 "name": "sequencing_tech",
                 "query_type": "value_varchar",
-                "description": "",
+                "description": "Technology used for sequencing the genome (predefined prop.)"
             },
-            {"name": "country", "query_type": "value_varchar", "description": ""},
+            {
+                "name": "country",
+                "query_type": "value_varchar",
+                "description": "Country where the sample was collected (predefined prop.)"
+            },
+            {
+                "name": "init_upload_date",
+                "query_type": "value_date",
+                "description": "Date when the sample data was initially uploaded to the database (predefined prop.)"
+            },
+            {
+                "name": "last_update_date",
+                "query_type": "value_date",
+                "description": "Date when the sample data was last updated in the database (predefined prop.)"
+            }
         ]  # from SAMPLE TABLE
+
         cols = [
             "name",
             "query_type",
@@ -616,18 +643,23 @@ class PropertyViewSet(
     def get_distinct_property_names():
         queryset = models.Property.objects.all()
         queryset = queryset.distinct("name")
-        filter_list = ['id', 'datahash']
+        filter_list = ["id", "datahash"]
         property_names = [item.name for item in queryset]
-        sample_properties = [field.name for field in models.Sample._meta.get_fields() if field.name not in filter_list]
+        sample_properties = [
+            field.name
+            for field in models.Sample._meta.get_fields()
+            if field.name not in filter_list
+        ]
         property_names += sample_properties
         return property_names
-    
+
     @staticmethod
     def get_custom_property_names():
         queryset = models.Property.objects.all()
         queryset = queryset.distinct("name")
         property_names = [item.name for item in queryset]
         return property_names
+
 
 class MutationFrequencySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -743,7 +775,7 @@ class FileUploadViewSet(viewsets.ViewSet):
             proJobID_obj, _ = models.ProcessingJob.objects.get_or_create(
                 status="Q", job_name=jobID
             )
-        except (IntegrityError ) as e:
+        except IntegrityError as e:
             proJobID_obj = models.ProcessingJob.objects.get(job_name=jobID)
 
         models.FileProcessing.objects.create(
@@ -781,12 +813,14 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
-    
+
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
         distinc_lineages = []
         for lineage in models.Lineage.objects.all():
-            if lineage.lineage == "": # case of lineages without '.', e.g "A", "B", "XBB", etc
+            if (
+                lineage.lineage == ""
+            ):  # case of lineages without '.', e.g "A", "B", "XBB", etc
                 combined_lineage = f"{lineage.prefixed_alias}{lineage.lineage}"
             else:
                 combined_lineage = f"{lineage.prefixed_alias}.{lineage.lineage}"
@@ -842,7 +876,11 @@ class TasksView(
                     {"file_name": file.file_name, "status_list": logs_data}
                 )
             return Response(
-                data={"jobID": job_id, "status": jobID_obj.status ,"detail": files_data},
+                data={
+                    "jobID": job_id,
+                    "status": jobID_obj.status,
+                    "detail": files_data,
+                },
                 status=status.HTTP_200_OK,
             )
         except models.ProcessingJob.DoesNotExist:
