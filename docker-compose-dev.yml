@@ -51,8 +51,8 @@ services:
       - conf/dev_secrets.env
     container_name: dev-covsonar-django
     restart: unless-stopped
-    command: gunicorn  --workers 2 --threads 2 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application --timeout 300
-    # command: python manage.py runserver 0.0.0.0:9080
+    #command: gunicorn  --workers 2 --threads 2 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application --timeout 300
+    command: python manage.py runserver 0.0.0.0:9080
     # enable this and "django_extensions" in settings.dev to enable per request profiling
     # also create the ./profiler directory in project root
     # command: python manage.py runprofileserver --use-cprofile --prof-path=/code/profiler 0.0.0.0:9080
