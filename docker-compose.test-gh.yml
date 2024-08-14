@@ -13,6 +13,12 @@ services:
       - conf/test-gh.env
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 10
+      start_period: 30s
+      timeout: 10s
 
   dev-django:
     image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
@@ -32,8 +38,10 @@ services:
       - './logs/:/covsonarlogs'
       - ./tmp/wkdir:/tmp/wkdir # working directory of import process
     depends_on:
-      - "postgres"
-      - "redis"
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     ports:
       # to access directly, normally can use localhost:8000 via the nginx proxy
       - "9080"
@@ -60,7 +68,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - "dev-django"
+      postgres:
+        condition: service_healthy
 
   redis:
     image: redis:7
@@ -68,6 +77,7 @@ services:
     restart: unless-stopped
     ports:
       - 6379
+
   celery-workers:
     container_name: celery-workers
     image: backend_dev:local

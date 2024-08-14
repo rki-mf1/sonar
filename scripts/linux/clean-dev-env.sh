@@ -20,12 +20,12 @@ help()
 }
 
 # Parse command line arguments into bash variables.
-while getopts "hrt:" arg; do
+while getopts "hrt" arg; do
   case $arg in
-#    h)
-#      help()
-#      exit
-#      ;;
+    h)
+      help
+      exit 0
+      ;;
     r)
       # Disable rebuilding the docker container
       REBUILD=1
@@ -37,13 +37,15 @@ while getopts "hrt:" arg; do
   esac
 done
 
-$SCRIPTPATH/dc-dev.sh down
+$SCRIPTPATH/dc-dev.sh down -v
 
+DC_ARGS=""
 if [ $REBUILD -eq 0 ]; then
   $SCRIPTPATH/build-docker-dev.sh
+  DC_ARGS="--build"
 fi
 
-$SCRIPTPATH/dc-dev.sh up -d
+$SCRIPTPATH/dc-dev.sh up -d $DC_ARGS
 $SCRIPTPATH/dev-manage.sh migrate
 
 if [ $TEST_DATA -eq 0 ]; then

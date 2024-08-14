@@ -40,6 +40,12 @@ services:
       - ./conf/initdb/:/docker-entrypoint-initdb.d/
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
 
   sonar-backend-django:
     image: backend:latest # hint: must be built before, use "build_docker_dev.ps1"
@@ -64,8 +70,10 @@ services:
       # - /tmp/sonar_backend/processing_data:${SONAR_DATA_PROCESSING_FOLDER}
       # - /tmp/sonar_backend/archive_data:${SONAR_DATA_ARCHIVE}
     depends_on:
-      - "postgres"
-      - "redis"
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     # ports:
     #   # to access directly, normally can use localhost:8000 via the nginx proxy
     #   - "9080"
@@ -79,7 +87,8 @@ services:
     command: >
       bash -c "python manage.py runapscheduler"
     depends_on:
-      - "postgres"
+      postgres:
+        condition: service_healthy
 
   celery-workers:
     container_name: celery-workers
