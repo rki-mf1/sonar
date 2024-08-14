@@ -1,5 +1,23 @@
 [
   {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$Gx0HhjxZV7WEn8oaXBL8TL$CsD/ISsNvtwuqMzHEIjhDz1ZvUQ6GZbwvtOSmmNtyLk=",
+      "last_login": "2024-03-29T03:03:44.355Z",
+      "is_superuser": true,
+      "username": "root",
+      "first_name": "",
+      "last_name": "",
+      "email": "",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2024-03-29T03:03:15.202Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
     "model": "auth.group",
     "fields": {
       "name": "admin",

@@ -111,7 +111,7 @@ services:
   celery-monitor:
     container_name: celery-monitor
     image: backend_dev:local
-    command: celery -A covsonar_backend flower --port=5555 --basic_auth=${BASIC_AUTH}
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth=${BASIC_AUTH} --enable_events=False
     env_file:
       - .prod.env
     ports:
