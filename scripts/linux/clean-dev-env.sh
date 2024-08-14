@@ -45,7 +45,7 @@ done
 
 $SCRIPTPATH/dc-dev.sh down -v
 
-if [ $DELETE -eq 1 ]; then
+if [ $DELETE -eq 0 ]; then
   sudo rm -rf ./work
 fi
 

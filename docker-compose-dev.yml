@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   # Needed to run postgres as a non-root user. This runs as root and sets the
   # postgres data directory to be owned by the non-root user that will run
@@ -11,7 +9,7 @@ services:
       - conf/dev_db.env
       - conf/dev_django.env
     volumes:
-      - ${EXTERNAL_POSTGRES_DATA}:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
     entrypoint: /bin/sh -c
     command: [ "chown -R ${POSTGRES_UID_GID} /var/lib/postgresql/data" ]
 
@@ -28,7 +26,7 @@ services:
       # This exact path inside the container needs to be mapped to a volume,
       # otherwise it will automatically be mapped to a volume inside of the
       # host's /var/lib/docker/volumes directory
-      - ${EXTERNAL_POSTGRES_DATA}:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
     env_file:
       - conf/dev_db.env
       - conf/dev_django.env
@@ -59,11 +57,12 @@ services:
     volumes:
       - ./covsonar2_server/test/media:/covsonarmedia
       - ./covsonar2_server/test/static:/staticfiles
-      - ${EXTERNAL_SONAR_LOGS}:${LOG_PATH}
-      - ${EXTERNAL_SONAR_INPUT_LOGS}:/input-logs
-      - ${EXTERNAL_SONAR_DATA_ENTRY_FOLDER}:${SONAR_DATA_ENTRY_FOLDER}
-      - ${EXTERNAL_SONAR_DATA_PROCESSING_FOLDER}:${SONAR_DATA_PROCESSING_FOLDER}
-      - ${EXTERNAL_SONAR_DATA_ARCHIVE}:${SONAR_DATA_ARCHIVE}
+      - ${SONAR_EXTERNAL}/logs:${LOG_PATH}
+      - ${SONAR_EXTERNAL}/input-logs:/input-logs
+      - ${SONAR_EXTERNAL}/data/import:${SONAR_DATA_ENTRY_FOLDER}
+      - ${SONAR_EXTERNAL}/data/processing:${SONAR_DATA_PROCESSING_FOLDER}
+      - ${SONAR_EXTERNAL}/data/archive:${SONAR_DATA_ARCHIVE}
+      - ${SONAR_EXTERNAL}/coverage:/code/coverage 
     depends_on:
       redis:
         condition: service_started
