@@ -50,6 +50,7 @@ class VCFInfoANNRaw:
 @dataclass
 class MutationLookupToAnnotations:
     start: str
+    end: str
     ref: str
     alt: str
     replicon__accession: str
@@ -67,7 +68,7 @@ class AnnotationImport:
         self.fetch_alignments()
         self.mutation_lookups_to_annotations = self.convert_lines()
         self.annotation_q_obj = Q()
-        
+
     def _import_vcf(self):
         with open(self.vcf_file_path, "r") as handle:
             for line in handle:
@@ -108,8 +109,7 @@ class AnnotationImport:
             try:
                 self.sample_to_sequence[sample.name] = sample.sequence
             except KeyError:
-                continue                
-                
+                continue
 
     def fetch_alignments(self):
         q_obj = Q()
@@ -121,7 +121,7 @@ class AnnotationImport:
                         replicon__accession=replicon,
                     )
                 except KeyError:
-                    continue  
+                    continue
         alignments = Alignment.objects.filter(q_obj).prefetch_related(
             "sequence__sample_set"
         )
@@ -150,7 +150,9 @@ class AnnotationImport:
                     if occurence == f"0/{sample_index}":
                         samples.append(sample)
                 mutation_lookup_to_annotations = MutationLookupToAnnotations(
-                    start=line.pos - 1,  # snp (we deduct by one because our database use 0-based)
+                    start=line.pos
+                    - 1,  # snp (we deduct by one because our database use 0-based)
+                    end=int(line.pos),
                     ref=line.ref,
                     alt=alt,
                     replicon__accession=line.chrom,
@@ -159,13 +161,20 @@ class AnnotationImport:
                 )
                 if len(alt) < len(mutation_lookup_to_annotations.ref):
                     # deletion and alt not null
+                    # because in vcf it always show the positon before deletion
+                    # for example; MN908947.3	506	.	CATGGTCATGTTATGGTTG	C
                     mutation_lookup_to_annotations.start += 1
+                    mutation_lookup_to_annotations.end = (
+                        mutation_lookup_to_annotations.end
+                        + len(mutation_lookup_to_annotations.ref)
+                        - 1
+                    )
                     # add None here if we dont want to keep the deletion in ref
-                    # column, however the program frozen once I change to 
+                    # column, however the program frozen once I change to
                     # mutation_lookup_to_annotations.ref = None
-                    mutation_lookup_to_annotations.ref = "" #  mutation_lookup_to_annotations.ref[1:]
+                    mutation_lookup_to_annotations.ref = "" 
                     mutation_lookup_to_annotations.alt = None
-                    
+
                 mutation_lookups_to_annotations.append(mutation_lookup_to_annotations)
         return mutation_lookups_to_annotations
 
@@ -198,20 +207,21 @@ class AnnotationImport:
         for mutation_lookup_to_annotations in self.mutation_lookups_to_annotations:
             q_obj |= Q(
                 start=mutation_lookup_to_annotations.start,
+                end=mutation_lookup_to_annotations.end,
                 ref=mutation_lookup_to_annotations.ref,
                 alt=mutation_lookup_to_annotations.alt,
                 replicon__accession=mutation_lookup_to_annotations.replicon__accession,
-                type='nt'
+                type="nt",
             )
         mutations = Mutation.objects.filter(q_obj).prefetch_related("replicon")
         annotation_q_obj = Q()
-        relation_info = {} 
+        relation_info = {}
         for mutation in mutations:
             # Problem 1: some samples got error 'StopIteration'
-            # I think because there are no items in the filtered iterable 
-            # that match the conditions specified by the lambda function 
-            # But How did this can happen?, 
-            # Solution: because there are cds and nt at the same position we should filter only NT     
+            # I think because there are no items in the filtered iterable
+            # that match the conditions specified by the lambda function
+            # But How did this can happen?,
+            # Solution: because there are cds and nt at the same position we should filter only NT
 
             try:
                 mut_lookup_to_annotation = self.mutation_lookups_to_annotations.pop(
@@ -219,9 +229,11 @@ class AnnotationImport:
                         next(
                             filter(
                                 lambda x: int(x.start) == int(mutation.start)
+                                and int(x.end) == int(mutation.end)
                                 and x.ref == mutation.ref
                                 and x.alt == mutation.alt
-                                and x.replicon__accession == mutation.replicon.accession,
+                                and x.replicon__accession
+                                == mutation.replicon.accession,
                                 self.mutation_lookups_to_annotations,
                             )
                         )
@@ -229,23 +241,26 @@ class AnnotationImport:
                 )
             except (ValueError, StopIteration) as e:
                 LOGGER.error(f"Error: {e}")
-                LOGGER.error(f"Mutation details: start={mutation.start}, ref={mutation.ref}, alt={mutation.alt}, replicon__accession={mutation.replicon.accession}")
+                LOGGER.error(
+                    f"Mutation details: start={mutation.start}, end={mutation.end}, ref={mutation.ref}, alt={mutation.alt}, replicon__accession={mutation.replicon.accession}"
+                )
                 raise
-                
+
             # print(mut_lookup_to_annotation)
             # Problem 2: We have too many entries in mut_lookup_to_annotation.annotations.
             # For example, if we have the mutation MN908947.3 26565 . A ANNNNNNN (insertion with ambiguous lots of Ns),
             # snpEff tries to predict the effect for every possible combination:
             # insCAAAAAA, insCAAAAAC, insCAAAAAG, insCAAAAAT, ..., insTAAAAAA, ..., insGAAAAAA.
-            # This can generate a lookup annotation size of 4 (A,T,C,G) to the power of N (position). 
+            # This can generate a lookup annotation size of 4 (A,T,C,G) to the power of N (position).
             # In this case, 4 to the power of 7 equals 16384.
             # Currently, we only use ontology (e.g., frameshift_variant) and annotation_impact (e.g., HIGH),
             # which means a potentially highly redundant query, hence taking too long to finish the import process (> 10 mins).
-            
+
             # Temporary solution: reduce the redundancy in alleles, annotations, and impacts.
             # we skip processing based on alleles, annotations, and impacts
-            seen = set()       
-            for a in mut_lookup_to_annotation.annotations:  # start to pass each VCFInfoANNRaw
+            seen = set()
+            # start to pass each VCFInfoANNRaw
+            for a in mut_lookup_to_annotation.annotations:
                 key = (a.allele, a.annotation, a.annotation_impact)
                 if key in seen:
                     continue

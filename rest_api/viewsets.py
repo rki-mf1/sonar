@@ -566,60 +566,75 @@ class PropertyViewSet(
         # fixed datatype accroding to the Sample Table.
         data_list = [
             {
+                "name": "name",
+                "query_type": "value_varchar",
+                "description": "sample name or ID (fixed prop.)",
+            },
+            {
+                "name": "genomic_profiles",
+                "query_type": "value_varchar",
+                "description": "list of neuclotide mutation (fixed prop.)",
+            },
+            {
+                "name": "proteomic_profiles",
+                "query_type": "value_varchar",
+                "description": "list of amino acid mutation (fixed prop.)",
+            },
+            {
                 "name": "collection_date",
                 "query_type": "value_date",
-                "description": "Date when the sample was collected (predefined prop.)"
+                "description": "Date when the sample was collected (predefined prop.)",
             },
             {
                 "name": "length",
                 "query_type": "value_integer",
-                "description": "Length of the genetic sequence (predefined prop.)"
+                "description": "Length of the genetic sequence (predefined prop.)",
             },
             {
                 "name": "lab",
                 "query_type": "value_varchar",
-                "description": "Name of the laboratory where the sample was analyzed (predefined prop.)"
+                "description": "Name of the laboratory where the sample was analyzed (predefined prop.)",
             },
             {
                 "name": "zip_code",
                 "query_type": "value_varchar",
-                "description": "ZIP code of the location where the sample was collected (predefined prop.)"
+                "description": "ZIP code of the location where the sample was collected (predefined prop.)",
             },
             {
                 "name": "host",
                 "query_type": "value_varchar",
-                "description": "Host organism from which the sample was taken (e.g., Human) (predefined prop.)"
+                "description": "Host organism from which the sample was taken (e.g., Human) (predefined prop.)",
             },
             {
                 "name": "genome_completeness",
                 "query_type": "value_varchar",
-                "description": "Completeness of the genome (e.g., partial or complete) (predefined prop.)"
+                "description": "Completeness of the genome (e.g., partial or complete) (predefined prop.)",
             },
             {
                 "name": "lineage",
                 "query_type": "value_varchar",
-                "description": "Lineage (predefined prop.)"
+                "description": "Lineage (predefined prop.)",
             },
             {
                 "name": "sequencing_tech",
                 "query_type": "value_varchar",
-                "description": "Technology used for sequencing the genome (predefined prop.)"
+                "description": "Technology used for sequencing the genome (predefined prop.)",
             },
             {
                 "name": "country",
                 "query_type": "value_varchar",
-                "description": "Country where the sample was collected (predefined prop.)"
+                "description": "Country where the sample was collected (predefined prop.)",
             },
             {
                 "name": "init_upload_date",
                 "query_type": "value_date",
-                "description": "Date when the sample data was initially uploaded to the database (predefined prop.)"
+                "description": "Date when the sample data was initially uploaded to the database (predefined prop.)",
             },
             {
                 "name": "last_update_date",
                 "query_type": "value_date",
-                "description": "Date when the sample data was last updated in the database (predefined prop.)"
-            }
+                "description": "Date when the sample data was last updated in the database (predefined prop.)",
+            },
         ]  # from SAMPLE TABLE
 
         cols = [

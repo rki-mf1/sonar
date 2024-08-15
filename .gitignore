@@ -20,4 +20,7 @@ log_improve
 .github/
 *prod.conf
 logs/
+
+
+tmp/
 work/
