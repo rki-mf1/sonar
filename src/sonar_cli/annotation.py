@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 from typing import Optional
@@ -14,14 +13,12 @@ class Annotator:
     def __init__(
         self,
         annotator_exe_path=None,
-        SNPSIFT_exe_path=None,
         VCF_ONEPERLINE_PATH=None,
         config_path=None,
         cache: Optional[sonarCache] = None,
     ) -> None:
         # "snpEff/SnpSift.jar"
         self.annotator = annotator_exe_path
-        self.SNPSIFT = SNPSIFT_exe_path
         self.VCF_ONEPERLINE_TOOL = VCF_ONEPERLINE_PATH
         self.config_path = config_path
         self.sonar_cache = cache
@@ -67,48 +64,48 @@ class Annotator:
             with open(self.sonar_cache.error_logfile_name, "a+") as writer:
                 writer.write("Fail bcftools_filter:" + filter_command + "\n")
 
-    def bcftools_split(
-        self, input_vcf, output_vcfs=[], map_name_annovcf_dict: dict = {}
-    ):
-        filtered_vcf = f"{input_vcf}.filtered"
-        # Define the command to filter the VCF file
-        filter_command = (
-            f"bcftools view -e 'INFO/ANN=\".\"' {input_vcf} > {filtered_vcf}"
-        )
+    # def bcftools_split(
+    #     self, input_vcf, output_vcfs=[], map_name_annovcf_dict: dict = {}
+    # ):
+    #     filtered_vcf = f"{input_vcf}.filtered"
+    #     # Define the command to filter the VCF file
+    #     filter_command = (
+    #         f"bcftools view -e 'INFO/ANN=\".\"' {input_vcf} > {filtered_vcf}"
+    #     )
 
-        # Execute the filter command
-        filter_process = subprocess.run(filter_command, shell=True)
-        if filter_process.returncode != 0:
-            LOGGER.error("Error occurred while filtering the VCF file.")
-            with open(self.sonar_cache.error_logfile_name, "a+") as writer:
-                writer.write("Fail bcftools_split:" + filter_command + "\n")
-        # Get the list of sample names from the command output
-        sample_names_cmd = f"bcftools query -l {filtered_vcf}"
-        sample_names_process = subprocess.run(
-            sample_names_cmd, shell=True, capture_output=True, text=True
-        )
+    #     # Execute the filter command
+    #     filter_process = subprocess.run(filter_command, shell=True)
+    #     if filter_process.returncode != 0:
+    #         LOGGER.error("Error occurred while filtering the VCF file.")
+    #         with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+    #             writer.write("Fail bcftools_split:" + filter_command + "\n")
+    #     # Get the list of sample names from the command output
+    #     sample_names_cmd = f"bcftools query -l {filtered_vcf}"
+    #     sample_names_process = subprocess.run(
+    #         sample_names_cmd, shell=True, capture_output=True, text=True
+    #     )
 
-        if sample_names_process.returncode != 0:
-            LOGGER.error("Error occurred while getting sample names.")
-            LOGGER.error("Error output:", sample_names_process)
-            exit()
+    #     if sample_names_process.returncode != 0:
+    #         LOGGER.error("Error occurred while getting sample names.")
+    #         LOGGER.error("Error output:", sample_names_process)
+    #         exit()
 
-        sample_names = sample_names_process.stdout.strip().split()
+    #     sample_names = sample_names_process.stdout.strip().split()
 
-        # Process each sample
-        for sample in sample_names:
-            anno_vcf = map_name_annovcf_dict[sample]
-            # --no-header suppress the header in VCF output
-            cmd = f"bcftools view --exclude-uncalled --no-header --trim-alt-alleles -s {sample} {filtered_vcf} -Oz -o {anno_vcf}"
-            process = subprocess.run(cmd, shell=True)
+    #     # Process each sample
+    #     for sample in sample_names:
+    #         anno_vcf = map_name_annovcf_dict[sample]
+    #         # --no-header suppress the header in VCF output
+    #         cmd = f"bcftools view --exclude-uncalled --no-header --trim-alt-alleles -s {sample} {filtered_vcf} -Oz -o {anno_vcf}"
+    #         process = subprocess.run(cmd, shell=True)
 
-            if process.returncode != 0:
-                LOGGER.error(f"Error occurred while processing sample {sample}")
-                with open(self.sonar_cache.error_logfile_name, "a+") as writer:
-                    writer.write("Fail bcftools_split:" + cmd + "\n")
+    #         if process.returncode != 0:
+    #             LOGGER.error(f"Error occurred while processing sample {sample}")
+    #             with open(self.sonar_cache.error_logfile_name, "a+") as writer:
+    #                 writer.write("Fail bcftools_split:" + cmd + "\n")
 
-        if os.path.exists(filtered_vcf):
-            os.remove(filtered_vcf)
+    #     if os.path.exists(filtered_vcf):
+    #         os.remove(filtered_vcf)
 
     def bcftools_merge(self, input_vcfs, output_vcf):
         # Loop through each input VCF path
