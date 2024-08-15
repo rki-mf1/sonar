@@ -48,7 +48,7 @@ jobs:
             conda info
             poetry lock --no-update
             poetry install
-            pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
+            poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
         - name: Hello sonar-cli 🐶
           run: sonar-cli -v
         - name: Checkout 🙈
