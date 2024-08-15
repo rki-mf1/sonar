@@ -449,10 +449,12 @@ def construct_query(  # noqa: C901
 
                         # Determine the operator
                         operator = get_operator(
-                            "LIKE"
-                            if extract_value.startswith("%")
-                            or extract_value.endswith("%")
-                            else "exact",
+                            (
+                                "LIKE"
+                                if extract_value.startswith("%")
+                                or extract_value.endswith("%")
+                                else "exact"
+                            ),
                         )
 
                         _query = {

@@ -38,6 +38,7 @@ from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
+from sonar_cli.config import CHUNK_SIZE
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
 
@@ -241,11 +242,14 @@ class sonarUtils:
         if not fasta_files:
             return
         start_seqcheck_time = get_current_time()
-        sample_data_dict_list = cache.add_fasta_v2(*fasta_files, method=method)
-
-        cache.logfile_obj.write(
-            f"Sequence check usage time: {calculate_time_difference(start_seqcheck_time, get_current_time())}\n"
+        sample_data_dict_list = cache.add_fasta_v2(
+            *fasta_files, method=method, chunk_size=CHUNK_SIZE
         )
+        prepare_seq_time = calculate_time_difference(
+            start_seqcheck_time, get_current_time()
+        )
+        LOGGER.info(f"Sequence check usage time: {prepare_seq_time}\n")
+        cache.logfile_obj.write(f"Sequence check usage time: {prepare_seq_time}\n")
         LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
 
         # Align sequences and process
@@ -562,7 +566,7 @@ class sonarUtils:
                     propnames["sample"] = col
 
         else:
-            LOGGER.info("Reading property names from user-provided --cols")
+            LOGGER.info("Reading property names from user-provided '--cols'")
             for link in prop_links:
                 if link.count("=") != 1:
                     LOGGER.error(
@@ -721,9 +725,9 @@ class sonarUtils:
         #    LOGGER.info(f"Using Default Reference: {reference}")
 
         params = {}
-        params[
-            "filters"
-        ] = '{"andFilter":[{"label":"Property","property_name":"sequencing_reason","filter_type":"exact","value":"N"}],"orFilter":[]}'
+        params["filters"] = (
+            '{"andFilter":[{"label":"Property","property_name":"sequencing_reason","filter_type":"exact","value":"N"}],"orFilter":[]}'
+        )
 
         params["filters"] = json.dumps(
             construct_query(
@@ -741,9 +745,9 @@ class sonarUtils:
         params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
-        params[
-            "limit"
-        ] = 999999999999999999  # hack (to get all result by using max bigint)
+        params["limit"] = (
+            999999999999999999  # hack (to get all result by using max bigint)
+        )
         params["offset"] = 0
 
         LOGGER.debug(params["filters"])
@@ -751,7 +755,7 @@ class sonarUtils:
         json_response = APIClient(
             base_url=BASE_URL
         ).get_variant_profile_bymatch_command(params=params)
-
+        LOGGER.info("Write outputs...")
         if "results" in json_response:
             rows = json_response
         else:
@@ -863,9 +867,12 @@ class sonarUtils:
 
                 for row in data_iter:
                     if output_column:
-                        row = {k: row[k] for k in output_column}
+                        row = {k: row.get(k, None) for k in output_column}
                     writer.writerow(row)
-
+            except ValueError as e:
+                LOGGER.error(f" error at row: {row}")
+                LOGGER.error(e)
+                raise
             except BrokenPipeError:
                 pass
 
