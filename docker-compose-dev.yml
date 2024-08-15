@@ -47,6 +47,10 @@ services:
     env_file:
       - conf/dev_django.env
       - conf/dev_secrets.env
+    environment:
+      - SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE
     container_name: dev-covsonar-django
     restart: unless-stopped
     #command: gunicorn  --workers 2 --threads 2 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application --timeout 300
@@ -59,9 +63,7 @@ services:
       - ./covsonar2_server/test/static:/staticfiles
       - ${SONAR_EXTERNAL}/logs:${LOG_PATH}
       - ${SONAR_EXTERNAL}/input-logs:/input-logs
-      - ${SONAR_EXTERNAL}/data/import:${SONAR_DATA_ENTRY_FOLDER}
-      - ${SONAR_EXTERNAL}/data/processing:${SONAR_DATA_PROCESSING_FOLDER}
-      - ${SONAR_EXTERNAL}/data/archive:${SONAR_DATA_ARCHIVE}
+      - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
       - ${SONAR_EXTERNAL}/coverage:/code/coverage 
     depends_on:
       redis:
@@ -77,12 +79,16 @@ services:
     env_file:
       - conf/dev_django.env
       - conf/dev_secrets.env
+    environment:
+      - SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE
     container_name: dev-covsonar-django-apscheduler
     restart: on-failure
     command: >
       bash -c "python manage.py runapscheduler"
     volumes:
-      - .:/code
+      - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,10 +125,14 @@ services:
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
     command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair  --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
     volumes:
-      - .:/code # working directory of import process
+      - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     env_file:
       - conf/dev_django.env
       - conf/dev_secrets.env
+    environment:
+      - SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE
     depends_on:
       - redis
       - dev-django
