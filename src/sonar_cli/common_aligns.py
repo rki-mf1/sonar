@@ -3,7 +3,6 @@ import sys
 
 from Bio.Align.Applications import MafftCommandline
 import parasail
-import psutil
 from pywfa import cigartuples_to_str
 from pywfa import WavefrontAligner
 from sonar_cli.logging import LoggingConfigurator
