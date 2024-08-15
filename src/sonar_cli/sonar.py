@@ -934,7 +934,7 @@ def execute_commands(args):  # noqa: C901
     Args:
         args (argparse.Namespace): Parsed command line arguments.
     """
-
+    LOGGER.info(f"Current version {NAME}:{VERSION}")
     if args.command == "import":
         if len(sys.argv[1:]) == 1:
             parse_args(["import", "-h"])

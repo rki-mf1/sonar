@@ -19,6 +19,7 @@ import pandas as pd
 from sonar_cli.align import sonarAligner
 from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
+from sonar_cli.basic import _check_property
 from sonar_cli.basic import _check_reference
 from sonar_cli.basic import _is_import_required
 from sonar_cli.basic import _log_import_mode
@@ -37,6 +38,7 @@ from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
+from sonar_cli.config import CHUNK_SIZE
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
 
@@ -98,7 +100,7 @@ class sonarUtils:
             quiet: Whether to suppress logging.
         """
         _log_import_mode(update, quiet)
-        _check_reference(db, reference)
+        reference = _check_reference(db, reference)
         start_import_time = get_current_time()
         # checks
         fasta = fasta or []
@@ -124,17 +126,19 @@ class sonarUtils:
                 csv_files=csv_files,
                 tsv_files=tsv_files,
             )
+            if "sample" not in properties:
+                LOGGER.error(
+                    "Cannot link sample id. Please provide a mapping id in the meta file, add --cols sample=(column name) to the command line."
+                )
+                sys.exit(1)
             sample_id_column = properties["sample"]
             del properties["sample"]
-            if len(properties) == 0:
-                LOGGER.warn(
-                    "No column in the file is mapped to the corresponding variables in the database."
-                )
+
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
                 LOGGER.error(
-                    "Cannot link sample name, please add --cols to the command line."
+                    "Cannot link sample id. Please provide a mapping id in the meta file, add --cols sample=(column name) to the command line."
                 )
                 sys.exit(1)
 
@@ -162,13 +166,18 @@ class sonarUtils:
 
         # importing properties
         if csv_files or tsv_files:
-            sonarUtils._import_properties(
-                sample_id_column,
-                properties,
-                csv_files,
-                tsv_files,
-                progress=progress,
-            )
+            if len(properties) == 0:
+                LOGGER.warn(
+                    "Skip sending properties: no column in the file is mapped to the corresponding variables in the database."
+                )
+            else:
+                sonarUtils._import_properties(
+                    sample_id_column,
+                    properties,
+                    csv_files,
+                    tsv_files,
+                    progress=progress,
+                )
 
         end_import_time = get_current_time()
         LOGGER.info(
@@ -233,11 +242,14 @@ class sonarUtils:
         if not fasta_files:
             return
         start_seqcheck_time = get_current_time()
-        sample_data_dict_list = cache.add_fasta_v2(*fasta_files, method=method)
-
-        cache.logfile_obj.write(
-            f"Sequence check usage time: {calculate_time_difference(start_seqcheck_time, get_current_time())}\n"
+        sample_data_dict_list = cache.add_fasta_v2(
+            *fasta_files, method=method, chunk_size=CHUNK_SIZE
         )
+        prepare_seq_time = calculate_time_difference(
+            start_seqcheck_time, get_current_time()
+        )
+        LOGGER.info(f"Sequence check usage time: {prepare_seq_time}\n")
+        cache.logfile_obj.write(f"Sequence check usage time: {prepare_seq_time}\n")
         LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
 
         # Align sequences and process
@@ -500,62 +512,37 @@ class sonarUtils:
         tsv_files: List[str],
     ) -> Dict[str, str]:
         """
-        get property names based on user input.
+        Get property names based on user input.
 
         "--auto-link" will link columns in the file to existing properties
-        in the database (no new property name will be created in database).
+        in the database (no new property names will be created in the database).
         However, if the properties that the user manually inputs don't exist,
-        we add those as new properties to the database.
+        we give a warning or (optional TODO: add those as new properties to the database).
 
+        Parameters:
+        - prop_links (List[str]): List of property links provided by the user.
+        - autolink (bool): Flag to enable automatic linking of columns to existing properties.
+        - csv_files (List[str]): List of CSV files to process.
+        - tsv_files (List[str]): List of TSV files to process.
+
+        Returns:
+        - Dict[str, str]: Dictionary mapping column names to property details.
         """
         propnames = {}
 
         listofkeys, values_listofdict = sonarUtils.get_all_properties()
         prop_df = pd.DataFrame(values_listofdict, columns=listofkeys)
-        # print(prop_df)
-        # propnames = {x: x for x in prop_df} if autolink else {}
-        # print(propnames)
 
-        # link from user input
-        for link in prop_links:
-            if link.count("=") != 1:
-                LOGGER.error(
-                    "'" + link + "' is not a valid column-to-property assignment."
-                )
-                sys.exit(1)
-            prop, col = link.split("=")
-            #
-            if prop.upper() == "SAMPLE":
-                prop = "sample"
-                propnames[prop] = col
-                continue
-            # if prop not in db_properties:
-            #    LOGGER.error(
-            #        "Sample property '"
-            #        + prop
-            #        + "' is unknown to the selected database. Use list-props to see all valid properties."
-            #    )
-            #    sys.exit(1)
-
-            # lookup
-            # _row_df = prop_df.loc[prop_df["name"] == prop]
-            _row_df = prop_df[
-                prop_df["name"].str.contains(prop, na=False, case=False, regex=False)
-            ]
-
-            if not _row_df.empty:
-                query_type = _row_df["query_type"].values[0]
-                propnames[col] = {"db_property_name": prop, "data_type": query_type}
-
-        #  link from files, process files- get headers
         if autolink:
+            LOGGER.info(
+                "Auto-link is enabled, automatically linking columns in the file to existing properties in the database."
+            )
             file_tuples = [(x, ",") for x in csv_files] + [(x, "\t") for x in tsv_files]
             col_names_fromfile = []
             for fname, delim in file_tuples:
-                # LOGGER.info("linking data from " + fname + "...")
                 col_names_fromfile.extend(_get_csv_colnames(fname, delim))
 
-            # NOTE: case insensitive (SAMPLE_TYPE = sample_type)
+            # Case insensitive linking (SAMPLE_TYPE = sample_type)
             col_names_fromfile = list(set(col_names_fromfile))
             for col_name in col_names_fromfile:
                 _row_df = prop_df[
@@ -564,7 +551,6 @@ class sonarUtils:
                     )
                 ]
 
-                # prop_df.loc[prop_df["name"] == col_name]
                 if not _row_df.empty:
                     query_type = _row_df["query_type"].values[0]
                     name = _row_df["name"].values[0]
@@ -572,13 +558,45 @@ class sonarUtils:
                         "db_property_name": name,
                         "data_type": query_type,
                     }
-        # print(propnames)
-        LOGGER.info("column corresponds to a property field in database")
+
+            # Handle sample ID linking
+            for link in prop_links:
+                prop, col = link.split("=")
+                if prop.upper() == "SAMPLE":
+                    propnames["sample"] = col
+
+        else:
+            LOGGER.info("Reading property names from user-provided '--cols'")
+            for link in prop_links:
+                if link.count("=") != 1:
+                    LOGGER.error(
+                        f"'{link}' is not a valid column-to-property assignment."
+                    )
+                    sys.exit(1)
+                prop, col = link.split("=")
+                if prop.upper() == "SAMPLE":
+                    propnames["sample"] = col
+                    continue
+
+                _row_df = prop_df[
+                    prop_df["name"].str.fullmatch(prop, na=False, case=False)
+                ]
+                if not _row_df.empty:
+                    query_type = _row_df["query_type"].values[0]
+                    propnames[col] = {"db_property_name": prop, "data_type": query_type}
+                else:
+                    LOGGER.warning(
+                        f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
+                    )
+
+        LOGGER.info("Displaying column-to-property mappings:")
         for prop, prop_info in propnames.items():
             if prop == "sample":
+                LOGGER.verbose(f"{prop} <- {prop_info}")
                 continue
             db_property_name = prop_info.get("db_property_name", "N/A")
             LOGGER.verbose(f"{prop} <- {db_property_name}")
+        LOGGER.info("--------")
 
         return propnames
 
@@ -700,16 +718,16 @@ class sonarUtils:
         Returns:
             None.
         """
-        _check_reference(db, reference)
-
+        reference = _check_reference(db, reference)
+        _check_property(db, output_column)
         # if not reference:
         #    reference = dbm.get_default_reference_accession()
         #    LOGGER.info(f"Using Default Reference: {reference}")
 
         params = {}
-        params[
-            "filters"
-        ] = '{"andFilter":[{"label":"Property","property_name":"sequencing_reason","filter_type":"exact","value":"N"}],"orFilter":[]}'
+        params["filters"] = (
+            '{"andFilter":[{"label":"Property","property_name":"sequencing_reason","filter_type":"exact","value":"N"}],"orFilter":[]}'
+        )
 
         params["filters"] = json.dumps(
             construct_query(
@@ -727,9 +745,9 @@ class sonarUtils:
         params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
-        params[
-            "limit"
-        ] = 999999999999999999  # hack (to get all result by using max bigint)
+        params["limit"] = (
+            999999999999999999  # hack (to get all result by using max bigint)
+        )
         params["offset"] = 0
 
         LOGGER.debug(params["filters"])
@@ -737,7 +755,7 @@ class sonarUtils:
         json_response = APIClient(
             base_url=BASE_URL
         ).get_variant_profile_bymatch_command(params=params)
-
+        LOGGER.info("Write outputs...")
         if "results" in json_response:
             rows = json_response
         else:
@@ -836,20 +854,27 @@ class sonarUtils:
             return
 
         with out_autodetect(outfile) as handle:
-            sep = "\t" if tsv else ","
-            writer = csv.DictWriter(
-                handle,
-                fieldnames=first_row.keys(),
-                delimiter=sep,
-                lineterminator=os.linesep,
-            )
-            writer.writeheader()
-            writer.writerow(first_row)
+            try:
+                sep = "\t" if tsv else ","
+                writer = csv.DictWriter(
+                    handle,
+                    fieldnames=first_row.keys(),
+                    delimiter=sep,
+                    lineterminator=os.linesep,
+                )
+                writer.writeheader()
+                writer.writerow(first_row)
 
-            for row in data_iter:
-                if output_column:
-                    row = {k: row[k] for k in output_column}
-                writer.writerow(row)
+                for row in data_iter:
+                    if output_column:
+                        row = {k: row.get(k, None) for k in output_column}
+                    writer.writerow(row)
+            except ValueError as e:
+                LOGGER.error(f" error at row: {row}")
+                LOGGER.error(e)
+                raise
+            except BrokenPipeError:
+                pass
 
     # vcf
     @staticmethod
@@ -910,12 +935,13 @@ class sonarUtils:
     def get_all_references():
         rows = APIClient(base_url=BASE_URL).get_all_references()
         if not rows:
-            return {"accession": "", "description": "", "organism": ""}
+            return {"id": "", "accession": "", "taxon": "", "organism": ""}
         # only neccessary column
         modified_data = [
             {
+                "id": entry["id"],
                 "accession": entry["accession"],
-                "description": entry["description"],
+                "taxon": entry["db_xref"],
                 "organism": entry["organism"],
             }
             for entry in rows

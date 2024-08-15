@@ -2,7 +2,6 @@ import re
 import sys
 
 from Bio.Align.Applications import MafftCommandline
-from Bio.Emboss.Applications import StretcherCommandline
 import parasail
 import psutil
 from pywfa import cigartuples_to_str
@@ -105,70 +104,71 @@ def align_MAFFT(input_fasta):
     return qry, ref
 
 
-def align_Stretcher(qry, ref, gapopen=16, gapextend=4):
-    """Method for handling emboss stretcher run
+# Uncomment this if needed
+# def align_Stretcher(qry, ref, gapopen=16, gapextend=4):
+#     """Method for handling emboss stretcher run
 
-    Return:
-    """
-    try:
-        cline = StretcherCommandline(
-            asequence=qry,
-            bsequence=ref,
-            gapopen=gapopen,
-            gapextend=gapextend,
-            outfile="stdout",
-            aformat="fasta",
-            # datafile="EDNAFULL", auto set by strecher
-        )
-        stdout, stderr = cline()
-        # self.cal_seq_length(stdout[0:20], msg="stdout")
-        # find the fist position of '\n' to get seq1
-        s1 = stdout.find("\n") + 1
-        # find the start of second sequence position
-        e = stdout[1:].find(">") + 1
-        # find the '\n' of the second sequence to get seq2
-        s2 = stdout[e:].find("\n") + e
-        qry = stdout[s1:e].replace("\n", "")
-        ref = stdout[s2:].replace("\n", "")
-        # self.cal_seq_length(qry, msg="qry")
-        # self.cal_seq_length(ref, msg="ref")
-    except Exception:
-        try:
-            for proc in psutil.process_iter():
-                # Get process name & pid from process object.
-                processName = proc.name()
-                processID = proc.pid
-                if (
-                    "stretcher" in processName or "stretcher" in proc.cmdline()
-                ):  # adapt this line to your needs
-                    LOGGER.info(
-                        f"Kill {processName}[{processID}] : {''.join(proc.cmdline())})"
-                    )
-                    proc.terminate()
-                    proc.kill()
-        except psutil.NoSuchProcess:
-            pass
-        LOGGER.error(
-            "Stop process during alignment; to rerun again, you may need to provide a new cache directory."
-        )
-        sys.exit("exited after ctrl-c")
+#     Return:
+#     """
+#     try:
+#         cline = StretcherCommandline(
+#             asequence=qry,
+#             bsequence=ref,
+#             gapopen=gapopen,
+#             gapextend=gapextend,
+#             outfile="stdout",
+#             aformat="fasta",
+#             # datafile="EDNAFULL", auto set by strecher
+#         )
+#         stdout, stderr = cline()
+#         # self.cal_seq_length(stdout[0:20], msg="stdout")
+#         # find the fist position of '\n' to get seq1
+#         s1 = stdout.find("\n") + 1
+#         # find the start of second sequence position
+#         e = stdout[1:].find(">") + 1
+#         # find the '\n' of the second sequence to get seq2
+#         s2 = stdout[e:].find("\n") + e
+#         qry = stdout[s1:e].replace("\n", "")
+#         ref = stdout[s2:].replace("\n", "")
+#         # self.cal_seq_length(qry, msg="qry")
+#         # self.cal_seq_length(ref, msg="ref")
+#     except Exception:
+#         try:
+#             for proc in psutil.process_iter():
+#                 # Get process name & pid from process object.
+#                 processName = proc.name()
+#                 processID = proc.pid
+#                 if (
+#                     "stretcher" in processName or "stretcher" in proc.cmdline()
+#                 ):  # adapt this line to your needs
+#                     LOGGER.info(
+#                         f"Kill {processName}[{processID}] : {''.join(proc.cmdline())})"
+#                     )
+#                     proc.terminate()
+#                     proc.kill()
+#         except psutil.NoSuchProcess:
+#             pass
+#         LOGGER.error(
+#             "Stop process during alignment; to rerun again, you may need to provide a new cache directory."
+#         )
+#         sys.exit("exited after ctrl-c")
 
-    return qry, ref
+#     return qry, ref
 
-
-def gen_cigar(ref, qry):
-    if len(ref) != len(qry):
-        raise Exception("unequal length")
-    cigar = []
-    for i in range(len(ref)):
-        r, q = ref[i], qry[i]
-        if r == "-" and q == "-":
-            raise Exception("both gaps")
-        op = "=" if r == q else "I" if r == "-" else "D" if q == "-" else "X"
-        if len(cigar) > 0 and cigar[-1][1] == op:  # add to the last operation
-            cigar[-1][0] += 1
-        else:
-            cigar.append([1, op])
-            # a new operation
-    return "".join(map(lambda x: str(x[0]) + x[1], cigar))
-    # turn to string
+# Uncomment this if needed
+# def gen_cigar(ref, qry):
+#     if len(ref) != len(qry):
+#         raise Exception("unequal length")
+#     cigar = []
+#     for i in range(len(ref)):
+#         r, q = ref[i], qry[i]
+#         if r == "-" and q == "-":
+#             raise Exception("both gaps")
+#         op = "=" if r == q else "I" if r == "-" else "D" if q == "-" else "X"
+#         if len(cigar) > 0 and cigar[-1][1] == op:  # add to the last operation
+#             cigar[-1][0] += 1
+#         else:
+#             cigar.append([1, op])
+#             # a new operation
+#     return "".join(map(lambda x: str(x[0]) + x[1], cigar))
+#     # turn to string

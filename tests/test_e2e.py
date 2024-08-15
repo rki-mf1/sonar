@@ -167,6 +167,5 @@ def test_output_csv_format(capfd, api_url, tmpfile_name):
     code = run_cli(
         f" match --db {api_url} -r MN908947.3 --profile S:N440K C24503T --format csv -o {tmpfile_name}/out.csv "
     )
-    out, err = capfd.readouterr()
     assert os.path.exists(f"{tmpfile_name}/out.csv") is True
     assert code == 0

@@ -443,7 +443,7 @@ class sonarCache:
             )
             # cache_cds is used for frameshift detection
             # but this will be removed soon, since we use snpEff.
-            data["cdsfile"] = self.cache_cds(refseq_acc, data["refmol"])
+            data["cdsfile"] = None  # self.cache_cds(refseq_acc, data["refmol"])
             data["varfile"] = self.get_var_fname(
                 data["seqhash"] + "@" + self.get_refhash(data["refmol"])
             )
@@ -563,36 +563,36 @@ class sonarCache:
     #         self._tt.add(translation_id)
     #     return fname
 
-    def cache_cds(self, refid, refmol_acc):
-        """
-        The function takes in a reference id, a reference molecule accession number,
-        and a reference sequence. It then checks to see if the reference molecule accession number is in the set of molecules that
-        have been cached. If it is not, it iterates through all of the coding sequences for that molecule and creates a
-        dataframe for each one.
+    # def cache_cds(self, refid, refmol_acc):
+    #     """
+    #     The function takes in a reference id, a reference molecule accession number,
+    #     and a reference sequence. It then checks to see if the reference molecule accession number is in the set of molecules that
+    #     have been cached. If it is not, it iterates through all of the coding sequences for that molecule and creates a
+    #     dataframe for each one.
 
-        It then saves the dataframe to a pickle file and adds the reference molecule accession number to
-        the set of molecules that have been cached.
-        It then returns the name of the pickle file
-        """
-        fname = self.get_cds_fname(refid)
-        if refmol_acc not in self._cds:
-            rows = []
-            cols = ["elemid", "pos", "end"]
-            for cds in self.iter_cds_v2(refmol_acc):
-                elemid = cds["id"]
-                coords = []
-                for rng in cds["ranges"]:
-                    coords.extend(list(rng))
-                for coord in coords:
-                    rows.append([elemid, coord, 0])
-                # rows[-1][2] = 1
-                # print(rows)
-                df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
-                df.to_pickle(fname)
-                if self.debug:
-                    df.to_csv(fname + ".csv")
-            self._cds.add(refmol_acc)
-        return fname
+    #     It then saves the dataframe to a pickle file and adds the reference molecule accession number to
+    #     the set of molecules that have been cached.
+    #     It then returns the name of the pickle file
+    #     """
+    #     fname = self.get_cds_fname(refid)
+    #     if refmol_acc not in self._cds:
+    #         rows = []
+    #         cols = ["elemid", "pos", "end"]
+    #         for cds in self.iter_cds_v2(refmol_acc):
+    #             elemid = cds["id"]
+    #             coords = []
+    #             for rng in cds["ranges"]:
+    #                 coords.extend(list(rng))
+    #             for coord in coords:
+    #                 rows.append([elemid, coord, 0])
+    #             # rows[-1][2] = 1
+    #             # print(rows)
+    #             df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
+    #             df.to_pickle(fname)
+    #             if self.debug:
+    #                 df.to_csv(fname + ".csv")
+    #         self._cds.add(refmol_acc)
+    #     return fname
 
     def cache_lift(self, refid, refmol_acc, sequence):
         """

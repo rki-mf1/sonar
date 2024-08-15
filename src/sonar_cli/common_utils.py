@@ -7,6 +7,7 @@ from hashlib import sha256
 from itertools import islice
 import lzma
 import os
+import shutil
 import sys
 import traceback
 from typing import List
@@ -152,6 +153,11 @@ def out_autodetect(outfile=None):
         f = sys.stdout
     try:
         yield f
+    except BrokenPipeError:
+        # Python flushes standard streams on exit; redirect remaining output
+        # to devnull to avoid another BrokenPipeError at shutdown
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
     finally:
         if f is not sys.stdout:
             f.close()
@@ -346,3 +352,30 @@ def get_fname(name, extension="", enable_parent_dir=False):
         return os.path.join(fn[:2], fn + extension)
     else:
         return fn + extension
+
+
+def copy_file(src, dest):
+    """
+    Copies a file from the source path to the destination path.
+
+    Parameters:
+    src (str): The path to the source file.
+    dest (str): The path to the destination directory.
+
+    Returns:
+    None
+    """
+    if not os.path.isfile(src):
+        raise FileNotFoundError(f"The source file {src} does not exist.")
+
+    if not os.path.isdir(dest):
+        raise NotADirectoryError(f"The destination directory {dest} does not exist.")
+
+    # Construct the new file path
+    new_file_path = os.path.join(dest, os.path.basename(src))
+
+    # Copy the file
+    shutil.copy(src, new_file_path)
+    print(f"File {src} has been copied to {dest}")
+    # Return the new file path
+    return new_file_path
