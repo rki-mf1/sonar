@@ -14,7 +14,7 @@ jobs:
             repository: rki-mf1/sonar-cli
             # token: ${{ secrets.SONAR_CLI_GH_ACTION }} # `secrets.GH_PAT` is a secret that contains your PAT
         - name: Set up Python 🐱
-          uses: actions/setup-python@v3
+          uses: actions/setup-python@v5
           with:
             python-version: '3.11'
         - name: Install dependencies 🐱
@@ -38,7 +38,7 @@ jobs:
           uses: conda-incubator/setup-miniconda@v3
           with:
             miniconda-version: "latest"
-            channels: bioconda, conda-forge, defaults
+            channels: conda-forge,bioconda,defaults
             activate-environment: "sonar-cli"
             python-version: 3.11
         - name: Install dependencies 🐶
@@ -72,7 +72,7 @@ jobs:
             CHUNK_SIZE: 100
             ANNO_TOOL_PATH: "snpEff"
             ANNO_CHUNK_SIZE: 50
-          run:  poetry run pytest --cov -n 2 --cache-clear --dist loadgroup -rfeP -x tests/
+          run:  poetry run pytest --cov --cache-clear --dist loadgroup -rfeP -x tests/
         # - name: Stop containers 🙈
         #   working-directory: sonar-backend
         #   if: always()
