@@ -14,7 +14,7 @@ jobs:
             repository: rki-mf1/sonar-cli
             # token: ${{ secrets.SONAR_CLI_GH_ACTION }} # `secrets.GH_PAT` is a secret that contains your PAT
         - name: Set up Python 🐱
-          uses: actions/setup-python@v3
+          uses: actions/setup-python@v5
           with:
             python-version: '3.11'
         - name: Install dependencies 🐱
@@ -38,7 +38,7 @@ jobs:
           uses: conda-incubator/setup-miniconda@v3
           with:
             miniconda-version: "latest"
-            channels: bioconda, conda-forge, defaults
+            channels: conda-forge,bioconda,defaults
             activate-environment: "sonar-cli"
             python-version: 3.11
         - name: Install dependencies 🐶
@@ -48,6 +48,7 @@ jobs:
             conda info
             poetry lock --no-update
             poetry install
+            poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
         - name: Hello sonar-cli 🐶
           run: sonar-cli -v
         - name: Checkout 🙈
