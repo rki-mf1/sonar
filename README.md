@@ -64,6 +64,13 @@ Install the application using Poetry.
 poetry install --only main
 ```
 
+Temporary: build pywfa from source. This is to work around a segfault when
+using the conda or pip installation (see
+https://github.com/kcleal/pywfa/issues/16)
+```sh
+pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
+```
+
 Verify the installation by checking the version.
 ```sh
 sonar-cli -v
