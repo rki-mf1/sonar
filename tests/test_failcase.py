@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-
+import logging
 from .conftest import run_cli
 
 
@@ -91,31 +91,29 @@ def test_delete_noref(capfd, api_url):
 
 
 # file not found
-def test_match_no_fasta(capfd, api_url):
+def test_match_no_fasta(caplog, api_url):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        run_cli(f"import --db {api_url} -r MN908947.3 --fasta where.is.my.fasta")
-    out, err = capfd.readouterr()
-    lines = out.splitlines()
-    assert "Error: The file 'where.is.my.fasta' does not exist" in lines[-1]
+        with caplog.at_level(logging.ERROR):
+            run_cli(f"import --db {api_url} -r MN908947.3 --fasta where.is.my.fasta")
+    assert "The file 'where.is.my.fasta' does not exist" in caplog.text
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1
 
 
-def test_match_no_tsv(capfd, api_url):
+def test_match_no_tsv(caplog, api_url):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        run_cli(f"import --db {api_url} -r MN908947.3 --tsv where.is.my.tsv")
-    out, err = capfd.readouterr()
-    lines = out.splitlines()
-    assert "Error: The file 'where.is.my.tsv' does not exist" in lines[-1]
+        with caplog.at_level(logging.ERROR):
+            run_cli(f"import --db {api_url} -r MN908947.3 --tsv where.is.my.tsv")
+
+    assert "The file 'where.is.my.tsv' does not exist" in caplog.text
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1
 
 
-def test_match_no_gb(capfd, api_url):
+def test_match_no_gb(caplog, api_url):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        run_cli(f"add-ref --db {api_url} --gb where.is.gb.gbk")
-    out, err = capfd.readouterr()
-    lines = out.splitlines()
-    assert "Error: The file 'where.is.gb.gbk' does not exist" in lines[-1]
+        with caplog.at_level(logging.ERROR):
+            run_cli(f"add-ref --db {api_url} --gb where.is.gb.gbk")
+    assert "The file 'where.is.gb.gbk' does not exist" in caplog.text
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1

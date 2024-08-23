@@ -25,46 +25,52 @@ def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
     match = -3
     mismatch = 1
     left_align_indels = True
-
-    # WFA2-lib right aligns indels by default. To force left alignment we reverse our sequences before doing alignment.
-    # See: https://github.com/smarco/WFA2-lib/issues/37
-    if left_align_indels:
-        refseq = refseq[::-1]
-        qryseq = qryseq[::-1]
-
-    reference_length = len(refseq)
-    a = WavefrontAligner(
-        refseq,
-        match=match,
-        mismatch=mismatch,
-        gap_opening=gapopen,
-        gap_extension=gapextend,
-        span="ends-free",
-        distance="affine",
-        pattern_begin_free=reference_length,
-        pattern_end_free=reference_length,
-        text_begin_free=0,
-        text_end_free=0,
-        wildcard="N",
-    )
-    alignment = a(qryseq)
-    if alignment.status != 0:  # alignment was not successful
-        LOGGER.error("An error occurred in align_WFA")
+    try:
+        # WFA2-lib right aligns indels by default. To force left alignment we reverse our sequences before doing alignment.
+        # See: https://github.com/smarco/WFA2-lib/issues/37
         if left_align_indels:
+            refseq = refseq[::-1]
             qryseq = qryseq[::-1]
-        LOGGER.error(f"Input sequence: {qryseq}")
+
+        reference_length = len(refseq)
+        a = WavefrontAligner(
+            refseq,
+            match=match,
+            mismatch=mismatch,
+            gap_opening=gapopen,
+            gap_extension=gapextend,
+            span="ends-free",
+            distance="affine",
+            pattern_begin_free=reference_length,
+            pattern_end_free=reference_length,
+            text_begin_free=0,
+            text_end_free=0,
+            wildcard="N",
+        )
+        alignment = a(qryseq)
+        if alignment.status != 0:  # alignment was not successful
+            LOGGER.error("An error occurred in align_WFA")
+            if left_align_indels:
+                qryseq = qryseq[::-1]
+            LOGGER.error(f"Input sequence: {qryseq}")
+            sys.exit("--stop--")
+
+        cigartuple = alignment.cigartuples
+        # Change wildcard positions to a mismatch in the cigar string
+        cigartuple = wfa_cigar_n_match_to_mismatch(refseq, qryseq, cigartuple)
+        if left_align_indels:
+            cigartuple = cigartuple[::-1]
+        cigar = cigartuples_to_str(cigartuple)
+
+        # We don't use the traceback, we can just return empty strings here
+        traceback_ref = ""
+        traceback_query = ""
+
+    except Exception as e:
+        LOGGER.error(f"An error occurred in align_WFA: {e}")
+        LOGGER.error(f"Input seq: {align_WFA}")
         sys.exit("--stop--")
 
-    cigartuple = alignment.cigartuples
-    # Change wildcard positions to a mismatch in the cigar string
-    cigartuple = wfa_cigar_n_match_to_mismatch(refseq, qryseq, cigartuple)
-    if left_align_indels:
-        cigartuple = cigartuple[::-1]
-    cigar = cigartuples_to_str(cigartuple)
-
-    # We don't use the traceback, we can just return empty strings here
-    traceback_ref = ""
-    traceback_query = ""
     return (
         traceback_ref,
         traceback_query,
@@ -84,14 +90,14 @@ def wfa_cigar_n_match_to_mismatch(ref, query, cigar_ops):
     for cigar_op in cigar_ops:
         operation = cigar_op[0]
         op_length = cigar_op[1]
-        query_subseq = query[qry_pos:qry_pos + op_length]
+        query_subseq = query[qry_pos : qry_pos + op_length]
 
         # We only do something special if there is an 'N' character in a match region
-        if operation in CIGAR_OP_MATCH and 'N' in query_subseq:
+        if operation in CIGAR_OP_MATCH and "N" in query_subseq:
             last_match_end = 0
             for match in re.finditer("N+", query_subseq):
                 # If there is anything before the match, create a new op and keep it as a match
-                if (last_match_end < match.start()):
+                if last_match_end < match.start():
                     cigar_ops_new.append((operation, match.start() - last_match_end))
                 # Create an op for the "N" region, setting it to be a mismatch
                 cigar_ops_new.append((CIGAR_OP_MISMATCH, match.end() - match.start()))

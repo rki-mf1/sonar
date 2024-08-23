@@ -307,7 +307,7 @@ def create_subparser_tasks(
     parser = subparsers.add_parser(
         "tasks",
         parents=parent_parsers,
-        help="Job Tracker",
+        help="Use this command to query job status",
     )
     mutually_exclusive_group = parser.add_mutually_exclusive_group()
 
@@ -672,7 +672,7 @@ def handle_import(args: argparse.Namespace):
     elif args.method == 3:
         LOGGER.info("Alignment Tool: WFA2-lib")
     else:
-        print("Invalid --method. Please use -h to see available methods")
+        LOGGER.warn("Invalid --method. Please use 'import -h' to see available methods")
         exit(1)
 
     sonarUtils.import_data(

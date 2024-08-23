@@ -215,7 +215,7 @@ class sonarUtils:
         )
 
     @staticmethod
-    def _import_fasta(
+    def _import_fasta(  # noqa: C901
         fasta_files: List[str],
         properties: Dict,
         cache: sonarCache,
@@ -271,10 +271,23 @@ class sonarUtils:
                 disable=not progress,
             ) as pbar,
         ):
-            for _ in pool.imap_unordered(
-                aligner.process_cached_sample, sample_data_dict_list
-            ):
-                pbar.update(1)
+            try:
+                for sample_data in pool.imap_unordered(
+                    aligner.process_cached_sample, sample_data_dict_list
+                ):
+                    try:
+                        pbar.update(1)
+                    except Exception as e:
+                        LOGGER.error(
+                            f"Error processing sample: {sample_data}\nException: {e}"
+                        )
+                        sys.exit(1)
+            except Exception as outer_exception:
+                LOGGER.error(f"Error in multiprocessing pool: {outer_exception}")
+                sys.exit(1)
+        # for _dict in sample_data_dict_list:
+        #     print(_dict)
+        #     aligner.process_cached_sample(_dict)
 
         cache.logfile_obj.write(
             f"Seq. alignment usage time: {calculate_time_difference(start_align_time, get_current_time())}\n"
@@ -375,8 +388,11 @@ class sonarUtils:
             LOGGER.info("Job ID: %s", job_id)
         else:
             LOGGER.info("Disable sending samples.")
-
-        clear_unnecessary_cache(passed_samples_list)
+        start_clean_time = get_current_time()
+        clear_unnecessary_cache(passed_samples_list, threads)
+        LOGGER.info(
+            f"Clear unnecessary cache: {calculate_time_difference(start_clean_time, get_current_time())}"
+        )
 
     @staticmethod
     def zip_import_upload_annotaion(shared_objects: dict, file_path):
@@ -725,9 +741,9 @@ class sonarUtils:
         #    LOGGER.info(f"Using Default Reference: {reference}")
 
         params = {}
-        params["filters"] = (
-            '{"andFilter":[{"label":"Property","property_name":"sequencing_reason","filter_type":"exact","value":"N"}],"orFilter":[]}'
-        )
+        # params["filters"] = (
+        #     '{"andFilter":[{"label":"Property","property_name":"sequencing_reason","filter_type":"exact","value":"N"}],"orFilter":[]}'
+        # )
 
         params["filters"] = json.dumps(
             construct_query(
@@ -745,9 +761,8 @@ class sonarUtils:
         params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
-        params["limit"] = (
-            999999999999999999  # hack (to get all result by using max bigint)
-        )
+        # hack (to get all result by using max bigint)
+        params["limit"] = 999999999999999999
         params["offset"] = 0
 
         LOGGER.debug(params["filters"])

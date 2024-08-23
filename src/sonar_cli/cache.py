@@ -344,7 +344,7 @@ class sonarCache:
                 'properties': {}}
         """
         try:
-            sample_id = header.replace("\t", " ").replace("|", " ").strip(" ")
+            sample_id = header.replace("\t", " ").replace("|", " ").split(" ")[0]
         except AttributeError:
             # Handle the 'NoneType' object has no attribute 'replace' error
             LOGGER.error("Invalid FASTA format")
@@ -605,6 +605,7 @@ class sonarCache:
         It then returns the name of the pickle file.
         """
         rows = []
+        # cache self._lifts
         if self._lifts is None:
             cols = [
                 "elemid",

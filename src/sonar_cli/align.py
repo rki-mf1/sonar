@@ -259,12 +259,15 @@ class sonarAligner:
 
         Parameters
         ----------
-        nuc_vars
+        nuc_vars:
             A list of tuples, where each tuple contains reference base,
                 alternate base, start position, end position,
               frameshift indicator, and mutation label for each variant.
-        lift_file : str
-            File path to a pickled DataFrame with genomic information.
+               exmaple [('G', '28680', '28681', 'K', 'MN908947.3', 'G28681K', 'nt'),
+               ('T', '28692', '28693', 'Y', 'MN908947.3', 'T28693Y', 'nt'),
+               ('G', '28880', '28881', 'A', 'MN908947.3', 'G28881A', 'nt')]
+        df: pandas dataframe
+            contain the original CDS position,NT and AA with respect to the reference.
 
         Yields
         -------
@@ -273,15 +276,11 @@ class sonarAligner:
             AA_ref Start_pos END_pos AA_alt Reference   Label   Mutation_Type
             H       39      40      X       QHD43422.1      H40X    cds
         """
-        # print(df[df["symbol"] == "ORF1ab"])
-        # print(df)
-        # with open(tt_file, "rb") as handle:
-        #    tt = pickle.load(handle, encoding="bytes")
-        # print(tt)
         # updating the DF with alternate nucleotides (alt)
         # for positions specified in the nuc_var range.
         # ------------ this part of the code is the major problem that cause the slow performance
 
+        # V.1 the original code version from covsonar1
         # for nuc_var in nuc_vars:
         #     if nuc_var[3] == ".":
         #         continue  # ignore uncovered terminal regions
@@ -292,17 +291,44 @@ class sonarAligner:
         #             col_name = f"alt{j}"
         #             df.loc[df[f"nucPos{j}"] == i, col_name] = alt
 
+        # V.1.5 a little bit of improvement of code explainability (no performance improved)
+        # for nuc_var in nuc_vars:
+        #     if nuc_var[3] != ".":
+        #         alt = "-" if nuc_var[3] == " " else nuc_var[3]
+        #         start, end = map(int, (nuc_var[1], nuc_var[2]))
+        #         positions = np.arange(start, end)
+        #         mask = np.isin(df["nucPos1"], positions)
+        #         df.loc[mask, "alt1"] = alt
+        #         mask = np.isin(df["nucPos2"], positions)
+        #         df.loc[mask, "alt2"] = alt
+        #         mask = np.isin(df["nucPos3"], positions)
+        #         df.loc[mask, "alt3"] = alt
+
+        # newer version
+        nucPos1 = df["nucPos1"].to_numpy(dtype=np.int32)
+        nucPos2 = df["nucPos2"].to_numpy(dtype=np.int32)
+        nucPos3 = df["nucPos3"].to_numpy(dtype=np.int32)
+        alt1 = df["alt1"].to_numpy()
+        alt2 = df["alt2"].to_numpy()
+        alt3 = df["alt3"].to_numpy()
+
         for nuc_var in nuc_vars:
             if nuc_var[3] != ".":
                 alt = "-" if nuc_var[3] == " " else nuc_var[3]
                 start, end = map(int, (nuc_var[1], nuc_var[2]))
-                positions = np.arange(start, end)
-                mask = np.isin(df["nucPos1"], positions)
-                df.loc[mask, "alt1"] = alt
-                mask = np.isin(df["nucPos2"], positions)
-                df.loc[mask, "alt2"] = alt
-                mask = np.isin(df["nucPos3"], positions)
-                df.loc[mask, "alt3"] = alt
+
+                # Boolean indexing directly
+                mask1 = (nucPos1 >= start) & (nucPos1 < end)
+                mask2 = (nucPos2 >= start) & (nucPos2 < end)
+                mask3 = (nucPos3 >= start) & (nucPos3 < end)
+                # print(mask1,mask2, mask3)
+                alt1[mask1] = alt
+                alt2[mask2] = alt
+                alt3[mask3] = alt
+
+        df["alt1"] = alt1
+        df["alt2"] = alt2
+        df["alt3"] = alt3
         # ------------------------------------------------------------
         # keep rows where there is a change in the nucleotide.
         # by dropping rows that dont get changed
@@ -319,25 +345,29 @@ class sonarAligner:
 
             # translates the updated nucleotide positions
             # to amino acid changes using the translation table (tt)
-            # df['altAa'] = [self.translate(df.loc[idx,"alt1"] + df.loc[idx,"alt2"] + df.loc[idx,"alt3"]) for idx in range(len(df))]
-            # for idx in df.index:
-            #    df.loc[idx,"altAa"] =  self.translate(df.loc[idx,"alt1"] + df.loc[idx,"alt2"] + df.loc[idx,"alt3"])
-            df["altAa"] = df.apply(
-                lambda x: self.translate(x["alt1"] + x["alt2"] + x["alt3"]), axis=1
+
+            # df["altAa"] = df.apply(
+            #     lambda x: self.translate(x["alt1"] + x["alt2"] + x["alt3"]), axis=1
+            # )
+            df["altAa"] = df["alt1"] + df["alt2"] + df["alt3"]
+            df["altAa"] = df["altAa"].apply(
+                lambda seq: "-"
+                if seq == "---"
+                else str(
+                    Seq(seq.replace("-", "")).translate(table="Standard", to_stop=True)
+                )
             )
             # get only rows where there is a change in amino acid.
             # by dropping rows that dont get changed
             df.drop(df[df["aa"] == df["altAa"]].index, inplace=True)
 
             # for snps or inserts
-            for index, row in df.loc[
-                (df["altAa"] != "-") & (df["altAa"] != "")
-            ].iterrows():
-                pos = row["aaPos"] + 1
-                label = row["aa"] + str(pos) + row["altAa"]
+            for row in df.loc[(df["altAa"] != "-") & (df["altAa"] != "")].itertuples():
+                pos = row.aaPos + 1
+                label = row.aa + str(pos) + row.altAa
 
-                yield row["aa"], str(pos - 1), str(pos), row["altAa"], str(
-                    row["accession"]
+                yield row.aa, str(pos - 1), str(pos), row.altAa, str(
+                    row.accession
                 ), label, "cds"
 
             # for deletions
@@ -447,7 +477,7 @@ class sonarAligner:
                             " ",
                             elemid,
                             "del:" + str(refpos + 1),
-                            "nt"
+                            "nt",
                             # self.detect_frameshifts(
                             #    refpos, refpos + 1, " ", cds_df, cds_set
                             # ),
@@ -464,7 +494,7 @@ class sonarAligner:
                             " ",
                             elemid,
                             "del:" + str(refpos + 1) + "-" + str(refpos + varlen),
-                            "nt"
+                            "nt",
                             # self.detect_frameshifts(
                             #    refpos, refpos + varlen, " ", cds_df, cds_set
                             # ),
@@ -493,7 +523,7 @@ class sonarAligner:
                         alt,
                         elemid,
                         ref + str(refpos) + alt,
-                        "nt"
+                        "nt",
                         # fs,
                     )
                 )

@@ -16,6 +16,12 @@ import zipfile
 
 from Bio.Seq import Seq
 import magic
+from sonar_cli.logging import LoggingConfigurator
+
+from concurrent.futures import ThreadPoolExecutor
+
+# Initialize logger
+LOGGER = LoggingConfigurator.get_logger()
 
 
 @contextmanager
@@ -258,7 +264,7 @@ def _files_exist(*files: str, exit_on_fail=True) -> bool:
 
     for fname in files:
         if not os.path.isfile(fname):
-            print(f"Error: The file '{fname}' does not exist.")
+            LOGGER.error(f"The file '{fname}' does not exist.")
             if exit_on_fail:
                 sys.exit(1)
             return False
@@ -312,37 +318,34 @@ def chunk(arr_range, arr_size):
     return iter(lambda: tuple(islice(arr_range, arr_size)), ())
 
 
-def clear_unnecessary_cache(samples):
-    for sample in samples:
-        # clear uncessary file
-        try:
-            if sample["mafft_seqfile"] is not None and os.path.exists(
-                sample["mafft_seqfile"]
-            ):
-                os.remove(sample["mafft_seqfile"])
-            # if os.path.exists(sample["vcffile"]):
-            #     os.remove(sample["vcffile"])
-            if os.path.exists(sample["vcffile"] + ".gz"):
-                os.remove(sample["vcffile"] + ".gz")
-            if os.path.exists(sample["vcffile"] + ".gz.tbi"):
-                os.remove(sample["vcffile"] + ".gz.tbi")
-            # if sample["anno_vcf_file"]:
-            #    os.remove(sample["anno_vcf_file"])
-            # if sample["anno_tsv_file"]:
-            #    os.remove(sample["anno_tsv_file"])
-        except TypeError as te:
-            # Code to handle TypeError
-            print(traceback.format_exc())
-            print("\nDebugging Information:")
-            print(te)
-            print("-----------")
-            print(sample)
-        except OSError as ose:
-            print(traceback.format_exc())
-            print("\nDebugging Information:")
-            print(ose)
-            print("-----------")
-            print(sample)
+def clear_sample_cache(sample):
+    try:
+        if sample["mafft_seqfile"] is not None and os.path.exists(
+            sample["mafft_seqfile"]
+        ):
+            os.remove(sample["mafft_seqfile"])
+        # if os.path.exists(sample["vcffile"]):
+        #     os.remove(sample["vcffile"])
+        if os.path.exists(sample["vcffile"] + ".gz"):
+            os.remove(sample["vcffile"] + ".gz")
+        if os.path.exists(sample["vcffile"] + ".gz.tbi"):
+            os.remove(sample["vcffile"] + ".gz.tbi")
+        # if sample["anno_vcf_file"]:
+        #    os.remove(sample["anno_vcf_file"])
+        # if sample["anno_tsv_file"]:
+        #    os.remove(sample["anno_tsv_file"])
+    except (TypeError, OSError) as e:
+        print(traceback.format_exc())
+        print("\nDebugging Information:")
+        print(e)
+        print("-----------")
+        print(sample)
+
+
+def clear_unnecessary_cache(samples, max_workers=4):
+    # I used ThreadPoolExecutorfor simplicity
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        executor.map(clear_sample_cache, samples)
 
 
 def get_fname(name, extension="", enable_parent_dir=False):
@@ -376,6 +379,6 @@ def copy_file(src, dest):
 
     # Copy the file
     shutil.copy(src, new_file_path)
-    print(f"File {src} has been copied to {dest}")
+    LOGGER.info(f"File {src} has been copied to {dest}")
     # Return the new file path
     return new_file_path

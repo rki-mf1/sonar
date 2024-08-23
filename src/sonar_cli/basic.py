@@ -438,7 +438,7 @@ def construct_query(  # noqa: C901
                     or prop_type == "value_text"
                 ):
                     extract_value = prop_value[1:] if negate else prop_value
-                    if with_sublineage:
+                    if prop_name == "lineage" and with_sublineage:
                         _query = {
                             "label": "Sublineages",
                             "lineage": extract_value,
@@ -468,109 +468,132 @@ def construct_query(  # noqa: C901
                     match = True
 
                 elif prop_type == "value_integer":
-                    if RANGE_OPERATOR not in prop_value:
-                        match = int_pattern_single.match(prop_value)
-                        # Determine the operator
-                        operator = get_operator(
-                            op=match.group(2), inverse=match.group(1)
+                    try:
+                        if RANGE_OPERATOR not in prop_value:
+                            match = int_pattern_single.match(prop_value)
+                            operator = get_operator(
+                                op=match.group(2), inverse=match.group(1)
+                            )
+                            extract_value = int(match.group(3))
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": extract_value,
+                                "exclude": negate,
+                            }
+
+                        else:  # Processing value range
+                            match = int_pattern_range.match(prop_value)
+                            num1 = int(match.group(2))
+                            num2 = int(match.group(3))
+                            operator = get_operator(
+                                op="BETWEEN", inverse=match.group(1)
+                            )
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": [num1, num2],
+                                "exclude": negate,
+                            }
+                    except (AttributeError, ValueError) as e:
+                        LOGGER.error(
+                            f"Error processing integer value: {prop_value} (input is not a valid type) - {str(e)}"
                         )
-
-                        extract_value = int(match.group(3))
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": extract_value,
-                            "exclude": negate,
-                        }
-
-                    else:  # Processing value range
-                        match = int_pattern_range.match(prop_value)
-                        num1 = int(match.group(2))
-                        num2 = int(match.group(3))
-                        operator = get_operator(op="BETWEEN", inverse=match.group(1))
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": [num1, num2],
-                            "exclude": negate,
-                        }
+                        sys.exit(1)
                 elif prop_type == "value_float":
+                    try:
+                        if RANGE_OPERATOR not in prop_value:
+                            match = float_pattern_single.match(prop_value)
+                            # Determine the operator
+                            operator = get_operator(
+                                op=match.group(2), inverse=match.group(1)
+                            )
+                            extract_value = float(match.group(3))
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": extract_value,
+                                "exclude": negate,
+                            }
 
-                    if RANGE_OPERATOR not in prop_value:
-                        match = float_pattern_single.match(prop_value)
-                        # Determine the operator
-                        operator = get_operator(
-                            op=match.group(2), inverse=match.group(1)
+                            final_query["andFilter"].append(_query)
+                        else:  # Processing value range
+                            match = float_pattern_range.match(prop_value)
+
+                            num1 = float(match.group(2))
+                            num2 = float(match.group(3))
+                            operator = get_operator(
+                                op="BETWEEN", inverse=match.group(1)
+                            )
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": [num1, num2],
+                                "exclude": negate,
+                            }
+                    except (AttributeError, ValueError) as e:
+                        LOGGER.error(
+                            f"Error processing float value: {prop_value} (input is not a valid type) - {str(e)}"
                         )
-                        extract_value = float(match.group(3))
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": extract_value,
-                            "exclude": negate,
-                        }
-
-                        final_query["andFilter"].append(_query)
-                    else:  # Processing value range
-                        match = float_pattern_range.match(prop_value)
-
-                        num1 = float(match.group(2))
-                        num2 = float(match.group(3))
-                        operator = get_operator(op="BETWEEN", inverse=match.group(1))
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": [num1, num2],
-                            "exclude": negate,
-                        }
+                        sys.exit(1)
                 elif prop_type == "value_date":
+                    try:
+                        if RANGE_OPERATOR not in prop_value:
+                            match = date_pattern_single.match(prop_value)
+                            operator = get_operator(
+                                op=match.group(2), inverse=match.group(1)
+                            )
+                            extract_value = match.group(3)
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": match.group(3),
+                                "exclude": negate,
+                            }
+                        else:  # Processing value range
+                            match = date_pattern_range.match(prop_value)
+                            operator = get_operator(
+                                op="BETWEEN", inverse=match.group(1)
+                            )
+                            try:
+                                date1 = datetime.datetime.strptime(
+                                    match.group(2), "%Y-%m-%d"
+                                )
+                                date2 = datetime.datetime.strptime(
+                                    match.group(3), "%Y-%m-%d"
+                                )
+                            except ValueError:
+                                LOGGER.error("Invalid date format or out-of-range day.")
+                                sys.exit(1)
 
-                    if RANGE_OPERATOR not in prop_value:
-                        match = date_pattern_single.match(prop_value)
-                        operator = get_operator(
-                            op=match.group(2), inverse=match.group(1)
+                            # Plausibility check
+                            if date1 >= date2:
+                                LOGGER.error("Invalid range (" + match.group(0) + ").")
+                                sys.exit(1)
+
+                            _query = {
+                                "label": "Property",
+                                "property_name": prop_name,
+                                "filter_type": operator,
+                                "value": [match.group(2), match.group(3)],
+                                "exclude": negate,
+                            }
+                    except (AttributeError, ValueError) as e:
+                        LOGGER.error(
+                            f"Error processing date value: {prop_value} (input is not a valid type) - {str(e)}"
                         )
-                        extract_value = match.group(3)
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": match.group(3),
-                            "exclude": negate,
-                        }
-                    else:  # Processing value range
-                        match = date_pattern_range.match(prop_value)
-                        operator = get_operator(op="BETWEEN", inverse=match.group(1))
-                        try:
-                            date1 = datetime.datetime.strptime(
-                                match.group(2), "%Y-%m-%d"
-                            )
-                            date2 = datetime.datetime.strptime(
-                                match.group(3), "%Y-%m-%d"
-                            )
-                        except ValueError:
-                            LOGGER.error("Invalid date format or out-of-range day.")
-                            sys.exit(1)
-
-                        # Plausibility check
-                        if date1 >= date2:
-                            LOGGER.error("Invalid range (" + match.group(0) + ").")
-                            sys.exit(1)
-
-                        _query = {
-                            "label": "Property",
-                            "property_name": prop_name,
-                            "filter_type": operator,
-                            "value": [match.group(2), match.group(3)],
-                            "exclude": negate,
-                        }
+                        sys.exit(1)
                 else:
                     # fail to validate
-                    pass
+                    LOGGER.error(
+                        f"Fail to validate: {prop_name} - {prop_value} - {prop_type}"
+                    )
+                    sys.exit(1)
 
                 if not match:
                     LOGGER.error(
@@ -596,6 +619,9 @@ def add_reference_query(query_dict, reference_query):
     if isinstance(query_dict, dict):
         if "andFilter" in query_dict:
             for and_filter in query_dict["andFilter"]:
+                # # If a filter with the same label is found, return without adding
+                # if and_filter.get("label") == "Replicon":
+                #     return
                 add_reference_query(and_filter, reference_query)
             if query_dict["andFilter"]:
                 query_dict["andFilter"].append(reference_query)
