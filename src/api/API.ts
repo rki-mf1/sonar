@@ -92,9 +92,12 @@ export default class API {
     async getSampleGenomesExport(params: FilterGroupRoot, columns: string[], xls = true) {
         const exportColumns = ['name', ...columns]
         const queryString = this.parseQueryString(params)
+        
         let url = `${this.BACKEND_ADDRESS}samples/genomes/${queryString}`
         url += `&columns=${exportColumns.join(',')}`
         url += `&csv_stream=true`
+
+
         const response = await axios.get(url, {
             responseType: 'stream',
             adapter: 'fetch'
@@ -106,6 +109,9 @@ export default class API {
             return
         }
         const chunks = []
+
+        chunks.push(exportColumns.join(';') + '\n'); // add column names for csv export
+
         const outStream = new WritableStream({
             write(chunk) {
                 chunks.push(chunk)
