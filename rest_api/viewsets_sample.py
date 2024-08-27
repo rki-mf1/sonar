@@ -4,6 +4,7 @@ import json
 import pathlib
 import ast
 import csv
+import os
 from datetime import datetime
 import traceback
 from typing import Generator
@@ -49,7 +50,7 @@ from .serializers import (
     SampleGenomesSerializerVCF,
     SampleSerializer,
 )
-from covsonar_backend.settings import DEBUG, LOGGER
+from covsonar_backend.settings import DEBUG, LOGGER, SONAR_DATA_ENTRY_FOLDER
 
 
 class Echo:
@@ -877,7 +878,7 @@ class SampleViewSet(
                     yield dict(zip(header, row))
 
     def _temp_save_file(self, uploaded_file: InMemoryUploadedFile):
-        file_path = pathlib.Path("import_data") / uploaded_file.name
+        file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER , uploaded_file.name)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.read())
         return file_path
