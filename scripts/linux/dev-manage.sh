@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-docker compose -f docker-compose-dev.yml run --rm dev-django poetry run python ./manage.py "$@"
+./scripts/linux/dc-dev.sh run --rm sonar-django-backend "poetry run python ./manage.py $*"

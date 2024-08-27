@@ -65,4 +65,4 @@ else
 fi
 
 # This is a hack to resolve the annoying apserver log messages
-$SCRIPTPATH/dc-dev.sh restart dev-django-apscheduler
+$SCRIPTPATH/dc-dev.sh restart sonar-django-apscheduler

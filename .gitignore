@@ -8,7 +8,7 @@ archive_data/
 processing_data/
 postgres-data/
 # Environments
-*.env
+.env
 .venv
 env/
 venv/
@@ -24,3 +24,4 @@ logs/
 
 tmp/
 work/
+cruft/

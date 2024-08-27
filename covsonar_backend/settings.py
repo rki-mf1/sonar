@@ -129,7 +129,7 @@ if not os.environ.get("DATABASE_URL"):
         "NAME": env("POSTGRES_DB"),
         "USER": env("POSTGRES_USER"),
         "PASSWORD": env("POSTGRES_PASSWORD"),
-        "HOST": "postgres",
+        "HOST": "sonar-db",
         "PORT": env("POSTGRES_PORT"),
     }
 else:

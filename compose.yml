@@ -2,20 +2,24 @@ services:
   # Needed to run postgres as a non-root user. This runs as root and sets the
   # postgres data directory to be owned by the non-root user that will run
   # postgres.
-  postgres-init:
+  sonar-db-init:
     image: postgres:alpine
-    container_name: dev-covsonar-db-init
-    env_file:
-      - conf/dev_db.env
-      - conf/dev_django.env
+    container_name: sonar-db-init
+    environment:
+    - POSTGRES_DB
+    - POSTGRES_SCHEMA
+    - POSTGRES_USER
+    - POSTGRES_PASSWORD
+    - POSTGRES_HOST
+    - POSTGRES_PORT
     volumes:
       - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
     entrypoint: /bin/sh -c
     command: [ "chown -R ${POSTGRES_UID_GID} /var/lib/postgresql/data" ]
 
-  postgres:
+  sonar-db:
     image: postgres:alpine
-    container_name: dev-covsonar-db
+    container_name: sonar-db
     restart: unless-stopped
     user: "${POSTGRES_UID_GID}"
     command: -c config_file=/etc/postgresql/postgresql.conf
@@ -27,13 +31,17 @@ services:
       # otherwise it will automatically be mapped to a volume inside of the
       # host's /var/lib/docker/volumes directory
       - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
-    env_file:
-      - conf/dev_db.env
-      - conf/dev_django.env
+    environment:
+    - POSTGRES_DB
+    - POSTGRES_SCHEMA
+    - POSTGRES_USER
+    - POSTGRES_PASSWORD
+    - POSTGRES_HOST
+    - POSTGRES_PORT
     ports:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     depends_on:
-      postgres-init:
+      sonar-db-init:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -42,19 +50,31 @@ services:
       start_period: 30s
       timeout: 10s
 
-  dev-django:
-    image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
-    env_file:
-      - conf/dev_django.env
-      - conf/dev_secrets.env
+  sonar-django-backend:
+    image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
+    container_name: sonar-django-backend
     environment:
+      - DEBUG
+      - REDIS_URL
+      - SAMPLE_BATCH_SIZE
+      - LOG_PATH
+      - LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_PORT
+      - ALLOWED_HOSTS
       - SONAR_DATA_ENTRY_FOLDER
       - SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE
-    container_name: dev-covsonar-django
+      - SECRET_KEY
     restart: unless-stopped
     #command: gunicorn  --workers 2 --threads 2 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application --timeout 300
-    command: python manage.py runserver 0.0.0.0:9080
+    entrypoint: /bin/sh -c
+    command: [ "${START_DJANGO_SERVER}" ]
     # enable this and "django_extensions" in settings.dev to enable per request profiling
     # also create the ./profiler directory in project root
     # command: python manage.py runprofileserver --use-cprofile --prof-path=/code/profiler 0.0.0.0:9080
@@ -66,36 +86,48 @@ services:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
       - ${SONAR_EXTERNAL}/coverage:/code/coverage 
     depends_on:
-      redis:
+      sonar-cache:
         condition: service_started
-      postgres:
+      sonar-db:
         condition: service_healthy
     ports:
       # to access directly, normally can use localhost:8000 via the nginx proxy
       - "9080"
 
-  dev-django-apscheduler:
-    image: backend_dev:local # hint: must be built before, use "build_docker_dev.ps1"
-    env_file:
-      - conf/dev_django.env
-      - conf/dev_secrets.env
+  sonar-django-apscheduler:
+    image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
+    container_name: sonar-django-apscheduler
     environment:
+      - DEBUG
+      - REDIS_URL
+      - SAMPLE_BATCH_SIZE
+      - LOG_PATH
+      - LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_PORT
+      - ALLOWED_HOSTS
       - SONAR_DATA_ENTRY_FOLDER
       - SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE
-    container_name: dev-covsonar-django-apscheduler
+      - SECRET_KEY
     restart: on-failure
-    command: >
-      bash -c "python manage.py runapscheduler"
+    entrypoint: /bin/sh -c
+    command: [ "python manage.py runapscheduler" ]
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
-      postgres:
+      sonar-db:
         condition: service_healthy
-      dev-django:
+      sonar-django-backend:
         condition: service_started
 
   backend-nginx:
+    container_name: backend-nginx
     build:
       context: ./nginx
     volumes:
@@ -105,18 +137,18 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - "dev-django"
+      - sonar-django-backend
 
-  redis:
+  sonar-cache:
     image: redis:7
-    container_name: dev-covsonar-cache
+    container_name: sonar-cache
     restart: unless-stopped
     ports:
       - "6379"
 
   celery-workers:
     container_name: celery-workers
-    image: backend_dev:local
+    image: backend:local
     # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend. For example, 
     # if the concurrency is set too high and the SAMPLE_BATCH_SIZE is too high,
     # this will not speed up the process. You need to lower SAMPLE_BATCH_SIZE into smaller chunks to gain the benefits
@@ -126,27 +158,59 @@ services:
     command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair  --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
-    env_file:
-      - conf/dev_django.env
-      - conf/dev_secrets.env
     environment:
+      - DEBUG
+      - REDIS_URL
+      - SAMPLE_BATCH_SIZE
+      - LOG_PATH
+      - LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_PORT
+      - ALLOWED_HOSTS
       - SONAR_DATA_ENTRY_FOLDER
       - SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE
+      - SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE
+      - SECRET_KEY
     depends_on:
-      - redis
-      - dev-django
+      - sonar-cache
+      - sonar-django-backend
       
   celery-monitor:
     container_name: celery-monitor
-    image: backend_dev:local
-    command: celery -A covsonar_backend flower --port=5555 --basic_auth=note:123456 --enable_events=False
-    env_file:
-      - conf/dev_django.env
-      - conf/dev_secrets.env
+    image: backend:local
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth="$CELERY_FLOWER_AUTH" --enable_events=False
+    environment:
+      - DEBUG
+      - REDIS_URL
+      - SAMPLE_BATCH_SIZE
+      - LOG_PATH
+      - LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_PORT
+      - ALLOWED_HOSTS
+      - SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE
+      - SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE
+      - SECRET_KEY
     ports:
       - "5555:5555"
     depends_on:
-      - redis
-      - dev-django
+      - sonar-cache
+      - sonar-django-backend
       - celery-workers
