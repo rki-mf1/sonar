@@ -15,7 +15,7 @@ RUN pip install poetry
 WORKDIR /code
 
 # The reason for copying certain core files and folders beforehand is to address failures in GH action (during poetry install)
-COPY manage.py README.md pyproject.toml poetry.lock ./
+COPY manage.py README.md pyproject.toml poetry.lock requirements-testing.txt ./
 COPY permission_model/ /code/permission_model
 COPY covsonar_backend/ /code/covsonar_backend
 COPY rest_api/ /code/rest_api
