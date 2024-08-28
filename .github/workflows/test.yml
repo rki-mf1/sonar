@@ -21,12 +21,6 @@ jobs:
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
-      
-      #      - name: Extract branch name
-      #        shell: bash
-      #        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-      #        id: extract_branch
-
 
       - name: Build the backend container
         run: |
@@ -41,31 +35,3 @@ jobs:
       - name: Run tests
         run: docker compose $COMPOSE_ENVS exec -T sonar-django-backend coverage run ./manage.py test --no-input
 
-      #      - name: Generate reports
-      #        run: docker compose $COMPOSE_ENVS exec -T sonar-django-backend coverage html -d 'coverage/${{ steps.extract_branch.outputs.branch }}/'
-      #        
-      #      - name: Setup Pages
-      #        uses: actions/configure-pages@v5
-      #        
-      #      - name: Upload artifact
-      #        uses: actions/upload-pages-artifact@v3
-      #        with:
-      #          path: 'work/sonar/coverage'
-      #
-      #      - name: Deploy to GitHub Pages
-      #        id: pages-deployment
-      #        uses: actions/deploy-pages@v4
-      #
-      #      - name: Find current PR
-      #        uses: jwalton/gh-find-current-pr@master
-      #        id: findPr
-      #        with:
-      #          state: open
-      #
-      #      - name: Comment coverage page link
-      #        uses: thollander/actions-comment-pull-request@v2
-      #        with:
-      #          message: |
-      #              [Coverage Report]( ${{ steps.pages-deployment.outputs.page_url }}/${{ steps.extract_branch.outputs.branch }}/)
-      #          comment_tag: 'coverage-link'
-      #          pr_number: ${{ steps.findPr.outputs.pr }}
