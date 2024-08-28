@@ -10,78 +10,85 @@ The sonar-backend is web service that represents the API version of the Sonar to
 ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)
 ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
-#### Please visit [sonar-backend wiki](https://github.com/rki-mf1/sonar-backend/wiki) for more details
+**Please visit [sonar-backend wiki](https://github.com/rki-mf1/sonar-backend/wiki) for more details**
 
 # Setup
 
-#### ⚠️Caution: The setting and installation steps can vary depending on the user; this was just an example guideline.
+## Production
+
+### Software requirements
+
+We have currently tested running producion on a server with:
+
+Operating system: Ubuntu 24.04
+CPU cores: 4
+RAM: 16 GB
+
+We deploy using a non-root user, so the following software needs to be set up
+by an administrator:
+- rootless docker (set up to be used by your user)
+- an SSL proxy forwarding port 443 to 8000
+
+Your user can then setup the following:
+- mamba
+
+Now we need to clone the sonar-backend repo:
+
+```bash
+git clone https://github.com/rki-mf1/sonar-backend.git
+cd sonar-backend
+```
+
+Next we need to set up secret information that will be unique to your installation. These values need to be defined in `sonar-backend/conf/docker/prod-secrets.env`. To see which values need to be set, you can check the `sonar-backend/conf/docker/dev-secrets.env` file but **do not just copy the values from this file**. You need to set your own passwords and Django SECRET_KEY.
+
+To generate a new Django SECRET_KEY, you can run the following (needs Python >=3.6):
+
+```bash
+$ python -c "import secrets; print(secrets.token_urlsafe())"
+<the secret key will be here>
+```
+
+Now you can add that value to your secrets file:
+
+```bash
+nano conf/docker/prod-secrets.env
+```
+
+Next we need to build the sonar-backend docker container, bring up all services and run Django migrations. We pass the `-t` argument because we do not want to include test data (you can remove this if you want to load some test data).
+
+```bash
+$ ./scripts/linux/clean-prod-env.sh -t
+```
+
+
+
+## Development
+
+**⚠️Caution: The setting and installation steps can vary depending on the user; this was just an example guideline.**
 
 The current version has been tested on the following system configurations:
 
 - Ubuntu ^22.04
-- Python ^3.11
-- Django ^4.2.7
-- PostgreSQL ^16
-
-## Prerequisites
-
-- [Install Redis on Linux](https://redis.io/docs/install/install-redis/install-redis-on-linux/)
-
-- Install PostgreSQL using the following example command on Ubuntu/Debian systems:
-  ```bash
-  sudo apt-get install postgresql
-  ```
-  Start the PostgreSQL service:
-  ```bash
-  sudo service postgresql start
-  ```
-- Set up a username and password for PostgreSQL.
-
-  Login and connect as the default user (postgres):
-
-  ```bash
-  sudo -u postgres psql
-  ```
-
-  Change the password:
-
-  ```bash
-  postgres=# ALTER USER postgres PASSWORD '123456';
-  ```
-
-- Create a new (clean & empty) PostgreSQL database (e.g., covsonar) and edit settings accordingly see [settings.py -> Databases](covsonar_backend/settings.py#L87))
-
-  create new database
-
-  ```bash
-  postgres=# CREATE DATABASE covsonar;
-  ```
-
-- Install the required dependencies, such as Python and Poetry.
-
-      Create a new Python environment with Conda:
-
-      ```bash
-      conda create -n sonar-backend python=3.11 poetry
-      conda activate sonar-backend
-      ```
+- docker
+- mamba
 
   > [!note] > **🗿 Recommended software:** DB Management Software (e.g. DBeaver), REST Client (e.g. Insomnia, Insomnia configuration can be shared)
 
-## Install sonar-backend
+### Install sonar-backend
 
 1. Clone the Project:
-   ```bash
-   git clone https://github.com/rki-mf1/sonar-backend.git
-   cd sonar-backend
-   ```
-2. Install Dependencies with Poetry:
-   `bash
- poetry install
- `
-   Once these steps are completed, proceed to the next section.
+```bash
+$ git clone https://github.com/rki-mf1/sonar-backend.git
+$ cd sonar-backend
+```
 
-## Start sonar-backend (development server)
+2. Install Dependencies with Poetry:
+```bash
+$ poetry install
+```
+Once these steps are completed, proceed to the next section.
+
+### Start sonar-backend development server
 
 There is a "template.env" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
 

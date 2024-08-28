@@ -72,12 +72,8 @@ services:
       - SONAR_DATA_ARCHIVE
       - SECRET_KEY
     restart: unless-stopped
-    #command: gunicorn  --workers 2 --threads 2 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application --timeout 300
     entrypoint: /bin/sh -c
     command: [ "${START_DJANGO_SERVER}" ]
-    # enable this and "django_extensions" in settings.dev to enable per request profiling
-    # also create the ./profiler directory in project root
-    # command: python manage.py runprofileserver --use-cprofile --prof-path=/code/profiler 0.0.0.0:9080
     volumes:
       - ./covsonar2_server/test/media:/covsonarmedia
       - ./covsonar2_server/test/static:/staticfiles
@@ -127,9 +123,9 @@ services:
         condition: service_started
 
   backend-nginx:
-    container_name: backend-nginx
     build:
       context: ./nginx
+    container_name: backend-nginx
     volumes:
       - ./nginx/covsonar.conf:/etc/nginx/conf.d/default.conf
       - ./covsonar2_server/test/static:/staticfiles
@@ -147,8 +143,8 @@ services:
       - "6379"
 
   celery-workers:
-    container_name: celery-workers
     image: backend:local
+    container_name: celery-workers
     # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend. For example, 
     # if the concurrency is set too high and the SAMPLE_BATCH_SIZE is too high,
     # this will not speed up the process. You need to lower SAMPLE_BATCH_SIZE into smaller chunks to gain the benefits
@@ -184,8 +180,8 @@ services:
       - sonar-django-backend
       
   celery-monitor:
-    container_name: celery-monitor
     image: backend:local
+    container_name: celery-monitor
     command: celery -A covsonar_backend flower --port=5555 --basic_auth="$CELERY_FLOWER_AUTH" --enable_events=False
     environment:
       - DEBUG
