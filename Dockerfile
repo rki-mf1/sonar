@@ -22,5 +22,3 @@ COPY rest_api/ /code/rest_api
 
 RUN poetry config virtualenvs.create false
 RUN poetry install --only main --no-interaction
-# For development purpose
-ADD . /code
