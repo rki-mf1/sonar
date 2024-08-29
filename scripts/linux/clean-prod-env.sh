@@ -12,9 +12,9 @@ TEST_DATA=0
 # Helper function to print help to stderr.
 help()
 {
-  >&2 echo "Build a clean dev environment"
+  >&2 echo "Build a clean production environment"
   >&2 echo ""
-  >&2 echo "./scripts/linux/build-dev-env.sh [-d] [-r] [-t]"
+  >&2 echo "./scripts/linux/build-prod-env.sh [-r] [-t]"
   >&2 echo ""
   >&2 echo "  -d : delete current ./work directory containing mapped directories [default: disabled]"
   >&2 echo "  -r : *disable* rebuilding docker container [default: rebuilding enabled]"
@@ -43,10 +43,10 @@ while getopts "hdrt" arg; do
   esac
 done
 
-$SCRIPTPATH/dc-dev.sh down -v
+$SCRIPTPATH/dc-prod.sh down -v
 
 if [ $DELETE -eq 0 ]; then
-  sudo rm -rf ./work
+  rootlesskit rm -rf ./work
 fi
 
 DC_ARGS=""
@@ -55,14 +55,14 @@ if [ $REBUILD -eq 0 ]; then
   DC_ARGS="--build"
 fi
 
-$SCRIPTPATH/dc-dev.sh up -d $DC_ARGS
-$SCRIPTPATH/dev-manage.sh migrate
+$SCRIPTPATH/dc-prod.sh up -d $DC_ARGS
+$SCRIPTPATH/prod-manage.sh migrate
 
 if [ $TEST_DATA -eq 0 ]; then
-  $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_sm
+  $SCRIPTPATH/prod-manage.sh loaddata initial_auth test_data_sm
 else
-  $SCRIPTPATH/dev-manage.sh loaddata initial_auth
+  $SCRIPTPATH/prod-manage.sh loaddata initial_auth
 fi
 
 # This is a hack to resolve the annoying apserver log messages
-$SCRIPTPATH/dc-dev.sh restart sonar-django-apscheduler
+$SCRIPTPATH/dc-prod.sh restart sonar-django-apscheduler

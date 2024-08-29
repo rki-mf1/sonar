@@ -38,8 +38,6 @@ services:
     - POSTGRES_PASSWORD
     - POSTGRES_HOST
     - POSTGRES_PORT
-    ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     depends_on:
       sonar-db-init:
         condition: service_completed_successfully
@@ -86,9 +84,6 @@ services:
         condition: service_started
       sonar-db:
         condition: service_healthy
-    ports:
-      # to access directly, normally can use localhost:8000 via the nginx proxy
-      - "9080"
 
   sonar-django-apscheduler:
     image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
@@ -139,8 +134,6 @@ services:
     image: redis:7
     container_name: sonar-cache
     restart: unless-stopped
-    ports:
-      - "6379"
 
   celery-workers:
     image: backend:local
@@ -204,8 +197,6 @@ services:
       - SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE
       - SECRET_KEY
-    ports:
-      - "5555:5555"
     depends_on:
       - sonar-cache
       - sonar-django-backend
