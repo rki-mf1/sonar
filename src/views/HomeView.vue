@@ -316,15 +316,21 @@ export default {
       this.symbolOptions = res.gene_symbols;
     },
     parseDateToDateRangeFilter(data) {
+      // Parse the first date
       data[0] = new Date(Date.parse(data[0].toString()));
+      // Check if there's a second date
       if (data[1]) {
         data[1] = new Date(Date.parse(data[1].toString()));
-        const formatted = `${data[0].toISOString().split('T')[0]},${data[1].toISOString().split('T')[0]}`
+        const formatted = [data[0].toISOString().split('T')[0], data[1].toISOString().split('T')[0]]
+        // `${data[0].toISOString().split('T')[0]},${data[1].toISOString().split('T')[0]}`
         return formatted;
       } else {
-        return `${data[0].toISOString().split('T')[0]},${new Date(
-          Date.parse(data[0]) + 1000 * 60 * 60 * 24
-        ).toISOString().split('T')[0]}`;
+        // If there's no second date, assume a range of one day?
+        const nextDay = new Date(Date.parse(data[0]) + 1000 * 60 * 60 * 24);
+        return [
+          data[0].toISOString().split('T')[0],
+          nextDay.toISOString().split('T')[0]
+        ];
       }
     },
     getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {

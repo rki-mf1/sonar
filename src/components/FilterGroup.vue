@@ -12,7 +12,8 @@ import {
   type InsProfileAAFilter,
   type ProfileFilter,
   type RepliconFilter,
-  type LineageFilter
+  type LineageFilter,
+  DjangoFilterType,
 } from '@/util/types'
 
 import type { MenuItem } from 'primevue/menuitem'
@@ -183,6 +184,19 @@ export default {
         this.$emit('update-property-value-options', filter.propertyName)
       }
     }
+  },
+  watch: {
+    // Watch for changes in filter.propertyName
+    'filterGroup.filters.propertyFilters': {
+      handler(filters: PropertyFilter[]) {
+        filters.forEach(filter => {
+          if (filter.propertyName?.includes('date')) {
+            filter.filterType = DjangoFilterType.RANGE;
+          }
+        });
+      },
+      deep: true
+    }
   }
 }
 </script>
@@ -194,9 +208,14 @@ export default {
         <span class="filter-label">Property</span>
         <Dropdown :options="propertyOptions" v-model="filter.propertyName" style="flex: auto"
           @change="updatePropertyValueOptions(filter)" />
+          
         <Dropdown :options="operators" v-model="filter.filterType" style="flex: auto" />
-        <Calendar v-if="filter.propertyName?.includes('date')" v-model="filter.value" style="flex: auto"
-          dateFormat="yy-mm-dd" selectionMode="range"/>
+
+        <Calendar v-if="filter.propertyName?.includes('date')" 
+        v-model="filter.value" style="flex: auto"
+        showIcon
+        dateFormat="yy-mm-dd" selectionMode="range"/>
+
         <Dropdown v-else-if="fetchOptionsProperties.includes(filter.propertyName)"
           :options="propertyValueOptions[filter.propertyName]?.options"
           :loading="propertyValueOptions[filter.propertyName]?.loading" v-model="filter.value" style="flex: auto" />
@@ -210,6 +229,7 @@ export default {
           <i class="pi pi-trash"></i>
         </Button>
       </div>
+
       <div v-for="filter in filterGroup.filters?.profileFilters" class="single-filter">
         <span class="filter-label">{{ filter.label }}</span>
         <div v-for="key in Object.keys(filter) as Array<keyof ProfileFilter>">
@@ -230,6 +250,7 @@ export default {
           <i class="pi pi-trash"></i>
         </Button>
       </div>
+      
       <div v-for="filter in filterGroup.filters?.repliconFilters" class="single-filter">
         <span class="filter-label">Replicon</span>
         <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
@@ -271,6 +292,7 @@ export default {
         </SplitButton>
         <Button size="small" icon="pi pi-filter" label="Add OR Group" @click="addOrFilterGroup" :disabled="cantAddOrGroup"/>
       </div>
+      
       <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
         <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px;">OR</span>
         <FilterGroup :filterGroup="subFilterGroup" :propertyOptions="propertyOptions" :symbolOptions="symbolOptions"
