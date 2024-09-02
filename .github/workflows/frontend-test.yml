@@ -1,0 +1,13 @@
+name: Make sure we can build
+on: push
+jobs:
+  unit_test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+        npm ci
+        npm run build
+#        npm run test:unit
+#        npm run lint
+
