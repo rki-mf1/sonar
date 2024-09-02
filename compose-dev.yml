@@ -1,3 +1,8 @@
+# This compose file is meant to be used *with* the compose.yml file, and only
+# adds/overrides some settings. Mainly we expose a few ports that might be
+# useful for debugging (e.g. PostgreSQL's port), and mount the current dir
+# under /code in the backend container so that you can make live changes to the
+# code without needing to rebuild the container.
 services:
 
   sonar-db:
