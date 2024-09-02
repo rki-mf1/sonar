@@ -1,6 +1,6 @@
 try {
-    docker-compose -f docker-compose-dev.yml exec -T dev-django coverage report $args
-    docker-compose -f docker-compose-dev.yml exec -T dev-django coverage html $args
+    scripts\win\dc-dev.ps1 exec -T sonar-django-backend coverage report $args
+    scripts\win\dc-dev.ps1 exec -T soanr-django-backend coverage html $args
     Invoke-Item htmlcov/index.html
 }
 catch {

@@ -3,7 +3,7 @@ Param(
     [switch]$NoRebuild = $false
 )
 try {
-    scripts\win\dc-dev.ps1 down
+    scripts\win\dc-dev.ps1 down --remove-orphans
     if ($LASTEXITCODE -ne 0) {
         exit($LASTEXITCODE)
     }
@@ -12,7 +12,7 @@ try {
         Write-Output "######### Skip rebuilding the docker image ###########"
     }
     else {
-        scripts\win\build_docker_dev.ps1
+        scripts\win\build-docker-dev.ps1
         if ($LASTEXITCODE -ne 0) {
             exit($LASTEXITCODE)
         }
