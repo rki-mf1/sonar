@@ -43,10 +43,16 @@ while getopts "hdrt" arg; do
   esac
 done
 
-$SCRIPTPATH/dc-dev.sh down -v
+$SCRIPTPATH/dc-dev.sh down -v --remove-orphans
 
 if [ $DELETE -eq 0 ]; then
-  sudo rm -rf ./work
+  TRUE_DIR=$(pwd -P ./work)
+  echo "You are about to delete the directory: \'$TRUE_DIR\'."
+  read -p "Are you sure you want to do this? [yn]" -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    sudo rm -rf ./work
+  fi
 fi
 
 DC_ARGS=""
