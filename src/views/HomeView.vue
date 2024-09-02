@@ -9,8 +9,10 @@
             <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
               :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
               :lineageOptions="lineageOptions"
-              :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
+              :symbolOptions="symbolOptions" 
+              :operators="Object.values(DjangoFilterType)"
               :propertyValueOptions="propertyValueOptions"
+              :propertiesDict="propertiesDict"
               v-on:update-property-value-options="updatePropertyValueOptions" />
           </div>
 
@@ -67,7 +69,7 @@
           </div>
         </Dialog>
 
-        <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows scrollable
+        <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="large" dataKey="name" stripedRows scrollable
           scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
           selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
           <template #empty> No Results </template>
@@ -105,22 +107,30 @@
             </template>
             <template #body="slotProps">
               <div v-if="column === 'genomic_profiles'">
-                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                <div style="height: 2.5em; width:20rem; overflow-x: auto; white-space: nowrap;">
                   <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
                     :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
                     :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
                 </div>
               </div>
               <div v-else-if="column === 'proteomic_profiles'">
-                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                <div style="height: 2.5em; width:20rem; overflow-x: auto; white-space: nowrap;">
                   <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
                     :variantString="variant"
                     :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
                 </div>
               </div>
+              <div v-else-if="column === 'init_upload_date'">
+                {{ formatDate(slotProps.data.init_upload_date) }}
+              </div>
+
+              <div v-else-if="column === 'last_update_date'">
+                {{ formatDate(slotProps.data.last_update_date) }}
+              </div> 
               <span v-else>
                 {{ findProperty(slotProps.data.properties, column) }}
               </span>
+      
             </template>
           </Column>
           <template #footer>
@@ -175,6 +185,7 @@ export default {
       ordering: '-collection_date',
       notSortable: ["genomic_profiles", "proteomic_profiles"],
       propertyOptions: [],
+      propertiesDict: {}, // to store name and type
       repliconAccessionOptions: [],
       lineageOptions: [],
       allColumns: [],
@@ -194,6 +205,10 @@ export default {
     };
   },
   methods: {
+    formatDate(dateStr: string): string {
+      if (!dateStr) return ''; // Handle case where dateStr is undefined or null
+      return dateStr.split('T')[0];
+    },
     async updateSamples() {
       this.loading = true;
       const params = {
@@ -298,10 +313,23 @@ export default {
         }
       };
     },
+    // async updatePropertyOptions() {
+    //   const res = await API.getInstance().getSampleGenomePropertyOptions();
+    //   this.propertyOptions = res.property_names;
+    //   this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
+    // },
     async updatePropertyOptions() {
-      const res = await API.getInstance().getSampleGenomePropertyOptions();
-      this.propertyOptions = res.property_names;
-      this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
+      const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes();
+
+      // Transform the array to an object
+      this.propertiesDict = res.values.reduce((acc, property) => {
+            acc[property.name] = property.query_type;
+            return acc;
+          }, {});
+
+      this.propertyOptions = Object.keys(this.propertiesDict);
+      this.allColumns =  this.propertyOptions;
+      // this.allColumns = this.propertyOptions.push('genomic_profiles', 'proteomic_profiles').sort();
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions();
@@ -407,6 +435,7 @@ export default {
           this.propertyValueOptions[propertyName].options = res.values;
           this.propertyValueOptions[propertyName].loading = false;
         });
+      console.log(this.propertyValueOptions[propertyName])
     },
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);

@@ -14,6 +14,7 @@ import {
   type RepliconFilter,
   type LineageFilter,
   DjangoFilterType,
+  StringDjangoFilterType,
 } from '@/util/types'
 
 import type { MenuItem } from 'primevue/menuitem'
@@ -48,11 +49,18 @@ export default {
     propertyValueOptions: {
       type: Object as () => { [key: string]: { options: string[]; loading: boolean } },
       required: true
-    }
+    },
+    propertiesDict : Object
   },
   data() {
     return {
-      fetchOptionsProperties: ['sequencing_tech', 'sequencing_reason', 'zip_code'],
+      localOperators: [...this.operators],
+      fetchOptionsProperties: ['genome_completeness',
+      'sequencing_tech',
+      'sequencing_reason', 
+      'zip_code',
+      'country',
+      'host'],
       ClassicFilter: {
         label: '"Label"',
         value: '',
@@ -183,21 +191,31 @@ export default {
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter.propertyName)
       }
-    }
+      this.initializeOperators(filter);
+    },
+    initializeOperators(filter) {
+      console.log("initializeOperators: " + filter.propertyName)
+      const propertyType = this.propertiesDict[filter.propertyName];
+      let newOperators = [];
+
+      if (propertyType === 'value_varchar') {
+        newOperators = Object.values(StringDjangoFilterType);
+      } else {
+        newOperators = Object.values(DjangoFilterType);
+      }
+      this.localOperators = newOperators;
+    },
   },
   watch: {
-    // Watch for changes in filter.propertyName
-    'filterGroup.filters.propertyFilters': {
-      handler(filters: PropertyFilter[]) {
-        filters.forEach(filter => {
-          if (filter.propertyName?.includes('date')) {
-            filter.filterType = DjangoFilterType.RANGE;
-          }
-        });
-      },
-      deep: true
-    }
-  }
+
+  },
+  mounted() {
+    // Initialize the operators array when the component is mounted
+    // also use when the set filter dialog open again to prevent lost of filter type
+    this.filterGroup.filters.propertyFilters.forEach((filter) => {
+      this.initializeOperators(filter);
+    });
+  },
 }
 </script>
 
@@ -206,10 +224,11 @@ export default {
     <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
       <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter">
         <span class="filter-label">Property</span>
+
         <Dropdown :options="propertyOptions" v-model="filter.propertyName" style="flex: auto"
           @change="updatePropertyValueOptions(filter)" />
           
-        <Dropdown :options="operators" v-model="filter.filterType" style="flex: auto" />
+        <Dropdown :options="localOperators" v-model="filter.filterType" style="flex: auto" />
 
         <Calendar v-if="filter.propertyName?.includes('date')" 
         v-model="filter.value" style="flex: auto"
@@ -218,7 +237,11 @@ export default {
 
         <Dropdown v-else-if="fetchOptionsProperties.includes(filter.propertyName)"
           :options="propertyValueOptions[filter.propertyName]?.options"
-          :loading="propertyValueOptions[filter.propertyName]?.loading" v-model="filter.value" style="flex: auto" />
+          :loading="propertyValueOptions[filter.propertyName]?.loading"
+          v-model="filter.value" style="flex: auto"
+          filter >
+        </Dropdown>
+
         <InputText v-else v-model="filter.value" style="flex: auto" />
         <Button size="small" @click="
           filterGroup.filters?.propertyFilters?.splice(
@@ -229,7 +252,7 @@ export default {
           <i class="pi pi-trash"></i>
         </Button>
       </div>
-
+      <!-- when click Add AND Filter -->
       <div v-for="filter in filterGroup.filters?.profileFilters" class="single-filter">
         <span class="filter-label">{{ filter.label }}</span>
         <div v-for="key in Object.keys(filter) as Array<keyof ProfileFilter>">
@@ -250,7 +273,7 @@ export default {
           <i class="pi pi-trash"></i>
         </Button>
       </div>
-      
+      <!-- Replicon Filter -->
       <div v-for="filter in filterGroup.filters?.repliconFilters" class="single-filter">
         <span class="filter-label">Replicon</span>
         <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
@@ -267,6 +290,7 @@ export default {
           <i class="pi pi-trash"></i>
         </Button>
       </div>
+      <!-- Lineage Filter -->
       <div v-for="filter in filterGroup.filters?.lineageFilters" class="single-filter">
         <span class="filter-label">Lineage</span>
         <InputText v-model="filter.lineage" style="flex: auto"/>
@@ -284,26 +308,36 @@ export default {
           <i class="pi pi-trash"></i>
         </Button>
       </div>
+      
       <div class="button-bar">
         <!-- <SplitButton size="small" icon="pi pi-filter" label="Add AND Filter" :model="filterTypeMethods" @click="addClassicFilter()" /> -->
         <SplitButton size="small" label="" :model="filterTypeMethods" @click="addClassicFilter()" >
           <i class="pi pi-filter"></i> 
           <span style="font-weight: 500;"> &nbsp; Add AND Filter</span>
         </SplitButton>
+        <!-- OR part -->
         <Button size="small" icon="pi pi-filter" label="Add OR Group" @click="addOrFilterGroup" :disabled="cantAddOrGroup"/>
       </div>
-      
+
       <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
         <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px;">OR</span>
-        <FilterGroup :filterGroup="subFilterGroup" :propertyOptions="propertyOptions" :symbolOptions="symbolOptions"
-          :operators="operators" :propertyValueOptions="propertyValueOptions" :repliconAccessionOptions="repliconAccessionOptions"
-          v-on:update-property-value-options="updatePropertyValueOptions" />
+        <FilterGroup 
+        :filterGroup="subFilterGroup" 
+        :propertyOptions="propertyOptions" 
+        :symbolOptions="symbolOptions"
+        :operators="operators" 
+        :propertyValueOptions="propertyValueOptions" 
+        :repliconAccessionOptions="repliconAccessionOptions"
+        :propertiesDict="propertiesDict"
+        :lineageOptions="lineageOptions"
+        v-on:update-property-value-options="updatePropertyValueOptions" />
         <Button size="small" style="float: right;" @click="
           filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)
           " @mouseenter="markGroup(subFilterGroup, true)" @mouseleave="markGroup(subFilterGroup, false)">
           <i class="pi pi-trash"></i>
         </Button>
       </div>
+
     </div>
   </template>
 

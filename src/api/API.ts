@@ -156,11 +156,16 @@ export default class API {
         return this.getRequest(`properties/distinct_property_names`, {}, false)
     }
 
+    getSampleGenomePropertyOptionsAndTypes() {
+        return this.getRequest(`properties/get_all_properties`, {}, false)
+    }
+
     getSampleStatistics() {
         return this.getRequest(`samples/statistics`, {}, false)
     }
 
     getSampleGenomePropertyValueOptions(propertyName: string) {
+        // get unique value2 of each property_name 
         return this.getRequest(`properties/distinct_properties/?property_name=${propertyName}`, {}, false)
     }
     getRepliconAccessionOptions() {

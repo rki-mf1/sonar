@@ -18,6 +18,16 @@ export enum DjangoFilterType {
     IREGEX = "iregex",
 }
 
+export enum StringDjangoFilterType {
+    EXACT = "exact",
+    CONTAINS = "contains",
+    REGEX = "regex",
+}
+
+export enum DateDjangoFilterType {
+    EXACT = "exact",
+}
+
 export type PropertyFilter = {
     fetchOptions: boolean;
     label: string;
