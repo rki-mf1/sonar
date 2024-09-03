@@ -9,8 +9,9 @@ import requests
 
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
-from rest_api.models import Lineage, LineageAlias
+from rest_api.models import Lineage
 
 
 class LineageImport:
@@ -36,7 +37,6 @@ class LineageImport:
         self._linurl = "https://raw.githubusercontent.com/cov-lineages/pango-designation/master/lineages.csv"
         self._aliurl = "https://raw.githubusercontent.com/cov-lineages/pango-designation/master/pango_designation/alias_key.json"
         self.lineage_file = os.path.join(self._tmpdir, "lineages.csv")
-        self.alias_file = os.path.join(self._tmpdir, "alias.json")
 
     def __enter__(self):
         return self
@@ -48,16 +48,17 @@ class LineageImport:
         """
         Download lineage and alias data.
         """
+        self.lineage_file = "test-data/lineages_2024_01_15.ready.tsv"
         # Download and write the lineage file
-        print(f"Downloading lineage info from: {self._linurl}")
-        try:
-            url_content = requests.get(self._linurl)
-            with open(self.lineage_file, "wb") as handle:
-                handle.write(url_content.content)
-        except:
-            print("Connection refused by the server..")
-            print("Using local data..")
-            self.lineage_file = "test-data/lineages_2024_01_15.csv"
+        # print(f"Downloading lineage info from: {self._linurl}")
+        # try:
+        #     url_content = requests.get(self._linurl)
+        #     with open(self.lineage_file, "wb") as handle:
+        #         handle.write(url_content.content)
+        # except:
+        #     print("Connection refused by the server..")
+        #     print("Using local data..")
+            
 
     def download_alias_data(self):
         """
@@ -74,65 +75,37 @@ class LineageImport:
             print("Using local data..")
             self.alias_file = "test-data/alias_key_2024_01_15.json"
 
-    def process_lineage_data(self) -> List[Lineage]:
+    def process_lineage_data(self) -> list[Lineage]:
         """
         Process the lineage data.
         """
         with open(self.alias_file) as f:
-            alias_json = json.load(f)
-        aliases = []
-        alias_lineages = []
-        for key, value in alias_json.items():
-            if isinstance(value, str):
-                if "." in value:
-                    lineage = self.get_or_create_lineage_obj(
-                        value, alias_lineages, alias_json
-                    )
-                    alias_lineages.append(lineage)
-                    aliases.append(LineageAlias(alias=key, lineage=lineage))
-                else:
-                    aliases.append(LineageAlias(alias=key, parent_alias=value))
-            else:
-                for item in value:
-                    if "." in item:
-                        lineage = self.get_or_create_lineage_obj(
-                            item, alias_lineages, alias_json
-                        )
-                        alias_lineages.append(lineage)
-                        aliases.append(LineageAlias(alias=key, lineage=lineage))
-                    else:
-                        aliases.append(LineageAlias(alias=key, parent_alias=item))
-
-        [lineage.save() for lineage in alias_lineages]
-        LineageAlias.objects.bulk_create(
-            aliases,
-            ignore_conflicts=True,
-        )
-
-        df_lineages = pd.read_csv(self.lineage_file, usecols=[0, 1])
-        lineage_ids = df_lineages.lineage.unique()
-        lineages = [
-            self.get_or_create_lineage_obj(lineage_id, [], alias_json)
-            for lineage_id in lineage_ids
-        ]
-        return lineages
-
-    def get_or_create_lineage_obj(
-        self, lineage: str, lineage_list: List[Lineage], alias_dict: dict
-    ) -> Lineage:
-        split = lineage.split(".")
-        if split[0] in alias_dict.keys():
-            alias = split.pop(0)
-            return next(
-                (
-                    lineage
-                    for lineage in lineage_list
-                    if lineage.lineage == ".".join(split)
-                    and lineage.prefixed_alias == alias
-                ),
-                None,
-            ) or Lineage(lineage=".".join(split), prefixed_alias=alias)
-        return Lineage(lineage=lineage)
+            tsv_data = pd.read_csv(self.lineage_file, sep="\t")
+        
+        parents: list[Lineage] = []
+        children: list[Lineage] = []
+        for id, key, value in tsv_data.itertuples(index=False):
+            if value == "none":
+                continue
+            values = value.split(",")
+            parent = Lineage(name=key)
+            parents.append(parent)
+            for val in values:                
+                children.append(Lineage(name=val, parent=parent))        
+        with transaction.atomic():  
+            for parent in parents:
+                parent.save()          
+            # Lineage.objects.bulk_create(
+                # objs=parents,
+                # ignore_conflicts=True,
+            # )
+            Lineage.objects.bulk_create(
+                objs=children,
+                ignore_conflicts=True,
+            )
+        
+        
+    
 
     def update_lineage_data(self, alias_key: str, lineages: str) -> List[Lineage]:
         """
@@ -176,13 +149,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         Lineage.objects.all().delete()
-        LineageAlias.objects.all().delete()
         with LineageImport() as lineage_manager:
             lineages = lineage_manager.update_lineage_data(
                 kwargs["alias_key"], kwargs["lineages"]
-            )
-        Lineage.objects.bulk_create(
-            objs=lineages,
-            ignore_conflicts=True,
-        )
+            )        
         print("--Done--")

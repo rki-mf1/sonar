@@ -1,4 +1,4 @@
-from functools import reduce
+from functools import reduce 
 import json
 import operator
 import os
@@ -819,7 +819,16 @@ class LineageViewSet(
     queryset = models.Lineage.objects.all()
     serializer_class = LineagesSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["lineage", "prefixed_alias"]
+    filterset_fields = ["name", "parent"]
+
+    @staticmethod
+    def _collect_sublineages(lineages: list[str]):
+        lineages = models.Lineage.objects.filter(name__in=lineages)
+        sublineages = set()
+        for lineage in lineages:
+            sublineages.update(lineage.get_sublineages())
+        return sublineages
+        
 
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):
@@ -830,18 +839,11 @@ class LineageViewSet(
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
-    def distinct_lineages(self, request: Request, *args, **kwargs):
-        distinc_lineages = []
-        for lineage in models.Lineage.objects.all():
-            if (
-                lineage.lineage == ""
-            ):  # case of lineages without '.', e.g "A", "B", "XBB", etc
-                combined_lineage = f"{lineage.prefixed_alias}{lineage.lineage}"
-            else:
-                combined_lineage = f"{lineage.prefixed_alias}.{lineage.lineage}"
-            distinc_lineages.append(combined_lineage)
+    def distinct_lineages(self, request: Request, *args, **kwargs):       
+        
+        distinct_lineages = [item.name for item in models.Lineage.objects.distinct("name")]
         return Response(
-            {"lineages": sorted(distinc_lineages)},
+            {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
         )
 

@@ -41,7 +41,7 @@ from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
 from rest_api.utils import Response, resolve_ambiguous_NT_AA, strtobool
-from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet
+from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet, LineageViewSet
 
 from . import models
 from .serializers import (
@@ -208,9 +208,9 @@ class SampleViewSet(
             )
 
             # apply ordering if specified
-            if ordering := request.query_params.get("ordering"):
+            ordering = request.query_params.get("ordering")
+            if ordering:
                 queryset = self._apply_ordering(queryset, ordering)
-
             # return csv stream if specified
             if csv_stream:
                 if not ordering:
@@ -691,15 +691,9 @@ class SampleViewSet(
         *args,
         **kwargs,
     ):
-        split = lineage.split(".")
-        alias = None
-        if models.LineageAlias.objects.filter(alias=split[0]).exists():
-            alias = split.pop(0)
-            lineage = ".".join(split)
-        lineage = models.Lineage.objects.get(lineage=lineage, prefixed_alias=alias)
+        
         sublineages = (
-            str(lineage)
-            for lineage in lineage.get_sublineages(include_recombinants=False)
+            LineageViewSet._collect_sublineages([lineage])
         )
         return self.filter_property("lineage", "in", sublineages, exclude)
 
