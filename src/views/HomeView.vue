@@ -32,8 +32,8 @@
   <div class="output_box">
     <div class="output">
       <div style="height: 100%; overflow: auto;">
-        <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
-          <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+        <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading..." >
+          <ProgressSpinner class="flex-1 p-3" size="small" v-if="loading" style="color: whitesmoke" />
         </Dialog>
 
         <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
@@ -217,6 +217,7 @@ export default {
         ordering: this.ordering
       }
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
+      console.log(this.samples)
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.filteredCount = this.filteredStatistics["filtered_total_count"];
       this.isFiltersSet = this.filters['filters']['andFilter'].length + this.filters['filters']['orFilter'].length > 0;
@@ -256,16 +257,31 @@ export default {
       }
     },
     chartData() {
-      const samples_per_week = this.filteredStatistics["samples_per_week"];
-      const labels: string[] = [];
-      const data: number[] = [];
+      const samples_per_week = this.filteredStatistics ? this.filteredStatistics["samples_per_week"] : {};
+      const labels = [];
+      const data = [];
 
-      if (samples_per_week != undefined) {
+      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
         Object.keys(samples_per_week).forEach(key => {
           labels.push(key);
           data.push(samples_per_week[key]);
         });
+      } else {
+        // Return an empty chart structure
+        return {
+          labels: ['No data available'],  // A label to indicate no data
+          datasets: [
+            {
+              label: 'Samples',
+              data: [],  // No data points
+              backgroundColor: 'rgba(249, 115, 22, 0.2)',
+              borderColor: 'rgb(249, 115, 22)',
+              borderWidth: 1
+            }
+          ]
+        };
       }
+
       return {
         labels: labels,
         datasets: [
@@ -277,7 +293,7 @@ export default {
             borderWidth: 1
           }
         ]
-      }
+      };
     },
     chartOptions() {
       const documentStyle = getComputedStyle(document.documentElement);
@@ -344,21 +360,25 @@ export default {
       this.symbolOptions = res.gene_symbols;
     },
     parseDateToDateRangeFilter(data) {
+      console.log(data)
       // Parse the first date
       data[0] = new Date(Date.parse(data[0].toString()));
+      //  format the date according to your local timezone instead of UTC.
+      const formatDateToLocal = (date) => {
+        return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .split('T')[0];
+      };
+
       // Check if there's a second date
       if (data[1]) {
         data[1] = new Date(Date.parse(data[1].toString()));
-        const formatted = [data[0].toISOString().split('T')[0], data[1].toISOString().split('T')[0]]
-        // `${data[0].toISOString().split('T')[0]},${data[1].toISOString().split('T')[0]}`
+        const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])];
         return formatted;
       } else {
         // If there's no second date, assume a range of one day?
         const nextDay = new Date(Date.parse(data[0]) + 1000 * 60 * 60 * 24);
-        return [
-          data[0].toISOString().split('T')[0],
-          nextDay.toISOString().split('T')[0]
-        ];
+        return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)];
       }
     },
     getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {

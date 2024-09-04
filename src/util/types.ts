@@ -31,7 +31,7 @@ export enum DateDjangoFilterType {
 export type PropertyFilter = {
     fetchOptions: boolean;
     label: string;
-    value: string;
+    value: string | number;
     propertyName: string;
     filterType: DjangoFilterType | null;
 }

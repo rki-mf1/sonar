@@ -1,5 +1,6 @@
 <script lang="ts">
 
+import API from '@/api/API';
 import {
   type FilterGroup,
   type ClassicFilter,
@@ -15,6 +16,7 @@ import {
   type LineageFilter,
   DjangoFilterType,
   StringDjangoFilterType,
+  DateDjangoFilterType,
 } from '@/util/types'
 
 import type { MenuItem } from 'primevue/menuitem'
@@ -126,10 +128,23 @@ export default {
           altAA: '',
           exclude: false
         } as InsProfileAAFilter
-      } as { [key: string]: ProfileFilter }
+      } as { [key: string]: ProfileFilter },
+      // to store the earliest and latest dates for each property.
+      dateRanges: {} as { [key: string]: { earliest: string; latest: string } },
     }
   },
   computed: {
+    sliderValue: {
+        get() {
+          // Convert filter.value to a number for the Slider
+          const numericValue = parseFloat(this.filter?.value);
+          return isNaN(numericValue) ? 0 : numericValue;
+        },
+        set(newValue) {
+          // Convert the Slider value back to a string for filter.value
+          return newValue.toString();
+        },
+    },
     filterTypeMethods(): MenuItem[] {
       const menuItems = []
       for (const [key, value] of Object.entries(this.profileFilterTypes)) {
@@ -175,6 +190,30 @@ export default {
     }
   },
   methods: {
+    async get_defaults_earliest_latest_collect_date(propertyName: string) {
+      // Check if the property already has a stored date range
+      if (this.dateRanges[propertyName]) {
+        return this.dateRanges[propertyName]; // Return the cached date range
+      }
+
+      // Fetch the date range if not already cached
+      const response = await API.getInstance().getSampleGenomePropertyValueOptions(propertyName);
+      const dateArray = response.values;
+
+      // Sort dates and store the earliest and latest dates in the dictionary
+      if (dateArray) {
+        const sortedDates = dateArray.sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
+        this.dateRanges[propertyName] = {
+          earliest: sortedDates[0],
+          latest: sortedDates[sortedDates.length - 1],
+        };
+      }
+
+      console.log(`Earliest Date for ${propertyName}:`, this.dateRanges[propertyName]?.earliest);
+      console.log(`Latest Date for ${propertyName}:`, this.dateRanges[propertyName]?.latest);
+
+      return this.dateRanges[propertyName];
+    },
     addOrFilterGroup() {
       this.filterGroup.filterGroups.push({
         filterGroups: [],
@@ -187,23 +226,35 @@ export default {
     addClassicFilter() {
       this.filterGroup.filters.profileFilters.push({ ...this.ClassicFilter })
     },
-    updatePropertyValueOptions(filter: PropertyFilter) {
+    async updatePropertyValueOptions(filter: PropertyFilter) {
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter.propertyName)
       }
       this.initializeOperators(filter);
+
+      // If the property is a date, set the default value to the date range
+      if (filter.propertyName?.includes('date')) {
+        const dateRange = await this.get_defaults_earliest_latest_collect_date(filter.propertyName);
+        if (dateRange) {
+          filter.value = [new Date(dateRange.earliest), new Date(dateRange.latest)];
+        }
+      }
     },
-    initializeOperators(filter) {
+    initializeOperators(filter: { fetchOptions?: boolean; label?: string; value?: string; propertyName: any; filterType?: DjangoFilterType | null; }) {
       console.log("initializeOperators: " + filter.propertyName)
       const propertyType = this.propertiesDict[filter.propertyName];
       let newOperators = [];
 
       if (propertyType === 'value_varchar') {
         newOperators = Object.values(StringDjangoFilterType);
-      } else {
+      } 
+      else if(propertyType === 'value_date'){
+        newOperators = Object.values(DateDjangoFilterType);
+      }else {
         newOperators = Object.values(DjangoFilterType);
       }
       this.localOperators = newOperators;
+      filter.filterType = newOperators[0]
     },
   },
   watch: {
@@ -215,6 +266,7 @@ export default {
     this.filterGroup.filters.propertyFilters.forEach((filter) => {
       this.initializeOperators(filter);
     });
+    
   },
 }
 </script>
@@ -222,19 +274,24 @@ export default {
 
 <template>
     <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
-      <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter">
-        <span class="filter-label">Property</span>
-
-        <Dropdown :options="propertyOptions" v-model="filter.propertyName" style="flex: auto"
+      <!-- Property Filters -->
+      <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter flex align-items-center justify-content-start">
+        <div class="p-d-flex">
+          <span class="filter-label">Property</span>
+          <Dropdown :options="propertyOptions" v-model="filter.propertyName"
+          class="mr-2" 
+          style="flex: auto"
           @change="updatePropertyValueOptions(filter)" />
-          
-        <Dropdown :options="localOperators" v-model="filter.filterType" style="flex: auto" />
+          <span class="filter-label">Operator</span>
+          <Dropdown :options="localOperators" v-model="filter.filterType" class="mr-2" 
+          style="flex: auto" />
+        </div>
 
         <Calendar v-if="filter.propertyName?.includes('date')" 
         v-model="filter.value" style="flex: auto"
         showIcon
         dateFormat="yy-mm-dd" selectionMode="range"/>
-
+        
         <Dropdown v-else-if="fetchOptionsProperties.includes(filter.propertyName)"
           :options="propertyValueOptions[filter.propertyName]?.options"
           :loading="propertyValueOptions[filter.propertyName]?.loading"
@@ -242,14 +299,14 @@ export default {
           filter >
         </Dropdown>
 
-        <InputText v-else v-model="filter.value" style="flex: auto" />
-        <Button size="small" @click="
+        <InputText severity="danger" v-else v-model="filter.value" style="flex: auto" />
+
+        <Button type="button"  raised size="small" @click="
           filterGroup.filters?.propertyFilters?.splice(
             filterGroup.filters?.propertyFilters?.indexOf(filter),
             1
           )
-          ">
-          <i class="pi pi-trash"></i>
+          " icon="pi pi-trash" label="" severity="danger">
         </Button>
       </div>
       <!-- when click Add AND Filter -->
@@ -264,12 +321,12 @@ export default {
             v-model="filter[key]" style="flex: auto" />
           <InputText v-else-if="key != 'label'" v-model="filter[key]" style="flex: auto" :placeholder="key" />
         </div> 
-        <Button size="small" @click="
+        <Button type="button" severity="danger" size="small" @click="
           filterGroup.filters?.profileFilters?.splice(
             filterGroup.filters?.profileFilters?.indexOf(filter),
             1
           )
-          ">
+          " icon="pi pi-trash">
           <i class="pi pi-trash"></i>
         </Button>
       </div>
@@ -281,7 +338,7 @@ export default {
           Exclude?
           <InputSwitch v-model="filter.exclude" />
         </div>
-        <Button size="small" @click="
+        <Button type="button" severity="danger" size="small" @click="
           filterGroup.filters?.repliconFilters?.splice(
             filterGroup.filters?.repliconFilters?.indexOf(filter),
             1
@@ -299,7 +356,7 @@ export default {
           Exclude?
           <InputSwitch v-model="filter.exclude" />
         </div>
-        <Button size="small" @click="
+        <Button type="button" severity="danger" size="small" @click="
           filterGroup.filters?.lineageFilters?.splice(
             filterGroup.filters?.lineageFilters?.indexOf(filter),
             1
@@ -331,7 +388,7 @@ export default {
         :propertiesDict="propertiesDict"
         :lineageOptions="lineageOptions"
         v-on:update-property-value-options="updatePropertyValueOptions" />
-        <Button size="small" style="float: right;" @click="
+        <Button type="button" severity="danger" size="small" style="float: right;" @click="
           filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)
           " @mouseenter="markGroup(subFilterGroup, true)" @mouseleave="markGroup(subFilterGroup, false)">
           <i class="pi pi-trash"></i>

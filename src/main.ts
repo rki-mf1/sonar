@@ -1,3 +1,4 @@
+import 'primeflex/primeflex.css';
 import 'primevue/resources/themes/aura-light-blue/theme.css';
 import './util/custom_theme.css';
 import 'primeicons/primeicons.css'; //icons
@@ -23,6 +24,7 @@ import MultiSelect from "primevue/multiselect";
 import Calendar from "primevue/calendar";
 import Chart from 'primevue/chart';
 import Tooltip from 'primevue/tooltip';
+import Slider from 'primevue/slider';
 
 import { OhVueIcon, addIcons } from 'oh-vue-icons'
 import { FaDna } from 'oh-vue-icons/icons'
@@ -74,6 +76,7 @@ app.component('InputSwitch', InputSwitch)
 app.component('SplitButton', SplitButton)
 app.component('Calendar', Calendar)
 app.component('Chart', Chart)
+app.component('Slider', Slider)
 
 app.component("v-icon", OhVueIcon);
 
