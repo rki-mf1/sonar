@@ -34,8 +34,6 @@ class LineageImport:
             tmpdir (str): Temporary directory.
         """
         self._tmpdir = mkdtemp(prefix=".tmp_sonarLinmgr_")
-        self._linurl = "https://raw.githubusercontent.com/cov-lineages/pango-designation/master/lineages.csv"
-        self._aliurl = "https://raw.githubusercontent.com/cov-lineages/pango-designation/master/pango_designation/alias_key.json"
         self.lineage_file = os.path.join(self._tmpdir, "lineages.csv")
 
     def __enter__(self):
@@ -44,54 +42,36 @@ class LineageImport:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         shutil.rmtree(self._tmpdir)
 
-    def download_lineage_data(self):
+    def import_lineage_data(self):
         """
         Download lineage and alias data.
         """
-        self.lineage_file = "test-data/lineages_2024_01_15.ready.tsv"
-        # Download and write the lineage file
-        # print(f"Downloading lineage info from: {self._linurl}")
-        # try:
-        #     url_content = requests.get(self._linurl)
-        #     with open(self.lineage_file, "wb") as handle:
-        #         handle.write(url_content.content)
-        # except:
-        #     print("Connection refused by the server..")
-        #     print("Using local data..")
+        self.lineage_file = "test-data/lineages_test.tsv"
             
-
-    def download_alias_data(self):
-        """
-        Download alias data.
-        """
-        # Download and write the alias file
-        print(f"Downloading lineage aliases info from: {self._aliurl}")
-        try:
-            items = requests.get(self._aliurl)
-            with open(self.alias_file, "w") as handle:
-                json.dump(items.json(), handle)
-        except:
-            print("Connection refused by the server..")
-            print("Using local data..")
-            self.alias_file = "test-data/alias_key_2024_01_15.json"
-
     def process_lineage_data(self) -> list[Lineage]:
         """
         Process the lineage data.
         """
-        with open(self.alias_file) as f:
+        with open(self.lineage_file) as f:
             tsv_data = pd.read_csv(self.lineage_file, sep="\t")
         
         parents: list[Lineage] = []
         children: list[Lineage] = []
-        for id, key, value in tsv_data.itertuples(index=False):
-            if value == "none":
+        # all_sublineages = set()
+        # all_parents = set()
+        for lineage, sublineages in tsv_data.itertuples(index=False):
+            if sublineages == "none":
                 continue
-            values = value.split(",")
-            parent = Lineage(name=key)
+            values = sublineages.split(",")
+           # all_sublineages.update(values)   
+           # all_parents.add(lineage)
+            parent = Lineage(name=lineage)
             parents.append(parent)
             for val in values:                
-                children.append(Lineage(name=val, parent=parent))        
+                children.append(Lineage(name=val, parent=parent))  
+       
+        # in parents only names of "root" lineages without parent:
+        # roots = all_parents-all_sublineages    
         with transaction.atomic():  
             for parent in parents:
                 parent.save()          
@@ -103,26 +83,19 @@ class LineageImport:
                 objs=children,
                 ignore_conflicts=True,
             )
-        
-        
     
 
-    def update_lineage_data(self, alias_key: str, lineages: str) -> List[Lineage]:
+    def update_lineage_data(self, lineages: str) -> List[Lineage]:
         """
         Update the lineage data.
 
         Returns:
             pd.DataFrame: The dataframe with updated data.
         """
-        if alias_key:
-            self.alias_file = alias_key
-        else:
-            self.download_alias_data()
-
         if lineages:
             self.lineage_file = lineages
         else:
-            self.download_lineage_data()
+            self.import_lineage_data()
 
         df = self.process_lineage_data()
         return df
@@ -130,19 +103,13 @@ class LineageImport:
 
 class Command(BaseCommand):
     help = (
-        "Download latest pangolin information and import the information to a database."
+        "import lineage tsv"
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--alias-key",
-            help="Pangolin alias_key.json file (default: auto download from GitHub)",
-            type=str,
-            default=None,
-        )
-        parser.add_argument(
             "--lineages",
-            help="Pangolin lineages.csv file (default: auto download from GitHub)",
+            help="lineages.tsv file",
             type=str,
             default=None,
         )
@@ -151,6 +118,6 @@ class Command(BaseCommand):
         Lineage.objects.all().delete()
         with LineageImport() as lineage_manager:
             lineages = lineage_manager.update_lineage_data(
-                kwargs["alias_key"], kwargs["lineages"]
+                kwargs["lineages"]
             )        
         print("--Done--")
