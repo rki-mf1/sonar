@@ -658,7 +658,7 @@ class PropertyViewSet(
     def get_distinct_property_names():
         queryset = models.Property.objects.all()
         queryset = queryset.distinct("name")
-        filter_list = ["id", "datahash"]
+        filter_list = ["id", "datahash", "properties"]
         property_names = [item.name for item in queryset]
         sample_properties = [
             field.name
