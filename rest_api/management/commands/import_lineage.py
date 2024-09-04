@@ -47,43 +47,32 @@ class LineageImport:
         Download lineage and alias data.
         """
         self.lineage_file = "test-data/lineages_test.tsv"
-            
+
     def process_lineage_data(self) -> list[Lineage]:
         """
         Process the lineage data.
         """
         with open(self.lineage_file) as f:
             tsv_data = pd.read_csv(self.lineage_file, sep="\t")
-        
+
         parents: list[Lineage] = []
         children: list[Lineage] = []
-        # all_sublineages = set()
-        # all_parents = set()
         for lineage, sublineages in tsv_data.itertuples(index=False):
             if sublineages == "none":
                 continue
             values = sublineages.split(",")
-           # all_sublineages.update(values)   
-           # all_parents.add(lineage)
             parent = Lineage(name=lineage)
             parents.append(parent)
-            for val in values:                
-                children.append(Lineage(name=val, parent=parent))  
-       
-        # in parents only names of "root" lineages without parent:
-        # roots = all_parents-all_sublineages    
-        with transaction.atomic():  
+            for val in values:
+                children.append(Lineage(name=val, parent=parent))
+
+        with transaction.atomic():
             for parent in parents:
-                parent.save()          
-            # Lineage.objects.bulk_create(
-                # objs=parents,
-                # ignore_conflicts=True,
-            # )
+                parent.save()
             Lineage.objects.bulk_create(
                 objs=children,
                 ignore_conflicts=True,
             )
-    
 
     def update_lineage_data(self, lineages: str) -> List[Lineage]:
         """
@@ -102,9 +91,7 @@ class LineageImport:
 
 
 class Command(BaseCommand):
-    help = (
-        "import lineage tsv"
-    )
+    help = "import lineage tsv"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -117,7 +104,5 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         Lineage.objects.all().delete()
         with LineageImport() as lineage_manager:
-            lineages = lineage_manager.update_lineage_data(
-                kwargs["lineages"]
-            )        
+            lineages = lineage_manager.update_lineage_data(kwargs["lineages"])
         print("--Done--")

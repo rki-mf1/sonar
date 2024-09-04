@@ -134,7 +134,7 @@ class Lineage(models.Model):
     def get_sublineages_from_list(lineages):
         lineages_set = set()
         if lineages.count() > 0:
-            children = Lineage.objects.filter(parent__in=lineages)
+            children = Lineage.objects.filter(parent__name__in=lineages.values("name"))
             lineages_set.update(children)
             lineages_set.update(Lineage.get_sublineages_from_list(children))
         return lineages_set
