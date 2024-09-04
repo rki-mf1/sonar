@@ -3,6 +3,7 @@ from django.db.models import UniqueConstraint, Q
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
+
 class Sequence(models.Model):
     seqhash = models.CharField(unique=True, max_length=200)
 
@@ -93,7 +94,9 @@ class Gene(models.Model):
     strand = models.BigIntegerField(blank=True, null=True)
     gene_symbol = models.CharField(max_length=50, blank=True, null=True)
     cds_symbol = models.CharField(max_length=50, blank=True, null=True)
-    gene_accession = models.CharField(max_length=50, unique=False, blank=True, null=True)
+    gene_accession = models.CharField(
+        max_length=50, unique=False, blank=True, null=True
+    )
     cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
@@ -117,25 +120,24 @@ class GeneSegment(models.Model):
 
 
 class Lineage(models.Model):
-    name = models.CharField(max_length=50) #not unique because of recombinants
+    name = models.CharField(max_length=50)  # not unique because of recombinants
     parent = models.ForeignKey("self", models.CASCADE, blank=True, null=True)
 
-    def get_sublineages(self):
+    def get_sublineages(self) -> set:
         lineages = set([self])
-        children = Lineage.objects.filter(parent=self)
-        lineages.update(Lineage.get_sublineages_from_list(children))
+        lineages.update(
+            Lineage.get_sublineages_from_list(Lineage.objects.filter(name=self.name))
+        )
         return lineages
-    
+
     @staticmethod
     def get_sublineages_from_list(lineages):
         lineages_set = set()
-        new_lineages = Lineage.objects.filter(parent__in=lineages)
-        if (new_lineages.count() == 0):
-            return []
-        lineages_set.update(Lineage.get_sublineages_from_list(new_lineages))
-        lineages_set.update(lineages)
+        if lineages.count() > 0:
+            children = Lineage.objects.filter(parent__in=lineages)
+            lineages_set.update(children)
+            lineages_set.update(Lineage.get_sublineages_from_list(children))
         return lineages_set
-
 
     def __str__(self) -> str:
         return self.name
@@ -207,6 +209,7 @@ class Sample(models.Model):
         if self.pk:  # Check if this is an update to an existing record
             self.last_update_date = timezone.now()
         super().save(*args, **kwargs)
+
 
 class Sample2Property(models.Model):
     property = models.ForeignKey(Property, models.CASCADE)

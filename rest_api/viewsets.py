@@ -1,4 +1,4 @@
-from functools import reduce 
+from functools import reduce
 import json
 import operator
 import os
@@ -821,27 +821,21 @@ class LineageViewSet(
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["name", "parent"]
 
-    @staticmethod
-    def _collect_sublineages(lineages: list[str]):
-        lineages = models.Lineage.objects.filter(name__in=lineages)
-        sublineages = set()
-        for lineage in lineages:
-            sublineages.update(lineage.get_sublineages())
-        return sublineages
-        
-
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):
         lineage = self.get_object()
         sublineages = lineage.get_sublineages()
+        print(len(sublineages))
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
-    def distinct_lineages(self, request: Request, *args, **kwargs):       
-        
-        distinct_lineages = [item.name for item in models.Lineage.objects.distinct("name")]
+    def distinct_lineages(self, request: Request, *args, **kwargs):
+
+        distinct_lineages = [
+            item.name for item in models.Lineage.objects.distinct("name")
+        ]
         return Response(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
