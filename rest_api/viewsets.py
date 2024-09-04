@@ -26,12 +26,13 @@ from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework import status
 
 
 from rest_api.data_entry.gbk_import import import_gbk_file
 from rest_api.data_entry.sample_entry_job import check_for_new_data
-
+from rest_api.management.commands.import_lineage import LineageImport
 from . import models
 from .serializers import (
     AlignmentSerializer,
@@ -840,6 +841,24 @@ class LineageViewSet(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
         )
+    
+    @action(detail=False, methods=["put"])
+    def update_lineages(self, request: Request, *args, **kwargs):        
+        tsv_file = request.FILES.get("lineages_file")        
+        tsv_file = self._temp_save_file(tsv_file)
+        lineage_import = LineageImport()
+        lineage_import.set_file(tsv_file)
+        models.Lineage.objects.all().delete()
+        lineage_import.process_lineage_data()
+        return Response(
+            {"detail": "Lineages updated successfully"}, status=status.HTTP_200_OK
+        )        
+    
+    def _temp_save_file(self, uploaded_file: InMemoryUploadedFile):
+        file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.read())
+        return file_path
 
 
 class TasksView(

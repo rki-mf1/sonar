@@ -42,13 +42,16 @@ class LineageImport:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         shutil.rmtree(self._tmpdir)
 
-    def import_lineage_data(self):
+    def set_file(self, file: str | None = None) -> None:
         """
         Download lineage and alias data.
         """
+        if file:
+            self.lineage_file = file
+            return
         self.lineage_file = "test-data/lineages_test.tsv"
 
-    def process_lineage_data(self) -> list[Lineage]:
+    def process_lineage_data(self):
         """
         Process the lineage data.
         """
@@ -84,7 +87,7 @@ class LineageImport:
         if lineages:
             self.lineage_file = lineages
         else:
-            self.import_lineage_data()
+            self.set_file()
 
         df = self.process_lineage_data()
         return df
