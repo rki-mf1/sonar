@@ -1,5 +1,5 @@
 <template>
-  <div class="input">
+  <div class="input my-2">
     <div class="input-left">
       <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
         :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
@@ -29,9 +29,9 @@
     </div>
   </div>
 
-  <div class="output_box">
-    <div class="output">
-      <div style="height: 100%; overflow: auto;">
+  <div class="output_box ">
+    <div class="output mb-2">
+      <div style="height:100%; overflow: auto;">
         <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading..." >
           <ProgressSpinner class="flex-1 p-3" size="small" v-if="loading" style="color: whitesmoke" />
         </Dialog>
@@ -433,16 +433,18 @@ export default {
       }
       for (const filter of filterGroup.filters.lineageFilters) {
         if (filter.lineage) {
+          
           summary.andFilter.push({
             label: filter.label,
             lineage: filter.lineage,
             exclude: filter.exclude
           });
         }
-      }
+      } 
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
       }
+      console.log("Filter: ", summary)
       return summary;
     },
     updatePropertyValueOptions(propertyName: string) {
@@ -484,7 +486,7 @@ export default {
 
 <style scoped>
 .input {
-  height: 15%;
+  height: 8rem;
   width: 98%;
   display: flex;
   flex-direction: row;
@@ -508,7 +510,7 @@ export default {
 
 .input-right {
   height: 100%;
-  width: 90%;
+  width: 70%;
   display: flex;
   flex-direction: row;
   justify-content: flex-end;

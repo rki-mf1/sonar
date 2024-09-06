@@ -171,7 +171,7 @@ export default {
         }
       })
       menuItems.push({
-        label: 'LineageFilter',
+        label: 'SubLineageFilter',
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.lineageFilters.push({ ...this.LineageFilter })
@@ -230,6 +230,7 @@ export default {
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter.propertyName)
       }
+
       this.initializeOperators(filter);
 
       // If the property is a date, set the default value to the date range
@@ -238,6 +239,9 @@ export default {
         if (dateRange) {
           filter.value = [new Date(dateRange.earliest), new Date(dateRange.latest)];
         }
+      }else{
+        // default 
+          filter.value = ""
       }
     },
     initializeOperators(filter: { fetchOptions?: boolean; label?: string; value?: string; propertyName: any; filterType?: DjangoFilterType | null; }) {
@@ -275,33 +279,28 @@ export default {
 <template>
     <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
       <!-- Property Filters -->
-      <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter flex align-items-center justify-content-start">
-        <div class="p-d-flex">
-          <span class="filter-label">Property</span>
-          <Dropdown :options="propertyOptions" v-model="filter.propertyName"
-          class="mr-2" 
-          style="flex: auto"
-          @change="updatePropertyValueOptions(filter)" />
-          <span class="filter-label">Operator</span>
-          <Dropdown :options="localOperators" v-model="filter.filterType" class="mr-2" 
-          style="flex: auto" />
-        </div>
-
+      <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter">
+        <span class="filter-label">Property</span>
+        <Dropdown :options="propertyOptions" v-model="filter.propertyName"
+        style="flex: auto"
+        @change="updatePropertyValueOptions(filter)" />
+        <span class="filter-label">Operator</span>
+        <Dropdown :options="localOperators" v-model="filter.filterType" class="mr-2" 
+        style="flex: auto" />
+        
         <Calendar v-if="filter.propertyName?.includes('date')" 
         v-model="filter.value" style="flex: auto"
         showIcon
-        dateFormat="yy-mm-dd" selectionMode="range"/>
-        
+        dateFormat="yy-mm-dd" selectionMode="range"/> 
         <Dropdown v-else-if="fetchOptionsProperties.includes(filter.propertyName)"
-          :options="propertyValueOptions[filter.propertyName]?.options"
-          :loading="propertyValueOptions[filter.propertyName]?.loading"
-          v-model="filter.value" style="flex: auto"
-          filter >
+        :options="propertyValueOptions[filter.propertyName]?.options"
+        :loading="propertyValueOptions[filter.propertyName]?.loading"
+        v-model="filter.value" style="flex: auto"
+        filter >
         </Dropdown>
+        <InputText v-else v-model="filter.value" style="flex: auto" />
 
-        <InputText severity="danger" v-else v-model="filter.value" style="flex: auto" />
-
-        <Button type="button"  raised size="small" @click="
+        <Button type="button" raised size="small" @click="
           filterGroup.filters?.propertyFilters?.splice(
             filterGroup.filters?.propertyFilters?.indexOf(filter),
             1
@@ -332,38 +331,52 @@ export default {
       </div>
       <!-- Replicon Filter -->
       <div v-for="filter in filterGroup.filters?.repliconFilters" class="single-filter">
-        <span class="filter-label">Replicon</span>
+        <div class="flex flex-column">
+          <div class="flex align-items-center ">
+            <lable class="filter-label">Replicon</lable>
         <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
         <div class="exclude-switch">
           Exclude?
           <InputSwitch v-model="filter.exclude" />
         </div>
-        <Button type="button" severity="danger" size="small" @click="
+        <Button type="button"  size="small" @click="
           filterGroup.filters?.repliconFilters?.splice(
             filterGroup.filters?.repliconFilters?.indexOf(filter),
             1
           )
-          ">
-          <i class="pi pi-trash"></i>
+          "  icon="pi pi-trash">
+
         </Button>
+          </div>
+
+        </div>
+
+        
       </div>
       <!-- Lineage Filter -->
       <div v-for="filter in filterGroup.filters?.lineageFilters" class="single-filter">
-        <span class="filter-label">Lineage</span>
-        <InputText v-model="filter.lineage" style="flex: auto"/>
-        <Dropdown :options="lineageOptions" v-model="filter.lineage" style="flex: auto" />
-        <div class="exclude-switch">
-          Exclude?
-          <InputSwitch v-model="filter.exclude" />
+        <div class="flex flex-column">
+          <div class="flex align-items-center ">
+            <span class="filter-label">Lineage</span>
+            <!-- <InputText v-model="filter.lineage" style="flex: auto"/> -->
+            <Dropdown :options="lineageOptions" v-model="filter.lineage" style="flex: auto" filter />
+            <div class="exclude-switch">
+              Exclude?
+              <InputSwitch v-model="filter.exclude"  />
+            </div>
+            <Button type="button" severity="danger" raised size="small" @click="
+              filterGroup.filters?.lineageFilters?.splice(
+                filterGroup.filters?.lineageFilters?.indexOf(filter),
+                1
+              )
+              " icon="pi pi-trash" label="">
+            </Button>
+          </div>
+          <div class="flex align-items-center ">
+            <small>*This search will return all sublieage of selected lineage.</small >
+
+          </div>
         </div>
-        <Button type="button" severity="danger" size="small" @click="
-          filterGroup.filters?.lineageFilters?.splice(
-            filterGroup.filters?.lineageFilters?.indexOf(filter),
-            1
-          )
-          ">
-          <i class="pi pi-trash"></i>
-        </Button>
       </div>
       
       <div class="button-bar">
@@ -402,7 +415,7 @@ export default {
 <style scoped>
 
 .single-filter {
-  display: flex;
+  /*  display: flex;*/
   flex-direction: row;
   align-items: center;
   border: 2px solid #e0e0e0;
