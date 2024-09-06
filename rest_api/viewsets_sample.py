@@ -94,6 +94,7 @@ class SampleViewSet(
             .count()
         )
         response_dict["samples_total"] = models.Sample.objects.all().count()
+        # - before column name mean "descending order", while without - mean "ascending".
         response_dict["newest_sample_date"] = (
             models.Sample.objects.all()
             .order_by("-collection_date")
@@ -134,8 +135,9 @@ class SampleViewSet(
         queryset = models.Sample.objects.all()
         if filter_params := request.query_params.get("filters"):
             filters = json.loads(filter_params)
-            queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
             LOGGER.info(f"Genomes Query, conditions: {filters}")
+            queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
+
         return queryset
 
     @action(detail=False, methods=["get"])
@@ -148,6 +150,7 @@ class SampleViewSet(
         2. add accession of reference at the output
         """
         try:
+            timer = datetime.now()
             # optional query parameters
             # we try to use bool(), but it is not working as expected.
             showNX = strtobool(request.query_params.get("showNX", "False"))
@@ -225,7 +228,10 @@ class SampleViewSet(
 
             # default response
             queryset = self.paginate_queryset(queryset)
+            LOGGER.info(f'Query time done in {datetime.now() - timer},Start to Format result')
             serializer = SampleGenomesSerializer(queryset, many=True)
+            timer = datetime.now()
+            LOGGER.info(f'Serializer done in {datetime.now() - timer},Start to Format result')
             return self.get_paginated_response(serializer.data)
 
         except Exception as e:
@@ -342,52 +348,55 @@ class SampleViewSet(
             dict[field_name] = non_empty_count
 
         for property_name in property_names:
-            datatype = models.Property.objects.get(name=property_name).datatype
-            dict[property_name] = (
-                queryset.exclude(
-                    **{
-                        "properties__property__name": property_name,
-                        f"properties__{datatype}": "",
-                    }
+            try:
+                datatype = models.Property.objects.get(name=property_name).datatype
+                # Determine the exclusion value based on the datatype
+                exclusion_value = 0 if datatype in ['value_integer', 'value_float'] else ""
+                dict[property_name] = (
+                    queryset.exclude(
+                        **{
+                            "properties__property__name": property_name,
+                            f"properties__{datatype}": exclusion_value
+                        }
+                    )
+                    .exclude(
+                        **{
+                            "properties__property__name": property_name,
+                            f"properties__{datatype}": None,
+                        }
+                    )
+                    .count()
                 )
-                .exclude(
-                    **{
-                        "properties__property__name": property_name,
-                        f"properties__{datatype}": None,
-                    }
-                )
-                .count()
-            )
-
+            except ValueError as e:
+                LOGGER.error(f"Error with property_name: {property_name}, datatype: {datatype}")
+                LOGGER.error(f"Error message: {e}")
+        
         return dict
 
     def _get_samples_per_week(self, queryset):
-        dict = {}
+        result_dict = {}
         queryset = (
             queryset.extra(
                 select={
-                    "week": "EXTRACT('week' FROM collection_date)",
-                    "year": "EXTRACT('year' FROM collection_date)",
+                    "week": "EXTRACT('week' FROM \"sample\".\"collection_date\")",
+                    "year": "EXTRACT('year' FROM \"sample\".\"collection_date\")",
                 }
             )
             .values("year", "week")
             .annotate(count=Count("id"), collection_date=Min("collection_date"))
             .order_by("year", "week")
         )
-
         if len(queryset) != 0:
             start_date = queryset.first()["collection_date"]
             end_date = queryset.last()["collection_date"]
-
-            for dt in rrule(
-                WEEKLY, dtstart=start_date, until=end_date
-            ):  # generate all weeks between start and end dates and assign default value 0
-                dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
-
-            for item in queryset:  # fill in count values of present weeks
-                dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
-
-        return dict
+            if start_date and end_date:
+                for dt in rrule(
+                    WEEKLY, dtstart=start_date, until=end_date
+                ):  # generate all weeks between start and end dates and assign default value 0
+                    result_dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
+                for item in queryset:  # fill in count values of present weeks
+                    result_dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
+        return result_dict
 
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
@@ -474,6 +483,10 @@ class SampleViewSet(
         # check the filter_type
         if filter_type == "contains":
             value = value.strip("%")
+        elif filter_type == "range":
+            if isinstance(value, str):
+                value = value.split(',')
+
 
         self.has_property_filter = True
         if property_name in [field.name for field in models.Sample._meta.get_fields()]:
@@ -714,7 +727,7 @@ class SampleViewSet(
     def import_properties_tsv(self, request: Request, *args, **kwargs):
         """
         NOTE:
-        1. if prop is not exist in the database, it will be created automatically
+        1. if prop is not exist in the database, it will not be created automatically
         """
         print("Importing properties...")
         timer = datetime.now()
@@ -778,7 +791,7 @@ class SampleViewSet(
         samples = models.Sample.objects.filter(name__in=sample_id_set).iterator()
         sample_updates = []
         property_updates = []
-        print("Updating samples...")
+        print("Generate/Format data...")
         properties_df.convert_dtypes()
         properties_df.set_index(sample_id_column, inplace=True)
         for sample in samples:
@@ -807,11 +820,12 @@ class SampleViewSet(
         print("Saving...")
         with transaction.atomic():
             # update based prop. for Sample
+            print("Updating Sample...")
             if (
                 len(sample_property_names) > 0
             ):  # when there is no update/add to based prop.
                 models.Sample.objects.bulk_update(
-                    sample_updates, sample_property_names + ["last_update_date"]
+                    sample_updates, sample_property_names + ["last_update_date"], batch_size=1000
                 )
 
             # update custom prop. for Sample
@@ -819,6 +833,7 @@ class SampleViewSet(
                 data=property_updates, many=True
             )
             serializer.is_valid(raise_exception=True)
+            print("Updating Sample2Property...")
             models.Sample2Property.objects.bulk_create(
                 [models.Sample2Property(**data) for data in serializer.validated_data],
                 update_conflicts=True,
@@ -831,7 +846,7 @@ class SampleViewSet(
                     "value_date",
                     "value_zip",
                 ],
-                unique_fields=["sample", "property"],
+                unique_fields=["sample", "property"], batch_size=1000
             )
 
         print("Done.")

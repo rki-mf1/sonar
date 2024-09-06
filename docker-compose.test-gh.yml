@@ -26,8 +26,8 @@ services:
       - conf/test-gh.env
     container_name: dev-covsonar-django
     restart: unless-stopped
-    command: gunicorn  --workers 1 --threads 2 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application
-    # python manage.py runserver 0.0.0.0:9080
+    # command: gunicorn  --workers 2 --threads 1 --bind 0.0.0.0:9080 covsonar_backend.wsgi:application --timeout 600 --log-level=debug
+    command: python manage.py runserver 0.0.0.0:9080
     # enable this and "django_extensions" in settings.dev to enable per request profiling
     # also create the ./profiler directory in project root
     #command: python manage.py runprofileserver --use-cprofile --prof-path=/code/profiler 0.0.0.0:9080
@@ -89,7 +89,7 @@ services:
     # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
     # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 10 --time-limit 180
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
-    command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=3 -E --max-tasks-per-child 2 --time-limit 600 -n Bob
+    command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --concurrency=2 -E --max-tasks-per-child 2 --time-limit 600 -n Bob
     volumes:
       - .:/code
       - ./tmp/wkdir:/tmp/wkdir # working directory of import process
