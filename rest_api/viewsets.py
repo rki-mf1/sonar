@@ -26,12 +26,13 @@ from rest_framework.decorators import action, api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework import status
 
 
 from rest_api.data_entry.gbk_import import import_gbk_file
 from rest_api.data_entry.sample_entry_job import check_for_new_data
-
+from rest_api.management.commands.import_lineage import LineageImport
 from . import models
 from .serializers import (
     AlignmentSerializer,
@@ -658,7 +659,7 @@ class PropertyViewSet(
     def get_distinct_property_names():
         queryset = models.Property.objects.all()
         queryset = queryset.distinct("name")
-        filter_list = ["id", "datahash"]
+        filter_list = ["id", "datahash", "properties"]
         property_names = [item.name for item in queryset]
         sample_properties = [
             field.name
@@ -819,31 +820,45 @@ class LineageViewSet(
     queryset = models.Lineage.objects.all()
     serializer_class = LineagesSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["lineage", "prefixed_alias"]
+    filterset_fields = ["name", "parent"]
 
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):
         lineage = self.get_object()
         sublineages = lineage.get_sublineages()
+        print(len(sublineages))
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
-        distinc_lineages = []
-        for lineage in models.Lineage.objects.all():
-            if (
-                lineage.lineage == ""
-            ):  # case of lineages without '.', e.g "A", "B", "XBB", etc
-                combined_lineage = f"{lineage.prefixed_alias}{lineage.lineage}"
-            else:
-                combined_lineage = f"{lineage.prefixed_alias}.{lineage.lineage}"
-            distinc_lineages.append(combined_lineage)
+
+        distinct_lineages = [
+            item.name for item in models.Lineage.objects.distinct("name")
+        ]
         return Response(
-            {"lineages": sorted(distinc_lineages)},
+            {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
         )
+    
+    @action(detail=False, methods=["put"])
+    def update_lineages(self, request: Request, *args, **kwargs):        
+        tsv_file = request.FILES.get("lineages_file")        
+        tsv_file = self._temp_save_file(tsv_file)
+        lineage_import = LineageImport()
+        lineage_import.set_file(tsv_file)
+        models.Lineage.objects.all().delete()
+        lineage_import.process_lineage_data()
+        return Response(
+            {"detail": "Lineages updated successfully"}, status=status.HTTP_200_OK
+        )        
+    
+    def _temp_save_file(self, uploaded_file: InMemoryUploadedFile):
+        file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.read())
+        return file_path
 
 
 class TasksView(

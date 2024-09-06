@@ -60,6 +60,7 @@ $SCRIPTPATH/dev-manage.sh migrate
 
 if [ $TEST_DATA -eq 0 ]; then
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_sm
+  $SCRIPTPATH/dev-manage.sh import_lineage
 else
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth
 fi

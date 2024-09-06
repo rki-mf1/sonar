@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import datetime
 from typing import Type
 from rest_framework import serializers
 from . import models
@@ -195,19 +196,16 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         custom_properties = Sample2PropertySerializer(
             obj.properties, many=True, read_only=True
         ).data
-
-        for prop in [
-            "sequencing_tech",
-            "country",
-            "host",
-            "zip_code",
-            "lab",
-            "lineage",
-            "genome_completeness",
-            "length",
-            "collection_date",
-        ]:
+        filter_list = ['properties', 'name', 'sequence', "id", "datahash"]
+        sample_properties = [
+                    field.name
+                    for field in models.Sample._meta.get_fields()
+                    if field.name not in filter_list
+                ]
+        for prop in sample_properties:
             if value := getattr(obj, prop):
+                if type(value) == datetime.datetime:
+                    value = value.strftime("%Y-%m-%d")
                 custom_properties.append({"name": prop, "value": value})
         return custom_properties
 

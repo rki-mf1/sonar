@@ -41,7 +41,7 @@ from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
 from rest_api.utils import Response, resolve_ambiguous_NT_AA, strtobool
-from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet
+from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet, LineageViewSet
 
 from . import models
 from .serializers import (
@@ -142,7 +142,7 @@ class SampleViewSet(
     def genomes(self, request: Request, *args, **kwargs):
         """
         fetch samples and genomic profiles based on provided filters and optional parameters
-        
+
         TODO:
         1. Optimize the query (reduce the database hit)
         2. add accession of reference at the output
@@ -154,13 +154,15 @@ class SampleViewSet(
             csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
             vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
 
-            LOGGER.info(f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}")
+            LOGGER.info(
+                f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}"
+            )
 
             self.has_property_filter = False
-            
+
             queryset = self._get_filtered_queryset(request)
 
-            # apply ID ('name') filter if provided 
+            # apply ID ('name') filter if provided
             if name_filter := request.query_params.get("name"):
                 queryset = queryset.filter(name=name_filter)
 
@@ -186,7 +188,7 @@ class SampleViewSet(
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.exclude(alt="N")
                 proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
-            
+
             # optimize queryset by prefetching and storing profiles as attributes
             queryset = queryset.select_related("sequence").prefetch_related(
                 "properties__property",
@@ -208,9 +210,9 @@ class SampleViewSet(
             )
 
             # apply ordering if specified
-            if ordering := request.query_params.get("ordering"):
+            ordering = request.query_params.get("ordering")
+            if ordering:
                 queryset = self._apply_ordering(queryset, ordering)
-
             # return csv stream if specified
             if csv_stream:
                 if not ordering:
@@ -220,31 +222,32 @@ class SampleViewSet(
             # return vcf format if specified
             if vcf_format:
                 return self._return_vcf_format(queryset)
-            
+
             # default response
             queryset = self.paginate_queryset(queryset)
             serializer = SampleGenomesSerializer(queryset, many=True)
             return self.get_paginated_response(serializer.data)
-        
+
         except Exception as e:
             traceback.print_exc()
-            return Response(data={"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                data={"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def _apply_ordering(self, queryset, ordering):
         """
-        apply given ordering to queryset 
+        apply given ordering to queryset
         """
         property_names = PropertyViewSet.get_custom_property_names()
         ordering_col_name = ordering.lstrip("-")
         reverse_order = ordering.startswith("-")
-        
+
         if ordering_col_name in property_names:
             datatype = models.Property.objects.get(name=ordering_col_name).datatype
             queryset = queryset.order_by(
                 Subquery(
                     models.Sample2Property.objects.filter(
-                        property__name=ordering_col_name,
-                        sample=OuterRef("id")
+                        property__name=ordering_col_name, sample=OuterRef("id")
                     ).values(datatype)
                 )
             )
@@ -252,9 +255,9 @@ class SampleViewSet(
                 queryset = queryset.reverse()
         else:
             queryset = queryset.order_by(ordering)
-        
+
         return queryset
-    
+
     def _return_csv_stream(self, queryset, request):
         """
         stream queryset data as a csv file
@@ -268,14 +271,16 @@ class SampleViewSet(
         else:
             raise Exception("No columns provided")
 
-        filename = request.query_params.get("filename", "sample_genomes.csv") # default: "sample_genomes.csv"
-        
+        filename = request.query_params.get(
+            "filename", "sample_genomes.csv"
+        )  # default: "sample_genomes.csv"
+
         return StreamingHttpResponse(
             self._stream_serialized_data(queryset.order_by("name"), columns, writer),
             content_type="text/csv",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
-    
+
     def _return_vcf_format(self, queryset):
         """
         return queryset data in vcf format
@@ -283,7 +288,7 @@ class SampleViewSet(
         queryset = self.paginate_queryset(queryset)
         serializer = SampleGenomesSerializerVCF(queryset, many=True)
         return self.get_paginated_response(serializer.data)
-    
+
     def _stream_serialized_data(
         self, queryset: QuerySet, columns: list[str], writer: "_csv._writer"
     ) -> Generator:
@@ -691,17 +696,15 @@ class SampleViewSet(
         *args,
         **kwargs,
     ):
-        split = lineage.split(".")
-        alias = None
-        if models.LineageAlias.objects.filter(alias=split[0]).exists():
-            alias = split.pop(0)
-            lineage = ".".join(split)
-        lineage = models.Lineage.objects.get(lineage=lineage, prefixed_alias=alias)
-        sublineages = (
-            str(lineage)
-            for lineage in lineage.get_sublineages(include_recombinants=False)
+        lineage = models.Lineage.objects.filter(name=lineage).first()
+        if not lineage:
+            raise Exception(f"Lineage {lineage} not found.")
+        return self.filter_property(
+            "lineage",
+            "in",
+            lineage.get_sublineages(),
+            exclude,
         )
-        return self.filter_property("lineage", "in", sublineages, exclude)
 
     def _convert_date(self, date: str):
         datetime_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
@@ -878,7 +881,7 @@ class SampleViewSet(
                     yield dict(zip(header, row))
 
     def _temp_save_file(self, uploaded_file: InMemoryUploadedFile):
-        file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER , uploaded_file.name)
+        file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, uploaded_file.name)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.read())
         return file_path

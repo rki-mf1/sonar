@@ -3,6 +3,7 @@ from django.db.models import UniqueConstraint, Q
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
+
 class Sequence(models.Model):
     seqhash = models.CharField(unique=True, max_length=200)
 
@@ -93,7 +94,9 @@ class Gene(models.Model):
     strand = models.BigIntegerField(blank=True, null=True)
     gene_symbol = models.CharField(max_length=50, blank=True, null=True)
     cds_symbol = models.CharField(max_length=50, blank=True, null=True)
-    gene_accession = models.CharField(max_length=50, unique=False, blank=True, null=True)
+    gene_accession = models.CharField(
+        max_length=50, unique=False, blank=True, null=True
+    )
     cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
@@ -117,74 +120,39 @@ class GeneSegment(models.Model):
 
 
 class Lineage(models.Model):
-    prefixed_alias = models.CharField(max_length=50, blank=True, null=True)
-    lineage = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)  # not unique because of recombinants
+    parent = models.ForeignKey("self", models.CASCADE, blank=True, null=True)
 
-    def _get_sublineages_query(self, include_recombinants: bool):
-        query = Q()
-        if self.prefixed_alias:
-            aliases = LineageAlias.objects.filter(lineage=self, parent_alias=None)
-            if not include_recombinants:
-                aliases = [
-                    alias.alias for alias in aliases if not alias.is_recombinant()
-                ]
-            query |= Q(prefixed_alias__in=aliases)
-            for sublineage in Lineage.objects.filter(prefixed_alias__in=aliases):
-                query |= sublineage._get_sublineages_query(
-                    include_recombinants=include_recombinants
-                )
-        query |= Q(
-            lineage__startswith=f"{self.lineage}.", prefixed_alias=self.prefixed_alias
+    def get_sublineages(self) -> set:
+        lineages = set([self])
+        lineages.update(
+            Lineage.get_sublineages_from_list(Lineage.objects.filter(name=self.name))
         )
-        return query
+        return lineages
 
-    def get_sublineages(self, include_recombinants=False):
-        query = self._get_sublineages_query(include_recombinants=include_recombinants)
-        query |= Q(lineage=self.lineage, prefixed_alias=self.prefixed_alias)
-        return Lineage.objects.filter(query)
+    @staticmethod
+    def get_sublineages_from_list(lineages):
+        lineages_set = set()
+        if lineages.count() > 0:
+            children = Lineage.objects.filter(parent__name__in=lineages.values("name"))
+            lineages_set.update(children)
+            lineages_set.update(Lineage.get_sublineages_from_list(children))
+        return lineages_set
 
     def __str__(self) -> str:
-        if self.prefixed_alias:
-            if self.lineage:
-                return f"{self.prefixed_alias}.{self.lineage}"
-            return self.prefixed_alias
-        return self.lineage
+        return self.name
 
     class Meta:
         db_table = "lineage"
         constraints = [
             UniqueConstraint(
                 name="unique_lineage",
-                fields=["prefixed_alias", "lineage"],
+                fields=["name", "parent"],
             ),
             UniqueConstraint(
-                name="unique_lineage_null_alias",
-                fields=["lineage"],
-                condition=models.Q(prefixed_alias__isnull=True),
-            ),
-        ]
-
-
-class LineageAlias(models.Model):
-    alias = models.CharField(max_length=50)
-    lineage = models.ForeignKey("Lineage", models.CASCADE, blank=True, null=True)
-    parent_alias = models.CharField(max_length=50, blank=True, null=True)
-
-    def is_recombinant(self):
-        return LineageAlias.objects.filter(alias=self.alias).count() > 1
-
-    class Meta:
-        db_table = "lineage_alias"
-        constraints = [
-            UniqueConstraint(
-                name="unique_alias2lineage",
-                fields=["alias", "lineage"],
-                condition=models.Q(parent_alias__isnull=True),
-            ),
-            UniqueConstraint(
-                name="unique_alias2parent_alias",
-                fields=["alias", "parent_alias"],
-                condition=models.Q(lineage__isnull=True),
+                name="unique_lineage_parent_null",
+                fields=["name"],
+                condition=models.Q(parent__isnull=True),
             ),
         ]
 
@@ -241,6 +209,7 @@ class Sample(models.Model):
         if self.pk:  # Check if this is an update to an existing record
             self.last_update_date = timezone.now()
         super().save(*args, **kwargs)
+
 
 class Sample2Property(models.Model):
     property = models.ForeignKey(Property, models.CASCADE)
