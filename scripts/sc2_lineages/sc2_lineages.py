@@ -30,6 +30,8 @@ def main():
     # for each lineage get the DIRECT sublineages
     df['sublineages'] = df['lineage'].apply(lambda x: get_sublineages(df, x))
 
+    df = df[df['sublineages'] != 'none']
+
     df[['lineage', 'sublineages']].to_csv(output_file, sep='\t', index=False)
 
     return 0
