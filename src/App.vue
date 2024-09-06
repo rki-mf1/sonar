@@ -3,26 +3,29 @@
   <body>
     <main>
       <header>
-        <i class="pi pi-spinner"
-          style="font-size: 3rem; color: var(--text-color); margin-top: 10px; margin-bottom: 10px;"></i>
-        <div style="font-size: 2rem; color: var(--text-color); margin-top: 10px;">ovSonar</div>
-
-        <div class="menu">
-          <Menubar :model="menuItems">
-            <template #item="{ item, props, hasSubmenu }">
-              <router-link v-if="item.route" v-slot="{ href, navigate }" :to="item.route" custom>
-                <a :href="href" v-bind="props.action" @click="navigate">
+        <div class="flex  flex-wrap justify-content-between">
+          <div class="flex align-items-center justify-content-center">
+            <div style="font-size: 2rem; color: var(--text-color);">
+              <i class="pi pi-spinner" style="font-size: 3rem; color: var(--text-color);"></i>ovSonar
+            </div>
+          </div>
+          <div class="flex align-items-center justify-content-center">
+            <Menubar :model="menuItems">
+              <template #item="{ item, props, hasSubmenu }">
+                <router-link v-if="item.route" v-slot="{ href, navigate }" :to="item.route" custom>
+                  <a class="flex align-items-center gap-1" :href="href" v-bind="props.action" @click="navigate">
+                    <span :class="item.icon" />
+                    <span class="ml-1">{{ item.label }}</span>
+                  </a>
+                </router-link>
+                <a v-else :href="item.url" :target="item.target" v-bind="props.action">
                   <span :class="item.icon" />
-                  <span class="ml-2">{{ item.label }}</span>
+                  <span >{{ item.label }}</span>
+                  <span v-if="hasSubmenu" class="pi pi-fw pi-angle-down" />
                 </a>
-              </router-link>
-              <a v-else :href="item.url" :target="item.target" v-bind="props.action">
-                <span :class="item.icon" />
-                <span class="ml-2">{{ item.label }}</span>
-                <span v-if="hasSubmenu" class="pi pi-fw pi-angle-down ml-2" />
-              </a>
-            </template>
-          </Menubar>
+              </template>
+            </Menubar>
+          </div>
         </div>
       </header>
 
@@ -87,11 +90,7 @@ main {
 }
 
 header {
-  height: 10%;
-  display: flex;
-  flex-direction: row;
-  align-items: left;
-  padding: 20px;
+  padding: 1%;
   background-color: var(--primary-color);
 }
 

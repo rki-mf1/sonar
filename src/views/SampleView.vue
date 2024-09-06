@@ -4,9 +4,17 @@
     <div v-if="selectedData" >
       <strong>Sample Details</strong>
       <br>
-      <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
+      <Dialog v-model:visible="loading" 
+      modal 
+      :closable="false" 
+      header="Loading..." 
+      :style="{ width: '10vw', textAlign: 'center'  }">
+      <div class="flex align-items-center">
         <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+      </div>
+ 
       </Dialog>
+
       <SampleDetails :selectedRow="selectedData" :allColumns="allColumns"></SampleDetails>
     </div>
     

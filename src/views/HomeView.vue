@@ -9,8 +9,10 @@
             <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
               :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
               :lineageOptions="lineageOptions"
-              :symbolOptions="symbolOptions" :operators="Object.values(DjangoFilterType)"
+              :symbolOptions="symbolOptions" 
+              :operators="Object.values(DjangoFilterType)"
               :propertyValueOptions="propertyValueOptions"
+              :propertiesDict="propertiesDict"
               v-on:update-property-value-options="updatePropertyValueOptions" />
           </div>
 
@@ -30,8 +32,8 @@
   <div class="output_box">
     <div class="output">
       <div style="height: 100%; overflow: auto;">
-        <Dialog v-model:visible="loading" modal :closable="false" header="Loading..." :style="{ width: '10vw' }">
-          <ProgressSpinner size="small" v-if="loading" style="color: whitesmoke" />
+        <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading..." >
+          <ProgressSpinner class="flex-1 p-3" size="small" v-if="loading" style="color: whitesmoke" />
         </Dialog>
 
         <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
@@ -67,7 +69,7 @@
           </div>
         </Dialog>
 
-        <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="small" dataKey="name" stripedRows scrollable
+        <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="large" dataKey="name" stripedRows scrollable
           scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
           selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
           <template #empty> No Results </template>
@@ -105,22 +107,30 @@
             </template>
             <template #body="slotProps">
               <div v-if="column === 'genomic_profiles'">
-                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                <div style="height: 2.5em; width:20rem; overflow-x: auto; white-space: nowrap;">
                   <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
                     :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
                     :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
                 </div>
               </div>
               <div v-else-if="column === 'proteomic_profiles'">
-                <div style="height: 1.5em; width:15rem; overflow-x: auto; white-space: nowrap;">
+                <div style="height: 2.5em; width:20rem; overflow-x: auto; white-space: nowrap;">
                   <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
                     :variantString="variant"
                     :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
                 </div>
               </div>
+              <div v-else-if="column === 'init_upload_date'">
+                {{ formatDate(slotProps.data.init_upload_date) }}
+              </div>
+
+              <div v-else-if="column === 'last_update_date'">
+                {{ formatDate(slotProps.data.last_update_date) }}
+              </div> 
               <span v-else>
                 {{ findProperty(slotProps.data.properties, column) }}
               </span>
+      
             </template>
           </Column>
           <template #footer>
@@ -175,6 +185,7 @@ export default {
       ordering: '-collection_date',
       notSortable: ["genomic_profiles", "proteomic_profiles"],
       propertyOptions: [],
+      propertiesDict: {}, // to store name and type
       repliconAccessionOptions: [],
       lineageOptions: [],
       allColumns: [],
@@ -194,6 +205,10 @@ export default {
     };
   },
   methods: {
+    formatDate(dateStr: string): string {
+      if (!dateStr) return ''; // Handle case where dateStr is undefined or null
+      return dateStr.split('T')[0];
+    },
     async updateSamples() {
       this.loading = true;
       const params = {
@@ -202,6 +217,7 @@ export default {
         ordering: this.ordering
       }
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
+      console.log(this.samples)
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.filteredCount = this.filteredStatistics["filtered_total_count"];
       this.isFiltersSet = this.filters['filters']['andFilter'].length + this.filters['filters']['orFilter'].length > 0;
@@ -241,16 +257,31 @@ export default {
       }
     },
     chartData() {
-      const samples_per_week = this.filteredStatistics["samples_per_week"];
-      const labels: string[] = [];
-      const data: number[] = [];
+      const samples_per_week = this.filteredStatistics ? this.filteredStatistics["samples_per_week"] : {};
+      const labels = [];
+      const data = [];
 
-      if (samples_per_week != undefined) {
+      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
         Object.keys(samples_per_week).forEach(key => {
           labels.push(key);
           data.push(samples_per_week[key]);
         });
+      } else {
+        // Return an empty chart structure
+        return {
+          labels: ['No data available'],  // A label to indicate no data
+          datasets: [
+            {
+              label: 'Samples',
+              data: [],  // No data points
+              backgroundColor: 'rgba(249, 115, 22, 0.2)',
+              borderColor: 'rgb(249, 115, 22)',
+              borderWidth: 1
+            }
+          ]
+        };
       }
+
       return {
         labels: labels,
         datasets: [
@@ -262,7 +293,7 @@ export default {
             borderWidth: 1
           }
         ]
-      }
+      };
     },
     chartOptions() {
       const documentStyle = getComputedStyle(document.documentElement);
@@ -298,10 +329,23 @@ export default {
         }
       };
     },
+    // async updatePropertyOptions() {
+    //   const res = await API.getInstance().getSampleGenomePropertyOptions();
+    //   this.propertyOptions = res.property_names;
+    //   this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
+    // },
     async updatePropertyOptions() {
-      const res = await API.getInstance().getSampleGenomePropertyOptions();
-      this.propertyOptions = res.property_names;
-      this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
+      const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes();
+
+      // Transform the array to an object
+      this.propertiesDict = res.values.reduce((acc, property) => {
+            acc[property.name] = property.query_type;
+            return acc;
+          }, {});
+
+      this.propertyOptions = Object.keys(this.propertiesDict);
+      this.allColumns =  this.propertyOptions;
+      // this.allColumns = this.propertyOptions.push('genomic_profiles', 'proteomic_profiles').sort();
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions();
@@ -316,15 +360,25 @@ export default {
       this.symbolOptions = res.gene_symbols;
     },
     parseDateToDateRangeFilter(data) {
+      console.log(data)
+      // Parse the first date
       data[0] = new Date(Date.parse(data[0].toString()));
+      //  format the date according to your local timezone instead of UTC.
+      const formatDateToLocal = (date) => {
+        return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .split('T')[0];
+      };
+
+      // Check if there's a second date
       if (data[1]) {
         data[1] = new Date(Date.parse(data[1].toString()));
-        const formatted = `${data[0].toISOString().split('T')[0]},${data[1].toISOString().split('T')[0]}`
+        const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])];
         return formatted;
       } else {
-        return `${data[0].toISOString().split('T')[0]},${new Date(
-          Date.parse(data[0]) + 1000 * 60 * 60 * 24
-        ).toISOString().split('T')[0]}`;
+        // If there's no second date, assume a range of one day?
+        const nextDay = new Date(Date.parse(data[0]) + 1000 * 60 * 60 * 24);
+        return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)];
       }
     },
     getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
@@ -401,6 +455,7 @@ export default {
           this.propertyValueOptions[propertyName].options = res.values;
           this.propertyValueOptions[propertyName].loading = false;
         });
+      console.log(this.propertyValueOptions[propertyName])
     },
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
