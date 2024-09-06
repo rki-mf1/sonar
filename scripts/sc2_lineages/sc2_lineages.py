@@ -13,11 +13,9 @@ def main():
 
     parser = argparse.ArgumentParser(description='Create file with all pangolin lineages mapped to their direct sublineages.')
     parser.add_argument('-o', '--output', type=str, help='Path and name of output tsv file.')
-    # parser.add_argument('-r', '--recombinants', type=bool, help='wether to include recombined lineages as sublineages.')
 
     args = parser.parse_args()
     output_file = args.output
-    # include_recombinants = args.recombinants
 
     path_lineages = "https://raw.githubusercontent.com/cov-lineages/pango-designation/master/lineage_notes.txt"
     all_lineages = [lineage for lineage in pd.read_csv(path_lineages, sep='\t').iloc[:, 0].tolist()  if not lineage.startswith('*')]
