@@ -25,6 +25,10 @@ import Calendar from "primevue/calendar";
 import Chart from 'primevue/chart';
 import Tooltip from 'primevue/tooltip';
 import Slider from 'primevue/slider';
+import Accordion from 'primevue/accordion';
+import AccordionTab from 'primevue/accordiontab';
+import OverlayPanel from 'primevue/overlaypanel';
+import Chip from 'primevue/chip';
 
 import { OhVueIcon, addIcons } from 'oh-vue-icons'
 import { FaDna } from 'oh-vue-icons/icons'
@@ -39,6 +43,7 @@ import FilterGroup from "./components/FilterGroup.vue";
 import GenomicProfileLabel from "./components/GenomicProfileLabel.vue";
 import SampleDetails from "./components/SampleDetails.vue";
 import Statistics from "./components/Statistics.vue";
+import ExampleUsage from "./components/ExampleUsage.vue";
 
 import App from './App.vue'
 import router from './router'
@@ -55,7 +60,7 @@ app.component('FilterGroup', FilterGroup)
 app.component('GenomicProfileLabel', GenomicProfileLabel)
 app.component('SampleDetails', SampleDetails)
 app.component('Statistics', Statistics)
-
+app.component('ExampleUsage', ExampleUsage)
 
 app.component('IconField', IconField)
 app.component('Menubar', Menubar)
@@ -77,10 +82,11 @@ app.component('SplitButton', SplitButton)
 app.component('Calendar', Calendar)
 app.component('Chart', Chart)
 app.component('Slider', Slider)
-
+app.component('AccordionTab', AccordionTab)
+app.component('Accordion', Accordion)
 app.component("v-icon", OhVueIcon);
-
-
+app.component('OverlayPanel', OverlayPanel)
+app.component('Chip', Chip)
 app.directive('tooltip', Tooltip);
 
 

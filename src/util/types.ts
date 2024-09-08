@@ -28,6 +28,15 @@ export enum DateDjangoFilterType {
     EXACT = "exact",
 }
 
+export enum IntegerDjangoFilterType {
+    EXACT = "exact",
+    GT = "gt",
+    GTE = "gte",
+    LT = "lt",
+    LTE = "lte",
+    RANGE = "range",
+    IN = "in",
+}
 export type PropertyFilter = {
     fetchOptions: boolean;
     label: string;
