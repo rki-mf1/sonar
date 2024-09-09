@@ -4,10 +4,6 @@ import argparse
 import pandas as pd
 from pango_aliasor.aliasor import Aliasor
 
-def get_sublineages(df, lineage):
-    sublineages = df[df['parent'] == lineage]['lineage'].tolist()
-    return ','.join(sublineages) if sublineages else 'none'
-
 
 def main():
 
@@ -22,15 +18,14 @@ def main():
     
     aliasor = Aliasor() # If no alias_key.json is passed, downloads the latest version from github # Aliasor('alias_key.json')
     df = pd.DataFrame({'lineage': all_lineages, 
-                       'parent': ['none' if aliasor.parent(lineage) == '' else aliasor.parent(lineage) for lineage in all_lineages], # e.g: aliasor.parent("BQ.1") # 'BE.1.1.1'
-                       'sublineages': None
+                       'parent': ['none' if aliasor.parent(lineage) == '' else aliasor.parent(lineage) for lineage in all_lineages] # e.g: aliasor.parent("BQ.1") # 'BE.1.1.1'
     }) 
-    # for each lineage get the DIRECT sublineages
-    df['sublineages'] = df['lineage'].apply(lambda x: get_sublineages(df, x))
 
-    df = df[df['sublineages'] != 'none']
+    # perform a self-join to get all DIRECT sublineages for each lineage (one per row) 
+    df = pd.merge(df, df, left_on='lineage', right_on='parent', how='left') # join each 'lineage' with matching 'parent' to get each direct sublineage
+    df = df[['lineage_x', 'lineage_y']].rename(columns={'lineage_x': 'lineage', 'lineage_y': 'sublineage'}).dropna(subset=['sublineage'])
 
-    df[['lineage', 'sublineages']].to_csv(output_file, sep='\t', index=False)
+    df.to_csv('sc2_lineages.tsv', sep='\t', index=False)
 
     return 0
 
