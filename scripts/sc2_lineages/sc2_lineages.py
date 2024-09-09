@@ -25,7 +25,7 @@ def main():
     df = pd.merge(df, df, left_on='lineage', right_on='parent', how='left') # join each 'lineage' with matching 'parent' to get each direct sublineage
     df = df[['lineage_x', 'lineage_y']].rename(columns={'lineage_x': 'lineage', 'lineage_y': 'sublineage'}).dropna(subset=['sublineage'])
 
-    df.to_csv('sc2_lineages.tsv', sep='\t', index=False)
+    df.to_csv(output_file, sep='\t', index=False)
 
     return 0
 
