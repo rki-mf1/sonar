@@ -279,10 +279,7 @@ export default {
         <Dropdown class="flex mr-2" :options="propertyOptions" v-model="filter.propertyName"
           style="flex: 1; min-width: 150px;" @change="updatePropertyValueOptions(filter)" />
 
-        <div v-if="filter.propertyName == 'host'
-          || filter.propertyName == 'name'
-          || filter.propertyName == 'length'
-        " class="mr-2">
+        <div v-if="['host', 'name', 'length'].includes(filter.propertyName)" class="mr-2">
           <span class="filter-label">Operator</span>
           <Dropdown :options="localOperators" v-model="filter.filterType" style="flex: 1; min-width: 150px;" />
           <span class="filter-label">Value</span>
@@ -294,9 +291,7 @@ export default {
         <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
           <Dropdown :options="propertyValueOptions[filter.propertyName]?.options"
             :loading="propertyValueOptions[filter.propertyName]?.loading" v-model="filter.value" style="flex: auto"
-            filter>
-          </Dropdown>
-
+            filter />
         </div>
         <div v-else>
           <InputText v-model="filter.value" style="flex: auto" />
@@ -307,48 +302,52 @@ export default {
             filterGroup.filters?.propertyFilters?.indexOf(filter),
             1
           )
-          " icon="pi pi-trash" label="" severity="danger">
-        </Button>
+          " icon="pi pi-trash" label="" severity="danger" />
       </div>
     </div>
-    <!-- when click Add AND Filter -->
+
+    <!-- Profile Filters -->
     <div v-for="filter in filterGroup.filters?.profileFilters" class="single-filter">
       <div class="flex flex-column">
         <div class="flex align-items-center ">
           <span class="filter-label">{{ filter.label }}</span>
           <div v-for="key in Object.keys(filter) as Array<keyof ProfileFilter>">
+
             <div v-if="key == 'exclude'" class="exclude-switch">
               Exclude?
               <InputSwitch v-model="filter[key]" />
             </div>
             <Dropdown v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" :placeholder="key"
-              :options="symbolOptions" v-model="filter[key]" style="flex: auto" />
-            <InputText v-else-if="key != 'label'" v-model="filter[key]" style="flex: auto" :placeholder="key" />
+              :options="symbolOptions" v-model="filter[key]" style="flex: auto" class="mr-1" />
+            <InputText v-else-if="key != 'label'" v-model="filter[key]" style="flex: auto" :placeholder="key"
+              class="mr-1" />
+
           </div>
+
+          <!-- the button has to stay outside-->
           <Button type="button" severity="danger" size="small" @click="
             filterGroup.filters?.profileFilters?.splice(
               filterGroup.filters?.profileFilters?.indexOf(filter),
               1
             )
-            " icon="pi pi-trash">
-
-          </Button>
-
+            " icon="pi pi-trash" />
         </div>
-        <div class="flex align-items-center ">
-          Example input:
-          <Chip label="S:L452R" />
-          <Chip label="S:del:143-144" />
-          <Chip label="del:21114-21929" />
-          <Chip label="T23018G" />
-        </div>
+
+      </div>
+      <div v-if='filter.label == "\"Label\""' class="flex align-items-center">
+        Example input:
+        <Chip label="S:L452R" />
+        <Chip label="S:del:143-144" />
+        <Chip label="del:21114-21929" />
+        <Chip label="T23018G" />
       </div>
     </div>
-    <!-- Replicon Filter -->
+
+    <!-- Replicon Filters -->
     <div v-for="filter in filterGroup.filters?.repliconFilters" class="single-filter">
       <div class="flex flex-column">
-        <div class="flex align-items-center ">
-          <lable class="filter-label">Replicon</lable>
+        <div class="flex align-items-center">
+          <label class="filter-label">Replicon</label>
           <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
           <div class="exclude-switch">
             Exclude?
@@ -359,21 +358,16 @@ export default {
               filterGroup.filters?.repliconFilters?.indexOf(filter),
               1
             )
-            " icon="pi pi-trash">
-
-          </Button>
+            " icon="pi pi-trash" />
         </div>
-
       </div>
-
-
     </div>
-    <!-- Lineage Filter -->
+
+    <!-- Lineage Filters -->
     <div v-for="filter in filterGroup.filters?.lineageFilters" class="single-filter">
       <div class="flex flex-column">
-        <div class="flex align-items-center ">
+        <div class="flex align-items-center">
           <span class="filter-label">Lineage</span>
-          <!-- <InputText v-model="filter.lineage" style="flex: auto"/> -->
           <Dropdown :options="lineageOptions" v-model="filter.lineage" style="flex: auto" filter />
           <div class="exclude-switch">
             Exclude?
@@ -384,27 +378,25 @@ export default {
               filterGroup.filters?.lineageFilters?.indexOf(filter),
               1
             )
-            " icon="pi pi-trash" label="">
-          </Button>
+            " icon="pi pi-trash" />
         </div>
-        <div class="flex align-items-center ">
-          <small>*This search will return all sublieage of selected lineage.</small>
-
+        <div class="flex align-items-center">
+          <small>*This search will return all sublineages of the selected lineage.</small>
         </div>
       </div>
     </div>
 
+    <!-- Button Bar -->
     <div class="button-bar">
-      <!-- <SplitButton size="small" icon="pi pi-filter" label="Add AND Filter" :model="filterTypeMethods" @click="addClassicFilter()" /> -->
       <SplitButton size="small" label="" :model="filterTypeMethods" @click="addClassicFilter()">
         <i class="pi pi-filter"></i>
-        <span style="font-weight: 500;"> &nbsp; Add AND Filter</span>
+        <span style="font-weight: 500;">&nbsp; Add AND Filter</span>
       </SplitButton>
-      <!-- OR part -->
       <Button size="small" icon="pi pi-filter" label="Add OR Group" @click="addOrFilterGroup"
         :disabled="cantAddOrGroup" />
     </div>
 
+    <!-- Sub-Filter Groups -->
     <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
       <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px;">OR</span>
       <FilterGroup :filterGroup="subFilterGroup" :propertyOptions="propertyOptions" :symbolOptions="symbolOptions"
@@ -417,7 +409,6 @@ export default {
         <i class="pi pi-trash"></i>
       </Button>
     </div>
-
   </div>
 </template>
 
