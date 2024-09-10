@@ -18,7 +18,7 @@ export default class API {
     CODE_INTERNAL_SERVER_ERROR = 500
 
     TIMEOUT = 50000;
-    BACKEND_ADDRESS = import.meta.env.SONAR_BACKEND_ADDRESS
+    BACKEND_ADDRESS = import.meta.env.VITE_SONAR_BACKEND_ADDRESS
 
     static instance: API
     static getInstance(): API {

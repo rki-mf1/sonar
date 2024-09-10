@@ -1,6 +1,6 @@
-# sonar-frontend-new
+# sonar-frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+A web frontend to the sonar mutation database.
 
 ## Recommended IDE Setup
 
@@ -26,8 +26,14 @@ npm install
 npm run dev
 ```
 
+Note: the url of the backend api (`VITE_SONAR_BACKEND_ADDRESS`) is set in the `.env.development` file. It defaults to "http://localhost:8000/api/".
+
 ### Type-Check, Compile and Minify for Production
+
+First, set the url of the backend api (`VITE_SONAR_BACKEND_ADDRESS`) in a file `.env.production` or `.env.production.local` if you do not want to add the url to git. Next, run:
 
 ```sh
 npm run build
 ```
+
+Output files will be placed in the `./dist/` folder.
