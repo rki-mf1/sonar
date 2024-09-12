@@ -11,6 +11,7 @@
             showIcon
             dateFormat="yy-mm-dd"
             selectionMode="range"
+            @date-select="updateSamples"
           />
         </div>
 
@@ -21,12 +22,9 @@
             v-model="lineage"
             style="flex: auto"
             filter
+            show-clear
             @change="updateSamples"
           />
-          <!-- <div class="exclude-switch">
-              include Sublineages?
-              <InputSwitch v-model="" />
-            </div> -->
         </div>
       </div>
 
@@ -61,8 +59,8 @@
             type="button"
             style="margin-top: 10px"
             label="OK"
+            displayDialogFilter = false
             @click="
-              displayDialogFilter = false
               updateSamples()
             "
           ></Button>
@@ -682,7 +680,7 @@ export default {
         filters.filters.andFilter = []
       } 
 
-      if(this.timeRange) {
+      if(this.timeRange[0] && this.timeRange[1]) {
         filters.filters.andFilter.push(
           {
           label: 'Property',
