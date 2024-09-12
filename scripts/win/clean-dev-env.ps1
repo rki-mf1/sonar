@@ -32,6 +32,7 @@ try {
     else {
         Write-Output "######### loading fixtures with test data ############"    
         scripts\win\dev-manage.ps1 loaddata initial_auth test_data_sm
+        scripts\win\dev-manage.ps1 import_lineage
     }
     if ($LASTEXITCODE -ne 0) {
         exit($LASTEXITCODE)

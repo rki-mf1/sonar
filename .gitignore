@@ -21,6 +21,7 @@ log_improve
 logs/
 conf/docker/prod-secrets.env
 
+private/
 
 tmp/
 work/
