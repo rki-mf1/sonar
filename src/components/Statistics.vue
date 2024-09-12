@@ -1,5 +1,6 @@
 <template>
-    <Card class="card" style="background-color: var(--secondary-color);">
+    <div class="flex">
+        <Card class="card " style="height: 6rem; background-color: var(--secondary-color);">
         <template #content>
             <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
             <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ filteredCount }} / {{
@@ -8,7 +9,7 @@
                 selected from database</div>
         </template>
     </Card>
-    <Card class="card">
+    <Card class="card" style="height: 6rem;">
         <template #content>
             <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
             <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{
@@ -17,7 +18,7 @@
                 mutations in database</div>
         </template>
     </Card>
-    <Card class="card">
+    <Card class="card" style="height: 6rem; width: 30%;">
         <template #content>
             <v-icon name="fa-calendar-alt" fill="var(--text-color)" scale="2.5" style="float: right;" />
             <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ statistics.newest_sample_date
@@ -26,6 +27,8 @@
                 sequence in database</div>
         </template>
     </Card>
+    </div>
+
 </template>
 
 <script lang="ts">

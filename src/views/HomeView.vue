@@ -1,5 +1,5 @@
 <template>
-  <div class="input">
+  <div class="input my-2">
     <div class="input-left">
       <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
         :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
@@ -8,12 +8,9 @@
           <div>
             <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
               :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
-              :lineageOptions="lineageOptions"
-              :symbolOptions="symbolOptions" 
-              :operators="Object.values(DjangoFilterType)"
-              :propertyValueOptions="propertyValueOptions"
-              :propertiesDict="propertiesDict"
-              v-on:update-property-value-options="updatePropertyValueOptions" />
+              :lineageOptions="lineageOptions" :symbolOptions="symbolOptions"
+              :operators="Object.values(DjangoFilterType)" :propertyValueOptions="propertyValueOptions"
+              :propertiesDict="propertiesDict" v-on:update-property-value-options="updatePropertyValueOptions" />
           </div>
 
         </div>
@@ -21,7 +18,89 @@
           <Button type="button" style="margin-top: 10px;" label="OK"
             @click="displayDialogFilter = false; updateSamples()"></Button>
         </div>
+        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
+      <OverlayPanel ref="op">
+        <div class="flex flex-column gap-3 w-25rem">
+          <div>
+            <span class="font-medium text-900 block mb-2">Example of Input</span>
+            <Accordion :activeIndex="0">
+              <AccordionTab header="Property: Date">
+                <p class="m-0">
+                  We let users select a range of dates where first date is the start of the range and second date is the
+                  end.
+                  <Chip label="2021-12-30 - 2023-01-18" />
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: exact">
+                <p class="m-0">
+                  exact = "exact match"
+                  <br>
+                  This operator filters values that exactly match the given input.
+                  <br>
+                  Example: A ID(name) filter with
+                  <Chip label="ID-001" /> will return records with this exact ID.
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: contain">
+                <p class="m-0">
+                  contains = "substring match"
+                  <br>
+                  Filters records that contain the input value as a substring.
+                  <br>
+                  Example: A name filter with
+                  <Chip label="John" /> will return names like "Johnathan" or "Johnny."
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: gt">
+                <p class="m-0">
+                  gt = "greater than" <br />
+                  Example:
+                  <Chip label="10" /> will filter records where the value is greater than 10.
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: gte">
+                <p class="m-0">
+                  gte = "greater than or equal" <br />
+                  Example:
+                  <Chip label="15" /> will filter records where the value is greater than or equal to 15.
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: lt">
+                <p class="m-0">
+                  lt = "less than" <br />
+                  Example:
+                  <Chip label="20" /> will filter records where the value is less than 20.
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: lte">
+                <p class="m-0">
+                  lte = "less than or equal" <br />
+                  Example:
+                  <Chip label="25" /> will filter records where the value is less than or equal to 25.
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: range">
+                <p class="m-0">
+                  range = "value between two numbers" <br />
+                  Example value input:
+                  <Chip label="(1, 5)" /> <br />
+                  This means the value starts from 1 and goes up to 5, inclusive.
+                </p>
+              </AccordionTab>
+              <AccordionTab header="Operator: regex">
+                <p class="m-0">
+                  regex = "matches regular expression" <br />
+                  Example:
+                  <Chip label="^IMS-101" /> will filter records where the value starts with 'IMS-101'. <br />
+                  For more regex expressions, please visit <a href="https://regex101.com/" target="_blank">this
+                    link</a>.
+                </p>
+              </AccordionTab>
+            </Accordion>
+          </div>
+        </div>
+      </OverlayPanel>
     </div>
 
     <div class="input-right">
@@ -29,10 +108,10 @@
     </div>
   </div>
 
-  <div class="output_box">
-    <div class="output">
-      <div style="height: 100%; overflow: auto;">
-        <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading..." >
+  <div class="output_box ">
+    <div class="output mb-2">
+      <div style="height:100%; overflow: auto;">
+        <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading...">
           <ProgressSpinner class="flex-1 p-3" size="small" v-if="loading" style="color: whitesmoke" />
         </Dialog>
 
@@ -126,11 +205,11 @@
 
               <div v-else-if="column === 'last_update_date'">
                 {{ formatDate(slotProps.data.last_update_date) }}
-              </div> 
+              </div>
               <span v-else>
                 {{ findProperty(slotProps.data.properties, column) }}
               </span>
-      
+
             </template>
           </Column>
           <template #footer>
@@ -153,7 +232,7 @@
 <script lang="ts">
 
 import API from '@/api/API'
-
+import { ref } from "vue";
 import {
   type FilterGroup,
   DjangoFilterType,
@@ -162,6 +241,7 @@ import {
   type FilterGroupFilters,
   type FilterGroupRoot,
   type Property
+
 } from '@/util/types'
 
 export default {
@@ -202,6 +282,22 @@ export default {
         filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
       } as FilterGroup,
       DjangoFilterType,
+    };
+  },
+  setup() {
+    // Create the ref for the OverlayPanel
+    const op = ref(null);
+
+    // Toggle function to open/close the overlay
+    const toggle = (event) => {
+      if (op.value) {
+        op.value.toggle(event);  // Use the ref's toggle method if op is available
+      }
+    };
+
+    return {
+      op,
+      toggle,
     };
   },
   methods: {
@@ -339,12 +435,12 @@ export default {
 
       // Transform the array to an object
       this.propertiesDict = res.values.reduce((acc, property) => {
-            acc[property.name] = property.query_type;
-            return acc;
-          }, {});
+        acc[property.name] = property.query_type;
+        return acc;
+      }, {});
 
       this.propertyOptions = Object.keys(this.propertiesDict);
-      this.allColumns =  this.propertyOptions;
+      this.allColumns = this.propertyOptions;
       // this.allColumns = this.propertyOptions.push('genomic_profiles', 'proteomic_profiles').sort();
     },
     async updateRepliconAccessionOptions() {
@@ -433,6 +529,7 @@ export default {
       }
       for (const filter of filterGroup.filters.lineageFilters) {
         if (filter.lineage) {
+
           summary.andFilter.push({
             label: filter.label,
             lineage: filter.lineage,
@@ -443,6 +540,7 @@ export default {
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
       }
+      console.log("Filter: ", summary)
       return summary;
     },
     updatePropertyValueOptions(propertyName: string) {
@@ -484,7 +582,7 @@ export default {
 
 <style scoped>
 .input {
-  height: 15%;
+  height: 8rem;
   width: 98%;
   display: flex;
   flex-direction: row;
@@ -508,7 +606,7 @@ export default {
 
 .input-right {
   height: 100%;
-  width: 90%;
+  width: 70%;
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
