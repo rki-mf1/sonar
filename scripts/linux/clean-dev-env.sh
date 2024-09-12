@@ -46,7 +46,7 @@ done
 $SCRIPTPATH/dc-dev.sh down -v --remove-orphans
 
 if [ $DELETE -eq 0 ]; then
-  TRUE_DIR=$(pwd -P ./work)
+  TRUE_DIR=$(realpath ./work)
   echo "You are about to delete the directory: '$TRUE_DIR'."
   read -p "Are you sure you want to do this? [yn]" -n 1 -r
   echo
