@@ -57,20 +57,18 @@ class LineageImport:
         """
         with open(self.lineage_file) as f:
             tsv_data = pd.read_csv(self.lineage_file, sep="\t")
-
-        parents: list[Lineage] = []
+        parents: dict[str, Lineage] = {}
         children: list[Lineage] = []
         for lineage, sublineages in tsv_data.itertuples(index=False):
             if sublineages == "none":
                 continue
             values = sublineages.split(",")
-            parent = Lineage(name=lineage)
-            parents.append(parent)
+            if lineage not in parents:
+                parents[lineage] = Lineage(name=lineage)
             for val in values:
-                children.append(Lineage(name=val, parent=parent))
-
+                children.append(Lineage(name=val, parent=parents[lineage]))
         with transaction.atomic():
-            for parent in parents:
+            for parent in parents.values():
                 parent.save()
             Lineage.objects.bulk_create(
                 objs=children,
