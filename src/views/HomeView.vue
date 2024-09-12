@@ -245,7 +245,7 @@ export default {
     exportFile(type: string) {
       this.displayDialogExport = false;
       this.loading = true;
-      API.getInstance().getSampleGenomesExport(this.filters, this.selectedColumns, type == "xlsx");
+      API.getInstance().getSampleGenomesExport(this.filters, this.selectedColumns, this.ordering, type == "xlsx");
       this.loading = false;
     },
     metaDataCoverage(column: string) {
