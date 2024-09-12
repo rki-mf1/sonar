@@ -14,6 +14,30 @@ The sonar-backend is web service that represents the API version of the Sonar to
 
 # Setup
 
+## General organization
+
+### Configuration
+
+We use docker compose to manage the software stack (the django backend itself, celery workers, the PostgreSQL database, ...). This is setup mainly in the `compose.yml` file in the project root. This compose file exposes the minimum ports, so for development there is an additional compose file `compose-dev.yml` that is loaded **in addition to** the main compose file, which just opens up a few more ports to a few of the services, and also mounts the source directory as a volume for all django containers to that you can do live editing of the code without having to rebuild your docker container:
+
+```
+$ docker compose -f compose.yml -f compose-dev.yml
+```
+
+To configure the containers, a set of config/environment files from the `conf/docker/` directory are loaded. For dev, that includes (in order) `common.env`, `dev.env`, and `dev-secret.yml`. For production, we load `common.env`, `prod.env` and `prod-secrets.env`. Each config file can overwrite settings in the previous, so you can overwrite "common" settings in the `dev.env` file and settings from both `common.env` and `dev.env` can be overwritten in the `dev-secrets.env` file.
+
+The `prod-secrets.yml` file is **not** supposed to be checked into git, and should contain things like the Django `SECRET_KEY` as well as variaous default passwords for services like PostgreSQL. You can see the minimum varialbes that you should include in that file in the matching `dev-secrets.env` file, which gives examples for each of the secrets which should obviously not be reused in production.
+
+Taking the previous points into account, the development environment using docker compose is interacted with like this:
+
+```
+$ docker compose -f compose.yml -f compose-dev.yml --env-file conf/docker/common.env --env-file conf/docker/dev.env --env-file conf/docker/dev-secrets.env <your command here>
+```
+
+That is a huge command, so we have convenience scripts here: `scripts/{linux,windows}/dc-{dev,prod}.{sh,ps1}` These helpers are used by all other convenience scripts so changes to this command line are easier to make, if we need to do that in the future.
+
+Note: for now, we specifically don't use the `env_file:` directive in our compose files. This is because it further fragments where the configuration is stored and also seemed to lead to some duplication in the config files. The downside to this is that the `environment:` sections of the current compose file have lots of duplication and are very long, and this can eventually lead to bugs when someone forgets to add a new environment variable to all necessary containers. With that in mind we might revisit using env_files in the future if the benefits are deemed to outweight the costs.
+
 ## Production
 
 ### Software requirements
@@ -60,7 +84,33 @@ Next we need to build the sonar-backend docker container, bring up all services 
 $ ./scripts/linux/clean-prod-env.sh -t
 ```
 
+If you want to deploy the frontend as well, you need to clone it:
 
+```bash
+git clone https://github.com/rki-mf1/sonar-backend.git
+cd sonar-backend
+```
+
+Make sure you have npm installed (`conda create -n sonar-frontend nodejs` will work with conda), and then follow the frontend docs:
+
+```
+$ npm install
+```
+
+Next you probably want to customize the url of the sonar backend. You can set this from a file `sonar-frontend/.env.production` or directly from the command line when building the frontend:
+
+```
+$ VITE_SONAR_BACKEND_ADDRESS=https://myserver.com npm run build
+```
+
+Then copy the built files into the backend `work/` directory. You might need to tweak the commands below depending on the relative location of sonar-frontend and sonar-backend, and whether you are updating an existing copy of the frontend or doing this for the first time:
+
+```
+$ mkdir -p ../sonar-backend/work/frontend/dist
+$ cp -r dist/* ../sonar-backend/work/frontend/dist
+```
+
+Now you should be able to access the frontend on your server at port 443 (e.g. `https://servername.org`).
 
 ## Development
 
@@ -76,55 +126,28 @@ The current version has been tested on the following system configurations:
 
 ### Install sonar-backend
 
-1. Clone the Project:
+First, clone the project:
+
 ```bash
 $ git clone https://github.com/rki-mf1/sonar-backend.git
 $ cd sonar-backend
 ```
 
-2. Install Dependencies with Poetry:
+Next, you can start up a dev instance of the software stack using docker compose (use the `-h` argument to see other options for this script):
+
 ```bash
-$ poetry install
+$ ./scripts/linux/clean-dev-env.sh
 ```
-Once these steps are completed, proceed to the next section.
 
-### Start sonar-backend development server
+After that command finishes, you should have the following services running on these ports:
 
-There is a "template.env" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+- 9080: django app server (`manage.py runserver`)
+- 8000: nginx forwarding requests to the django dev appserver on port 9080. You can access the django admin interface at `localhost:8000/admin`
+- 5432 (configurable by env file): PostgreSQL database
+- 6379: redis used by celery
+- 5555: celery monitor web interface
 
-1. Check if the application and django are set up and running correctly.
-
-   ```bash
-   python manage.py
-   ```
-
-   This will show a list of commands and options that can be used with manage.py.
-
-2. Start database migration (create the tables in the database)
-   ```bash
-   python manage.py migrate
-   ```
-3. Start Redis server
-   ```bash
-   redis-server
-   ```
-4. Start Celery
-
-   Navigate to the import folder. By default, if you do not specify in the .env file, the import_data folder will be created at the root level of snoar-backend.
-
-   Then you have to run the following command in the terminal:
-
-   ```bash
-   celery -A covsonar_backend worker --loglevel=info --without-gossip --without-mingle --without-heartbeat -Ofair --concurrency=2 -E
-   ```
-
-   To access more detailed information about Celery, please visit the official Celery website at https://docs.celeryproject.org/en/latest/.
-
-5. Start application
-   ```bash
-   python manage.py runserver
-   ```
-   You can access the application at `http://127.0.0.1:8000/`.
+Files from the containers that need to persist across restarts (e.g. the postgres databases themselves, mutation and metadata from imports, etc.) are all stored in subdirectories of the `./work/` dir. This directory will be removed if you run `clean-dev-env.sh -d`.
 
 ### Sublineage Search (optional, SARS-CoV-2 specific)
 
@@ -175,87 +198,20 @@ We provide the test datasets under the `test-data` directory. These datasets can
 | `MN908947.3.gbk`         | Reference genome of SARS-CoV-2 in GenBank format.                                                                     |
 | `dump-sonar-test-db.sql` | SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest." |
 
-## Start sonar-backend with Docker
+### Extra docker compose commands
 
-### Deploy sonar-backend for development
-
-1. Build the sonar-backend image
-
-```bash
-docker build -t backend_dev:local -f Dockerfile .
-```
-
-2. Start Docker compose
-
-```bash
-docker compose -f "docker-compose-dev.yml" up  --build
-```
-
-OR use -d to detach the command. For example:
-
-```bash
-docker compose -f "docker-compose-dev.yml" up --build -d
-```
-
-3. Create superuser for Django admin
+1. Create superuser for Django admin
 
 ```bash
 # docker-compose exec <service_name>, not docker-compose exec <container_name>.
-docker compose -f docker-compose-dev.yml exec dev-django python manage.py createsuperuser
+./scripts/linux/dev-manage.sh createsuperuser
 ```
 
 Once the containers are up and running, you can access
 
 - sonar-cli reach the backend via http://127.0.0.1:8000/api
 - http://127.0.0.1:8000/admin
-- http://localhost:5555 for monitoring workers (username:"note" passwrod:"123456")
-
-### Deploy sonar-backend with pre-built database for quickstart (used in GH action) (Linux environment)
-
-```bash
-docker compose -f "docker-compose.test-gh.yml" up  --build
-```
-
-Once the containers are up and running, you can access
-
-- sonar-cli reach the backend via http://127.0.0.1:8000/api
-- http://127.0.0.1:8000/admin through a web browser (username:"note" passwrod:"123456")
-- http://localhost:5555 for monitoring workers (username:"note" passwrod:"123456")
-
-### Deploy sonar-backend for production
-
-⚠️Caution: not a final version
-
-1. Create an environment file.
-
-```bash
-cp template.env .prod.env
-```
-
-2. Create a config file for Nginx.
-
-```bash
-cp ./nginx/covsonar.conf ./nginx/prod.conf
-```
-
-3. Build local docker image
-
-```bash
-docker build -t backend:latest -f Dockerfile .
-```
-
-4. Start docker stacks
-
-```bash
-docker compose --env-file .prod.env  -f "docker-compose-prod.yml" up --build
-```
-
-5. Create super user for django admin
-
-```bash
-# docker-compose exec <service_name>, not docker-compose exec <container_name>.
-docker compose --env-file .prod.env -f 'docker-compose-prod.yml' exec sonar-backend-django python manage.py createsuperuser
-```
+- http://localhost:5555 for monitoring workers (username:"note" password:"123456")
 
 ---
 
