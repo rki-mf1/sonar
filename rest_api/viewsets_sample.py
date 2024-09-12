@@ -282,7 +282,7 @@ class SampleViewSet(
         )  # default: "sample_genomes.csv"
 
         return StreamingHttpResponse(
-            self._stream_serialized_data(queryset.order_by("name"), columns, writer),
+            self._stream_serialized_data(queryset, columns, writer),
             content_type="text/csv",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
