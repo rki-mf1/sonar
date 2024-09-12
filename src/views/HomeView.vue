@@ -1,22 +1,71 @@
 <template>
   <div class="input my-2">
     <div class="input-left">
-      <Button type="button" icon="pi pi-filter" label="&nbsp;Set Filters" severity="warning" raised
-        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
-      <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
-        <div style="display: flex; gap: 10px;">
-          <div>
-            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
-              :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
-              :lineageOptions="lineageOptions" :symbolOptions="symbolOptions"
-              :operators="Object.values(DjangoFilterType)" :propertyValueOptions="propertyValueOptions"
-              :propertiesDict="propertiesDict" v-on:update-property-value-options="updatePropertyValueOptions" />
-          </div>
-
+      <!-- Home View Filters -->
+      <div>
+        <div class="flex align-items-center" style="gap: 10px">
+          <span>Time Range</span>
+          <Calendar
+            v-model="timeRange"
+            style="flex: auto"
+            showIcon
+            dateFormat="yy-mm-dd"
+            selectionMode="range"
+          />
         </div>
-        <div style="display: flex; justify-content: end; gap: 10px;">
-          <Button type="button" style="margin-top: 10px;" label="OK"
-            @click="displayDialogFilter = false; updateSamples()"></Button>
+
+        <div class="flex align-items-center" style="gap: 10px">
+          <span>Lineage</span>
+          <Dropdown
+            :options="lineageOptions"
+            v-model="lineage"
+            style="flex: auto"
+            filter
+            @change="updateSamples"
+          />
+          <!-- <div class="exclude-switch">
+              include Sublineages?
+              <InputSwitch v-model="" />
+            </div> -->
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        icon="pi pi-filter"
+        label="&nbsp;Set Advanced Filters"
+        severity="warning"
+        raised
+        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }"
+        @click="displayDialogFilter = true"
+      />
+      <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
+        <div style="display: flex; gap: 10px">
+          <div>
+            <FilterGroup
+              style="width: fit-content; margin: auto"
+              :filterGroup="filterGroup"
+              :propertyOptions="propertyOptions"
+              :repliconAccessionOptions="repliconAccessionOptions"
+              :lineageOptions="lineageOptions"
+              :symbolOptions="symbolOptions"
+              :operators="Object.values(DjangoFilterType)"
+              :propertyValueOptions="propertyValueOptions"
+              :propertiesDict="propertiesDict"
+              v-on:update-property-value-options="updatePropertyValueOptions"
+            />
+          </div>
+        </div>
+        <div style="display: flex; justify-content: end; gap: 10px">
+          <Button
+            type="button"
+            style="margin-top: 10px"
+            label="OK"
+            @click="
+              displayDialogFilter = false
+              updateSamples()
+            "
+          ></Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -27,17 +76,17 @@
             <Accordion :activeIndex="0">
               <AccordionTab header="Property: Date">
                 <p class="m-0">
-                  We let users select a range of dates where first date is the start of the range and second date is the
-                  end.
+                  We let users select a range of dates where first date is the start of the range
+                  and second date is the end.
                   <Chip label="2021-12-30 - 2023-01-18" />
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: exact">
                 <p class="m-0">
                   exact = "exact match"
-                  <br>
+                  <br />
                   This operator filters values that exactly match the given input.
-                  <br>
+                  <br />
                   Example: A ID(name) filter with
                   <Chip label="ID-001" /> will return records with this exact ID.
                 </p>
@@ -45,9 +94,9 @@
               <AccordionTab header="Operator: contain">
                 <p class="m-0">
                   contains = "substring match"
-                  <br>
+                  <br />
                   Filters records that contain the input value as a substring.
-                  <br>
+                  <br />
                   Example: A name filter with
                   <Chip label="John" /> will return names like "Johnathan" or "Johnny."
                 </p>
@@ -63,7 +112,8 @@
                 <p class="m-0">
                   gte = "greater than or equal" <br />
                   Example:
-                  <Chip label="15" /> will filter records where the value is greater than or equal to 15.
+                  <Chip label="15" /> will filter records where the value is greater than or equal
+                  to 15.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: lt">
@@ -77,7 +127,8 @@
                 <p class="m-0">
                   lte = "less than or equal" <br />
                   Example:
-                  <Chip label="25" /> will filter records where the value is less than or equal to 25.
+                  <Chip label="25" /> will filter records where the value is less than or equal to
+                  25.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: range">
@@ -92,9 +143,10 @@
                 <p class="m-0">
                   regex = "matches regular expression" <br />
                   Example:
-                  <Chip label="^IMS-101" /> will filter records where the value starts with 'IMS-101'. <br />
-                  For more regex expressions, please visit <a href="https://regex101.com/" target="_blank">this
-                    link</a>.
+                  <Chip label="^IMS-101" /> will filter records where the value starts with
+                  'IMS-101'. <br />
+                  For more regex expressions, please visit
+                  <a href="https://regex101.com/" target="_blank">this link</a>.
                 </p>
               </AccordionTab>
             </Accordion>
@@ -108,19 +160,24 @@
     </div>
   </div>
 
-  <div class="output_box ">
+  <div class="output_box">
     <div class="output mb-2">
-      <div style="height:100%; overflow: auto;">
+      <div style="height: 100%; overflow: auto">
         <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading...">
-          <ProgressSpinner class="flex-1 p-3" size="small" v-if="loading" style="color: whitesmoke" />
+          <ProgressSpinner
+            class="flex-1 p-3"
+            size="small"
+            v-if="loading"
+            style="color: whitesmoke"
+          />
         </Dialog>
 
         <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
           <template #header>
-            <div style="display: flex; align-items: center;">
+            <div style="display: flex; align-items: center">
               <strong>Sample Details</strong>
               <router-link v-slot="{ href, navigate }" :to="`sample/${selectedRow.name}`" custom>
-                <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px;">
+                <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px">
                   <i class="pi pi-external-link"></i>
                 </a>
               </router-link>
@@ -129,39 +186,74 @@
           <SampleDetails :selectedRow="selectedRow" :allColumns="allColumns"></SampleDetails>
         </Dialog>
 
-        <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
-          :style="{ width: '25vw' }">
-
+        <Dialog
+          v-model:visible="displayDialogExport"
+          header="Export Settings"
+          modal
+          dismissableMask
+          :style="{ width: '25vw' }"
+        >
           <div>
             <RadioButton v-model="exportFormat" inputId="exportFormat1" value="csv" />
             <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
-            <br><br>
+            <br /><br />
             <RadioButton v-model="exportFormat" inputId="exportFormat2" value="xlsx" />
             <label for="exportFormat2" class="ml-2"> Excel (.xlsx)</label>
-            <br><br>
+            <br /><br />
           </div>
 
           <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
-          <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px;">
-            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="exportFile(exportFormat)" />
+          <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
+            <Button
+              icon="pi pi-external-link"
+              label="&nbsp;Export"
+              raised
+              @click="exportFile(exportFormat)"
+            />
           </div>
         </Dialog>
 
-        <DataTable :value="samples" ref="dt" style="max-width: 90vw;" size="large" dataKey="name" stripedRows scrollable
-          scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
-          selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
+        <DataTable
+          :value="samples"
+          ref="dt"
+          style="max-width: 90vw"
+          size="large"
+          dataKey="name"
+          stripedRows
+          scrollable
+          scrollHeight="flex"
+          sortable
+          @sort="sortingChanged($event)"
+          v-model:selection="selectedRow"
+          selectionMode="single"
+          @rowSelect="onRowSelect"
+          @rowUnselect="onRowUnselect"
+        >
           <template #empty> No Results </template>
           <template #header>
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between">
               <div>
-                <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
+                <Button
+                  icon="pi pi-external-link"
+                  label="&nbsp;Export"
+                  raised
+                  @click="displayDialogExport = true"
+                />
               </div>
-              <div style="display: flex; justify-content: flex-end;">
-                <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
-                  placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+              <div style="display: flex; justify-content: flex-end">
+                <MultiSelect
+                  v-model="selectedColumns"
+                  display="chip"
+                  :options="allColumns"
+                  filter
+                  placeholder="Select Columns"
+                  class="w-full md:w-20rem"
+                  @update:modelValue="columnSelection"
+                >
                   <template #value>
-                    <div style="margin-top: 5px; margin-left: 5px;">{{ selectedColumns.length }} columns selected
+                    <div style="margin-top: 5px; margin-left: 5px">
+                      {{ selectedColumns.length }} columns selected
                     </div>
                   </template>
                 </MultiSelect>
@@ -174,29 +266,46 @@
             </template>
             <template #body="slotProps">
               <div
-                style="height: 1.5em; width:9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction:rtl;"
-                :title="slotProps.data.name">
+                style="
+                  height: 1.5em;
+                  width: 9rem;
+                  text-overflow: ellipsis;
+                  overflow: hidden;
+                  white-space: nowrap;
+                  direction: rtl;
+                "
+                :title="slotProps.data.name"
+              >
                 {{ slotProps.data.name }}
               </div>
             </template>
           </Column>
-          <Column v-for="column in selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
+          <Column
+            v-for="column in selectedColumns"
+            :sortable="!notSortable.includes(column)"
+            :field="column"
+          >
             <template #header>
               <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
             </template>
             <template #body="slotProps">
               <div v-if="column === 'genomic_profiles'">
-                <div style="height: 2.5em; width:20rem; overflow-x: auto; white-space: nowrap;">
-                  <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                    :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
-                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
+                <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
+                  <GenomicProfileLabel
+                    v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                    :variantString="variant"
+                    :annotations="slotProps.data.genomic_profiles[variant]"
+                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
+                  />
                 </div>
               </div>
               <div v-else-if="column === 'proteomic_profiles'">
-                <div style="height: 2.5em; width:20rem; overflow-x: auto; white-space: nowrap;">
-                  <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
+                  <GenomicProfileLabel
+                    v-for="(variant, index) in slotProps.data.proteomic_profiles"
                     :variantString="variant"
-                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
+                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
+                  />
                 </div>
               </div>
               <div v-else-if="column === 'init_upload_date'">
@@ -209,21 +318,24 @@
               <span v-else>
                 {{ findProperty(slotProps.data.properties, column) }}
               </span>
-
             </template>
           </Column>
           <template #footer>
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between">
               Total: {{ filteredCount }} Samples
             </div>
-            <Paginator :totalRecords="filteredCount" v-model:rows="perPage"
-              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
-              @update:rows="updateSamples()" />
+            <Paginator
+              :totalRecords="filteredCount"
+              v-model:rows="perPage"
+              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
+              v-model:first="firstRow"
+              @update:rows="updateSamples()"
+            />
           </template>
         </DataTable>
       </div>
-      <div style="height: 100%; width: 30%; display: flex; justify-content: center;">
-        <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
+      <div style="height: 100%; width: 30%; display: flex; justify-content: center">
+        <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%" />
       </div>
     </div>
   </div>
@@ -235,6 +347,8 @@ import API from '@/api/API'
 import { ref } from "vue";
 import {
   type FilterGroup,
+  type LineageFilter,
+  type PropertyFilter,
   DjangoFilterType,
   type GenomeFilter,
   type ProfileFilter,
@@ -276,6 +390,8 @@ export default {
           loading: boolean;
         };
       },
+      lineage: '',
+      timeRange: [] as Date[],
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
@@ -313,10 +429,9 @@ export default {
         ordering: this.ordering
       }
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
-      console.log(this.samples)
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.filteredCount = this.filteredStatistics["filtered_total_count"];
-      this.isFiltersSet = this.filters['filters']['andFilter'].length + this.filters['filters']['orFilter'].length > 0;
+      this.isFiltersSet = this.filterGroup.filterGroups.length > 0 || Object.values(this.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0);
       this.loading = false;
     },
     columnSelection(value) {
@@ -456,7 +571,6 @@ export default {
       this.symbolOptions = res.gene_symbols;
     },
     parseDateToDateRangeFilter(data) {
-      console.log(data)
       // Parse the first date
       data[0] = new Date(Date.parse(data[0].toString()));
       //  format the date according to your local timezone instead of UTC.
@@ -540,7 +654,6 @@ export default {
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
       }
-      console.log("Filter: ", summary)
       return summary;
     },
     updatePropertyValueOptions(propertyName: string) {
@@ -553,7 +666,6 @@ export default {
           this.propertyValueOptions[propertyName].options = res.values;
           this.propertyValueOptions[propertyName].loading = false;
         });
-      console.log(this.propertyValueOptions[propertyName])
     },
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
@@ -566,8 +678,34 @@ export default {
       const filters = {
         filters: this.getFilterGroupFilters(this.filterGroup),
       };
+      if (!filters.filters?.andFilter){
+        filters.filters.andFilter = []
+      } 
+
+      if(this.timeRange) {
+        filters.filters.andFilter.push(
+          {
+          label: 'Property',
+          value: [this.timeRange[0], this.timeRange[1]], //[new Date('2021-02-16'), new Date('2023-01-18')],
+          propertyName: 'collection_date',
+          filterType: "range" // null //Object.values(DateDjangoFilterType)
+          }
+        )
+      }
+
+      if(this.lineage) {
+        filters.filters.andFilter.push(
+          {
+          label: 'Sublineages',
+          lineage: this.lineage,
+          exclude: false
+          } 
+        )
+      }
+
       return filters as FilterGroupRoot;
     }
+
   },
   mounted() {
     this.updateSamples();
@@ -577,7 +715,6 @@ export default {
     this.updateLineageOptions();
   }
 }
-
 </script>
 
 <style scoped>
@@ -596,17 +733,18 @@ export default {
 
 .input-left {
   height: 100%;
-  width: 30%;
+  width: 50%;
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 20%;
   margin-left: 20px;
   align-items: center;
 }
 
 .input-right {
   height: 100%;
-  width: 70%;
+  width: 50%;
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
@@ -643,7 +781,7 @@ export default {
 }
 
 :deep(.p-button):hover {
-  background: var(--primary-color-lighter)
+  background: var(--primary-color-lighter);
 }
 
 :deep(.p-button.p-button-outlined) {
