@@ -66,7 +66,7 @@ export default {
         'country',
         'host', 'lab'],
       ClassicFilter: {
-        label: '"Label"',
+        label: 'Label',
         value: '',
         exclude: false
       } as ClassicFilter,
@@ -334,7 +334,7 @@ export default {
         </div>
 
       </div>
-      <div v-if='filter.label == "\"Label\""' class="flex align-items-center">
+      <div v-if='filter.label == "Label"' class="flex align-items-center">
         Example input:
         <Chip label="S:L452R" />
         <Chip label="S:del:143-144" />

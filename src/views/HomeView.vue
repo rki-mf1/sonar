@@ -14,6 +14,9 @@
           </div>
 
         </div>
+        <div v-if="errorMessage" style="margin-top: 20px;">
+          <Message severity="error">{{ errorMessage }}</Message>
+        </div>
         <div style="display: flex; justify-content: end; gap: 10px;">
           <Button type="button" style="margin-top: 10px;" label="OK"
             @click="displayDialogFilter = false; updateSamples()"></Button>
@@ -226,6 +229,8 @@
         <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%;" />
       </div>
     </div>
+        
+    <Toast ref="toast" />
   </div>
 </template>
 
@@ -248,6 +253,66 @@ export default {
   name: 'HomeView',
   data() {
     return {
+      IUPAC_CODES: {
+        nt: {
+          A: new Set("A"),
+          C: new Set("C"),
+          G: new Set("G"),
+          T: new Set("T"),
+          R: new Set("AGR"),
+          Y: new Set("CTY"),
+          S: new Set("GCS"),
+          W: new Set("ATW"),
+          K: new Set("GTK"),
+          M: new Set("ACM"),
+          B: new Set("CGTB"),
+          D: new Set("AGTD"),
+          H: new Set("ACTH"),
+          V: new Set("ACGV"),
+          N: new Set("ACGTRYSWKMBDHVN"),
+          n: new Set("N"),
+        },
+        aa: {
+          A: new Set("A"),
+          R: new Set("R"),
+          N: new Set("N"),
+          D: new Set("D"),
+          C: new Set("C"),
+          Q: new Set("Q"),
+          E: new Set("E"),
+          G: new Set("G"),
+          H: new Set("H"),
+          I: new Set("I"),
+          L: new Set("L"),
+          K: new Set("K"),
+          M: new Set("M"),
+          F: new Set("F"),
+          P: new Set("P"),
+          S: new Set("S"),
+          T: new Set("T"),
+          W: new Set("W"),
+          Y: new Set("Y"),
+          V: new Set("V"),
+          U: new Set("U"),
+          O: new Set("O"),
+          B: new Set("DNB"),
+          Z: new Set("EQZ"),
+          J: new Set("ILJ"),
+          Φ: new Set("VILFWYMΦ"),
+          Ω: new Set("FWYHΩ"),
+          Ψ: new Set("VILMΨ"),
+          π: new Set("PGASπ"),
+          ζ: new Set("STHNQEDKRζ"),
+          "+": new Set("KRH+"),
+          "-": new Set("DE-"),
+          X: new Set("ARNDCQEGHILKMFPSTWYVUOBZJΦΩΨπζ+-X"),
+          x: new Set("X"),
+        },
+      },
+      regexes: {
+        snv: /^(\^*)(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$/,
+        del: /^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$/
+      },
       displayDialogFilter: false,
       selectedRow: null,
       displayDialogRow: false,
@@ -282,6 +347,7 @@ export default {
         filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
       } as FilterGroup,
       DjangoFilterType,
+      errorMessage: '',
     };
   },
   setup() {
@@ -306,6 +372,7 @@ export default {
       return dateStr.split('T')[0];
     },
     async updateSamples() {
+      this.errorMessage = '';
       this.loading = true;
       const params = {
         limit: this.perPage,
@@ -504,19 +571,30 @@ export default {
       for (const filter of filterGroup.filters.profileFilters) {
         var valid = true;
         const translatedFilter = {} as Record<string, string | number | boolean>;
-        for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
-          //snake_case conversion
-          var translatedKey = key.replace('AA', '_aa');
-          translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase();
-          translatedFilter[translatedKey] = filter[key];
-          if (!filter[key] && key != 'exclude') {
-            valid = false;
-            break;
+
+        if (filter['label'] == 'Label'){
+          // matches any sequence of spaces (\s), commas (,)
+          const mutations = filter['value'].split(/[\s,]+/).filter(Boolean);
+          const profileQuery = this.createProfileQuery(mutations, filter['exclude']);
+          summary.andFilter.push(profileQuery);
+
+        }else{
+          for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
+            //snake_case conversion
+            var translatedKey = key.replace('AA', '_aa');
+
+            translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase();
+            translatedFilter[translatedKey] = filter[key];
+            if (!filter[key] && key != 'exclude') {
+              valid = false;
+              break;
+            }
+          }
+          if (valid) {
+            summary.andFilter.push(translatedFilter);
           }
         }
-        if (valid) {
-          summary.andFilter.push(translatedFilter);
-        }
+        
       }
       for (const filter of filterGroup.filters.repliconFilters) {
         if (filter.accession) {
@@ -558,6 +636,81 @@ export default {
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
       return property ? property.value : undefined;
+    },
+    createProfileQuery(profiles: [], exclude: boolean) {
+      const andFilter = { andFilter: [] };
+      profiles.forEach(mutation => {
+        const query = this.defineProfile(mutation, exclude);
+        if (Object.keys(query).length > 0) {
+          andFilter.andFilter.push(query);
+        }
+      });
+
+      return andFilter; 
+    },
+    defineProfile(mutation: string, exclude: boolean) {
+      let query = { label: "" };
+      let match = null;
+
+      for (const [mutationType, regex] of Object.entries(this.regexes)) {
+        match = mutation.match(regex);
+        if (match) {
+          const geneName = match[2] ? match[2].slice(0, -1) : null;
+          if (mutationType === "snv") {
+            const alt = match[6];
+
+            for (let x of alt) {
+              if (!this.IUPAC_CODES.aa.hasOwnProperty(x) && !this.IUPAC_CODES.nt.hasOwnProperty(x)) {
+                this.errorMessage = (`Invalid alternate allele notation '${alt}'.`);
+                // this.showToastError(this.errorMessage);
+                return {};
+              }
+            }
+            if (geneName) {
+              query.alt_aa = alt;
+              query.ref_aa = match[4];
+              query.ref_pos = match[5];
+              query.protein_symbol = geneName;
+              query.label = alt.length === 1 ? "SNP AA" : "Ins AA";
+            } else {
+              query.alt_nuc = alt;
+              query.ref_nuc = match[4];
+              query.ref_pos = match[5];
+              query.label = alt.length === 1 ? "SNP Nt" : "Ins Nt";
+            }
+          } else if (mutationType === "del") {
+            query.first_deleted = match[4];
+            query.last_deleted = match[5]?.slice(1) || "";
+
+            if (geneName) {
+              query.protein_symbol = geneName;
+              query.label = "Del AA";
+            } else {
+              query.label = "Del Nt";
+            }
+          }
+
+          query.exclude = exclude;
+          break;
+        }
+      }
+
+      if (!match) {
+        this.errorMessage = (`Invalid mutation notation '${mutation}'.`);
+        // this.showToastError(this.errorMessage)
+        return  {};
+      }
+
+      return query;
+    },
+    showToastError(message: string) {
+
+      this.$refs.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: message,
+        life: 10000
+      });
     }
   },
   computed: {
