@@ -3,8 +3,8 @@
     <div class="input-left">
       <!-- Home View Filters -->
       <div>
-        <div class="flex align-items-center" style="gap: 10px">
-          <span>Time Range</span>
+        <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px;">
+          <span style="font-weight: 500;">Time Range</span>
           <Calendar
             v-model="timeRange"
             style="flex: auto"
@@ -16,15 +16,18 @@
         </div>
 
         <div class="flex align-items-center" style="gap: 10px">
-          <span>Lineage</span>
-          <Dropdown
+          <span style="font-weight: 500;">Lineage</span>
+          <!-- <Dropdown
             :options="lineageOptions"
             v-model="lineage"
             style="flex: auto"
             filter
+            multiple
             show-clear
             @change="updateSamples"
-          />
+          /> -->
+
+          <MultiSelect v-model="lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages" class="w-full md:w-80" @change="updateSamples"/>
         </div>
       </div>
 
@@ -54,16 +57,9 @@
             />
           </div>
         </div>
-        <div style="display: flex; justify-content: end; gap: 10px">
-          <Button
-            type="button"
-            style="margin-top: 10px"
-            label="OK"
-            displayDialogFilter = false
-            @click="
-              updateSamples()
-            "
-          ></Button>
+        <div style="display: flex; justify-content: end; gap: 10px;">
+          <Button type="button" style="margin-top: 10px;" label="OK"
+            @click="displayDialogFilter = false; updateSamples()"></Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -389,7 +385,7 @@ export default {
         };
       },
       lineage: '',
-      timeRange: [] as Date[],
+      timeRange: [] as Date[], 
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
@@ -415,10 +411,6 @@ export default {
     };
   },
   methods: {
-    formatDate(dateStr: string): string {
-      if (!dateStr) return ''; // Handle case where dateStr is undefined or null
-      return dateStr.split('T')[0];
-    },
     async updateSamples() {
       this.loading = true;
       const params = {
@@ -431,6 +423,14 @@ export default {
       this.filteredCount = this.filteredStatistics["filtered_total_count"];
       this.isFiltersSet = this.filterGroup.filterGroups.length > 0 || Object.values(this.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0);
       this.loading = false;
+    },
+    async setDefaultTimeRange() {
+      const statistics = await API.getInstance().getSampleStatistics()
+      this.timeRange = [new Date(statistics.first_sample_date), new Date(statistics.latest_sample_date)]
+    },
+    formatDate(dateStr: string): string {
+      if (!dateStr) return ''; // Handle case where dateStr is undefined or null
+      return dateStr.split('T')[0];
     },
     columnSelection(value) {
       this.selectedColumns = value.filter(v => this.allColumns.includes(v));
@@ -684,9 +684,9 @@ export default {
         filters.filters.andFilter.push(
           {
           label: 'Property',
-          value: [this.timeRange[0], this.timeRange[1]], //[new Date('2021-02-16'), new Date('2023-01-18')],
-          propertyName: 'collection_date',
-          filterType: "range" // null //Object.values(DateDjangoFilterType)
+          property_name: 'collection_date',
+          filter_type: "range",
+          value: `${this.timeRange[0].toLocaleDateString('en-CA')},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
           }
         )
       }
@@ -707,6 +707,7 @@ export default {
   },
   mounted() {
     this.updateSamples();
+    this.setDefaultTimeRange();
     this.updatePropertyOptions();
     this.updateSymbolOptions();
     this.updateRepliconAccessionOptions();

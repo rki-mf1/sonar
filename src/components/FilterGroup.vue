@@ -350,8 +350,8 @@ export default {
       <!-- Lineage Filter -->
       <div v-for="filter in filterGroup.filters?.lineageFilters" class="single-filter">
         <span class="filter-label">Lineage</span>
-        <InputText v-model="filter.lineage" style="flex: auto"/>
-        <Dropdown :options="lineageOptions" v-model="filter.lineage" style="flex: auto" />
+        <MultiSelect v-model="filter.lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages" class="w-full md:w-80"/>
+
         <div class="exclude-switch">
           Exclude?
           <InputSwitch v-model="filter.exclude" />
