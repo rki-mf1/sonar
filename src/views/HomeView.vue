@@ -17,16 +17,6 @@
 
         <div class="flex align-items-center" style="gap: 10px">
           <span style="font-weight: 500;">Lineage</span>
-          <!-- <Dropdown
-            :options="lineageOptions"
-            v-model="lineage"
-            style="flex: auto"
-            filter
-            multiple
-            show-clear
-            @change="updateSamples"
-          /> -->
-
           <MultiSelect v-model="lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages" class="w-full md:w-80" @change="updateSamples"/>
         </div>
       </div>
