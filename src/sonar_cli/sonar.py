@@ -231,13 +231,6 @@ def create_parser_output() -> argparse.ArgumentParser:
         type=str,
         default=None,
     )
-
-    parser.add_argument(
-        "--out-column",
-        help="select output columns to the output file (support csv and tsv)",
-        type=str,
-        default="all",
-    )
     return parser
 
 
