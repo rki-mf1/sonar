@@ -87,8 +87,8 @@ $ ./scripts/linux/clean-prod-env.sh -t
 If you want to deploy the frontend as well, you need to clone it:
 
 ```bash
-git clone https://github.com/rki-mf1/sonar-backend.git
-cd sonar-backend
+git clone https://github.com/rki-mf1/sonar-frontend.git
+cd sonar-frontend
 ```
 
 Make sure you have npm installed (`conda create -n sonar-frontend nodejs` will work with conda), and then follow the frontend docs:
