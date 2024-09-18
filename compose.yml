@@ -4,7 +4,7 @@ services:
     image: $DOCKER_POSTGRES_IMAGE
     container_name: sonar-db
     restart: unless-stopped
-    command: -c config_file=/etc/postgresql/postgresql.conf
+    command: -c config_file=/etc/postgresql/postgresql.conf -c port=$POSTGRES_PORT
     volumes:
       # Have to check that the configuration is actually loaded. Right now, I'm following the same approach as the official PostgreSQL Docker
       - ${POSTGRES_CONFIG_FILE}:/etc/postgresql/postgresql.conf
@@ -21,7 +21,7 @@ services:
     - POSTGRES_HOST=$POSTGRES_HOST
     - POSTGRES_PORT=$POSTGRES_PORT
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -p $POSTGRES_PORT -U postgres"]
       interval: 10s
       retries: 5
       start_period: 30s
