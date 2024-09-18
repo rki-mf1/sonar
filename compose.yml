@@ -1,0 +1,187 @@
+services:
+
+  sonar-db:
+    image: $DOCKER_POSTGRES_IMAGE
+    container_name: sonar-db
+    restart: unless-stopped
+    command: -c config_file=/etc/postgresql/postgresql.conf -c port=$POSTGRES_PORT
+    volumes:
+      # Have to check that the configuration is actually loaded. Right now, I'm following the same approach as the official PostgreSQL Docker
+      - ${POSTGRES_CONFIG_FILE}:/etc/postgresql/postgresql.conf
+      - ${POSTGRES_INIT_DB}:/docker-entrypoint-initdb.d/
+      # This exact path inside the container needs to be mapped to a volume,
+      # otherwise it will automatically be mapped to a volume inside of the
+      # host's /var/lib/docker/volumes directory
+      - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_DB=$POSTGRES_DB
+    - POSTGRES_SCHEMA=$POSTGRES_SCHEMA
+    - POSTGRES_USER=$POSTGRES_USER
+    - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+    - POSTGRES_HOST=$POSTGRES_HOST
+    - POSTGRES_PORT=$POSTGRES_PORT
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p $POSTGRES_PORT -U postgres"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  sonar-django-backend:
+    image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
+    container_name: sonar-django-backend
+    environment:
+      - DEBUG=$DEBUG
+      - REDIS_URL=$REDIS_URL
+      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
+      - LOG_PATH=$LOG_PATH
+      - LOG_LEVEL=$LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST=$POSTGRES_HOST
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_PORT=$POSTGRES_PORT
+      - ALLOWED_HOSTS=$ALLOWED_HOSTS
+      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+      - SECRET_KEY=$SECRET_KEY
+    restart: unless-stopped
+    entrypoint: /bin/sh -c
+    command: [ "${START_DJANGO_SERVER}" ]
+    volumes:
+      - ./covsonar2_server/test/media:/covsonarmedia
+      - ./covsonar2_server/test/static:/staticfiles
+      - ${SONAR_EXTERNAL}/logs:${LOG_PATH}
+      - ${SONAR_EXTERNAL}/input-logs:/input-logs
+      - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
+      - ${SONAR_EXTERNAL}/coverage:/code/coverage 
+    depends_on:
+      sonar-cache:
+        condition: service_started
+      sonar-db:
+        condition: service_healthy
+
+  sonar-django-apscheduler:
+    image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
+    container_name: sonar-django-apscheduler
+    environment:
+      - DEBUG=$DEBUG
+      - REDIS_URL=$REDIS_URL
+      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
+      - LOG_PATH=$LOG_PATH
+      - LOG_LEVEL=$LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST=$POSTGRES_HOST
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_PORT=$POSTGRES_PORT
+      - ALLOWED_HOSTS=$ALLOWED_HOSTS
+      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+      - SECRET_KEY=$SECRET_KEY
+    restart: on-failure
+    entrypoint: /bin/sh -c
+    command: [ "python manage.py runapscheduler" ]
+    volumes:
+      - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+      sonar-django-backend:
+        condition: service_started
+
+  # This nginx reverse proxy instance is for both the backend and frontend.
+  sonar-proxy:
+    image: $DOCKER_NGINX_IMAGE
+    container_name: sonar-proxy
+    volumes:
+      - ./conf/nginx/templates:/etc/nginx/templates
+      # These are for the backend(?)
+      - ./covsonar2_server/test/static:/staticfiles
+      - ./covsonar2_server/test/media:/mediafiles
+      # These are for the frontend
+      - ./work/frontend/dist:/frontend
+    environment:
+      - NGINX_PORT=8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - sonar-django-backend
+
+  sonar-cache:
+    image: $DOCKER_REDIS_IMAGE
+    container_name: sonar-cache
+    restart: unless-stopped
+
+  celery-workers:
+    image: backend:local
+    container_name: celery-workers
+    # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend. For example, 
+    # if the concurrency is set too high and the SAMPLE_BATCH_SIZE is too high,
+    # this will not speed up the process. You need to lower SAMPLE_BATCH_SIZE into smaller chunks to gain the benefits
+    # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
+    # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
+    # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
+    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair  --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
+    volumes:
+      - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
+    environment:
+      - DEBUG=$DEBUG
+      - REDIS_URL=$REDIS_URL
+      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
+      - LOG_PATH=$LOG_PATH
+      - LOG_LEVEL=$LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST=$POSTGRES_HOST
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_PORT=$POSTGRES_PORT
+      - ALLOWED_HOSTS=$ALLOWED_HOSTS
+      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+      - SECRET_KEY=$SECRET_KEY
+    depends_on:
+      - sonar-cache
+      - sonar-django-backend
+      
+  celery-monitor:
+    image: backend:local
+    container_name: celery-monitor
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth="$CELERY_FLOWER_AUTH" --enable_events=False
+    environment:
+      - DEBUG=$DEBUG
+      - REDIS_URL=$REDIS_URL
+      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
+      - LOG_PATH=$LOG_PATH
+      - LOG_LEVEL=$LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST=$POSTGRES_HOST
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_PORT=$POSTGRES_PORT
+      - ALLOWED_HOSTS=$ALLOWED_HOSTS
+      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+      - SECRET_KEY=$SECRET_KEY
+    depends_on:
+      - sonar-cache
+      - sonar-django-backend
+      - celery-workers

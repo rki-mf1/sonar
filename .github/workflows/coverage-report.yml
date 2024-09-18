@@ -1,10 +1,7 @@
 name: coverage-report
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["master", "dev"]
-
+  pull_request:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -13,6 +10,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -25,6 +23,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      COMPOSE_ARGS: "-f compose.yml -f compose-dev.yml --env-file conf/docker/common.env --env-file conf/docker/dev.env --env-file conf/docker/dev-secrets.env"
     runs-on: ubuntu-latest
     steps:
       - name: Check out pipeline code
@@ -32,20 +32,19 @@ jobs:
 
       - name: Build the backend container
         run: |
-          cp template.env .env
-          docker build -t backend_dev:local -f Dockerfile .
+          docker build -t backend:local -f Dockerfile .
 
       - name: Bring up containers
-        run: docker compose -f docker-compose-dev.yml up --detach --quiet-pull
+        run: docker compose $COMPOSE_ARGS up --detach --quiet-pull
 
       - name: Install testing dependencies
-        run: docker compose -f docker-compose-dev.yml exec -t dev-django pip install --no-cache-dir --disable-pip-version-check -r requirements-testing.txt
+        run: docker compose $COMPOSE_ARGS exec -t sonar-django-backend pip install --no-cache-dir --disable-pip-version-check -r requirements-testing.txt
           
       - name: Run tests
-        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage run ./manage.py test --no-input
+        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage run ./manage.py test --no-input
 
       - name: Generate reports
-        run: docker compose -f docker-compose-dev.yml exec -T dev-django coverage html
+        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage html
         
       - name: Setup Pages
         uses: actions/configure-pages@v5

@@ -1,5 +1,5 @@
 try {
-    docker-compose -f .\docker-compose-dev.yml run --rm dev-django poetry run python ./manage.py $args
+    scripts\win\dc-dev.ps1 run --rm sonar-django-backend "poetry run python ./manage.py $args"
 }
 catch {
     Write-Output "Error occurred while running the script - make sure to run the script from the root directory of the project!"

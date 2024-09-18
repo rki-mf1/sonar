@@ -8,7 +8,7 @@ archive_data/
 processing_data/
 postgres-data/
 # Environments
-*.env
+.env
 .venv
 env/
 venv/
@@ -17,10 +17,12 @@ env.bak/
 venv.bak/
 .coverage
 log_improve
-.github/
 *prod.conf
 logs/
+conf/docker/prod-secrets.env
+
 private/
 
 tmp/
 work/
+cruft/
