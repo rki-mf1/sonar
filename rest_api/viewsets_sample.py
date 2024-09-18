@@ -94,8 +94,15 @@ class SampleViewSet(
             .count()
         )
         response_dict["samples_total"] = models.Sample.objects.all().count()
-        # - before column name mean "descending order", while without - mean "ascending".
-        response_dict["newest_sample_date"] = (
+
+        response_dict["first_sample_date"] = (
+            models.Sample.objects.all()
+            .order_by("collection_date")
+            .first()
+            .collection_date
+        )
+        # '-' before column name mean "descending order", while without '-' mean "ascending".
+        response_dict["latest_sample_date"] = (
             models.Sample.objects.all()
             .order_by("-collection_date")
             .first()
@@ -709,13 +716,23 @@ class SampleViewSet(
         *args,
         **kwargs,
     ):
-        lineage = models.Lineage.objects.filter(name=lineage).first()
-        if not lineage:
+        if isinstance(lineage, str):
+            lineage = [lineage]  # convert to list if a single string is passed
+
+        lineages = models.Lineage.objects.filter(name__in=lineage)
+
+        if not lineages.exists():
             raise Exception(f"Lineage {lineage} not found.")
+        
+        sublineages = []
+        for l in lineages:
+            sublineages.extend(l.get_sublineages())
+
+        # match for all sublineages of all given lineages
         return self.filter_property(
             "lineage",
             "in",
-            lineage.get_sublineages(),
+            sublineages,
             exclude,
         )
 
