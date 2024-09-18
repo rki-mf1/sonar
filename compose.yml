@@ -1,28 +1,10 @@
 services:
-  # Needed to run postgres as a non-root user. This runs as root and sets the
-  # postgres data directory to be owned by the non-root user that will run
-  # postgres.
-  sonar-db-init:
-    image: $DOCKER_POSTGRES_IMAGE
-    container_name: sonar-db-init
-    environment:
-    - POSTGRES_DB=$POSTGRES_DB
-    - POSTGRES_SCHEMA=$POSTGRES_SCHEMA
-    - POSTGRES_USER=$POSTGRES_USER
-    - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-    - POSTGRES_HOST=$POSTGRES_HOST
-    - POSTGRES_PORT=$POSTGRES_PORT
-    volumes:
-      - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
-    entrypoint: /bin/sh -c
-    command: [ "chown -R ${POSTGRES_UID_GID} /var/lib/postgresql/data" ]
 
   sonar-db:
     image: $DOCKER_POSTGRES_IMAGE
     container_name: sonar-db
     restart: unless-stopped
-    user: "${POSTGRES_UID_GID}"
-    command: -c config_file=/etc/postgresql/postgresql.conf
+    command: -c config_file=/etc/postgresql/postgresql.conf -c port=$POSTGRES_PORT
     volumes:
       # Have to check that the configuration is actually loaded. Right now, I'm following the same approach as the official PostgreSQL Docker
       - ${POSTGRES_CONFIG_FILE}:/etc/postgresql/postgresql.conf
@@ -38,11 +20,8 @@ services:
     - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
     - POSTGRES_HOST=$POSTGRES_HOST
     - POSTGRES_PORT=$POSTGRES_PORT
-    depends_on:
-      sonar-db-init:
-        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -p $POSTGRES_PORT -U postgres"]
       interval: 10s
       retries: 5
       start_period: 30s
