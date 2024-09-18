@@ -56,6 +56,11 @@ export default {
           route: '/'
         },
         {
+          label: 'Plots',
+          icon: 'pi pi-chart-bar',
+          route: '/plots'
+        },
+        {
           label: 'About',
           icon: 'pi pi-star',
           route: '/about'
