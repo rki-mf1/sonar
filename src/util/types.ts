@@ -40,7 +40,7 @@ export enum IntegerDjangoFilterType {
 export type PropertyFilter = {
     fetchOptions: boolean;
     label: string;
-    value: string | number;
+    value: string | number | string[];
     propertyName: string;
     filterType: DjangoFilterType | null;
 }

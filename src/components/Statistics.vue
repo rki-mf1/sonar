@@ -1,6 +1,6 @@
 <template>
     <div class="flex">
-        <Card class="card " style="height: 6rem; background-color: var(--secondary-color);">
+        <Card class="card" style="background-color: var(--secondary-color);">
         <template #content>
             <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
             <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ filteredCount }} / {{
@@ -9,20 +9,10 @@
                 selected from database</div>
         </template>
     </Card>
-    <Card class="card" style="height: 6rem;">
-        <template #content>
-            <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
-            <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{
-                statistics.distinct_mutations_count }}</div>
-            <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">distinct
-                mutations in database</div>
-        </template>
-    </Card>
-    <Card class="card" style="height: 6rem; width: 30%;">
+    <Card class="card">
         <template #content>
             <v-icon name="fa-calendar-alt" fill="var(--text-color)" scale="2.5" style="float: right;" />
-            <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ statistics.newest_sample_date
-                }}</div>
+            <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ statistics.latest_sample_date }}</div>
             <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">Date of newest
                 sequence in database</div>
         </template>
@@ -49,7 +39,7 @@ export default {
             statistics: {
                 distinct_mutations_count: 0,
                 samples_total: 0,
-                newest_sample_date: ""
+                latest_sample_date: ""
             }
         }
     },
@@ -58,8 +48,7 @@ export default {
             const sample_statistics = await API.getInstance().getSampleStatistics()
             this.statistics.distinct_mutations_count = sample_statistics.distinct_mutations_count
             this.statistics.samples_total = sample_statistics.samples_total
-            this.statistics.newest_sample_date = sample_statistics.newest_sample_date
-
+            this.statistics.latest_sample_date = sample_statistics.latest_sample_date
         }
     },
     mounted() {
@@ -70,9 +59,10 @@ export default {
 
 <style scoped>
 .card {
-    width: 25%;
     background-color: var(--primary-color);
+    width: 350px;
     margin: 20px;
+    height: 6rem;
     box-shadow: var(--shadow);
 }
 </style>
