@@ -5,8 +5,8 @@
       <div>
         <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
           <span style="font-weight: 500">Time Range</span>
-          <Calendar v-model="timeRange" style="flex: auto" showIcon dateFormat="yy-mm-dd" selectionMode="range" :disabled="filterGroupFiltersHasDateFilter"
-            @date-select="updateSamples" />
+          <Calendar v-model="timeRange" style="flex: auto" showIcon dateFormat="yy-mm-dd" selectionMode="range"
+            :disabled="filterGroupFiltersHasDateFilter" @date-select="updateSamples" />
         </div>
 
         <div class="flex align-items-center" style="gap: 10px">
@@ -29,8 +29,7 @@
           </div>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button type="button" style="margin-top: 10px" label="OK"
-            @click="displayDialogFilter = false; updateSamples()"></Button>
+          <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialog()"></Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -257,11 +256,14 @@ import {
   type FilterGroup,
   type LineageFilter,
   type PropertyFilter,
-  DjangoFilterType,
   type GenomeFilter,
-  type ProfileFilter, FilterGroupFilters,
+  type ProfileFilter,
+  type FilterGroupFilters,
   type FilterGroupRoot,
-  type Property
+  type Property,
+  DjangoFilterType,
+  StringDjangoFilterType,
+  DateDjangoFilterType,
 } from '@/util/types'
 
 export default {
@@ -284,11 +286,11 @@ export default {
       isFiltersSet: false,
       ordering: '-collection_date',
       notSortable: ['genomic_profiles', 'proteomic_profiles'],
-      propertyOptions: [],
-      propertiesDict: {}, // to store name and type
+      propertyOptions: [] as string[],
+      propertiesDict: {} as { [key: string]: string[] }, // to store name and type
       repliconAccessionOptions: [],
       lineageOptions: [],
-      allColumns: [],
+      allColumns: [] as string[],
       selectedColumns: [
         'sequencing_reason',
         'collection_date',
@@ -336,21 +338,21 @@ export default {
   },
   methods: {
     async updateSamples() {
-      this.loading = true
-      const params = {
-        limit: this.perPage,
-        offset: this.firstRow,
-        ordering: this.ordering
-      }
-      this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
-      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-      this.filteredCount = this.filteredStatistics['filtered_total_count']
-      this.isFiltersSet =
-        this.filterGroup.filterGroups.length > 0 ||
-        Object.values(this.filterGroup.filters).some(
-          (filter: any) => Array.isArray(filter) && filter.length > 0
-        )
-      this.loading = false
+        this.loading = true
+        const params = {
+          limit: this.perPage,
+          offset: this.firstRow,
+          ordering: this.ordering
+        }
+        this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
+        this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+        this.filteredCount = this.filteredStatistics['filtered_total_count']
+        this.isFiltersSet =
+          this.filterGroup.filterGroups.length > 0 ||
+          Object.values(this.filterGroup.filters).some(
+            (filter: any) => Array.isArray(filter) && filter.length > 0
+          )
+        this.loading = false
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
@@ -445,6 +447,10 @@ export default {
         ]
       }
     },
+    closeAdvancedFilterDialog() {
+      this.displayDialogFilter = false;
+      this.updateSamples()
+    },
     chartOptions() {
       const documentStyle = getComputedStyle(document.documentElement)
       const textColor = documentStyle.getPropertyValue('--text-color')
@@ -486,16 +492,19 @@ export default {
     // },
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-
       // Transform the array to an object
-      this.propertiesDict = res.values.reduce((acc, property) => {
-        acc[property.name] = property.query_type
-        return acc
-      }, {})
-
+      this.propertiesDict = {}
+      res.values.forEach((property: { name: string, query_type: string, description: string }) => {
+        if (property.query_type === 'value_varchar') {
+          this.propertiesDict[property.name] = Object.values(StringDjangoFilterType);
+        } else if (property.query_type === 'value_date') {
+          this.propertiesDict[property.name] = Object.values(DateDjangoFilterType);
+        } else {
+          this.propertiesDict[property.name] = Object.values(DjangoFilterType);
+        }
+      });
       this.propertyOptions = Object.keys(this.propertiesDict)
       this.allColumns = this.propertyOptions
-      // this.allColumns = this.propertyOptions.push('genomic_profiles', 'proteomic_profiles').sort();
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
@@ -660,7 +669,7 @@ export default {
     this.updateSymbolOptions()
     this.updateRepliconAccessionOptions()
     this.updateLineageOptions()
-  }
+  },
 }
 </script>
 

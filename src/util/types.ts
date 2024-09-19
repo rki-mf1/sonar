@@ -25,7 +25,7 @@ export enum StringDjangoFilterType {
 }
 
 export enum DateDjangoFilterType {
-    EXACT = "exact",
+    RANGE = "range",
 }
 
 export enum IntegerDjangoFilterType {
@@ -40,7 +40,7 @@ export enum IntegerDjangoFilterType {
 export type PropertyFilter = {
     fetchOptions: boolean;
     label: string;
-    value: string | number | string[];
+    value: string | number | string[] | Date[];
     propertyName: string;
     filterType: DjangoFilterType | null;
 }
