@@ -1,10 +1,12 @@
 <template>
   <div class="input my-2">
     <div class="input-left">
+      {{ filters }}
+      {{ filterGroupsFilters }}
       <!-- Home View Filters -->
       <div>
-        <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px;">
-          <span style="font-weight: 500;">Time Range</span>
+        <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
+          <span style="font-weight: 500">Time Range</span>
           <Calendar
             v-model="timeRange"
             style="flex: auto"
@@ -16,8 +18,16 @@
         </div>
 
         <div class="flex align-items-center" style="gap: 10px">
-          <span style="font-weight: 500;">Lineage</span>
-          <MultiSelect v-model="lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages" class="w-full md:w-80" @change="updateSamples"/>
+          <span style="font-weight: 500">Lineage</span>
+          <MultiSelect
+            v-model="lineage"
+            display="chip"
+            :options="lineageOptions"
+            filter
+            placeholder="Select Lineages"
+            class="w-full md:w-80"
+            @change="updateSamples"
+          />
         </div>
       </div>
 
@@ -47,9 +57,13 @@
             />
           </div>
         </div>
-        <div style="display: flex; justify-content: end; gap: 10px;">
-          <Button type="button" style="margin-top: 10px;" label="OK"
-            @click="displayDialogFilter = false; updateSamples()"></Button>
+        <div style="display: flex; justify-content: end; gap: 10px">
+          <Button
+            type="button"
+            style="margin-top: 10px"
+            label="OK"
+            @click="displayDialogFilter = false; updateSamples()"
+          ></Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -326,20 +340,17 @@
 </template>
 
 <script lang="ts">
-
 import API from '@/api/API'
-import { ref } from "vue";
+import { ref } from 'vue'
 import {
   type FilterGroup,
   type LineageFilter,
   type PropertyFilter,
   DjangoFilterType,
   type GenomeFilter,
-  type ProfileFilter,
-  type FilterGroupFilters,
+  type ProfileFilter, FilterGroupFilters,
   type FilterGroupRoot,
   type Property
-
 } from '@/util/types'
 
 export default {
@@ -361,124 +372,153 @@ export default {
       loading: false,
       isFiltersSet: false,
       ordering: '-collection_date',
-      notSortable: ["genomic_profiles", "proteomic_profiles"],
+      notSortable: ['genomic_profiles', 'proteomic_profiles'],
       propertyOptions: [],
       propertiesDict: {}, // to store name and type
       repliconAccessionOptions: [],
       lineageOptions: [],
       allColumns: [],
-      selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles'],
+      selectedColumns: [
+        'sequencing_reason',
+        'collection_date',
+        'lineage',
+        'lab',
+        'zip_code',
+        'genomic_profiles'
+      ],
       propertyValueOptions: {} as {
         [key: string]: {
-          options: string[];
-          loading: boolean;
-        };
+          options: string[]
+          loading: boolean
+        }
       },
       lineage: '',
-      timeRange: [] as Date[], 
+      timeRange: [] as Date[],
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
+        filters: {
+          propertyFilters: [],
+          profileFilters: [],
+          repliconFilters: [],
+          lineageFilters: []
+        }
       } as FilterGroup,
-      DjangoFilterType,
-    };
+      DjangoFilterType
+    }
   },
   setup() {
     // Create the ref for the OverlayPanel
-    const op = ref(null);
+    const op = ref(null)
 
     // Toggle function to open/close the overlay
     const toggle = (event) => {
       if (op.value) {
-        op.value.toggle(event);  // Use the ref's toggle method if op is available
+        op.value.toggle(event) // Use the ref's toggle method if op is available
       }
-    };
+    }
 
     return {
       op,
-      toggle,
-    };
+      toggle
+    }
   },
   methods: {
     async updateSamples() {
-      this.loading = true;
+      this.loading = true
       const params = {
         limit: this.perPage,
         offset: this.firstRow,
         ordering: this.ordering
       }
-      this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
-      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
-      this.filteredCount = this.filteredStatistics["filtered_total_count"];
-      this.isFiltersSet = this.filterGroup.filterGroups.length > 0 || Object.values(this.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0);
-      this.loading = false;
+      this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
+      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+      this.filteredCount = this.filteredStatistics['filtered_total_count']
+      this.isFiltersSet =
+        this.filterGroup.filterGroups.length > 0 ||
+        Object.values(this.filterGroup.filters).some(
+          (filter: any) => Array.isArray(filter) && filter.length > 0
+        )
+      this.loading = false
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
-      this.timeRange = [new Date(statistics.first_sample_date), new Date(statistics.latest_sample_date)]
+      this.timeRange = [
+        new Date(statistics.first_sample_date),
+        new Date(statistics.latest_sample_date)
+      ]
     },
     formatDate(dateStr: string): string {
-      if (!dateStr) return ''; // Handle case where dateStr is undefined or null
-      return dateStr.split('T')[0];
+      if (!dateStr) return '' // Handle case where dateStr is undefined or null
+      return dateStr.split('T')[0]
     },
     columnSelection(value) {
-      this.selectedColumns = value.filter(v => this.allColumns.includes(v));
+      this.selectedColumns = value.filter((v) => this.allColumns.includes(v))
     },
     onRowSelect(event) {
-      this.selectedRow = event.data;
-      this.displayDialogRow = true;
+      this.selectedRow = event.data
+      this.displayDialogRow = true
     },
     onRowUnselect(event) {
-      this.selectedRow = null;
-      this.displayDialogRow = false;
+      this.selectedRow = null
+      this.displayDialogRow = false
     },
     sortingChanged(sortBy) {
       if (sortBy.sortOrder > 0) {
-        this.ordering = sortBy.sortField;
+        this.ordering = sortBy.sortField
       } else {
-        this.ordering = `-${sortBy.sortField}`;
+        this.ordering = `-${sortBy.sortField}`
       }
-      this.updateSamples();
+      this.updateSamples()
     },
     exportFile(type: string) {
-      this.displayDialogExport = false;
-      this.loading = true;
-      API.getInstance().getSampleGenomesExport(this.filters, this.selectedColumns, this.ordering, type == "xlsx");
-      this.loading = false;
+      this.displayDialogExport = false
+      this.loading = true
+      API.getInstance().getSampleGenomesExport(
+        this.filters,
+        this.selectedColumns,
+        this.ordering,
+        type == 'xlsx'
+      )
+      this.loading = false
     },
     metaDataCoverage(column: string) {
-      if (this.filteredCount != 0 && this.filteredStatistics["meta_data_coverage"] != undefined) {
-        const coverage = (this.filteredStatistics["meta_data_coverage"][column] / this.filteredCount * 100).toFixed(0);
-        return 'Coverage: ' + coverage.toString() + ' %';
+      if (this.filteredCount != 0 && this.filteredStatistics['meta_data_coverage'] != undefined) {
+        const coverage = (
+          (this.filteredStatistics['meta_data_coverage'][column] / this.filteredCount) *
+          100
+        ).toFixed(0)
+        return 'Coverage: ' + coverage.toString() + ' %'
       } else {
-        return '';
+        return ''
       }
     },
     chartData() {
-      const samples_per_week = this.filteredStatistics ? this.filteredStatistics["samples_per_week"] : {};
-      const labels = [];
-      const data = [];
+      const samples_per_week = this.filteredStatistics
+        ? this.filteredStatistics['samples_per_week']
+        : {}
+      const labels = []
+      const data = []
 
       if (samples_per_week && Object.keys(samples_per_week).length > 0) {
-        Object.keys(samples_per_week).forEach(key => {
-          labels.push(key);
-          data.push(samples_per_week[key]);
-        });
+        Object.keys(samples_per_week).forEach((key) => {
+          labels.push(key)
+          data.push(samples_per_week[key])
+        })
       } else {
         // Return an empty chart structure
         return {
-          labels: ['No data available'],  // A label to indicate no data
+          labels: ['No data available'], // A label to indicate no data
           datasets: [
             {
               label: 'Samples',
-              data: [],  // No data points
+              data: [], // No data points
               backgroundColor: 'rgba(249, 115, 22, 0.2)',
               borderColor: 'rgb(249, 115, 22)',
               borderWidth: 1
             }
           ]
-        };
+        }
       }
 
       return {
@@ -492,18 +532,18 @@ export default {
             borderWidth: 1
           }
         ]
-      };
+      }
     },
     chartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement);
-      const textColor = documentStyle.getPropertyValue('--text-color');
-      const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary');
-      const surfaceBorder = documentStyle.getPropertyValue('--surface-border');
+      const documentStyle = getComputedStyle(document.documentElement)
+      const textColor = documentStyle.getPropertyValue('--text-color')
+      const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
+      const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
       return {
         plugins: {
           legend: {
             display: false
-          },
+          }
         },
         responsive: true,
         maintainAspectRatio: false,
@@ -526,7 +566,7 @@ export default {
             }
           }
         }
-      };
+      }
     },
     // async updatePropertyOptions() {
     //   const res = await API.getInstance().getSampleGenomePropertyOptions();
@@ -534,65 +574,65 @@ export default {
     //   this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort();
     // },
     async updatePropertyOptions() {
-      const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes();
+      const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
 
       // Transform the array to an object
       this.propertiesDict = res.values.reduce((acc, property) => {
-        acc[property.name] = property.query_type;
-        return acc;
-      }, {});
+        acc[property.name] = property.query_type
+        return acc
+      }, {})
 
-      this.propertyOptions = Object.keys(this.propertiesDict);
-      this.allColumns = this.propertyOptions;
+      this.propertyOptions = Object.keys(this.propertiesDict)
+      this.allColumns = this.propertyOptions
       // this.allColumns = this.propertyOptions.push('genomic_profiles', 'proteomic_profiles').sort();
     },
     async updateRepliconAccessionOptions() {
-      const res = await API.getInstance().getRepliconAccessionOptions();
-      this.repliconAccessionOptions = res.accessions;
+      const res = await API.getInstance().getRepliconAccessionOptions()
+      this.repliconAccessionOptions = res.accessions
     },
     async updateLineageOptions() {
-      const res = await API.getInstance().getLineageOptions();
-      this.lineageOptions = res.lineages;
+      const res = await API.getInstance().getLineageOptions()
+      this.lineageOptions = res.lineages
     },
     async updateSymbolOptions() {
-      const res = await API.getInstance().getGeneSymbolOptions();
-      this.symbolOptions = res.gene_symbols;
+      const res = await API.getInstance().getGeneSymbolOptions()
+      this.symbolOptions = res.gene_symbols
     },
     parseDateToDateRangeFilter(data) {
       // Parse the first date
-      data[0] = new Date(Date.parse(data[0].toString()));
+      data[0] = new Date(Date.parse(data[0].toString()))
       //  format the date according to your local timezone instead of UTC.
       const formatDateToLocal = (date) => {
         return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
           .toISOString()
-          .split('T')[0];
-      };
+          .split('T')[0]
+      }
 
       // Check if there's a second date
       if (data[1]) {
-        data[1] = new Date(Date.parse(data[1].toString()));
-        const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])];
-        return formatted;
+        data[1] = new Date(Date.parse(data[1].toString()))
+        const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])]
+        return formatted
       } else {
         // If there's no second date, assume a range of one day?
-        const nextDay = new Date(Date.parse(data[0]) + 1000 * 60 * 60 * 24);
-        return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)];
+        const nextDay = new Date(Date.parse(data[0]) + 1000 * 60 * 60 * 24)
+        return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)]
       }
     },
     getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
       const summary = {
         andFilter: [] as GenomeFilter[],
         orFilter: [] as FilterGroupFilters[]
-      } as FilterGroupFilters;
+      } as FilterGroupFilters
       for (const filter of filterGroup.filters.propertyFilters) {
         if (filter.propertyName && filter.filterType && filter.value) {
-          var value = filter.value;
+          var value = filter.value
           if (filter.propertyName.includes('date')) {
             if (value[1]) {
-              filter.filterType = DjangoFilterType.RANGE;
-              value = this.parseDateToDateRangeFilter(value);
+              filter.filterType = DjangoFilterType.RANGE
+              value = this.parseDateToDateRangeFilter(value)
             } else {
-              value = new Date(value[0]).toISOString().split('T')[0];
+              value = new Date(value[0]).toISOString().split('T')[0]
             }
           }
           summary.andFilter.push({
@@ -600,24 +640,24 @@ export default {
             property_name: filter.propertyName,
             filter_type: filter.filterType,
             value: value.toString()
-          });
+          })
         }
       }
       for (const filter of filterGroup.filters.profileFilters) {
-        var valid = true;
-        const translatedFilter = {} as Record<string, string | number | boolean>;
+        var valid = true
+        const translatedFilter = {} as Record<string, string | number | boolean>
         for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
           //snake_case conversion
-          var translatedKey = key.replace('AA', '_aa');
-          translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase();
-          translatedFilter[translatedKey] = filter[key];
+          var translatedKey = key.replace('AA', '_aa')
+          translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
+          translatedFilter[translatedKey] = filter[key]
           if (!filter[key] && key != 'exclude') {
-            valid = false;
-            break;
+            valid = false
+            break
           }
         }
         if (valid) {
-          summary.andFilter.push(translatedFilter);
+          summary.andFilter.push(translatedFilter)
         }
       }
       for (const filter of filterGroup.filters.repliconFilters) {
@@ -626,82 +666,83 @@ export default {
             label: filter.label,
             accession: filter.accession,
             exclude: filter.exclude
-          });
+          })
         }
       }
       for (const filter of filterGroup.filters.lineageFilters) {
         if (filter.lineage) {
-
           summary.andFilter.push({
             label: filter.label,
             lineage: filter.lineage,
             exclude: filter.exclude
-          });
+          })
         }
       }
       for (const subFilterGroup of filterGroup.filterGroups) {
-        summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
+        summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup))
       }
-      return summary;
+      return summary
     },
     updatePropertyValueOptions(propertyName: string) {
-      if (this.propertyValueOptions[propertyName])
-        return;
-      this.propertyValueOptions[propertyName] = { loading: true, options: [] };
+      if (this.propertyValueOptions[propertyName]) return
+      this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
         .getSampleGenomePropertyValueOptions(propertyName)
         .then((res) => {
-          this.propertyValueOptions[propertyName].options = res.values;
-          this.propertyValueOptions[propertyName].loading = false;
-        });
+          this.propertyValueOptions[propertyName].options = res.values
+          this.propertyValueOptions[propertyName].loading = false
+        })
     },
     findProperty(properties: Array<Property>, propertyName: string) {
-      const property = properties.find(property => property.name === propertyName);
-      return property ? property.value : undefined;
+      const property = properties.find((property) => property.name === propertyName)
+      return property ? property.value : undefined
     }
   },
   computed: {
+    filterGroupsFilters(): FilterGroupRoot {
+      return {
+        filters: this.getFilterGroupFilters(this.filterGroup)
+      }
+    },
+    filterGroupFiltersHasLineageFilter(): Boolean {
+
+      return false
+    },
     filters(): FilterGroupRoot {
-
-      const filters = {
-        filters: this.getFilterGroupFilters(this.filterGroup),
-      };
-      if (!filters.filters?.andFilter){
+      const filters = {... this.filterGroupsFilters}      
+      if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
-      } 
-
-      if(this.timeRange[0] && this.timeRange[1]) {
-        filters.filters.andFilter.push(
-          {
-          label: 'Property',
-          property_name: 'collection_date',
-          filter_type: "range",
-          value: `${this.timeRange[0].toLocaleDateString('en-CA')},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
-          }
-        )
       }
 
-      if(this.lineage) {
-        filters.filters.andFilter.push(
-          {
+      if (this.timeRange[0] && this.timeRange[1]) {
+        filters.filters.andFilter.push({
+          label: 'Property',
+          property_name: 'collection_date',
+          filter_type: 'range',
+          value: `${this.timeRange[0].toLocaleDateString(
+            'en-CA'
+          )},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
+        })
+      }
+
+      if (this.lineage) {
+        filters.filters.andFilter.push({
           label: 'Sublineages',
           lineage: this.lineage,
           exclude: false
-          } 
-        )
+        })
       }
 
-      return filters as FilterGroupRoot;
+      return filters as FilterGroupRoot
     }
-
   },
   mounted() {
-    this.updateSamples();
-    this.setDefaultTimeRange();
-    this.updatePropertyOptions();
-    this.updateSymbolOptions();
-    this.updateRepliconAccessionOptions();
-    this.updateLineageOptions();
+    this.updateSamples()
+    this.setDefaultTimeRange()
+    this.updatePropertyOptions()
+    this.updateSymbolOptions()
+    this.updateRepliconAccessionOptions()
+    this.updateLineageOptions()
   }
 }
 </script>
