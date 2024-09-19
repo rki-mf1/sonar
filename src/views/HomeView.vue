@@ -636,7 +636,7 @@ export default {
         filters.filters.andFilter = []
       }
 
-      if (this.timeRange[0] && this.timeRange[1]) {
+      if (this.timeRange[0] && this.timeRange[1] && !this.filterGroupFiltersHasDateFilter) {
         filters.filters.andFilter.push({
           label: 'Property',
           property_name: 'collection_date',
@@ -645,6 +645,13 @@ export default {
             'en-CA'
           )},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
         })
+      }
+
+      if (this.filterGroupFiltersHasDateFilter) {
+        this.timeRange = ''
+      }
+      else {
+        this.setDefaultTimeRange()
       }
 
       if (this.filterGroupFiltersHasLineageFilter) {
