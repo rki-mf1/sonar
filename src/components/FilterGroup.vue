@@ -227,6 +227,7 @@ export default {
       this.filterGroup.filters.profileFilters.push({ ...this.ClassicFilter })
     },
     async updatePropertyValueOptions(filter: PropertyFilter) {
+      console.log(filter)
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter.propertyName)
       }

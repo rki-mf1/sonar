@@ -1,69 +1,36 @@
 <template>
   <div class="input my-2">
     <div class="input-left">
-      {{ filters }}
-      {{ filterGroupsFilters }}
       <!-- Home View Filters -->
       <div>
         <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
           <span style="font-weight: 500">Time Range</span>
-          <Calendar
-            v-model="timeRange"
-            style="flex: auto"
-            showIcon
-            dateFormat="yy-mm-dd"
-            selectionMode="range"
-            @date-select="updateSamples"
-          />
+          <Calendar v-model="timeRange" style="flex: auto" showIcon dateFormat="yy-mm-dd" selectionMode="range" :disabled="filterGroupFiltersHasDateFilter"
+            @date-select="updateSamples" />
         </div>
 
         <div class="flex align-items-center" style="gap: 10px">
           <span style="font-weight: 500">Lineage</span>
-          <MultiSelect
-            v-model="lineage"
-            display="chip"
-            :options="lineageOptions"
-            filter
-            placeholder="Select Lineages"
-            class="w-full md:w-80"
-            @change="updateSamples"
-          />
+          <MultiSelect v-model="lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages"
+            class="w-full md:w-80" :disabled="filterGroupFiltersHasLineageFilter" @change="updateSamples" />
         </div>
       </div>
 
-      <Button
-        type="button"
-        icon="pi pi-filter"
-        label="&nbsp;Set Advanced Filters"
-        severity="warning"
-        raised
-        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }"
-        @click="displayDialogFilter = true"
-      />
-      <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
+      <Button type="button" icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised
+        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
+      <Dialog :visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
-            <FilterGroup
-              style="width: fit-content; margin: auto"
-              :filterGroup="filterGroup"
-              :propertyOptions="propertyOptions"
-              :repliconAccessionOptions="repliconAccessionOptions"
-              :lineageOptions="lineageOptions"
-              :symbolOptions="symbolOptions"
-              :operators="Object.values(DjangoFilterType)"
-              :propertyValueOptions="propertyValueOptions"
-              :propertiesDict="propertiesDict"
-              v-on:update-property-value-options="updatePropertyValueOptions"
-            />
+            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
+              :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
+              :lineageOptions="lineageOptions" :symbolOptions="symbolOptions"
+              :operators="Object.values(DjangoFilterType)" :propertyValueOptions="propertyValueOptions"
+              :propertiesDict="propertiesDict" v-on:update-property-value-options="updatePropertyValueOptions" />
           </div>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button
-            type="button"
-            style="margin-top: 10px"
-            label="OK"
-            @click="displayDialogFilter = false; updateSamples()"
-          ></Button>
+          <Button type="button" style="margin-top: 10px" label="OK"
+            @click="displayDialogFilter = false; updateSamples()"></Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -162,12 +129,7 @@
     <div class="output mb-2">
       <div style="height: 100%; overflow: auto">
         <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading...">
-          <ProgressSpinner
-            class="flex-1 p-3"
-            size="small"
-            v-if="loading"
-            style="color: whitesmoke"
-          />
+          <ProgressSpinner class="flex-1 p-3" size="small" v-if="loading" style="color: whitesmoke" />
         </Dialog>
 
         <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
@@ -184,13 +146,8 @@
           <SampleDetails :selectedRow="selectedRow" :allColumns="allColumns"></SampleDetails>
         </Dialog>
 
-        <Dialog
-          v-model:visible="displayDialogExport"
-          header="Export Settings"
-          modal
-          dismissableMask
-          :style="{ width: '25vw' }"
-        >
+        <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
+          :style="{ width: '25vw' }">
           <div>
             <RadioButton v-model="exportFormat" inputId="exportFormat1" value="csv" />
             <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
@@ -203,52 +160,22 @@
           <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
           <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-            <Button
-              icon="pi pi-external-link"
-              label="&nbsp;Export"
-              raised
-              @click="exportFile(exportFormat)"
-            />
+            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="exportFile(exportFormat)" />
           </div>
         </Dialog>
 
-        <DataTable
-          :value="samples"
-          ref="dt"
-          style="max-width: 90vw"
-          size="large"
-          dataKey="name"
-          stripedRows
-          scrollable
-          scrollHeight="flex"
-          sortable
-          @sort="sortingChanged($event)"
-          v-model:selection="selectedRow"
-          selectionMode="single"
-          @rowSelect="onRowSelect"
-          @rowUnselect="onRowUnselect"
-        >
+        <DataTable :value="samples" ref="dt" style="max-width: 90vw" size="large" dataKey="name" stripedRows scrollable
+          scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
+          selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
           <template #empty> No Results </template>
           <template #header>
             <div style="display: flex; justify-content: space-between">
               <div>
-                <Button
-                  icon="pi pi-external-link"
-                  label="&nbsp;Export"
-                  raised
-                  @click="displayDialogExport = true"
-                />
+                <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
               </div>
               <div style="display: flex; justify-content: flex-end">
-                <MultiSelect
-                  v-model="selectedColumns"
-                  display="chip"
-                  :options="allColumns"
-                  filter
-                  placeholder="Select Columns"
-                  class="w-full md:w-20rem"
-                  @update:modelValue="columnSelection"
-                >
+                <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
+                  placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
                   <template #value>
                     <div style="margin-top: 5px; margin-left: 5px">
                       {{ selectedColumns.length }} columns selected
@@ -263,47 +190,35 @@
               <span v-tooltip="metaDataCoverage('name')">ID</span>
             </template>
             <template #body="slotProps">
-              <div
-                style="
+              <div style="
                   height: 1.5em;
                   width: 9rem;
                   text-overflow: ellipsis;
                   overflow: hidden;
                   white-space: nowrap;
                   direction: rtl;
-                "
-                :title="slotProps.data.name"
-              >
+                " :title="slotProps.data.name">
                 {{ slotProps.data.name }}
               </div>
             </template>
           </Column>
-          <Column
-            v-for="column in selectedColumns"
-            :sortable="!notSortable.includes(column)"
-            :field="column"
-          >
+          <Column v-for="column in selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
             <template #header>
               <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
             </template>
             <template #body="slotProps">
               <div v-if="column === 'genomic_profiles'">
                 <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-                  <GenomicProfileLabel
-                    v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                    :variantString="variant"
-                    :annotations="slotProps.data.genomic_profiles[variant]"
-                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
-                  />
+                  <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                    :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
                 </div>
               </div>
               <div v-else-if="column === 'proteomic_profiles'">
                 <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-                  <GenomicProfileLabel
-                    v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                  <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
                     :variantString="variant"
-                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
-                  />
+                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
                 </div>
               </div>
               <div v-else-if="column === 'init_upload_date'">
@@ -322,13 +237,9 @@
             <div style="display: flex; justify-content: space-between">
               Total: {{ filteredCount }} Samples
             </div>
-            <Paginator
-              :totalRecords="filteredCount"
-              v-model:rows="perPage"
-              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
-              v-model:first="firstRow"
-              @update:rows="updateSamples()"
-            />
+            <Paginator :totalRecords="filteredCount" v-model:rows="perPage"
+              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
+              @update:rows="updateSamples()" />
           </template>
         </DataTable>
       </div>
@@ -704,12 +615,14 @@ export default {
         filters: this.getFilterGroupFilters(this.filterGroup)
       }
     },
-    filterGroupFiltersHasLineageFilter(): Boolean {
-
-      return false
+    filterGroupFiltersHasLineageFilter(): boolean {
+      return this.filterGroupsFilters.filters.andFilter.some(item => item.label === "Sublineages") || this.filterGroupsFilters.filters.orFilter.some(item => item.label === "Sublineages");
+    },
+    filterGroupFiltersHasDateFilter(): boolean {
+      return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") || this.filterGroupsFilters.filters.orFilter.some(item => item.property_name === "collection_date");
     },
     filters(): FilterGroupRoot {
-      const filters = {... this.filterGroupsFilters}      
+      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters));
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
@@ -725,7 +638,11 @@ export default {
         })
       }
 
-      if (this.lineage) {
+      if (this.filterGroupFiltersHasLineageFilter) {
+        this.lineage = null
+      }
+
+      if (this.lineage && !this.filterGroupFiltersHasLineageFilter) {
         filters.filters.andFilter.push({
           label: 'Sublineages',
           lineage: this.lineage,
