@@ -40,6 +40,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import FilterGroup from "./components/FilterGroup.vue";
+import Filters from "./components/Filters.vue";
 import GenomicProfileLabel from "./components/GenomicProfileLabel.vue";
 import SampleDetails from "./components/SampleDetails.vue";
 import Statistics from "./components/Statistics.vue";
@@ -57,6 +58,7 @@ app.use(PrimeVue)
 
 
 app.component('FilterGroup', FilterGroup)
+app.component('Filters', FilterGroup)
 app.component('GenomicProfileLabel', GenomicProfileLabel)
 app.component('SampleDetails', SampleDetails)
 app.component('Statistics', Statistics)
