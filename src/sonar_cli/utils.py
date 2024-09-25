@@ -1,10 +1,12 @@
 import collections
 import csv
+from http import HTTPStatus
 from io import BytesIO
 import json
 import os
 import pickle
 import sys
+import time
 from typing import Any
 from typing import Dict
 from typing import Iterator
@@ -463,13 +465,28 @@ class sonarUtils:
         files = {
             "zip_file": compressed_data,
         }
-
+        start_time = get_current_time()
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=shared_objects["job_id"]
         )
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
+        job_status = None
+        sleep_time = 3
+        #maybe pause here needed?
+        while job_status not in ['C','F']:
+            resp = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])
+            if resp["status"] != HTTPStatus.OK:
+                LOGGER.error(f"Error: {resp.json()}")
+                break
+            job_status = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])["data"]["status"]           
+            if job_status in ['Q','IP']:
+                LOGGER.debug(f"Job {shared_objects['job_id']} is {job_status}.")                
+                time.sleep(sleep_time)
+        time_diff = calculate_time_difference(start_time, get_current_time())
+        LOGGER.info(f"Job {shared_objects['job_id']} is {job_status} after {time_diff}.")
+
 
     @staticmethod
     def _import_properties(
