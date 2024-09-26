@@ -182,12 +182,11 @@ class sonarUtils:
                 )
 
         end_import_time = get_current_time()
-        LOGGER.info(
-            f"\nImport Runtime: {calculate_time_difference(start_import_time, end_import_time)}"
+        LOGGER.info(f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}"
         )
         LOGGER.info(f"---- Done: {end_import_time} ----\n")
         cache.logfile_obj.write(
-            f"Import Runtime: {calculate_time_difference(start_import_time, end_import_time)}\n"
+            f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}\n"
         )
         cache.logfile_obj.write(f"---- Done: {end_import_time} ----\n")
         cache.logfile_obj.close()
@@ -250,8 +249,8 @@ class sonarUtils:
         prepare_seq_time = calculate_time_difference(
             start_seqcheck_time, get_current_time()
         )
-        LOGGER.info(f"Sequence check usage time: {prepare_seq_time}\n")
-        cache.logfile_obj.write(f"Sequence check usage time: {prepare_seq_time}\n")
+        LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
+        cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
         LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
 
         # Align sequences and process
@@ -287,18 +286,17 @@ class sonarUtils:
             except Exception as outer_exception:
                 LOGGER.error(f"Error in multiprocessing pool: {outer_exception}")
                 sys.exit(1)
-        # for _dict in sample_data_dict_list:
-        #     print(_dict)
-        #     aligner.process_cached_sample(_dict)
 
+        LOGGER.info(f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}")
         cache.logfile_obj.write(
-            f"Seq. alignment usage time: {calculate_time_difference(start_align_time, get_current_time())}\n"
+            f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}\n"
         )
 
         start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples(
             sample_data_dict_list
         )
+        LOGGER.info(f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}")
         cache.logfile_obj.write(
             f"Paranoid test usage time: {calculate_time_difference(start_paranoid_time, get_current_time())}\n"
         )
@@ -331,6 +329,8 @@ class sonarUtils:
                         "bar_format": bar_format,
                     },
                 )
+
+            LOGGER.info(f"[runtime] Sample annotation: {calculate_time_difference(start_anno_time, get_current_time())}")
             cache.logfile_obj.write(
                 f"Sample anno usage time: {calculate_time_difference(start_anno_time, get_current_time())}\n"
             )
@@ -344,27 +344,9 @@ class sonarUtils:
             # NOTE: reuse the chunk size from anno
             # n = 500
             cache_dict = {"job_id": job_id}
-            with (
-                WorkerPool(
-                    n_jobs=threads,
-                    start_method="fork",
-                    shared_objects=cache_dict,
-                ) as pool,
-                tqdm(
-                    position=0,
-                    leave=True,
-                    desc="Sending sample/variant...",
-                    total=len(passed_samples_chunk_list),
-                    unit="chunks",
-                    bar_format=bar_format,
-                    disable=not progress,
-                ) as pbar,
-            ):
-                for _ in pool.imap_unordered(
-                    sonarUtils.zip_import_upload_multithread,
-                    passed_samples_chunk_list,
-                ):
-                    pbar.update(1)
+            for sample_chunk in passed_samples_chunk_list:
+                LOGGER.info(f"Uploading and importing chunk.")
+                sonarUtils.zip_import_upload_multithread(cache_dict, sample_chunk)
 
             if auto_anno:
                 with WorkerPool(
@@ -384,8 +366,9 @@ class sonarUtils:
                         },
                     )
 
+            LOGGER.info(f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}")
             cache.logfile_obj.write(
-                f"Sample upload usage time: {calculate_time_difference(start_upload_time, get_current_time())}\n"
+                f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}\n"
             )
             LOGGER.info("Job ID: %s", job_id)
         else:
@@ -423,7 +406,7 @@ class sonarUtils:
             LOGGER.error(msg)
 
     @staticmethod
-    def zip_import_upload_multithread(shared_objects: dict, *sample_list):
+    def zip_import_upload_multithread(shared_objects: dict, sample_list):
 
         files_to_compress = []
         for kwargs in sample_list:
@@ -477,12 +460,9 @@ class sonarUtils:
         #maybe pause here needed?
         while job_status not in ['C','F']:
             resp = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])
-            if resp["status"] != HTTPStatus.OK:
-                LOGGER.error(f"Error: {resp.json()}")
-                break
-            job_status = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])["data"]["status"]           
+            job_status = resp["status"]
             if job_status in ['Q','IP']:
-                LOGGER.debug(f"Job {shared_objects['job_id']} is {job_status}.")                
+                LOGGER.info(f"Job {shared_objects['job_id']} is {job_status}.")
                 time.sleep(sleep_time)
         time_diff = calculate_time_difference(start_time, get_current_time())
         LOGGER.info(f"Job {shared_objects['job_id']} is {job_status} after {time_diff}.")
