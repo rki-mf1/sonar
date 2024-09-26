@@ -1,7 +1,7 @@
 <template>
 
   <div class="content">
-
+    
     <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows scrollable scrollHeight="flex" sortable
       @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
       <template #empty> No Results </template>

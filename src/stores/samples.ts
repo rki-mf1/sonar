@@ -21,7 +21,7 @@ export const useSamplesStore = defineStore('samples', {
     perPage: 10,
     firstRow: 0,
     ordering: '-collection_date',
-    lineage: '',
+    lineage: [] as string[],
     timeRange: [] as Date[],
     propertiesDict: {} as { [key: string]: string[] }, 
     propertyOptions: [] as string[],
@@ -54,7 +54,6 @@ export const useSamplesStore = defineStore('samples', {
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
       this.filteredCount = this.filteredStatistics.filtered_total_count
       this.loading = false
-      console.log(this.samples)
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
@@ -150,7 +149,7 @@ export const useSamplesStore = defineStore('samples', {
         }
       }
       for (const filter of filterGroup.filters.lineageFilters) {
-        if (filter.lineage) {
+        if (filter.lineage && filter.lineage.length > 0) {
           summary.andFilter.push({
             label: filter.label,
             lineage: filter.lineage,
@@ -221,7 +220,7 @@ export const useSamplesStore = defineStore('samples', {
         this.lineage = null
       }
 
-      if (this.lineage && !this.filterGroupFiltersHasLineageFilter) {
+      if (this.lineage && this.lineage.length > 0 && !this.filterGroupFiltersHasLineageFilter) {
         filters.filters.andFilter.push({
           label: 'Sublineages',
           lineage: this.lineage,
