@@ -1,6 +1,5 @@
 import collections
 import csv
-from http import HTTPStatus
 from io import BytesIO
 import json
 import os
@@ -182,8 +181,7 @@ class sonarUtils:
                 )
 
         end_import_time = get_current_time()
-        LOGGER.info(f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}"
-        )
+        LOGGER.info(f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}")
         LOGGER.info(f"---- Done: {end_import_time} ----\n")
         cache.logfile_obj.write(
             f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}\n"
@@ -345,7 +343,7 @@ class sonarUtils:
             # n = 500
             cache_dict = {"job_id": job_id}
             for sample_chunk in passed_samples_chunk_list:
-                LOGGER.info(f"Uploading and importing chunk.")
+                LOGGER.info("Uploading and importing chunk.")
                 sonarUtils.zip_import_upload_multithread(cache_dict, sample_chunk)
 
             if auto_anno:
@@ -457,16 +455,14 @@ class sonarUtils:
             LOGGER.error(msg)
         job_status = None
         sleep_time = 3
-        #maybe pause here needed?
-        while job_status not in ['C','F']:
+        while job_status not in ['C', 'F']:
             resp = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])
             job_status = resp["status"]
-            if job_status in ['Q','IP']:
+            if job_status in ['Q', 'IP']:
                 LOGGER.info(f"Job {shared_objects['job_id']} is {job_status}.")
                 time.sleep(sleep_time)
         time_diff = calculate_time_difference(start_time, get_current_time())
         LOGGER.info(f"Job {shared_objects['job_id']} is {job_status} after {time_diff}.")
-
 
     @staticmethod
     def _import_properties(
