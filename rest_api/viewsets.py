@@ -797,7 +797,7 @@ class FileUploadViewSet(viewsets.ViewSet):
         models.FileProcessing.objects.create(
             file_name=filename, processing_job_id=proJobID_obj.id
         )
-
+        check_for_new_data()
         return Response(
             {"detail": "File uploaded successfully", "jobID": jobID},
             status=status.HTTP_201_CREATED,
