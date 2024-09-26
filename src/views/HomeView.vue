@@ -2,7 +2,7 @@
 
   <div class="content">
     
-    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows scrollable scrollHeight="flex" sortable
+    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
       @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
       <template #empty> No Results </template>
       <template #header>
@@ -21,7 +21,7 @@
           </div>
         </div>
       </template>
-      <Column field="name" sortable>
+      <Column field="name" sortable :reorderableColumn="false">
         <template #header>
           <span v-tooltip="metaDataCoverage('name')">ID</span>
         </template>
@@ -152,6 +152,15 @@ export default {
     },
     columnSelection(value) {
       this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
+    },
+    onColReorder(event) {
+     const { dragIndex, dropIndex } = event; 
+      // Rearrange columns based on dragIndex and dropIndex
+      const reorderedColumns = ['name', ...this.selectedColumns]; // note: 'name' is fixed and cant be reordered
+      const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
+      reorderedColumns.splice(dropIndex, 0, movedColumn);
+
+      this.selectedColumns = reorderedColumns.slice(1); // drop 'name' from column list since it is fixed and cant be reordered
     },
     onRowSelect(event) {
       this.selectedRow = event.data;
