@@ -124,10 +124,7 @@
 <script lang="ts">
 import API from '@/api/API'
 import { useSamplesStore } from '@/stores/samples';
-
-import {
-  type Property
-} from '@/util/types'
+import { type Property } from '@/util/types'
 
 export default {
   name: 'HomeView',

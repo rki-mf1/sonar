@@ -11,26 +11,26 @@
 
         <div class="flex align-items-center" style="gap: 10px">
           <span style="font-weight: 500">Lineage</span>
-          <MultiSelect v-model="samplesStore.lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages"
+          <MultiSelect v-model="samplesStore.lineage" display="chip" :options="samplesStore.lineageOptions" filter placeholder="Select Lineages"
             class="w-full md:w-80" :disabled="samplesStore.filterGroupFiltersHasLineageFilter" @change="samplesStore.updateSamples" />
         </div>
       </div>
 
-      <!-- <Button type="button" icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised
-        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
+      <Button type="button" icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised
+        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter=true" />
       <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
-            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
-              :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
-              :lineageOptions="lineageOptions" :symbolOptions="symbolOptions"
-              :operators="Object.values(DjangoFilterType)" :propertyValueOptions="propertyValueOptions"
-              :propertiesDict="propertiesDict" v-on:update-property-value-options="updatePropertyValueOptions" />
+            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="samplesStore.filterGroup"
+              :propertyOptions="samplesStore.propertyOptions" :repliconAccessionOptions="samplesStore.repliconAccessionOptions"
+              :lineageOptions="samplesStore.lineageOptions" :symbolOptions="samplesStore.symbolOptions"
+              :operators="Object.values(DjangoFilterType)" :propertyValueOptions="samplesStore.propertyValueOptions"
+              :propertiesDict="samplesStore.propertiesDict" v-on:update-property-value-options="samplesStore.updatePropertyValueOptions" />
           </div>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
           <Button type="button" style="margin-top: 10px" label="OK"
-            @click="displayDialogFilter=false; updateSamples"></Button>
+            @click="closeAdvancedFilterDialog()"></Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -117,7 +117,7 @@
             </Accordion>
           </div>
         </div>
-      </OverlayPanel> -->
+      </OverlayPanel>
     </div>
 
     <div class="input-right">
@@ -131,78 +131,34 @@
 
 import API from '@/api/API';
 import { useSamplesStore } from '@/stores/samples';
-
+import { DjangoFilterType} from '@/util/types'
 
 export default {
     name: "Filters",
     data() {
         return {
             samplesStore: useSamplesStore(), 
-            // displayDialogFilter: false,
-            // propertyOptions: [],
-            // propertiesDict: {}, // to store name and type
-            // repliconAccessionOptions: [],
-            lineageOptions: [],
-            // allColumns: [],
-            // propertyValueOptions: {} as {
-            //     [key: string]: {
-            //     options: string[]
-            //     loading: boolean
-            //     }
-            // }
+            displayDialogFilter: false,
+            DjangoFilterType
         }
     },
     methods: {
-        // async updatePropertyOptions() {
-        //     const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-
-        //     // Transform the array to an object
-        //     this.propertiesDict = res.values.reduce((acc, property) => {
-        //         acc[property.name] = property.query_type
-        //         return acc
-        //     }, {})
-
-        //     this.propertyOptions = Object.keys(this.propertiesDict)
-        //     this.allColumns = this.propertyOptions
-        //     // this.allColumns = this.propertyOptions.push('genomic_profiles', 'proteomic_profiles').sort();
-        // },
-        // updatePropertyValueOptions(propertyName: string) {
-        //     if (this.propertyValueOptions[propertyName]) return
-        //     this.propertyValueOptions[propertyName] = { loading: true, options: [] }
-        //     API.getInstance()
-        //         .getSampleGenomePropertyValueOptions(propertyName)
-        //         .then((res) => {
-        //         this.propertyValueOptions[propertyName].options = res.values
-        //         this.propertyValueOptions[propertyName].loading = false
-        //         })
-        // },
-        // async updateSymbolOptions() {
-        //     const res = await API.getInstance().getGeneSymbolOptions()
-        //     this.symbolOptions = res.gene_symbols
-        // },
-        // async updateRepliconAccessionOptions() {
-        //     const res = await API.getInstance().getRepliconAccessionOptions()
-        //     this.repliconAccessionOptions = res.accessions
-        // },
-        async updateLineageOptions() {
-            const res = await API.getInstance().getLineageOptions()
-            this.lineageOptions = res.lineages
-        },
-        // toggle(event) {
-        //   if (this.$refs.op) {
-        //     this.$refs.op.toggle(event); 
-        //   }
-        // }
+      closeAdvancedFilterDialog() {
+        this.displayDialogFilter = false;
+        this.samplesStore.updateSamples()
+      },
+        toggle(event) {
+          if (this.$refs.op) {
+            this.$refs.op.toggle(event); 
+          }
+        }
     },
     computed: {
+      isFiltersSet(): boolean {
+        return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
+      },
     },
     mounted() {
-        // this.samplesStore.updateSamples()
-        // this.samplesStore.setDefaultTimeRange()
-        this.updateLineageOptions()
-        // this.updatePropertyOptions()
-        // this.updateSymbolOptions()
-        // this.updateRepliconAccessionOptions()
     }
 }
 </script>
@@ -240,6 +196,41 @@ export default {
   flex-direction: row;
   justify-content: flex-end;
   align-items: center;
+}
+
+:deep(.p-button) {
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color-darker);
+}
+
+:deep(.p-button):hover {
+  background: var(--primary-color-lighter);
+}
+
+:deep(.p-button.p-button-outlined) {
+  background: transparent;
+  color: var(--primary-color);
+}
+
+:deep(.p-button.p-button-outlined):hover {
+  background: rgb(248, 247, 247);
+}
+
+:deep(.p-button.p-button-warning) {
+  background: var(--secondary-color);
+  border: 1px solid var(--secondary-color-darker);
+}
+
+:deep(.p-button.p-button-warning):hover {
+  background: var(--secondary-color-lighter);
+}
+
+:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+  background: var(--primary-color);
+}
+
+:deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
+  background: var(--primary-color);
 }
 
 </style>
