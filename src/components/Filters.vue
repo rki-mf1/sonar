@@ -1,7 +1,7 @@
 <template>
 <div class="input my-2">
     <div class="input-left">
-      <div>
+      <div style="max-width: 500px;">
         <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
           <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
           
@@ -15,10 +15,11 @@
           </Calendar>
         </div>
 
-        <div class="flex align-items-center" style="gap: 10px">
+        <div class="flex align-items-center" style="gap: 10px;">
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect v-model="samplesStore.lineage" display="chip" :options="samplesStore.lineageOptions" filter placeholder="Select Lineages"
             class="w-full md:w-80" :disabled="samplesStore.filterGroupFiltersHasLineageFilter" @change="samplesStore.updateSamples" />
+          <Button icon="pi pi-times" class="ml-2 p-button-sm" v-if="samplesStore.lineage.length" @click="clearLineaegInput" />
         </div>
       </div>
 
@@ -155,6 +156,10 @@ export default {
         if (!this.isTimeRangeInvalid) {
           this.samplesStore.updateSamples();
         }
+      },
+      clearLineaegInput() {
+        this.samplesStore.lineage = [];
+        this.samplesStore.updateSamples(); 
       },
       closeAdvancedFilterDialog() {
         this.displayDialogFilter = false;
