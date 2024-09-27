@@ -113,7 +113,7 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="exportFile(exportFormat)" />
+        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading" @click="exportFile(exportFormat)" />
       </div>
     </Dialog>
 
@@ -213,6 +213,42 @@ export default {
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow);
+}
+
+
+:deep(.p-button) {
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color-darker);
+}
+
+:deep(.p-button):hover {
+  background: var(--primary-color-lighter);
+}
+
+:deep(.p-button.p-button-outlined) {
+  background: transparent;
+  color: var(--primary-color);
+}
+
+:deep(.p-button.p-button-outlined):hover {
+  background: rgb(248, 247, 247);
+}
+
+:deep(.p-button.p-button-warning) {
+  background: var(--secondary-color);
+  border: 1px solid var(--secondary-color-darker);
+}
+
+:deep(.p-button.p-button-warning):hover {
+  background: var(--secondary-color-lighter);
+}
+
+:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+  background: var(--primary-color);
+}
+
+:deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
+  background: var(--primary-color);
 }
 
 </style>

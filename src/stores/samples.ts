@@ -61,6 +61,7 @@ export const useSamplesStore = defineStore('samples', {
           new Date(statistics.first_sample_date),
           new Date(statistics.latest_sample_date)
       ]
+      this.updateSamples()
     },
     updatePropertyValueOptions(propertyName: string) {
       if (this.propertyValueOptions[propertyName]) return

@@ -1,12 +1,18 @@
 <template>
-
 <div class="input my-2">
     <div class="input-left">
-      <!-- Home View Filters -->
       <div>
         <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
-          <span style="font-weight: 500">Time Range</span>
-          <Calendar v-model="samplesStore.timeRange" style="flex: auto" showIcon dateFormat="yy-mm-dd" selectionMode="range" :disabled="samplesStore.filterGroupFiltersHasDateFilter" @date-select="samplesStore.updateSamples" />
+          <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
+          
+          <Calendar v-model="samplesStore.timeRange" style="flex: auto" showIcon dateFormat="yy-mm-dd" selectionMode="range" 
+            :disabled="samplesStore.filterGroupFiltersHasDateFilter" :invalid="isTimeRangeInvalid" @date-select="handleDateSelect">
+              <template #footer>
+                <div class="flex justify-content-center align-items-center" style="width: 100%;">
+                  <Button style="font-size: 13px;" icon="pi pi-arrow-circle-left" label="Set Default Time Range" @click="samplesStore.setDefaultTimeRange" />
+                </div>
+              </template>
+          </Calendar>
         </div>
 
         <div class="flex align-items-center" style="gap: 10px">
@@ -18,6 +24,7 @@
 
       <Button type="button" icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised
         :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter=true" />
+      
       <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
@@ -34,6 +41,7 @@
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
+
       <OverlayPanel ref="op">
         <div class="flex flex-column gap-3 w-25rem">
           <div>
@@ -143,19 +151,27 @@ export default {
         }
     },
     methods: {
+      handleDateSelect() {
+        if (!this.isTimeRangeInvalid) {
+          this.samplesStore.updateSamples();
+        }
+      },
       closeAdvancedFilterDialog() {
         this.displayDialogFilter = false;
         this.samplesStore.updateSamples()
       },
-        toggle(event) {
-          if (this.$refs.op) {
-            this.$refs.op.toggle(event); 
-          }
+      toggle(event) {
+        if (this.$refs.op) {
+          this.$refs.op.toggle(event); 
         }
+      }
     },
     computed: {
       isFiltersSet(): boolean {
         return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
+      },
+      isTimeRangeInvalid(): boolean {
+        return this.samplesStore.timeRange.includes(null) 
       },
     },
     mounted() {
