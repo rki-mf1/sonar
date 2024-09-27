@@ -71,7 +71,7 @@
     <div v-for="filter in filterGroup.filters?.lineageFilters" class="single-filter">
       <span class="filter-label">Lineage</span>
       <MultiSelect v-model="filter.lineage" display="chip" :options="lineageOptions" filter
-        placeholder="Select Lineages" class="w-full md:w-80" />
+        placeholder="Select Lineages" class="w-full md:w-80" style="max-width: 500px;"/>
 
       <div class="exclude-switch">
         Exclude?
