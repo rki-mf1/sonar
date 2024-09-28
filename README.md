@@ -48,9 +48,19 @@ cp env.template .env
 ### 2.3 Create python environment
 
 ```sh
-conda create -n sonar-cli python=3.11 poetry snpeff mafft bcftools --channel conda-forge --channel bioconda
-conda activate sonar-cli
+conda env update -p ./env -f environment.yml --prune
+conda activate ./env
 ```
+
+optional: use this if you get SSL errors. You need to reload your env to refresh the environment variables:
+
+```sh
+conda env config vars set REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+conda activate ./env
+```
+
+The same `conda env update` command can be used any time if you change your environment.yml file and want to update your environment to reflect the changes.
+
 ### 2.4 Install sonar-cli
 
 Navigate to the root directory of `sonar-cli`.
@@ -76,6 +86,17 @@ Verify the installation by checking the version.
 sonar-cli -v
 ```
 
+Next make sure you can contact the backend:
+
+```sh
+$ sonar-cli list-ref
+Current version sonar-cli:1.0.0
+╒══════╤═════════════╤═══════════════╤═════════════════════════════════════════════════╕
+│   id │ accession   │ taxon         │ organism                                        │
+╞══════╪═════════════╪═══════════════╪═════════════════════════════════════════════════╡
+│    1 │ MN908947.3  │ taxon:2697049 │ Severe acute respiratory syndrome coronavirus 2 │
+╘══════╧═════════════╧═══════════════╧═════════════════════════════════════════════════╛
+```
 
 ### Test Datasets
 
