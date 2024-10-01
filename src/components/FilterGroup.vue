@@ -64,7 +64,8 @@ export default {
         'sample_type',
         'zip_code',
         'country',
-        'host', 'lab'],
+        'host',
+        'lab'],
       ClassicFilter: {
         label: 'Label',
         value: '',
@@ -162,7 +163,7 @@ export default {
         }
       })
       menuItems.push({
-        label: 'SubLineageFilter',
+        label: 'LineageFilter',
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.lineageFilters.push({ ...this.LineageFilter })
@@ -221,7 +222,6 @@ export default {
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter.propertyName)
       }
-
       this.initializeOperators(filter);
 
       // If the property is a date, set the default value to the date range
@@ -305,7 +305,6 @@ export default {
           " icon="pi pi-trash" label="" severity="danger" />
       </div>
     </div>
-
     <!-- Profile Filters -->
     <div v-for="filter in filterGroup.filters?.profileFilters" class="single-filter">
       <div class="flex flex-column">
@@ -368,7 +367,9 @@ export default {
       <div class="flex flex-column">
         <div class="flex align-items-center">
           <span class="filter-label">Lineage</span>
-          <Dropdown :options="lineageOptions" v-model="filter.lineage" style="flex: auto" filter />
+          <MultiSelect v-model="filter.lineage" display="chip" :options="lineageOptions" filter
+            placeholder="Select Lineages" class="w-full md:w-80" />
+
           <div class="exclude-switch">
             Exclude?
             <InputSwitch v-model="filter.exclude" />
@@ -392,6 +393,7 @@ export default {
         <i class="pi pi-filter"></i>
         <span style="font-weight: 500;">&nbsp; Add AND Filter</span>
       </SplitButton>
+      <!-- OR part -->
       <Button size="small" icon="pi pi-filter" label="Add OR Group" @click="addOrFilterGroup"
         :disabled="cantAddOrGroup" />
     </div>
@@ -409,6 +411,7 @@ export default {
         <i class="pi pi-trash"></i>
       </Button>
     </div>
+
   </div>
 </template>
 
