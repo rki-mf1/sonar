@@ -1,50 +1,34 @@
 <template>
-  <div class="input my-2">
-    <div class="input-left">
+  <div class="input grid m-1">
+    <div class="col">
       <!-- Home View Filters -->
-      <div>
-        <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px;">
-          <span style="font-weight: 500;">Time Range</span>
-          <Calendar
-            v-model="timeRange"
-            style="flex: auto"
-            showIcon
-            dateFormat="yy-mm-dd"
-            selectionMode="range"
-            @date-select="updateSamples"
-          />
-        </div>
+      <div class="grid">
+        <div class="col">
+          <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px;">
+            <span style="font-weight: 500;">Time Range</span>
+            <Calendar v-model="timeRange" style="flex: auto" showIcon dateFormat="yy-mm-dd" selectionMode="range"
+              @date-select="updateSamples" />
+          </div>
 
-        <div class="flex align-items-center" style="gap: 10px">
-          <span style="font-weight: 500;">Lineage</span>
-          <MultiSelect v-model="lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages" class="w-full md:w-80" @change="updateSamples"/>
+          <div class="flex align-items-center" style="gap: 10px">
+            <span style="font-weight: 500;">Lineage</span>
+            <MultiSelect v-model="lineage" display="chip" :options="lineageOptions" filter placeholder="Select Lineages"
+              class="w-full md:w-80" @change="updateSamples" />
+          </div>
+        </div>
+        <div class="col">
+          <Button type="button" icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised
+            :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
         </div>
       </div>
-
-      <Button
-        type="button"
-        icon="pi pi-filter"
-        label="&nbsp;Set Advanced Filters"
-        severity="warning"
-        raised
-        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }"
-        @click="displayDialogFilter = true"
-      />
       <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
-            <FilterGroup
-              style="width: fit-content; margin: auto"
-              :filterGroup="filterGroup"
-              :propertyOptions="propertyOptions"
-              :repliconAccessionOptions="repliconAccessionOptions"
-              :lineageOptions="lineageOptions"
-              :symbolOptions="symbolOptions"
-              :operators="Object.values(DjangoFilterType)"
-              :propertyValueOptions="propertyValueOptions"
-              :propertiesDict="propertiesDict"
-              v-on:update-property-value-options="updatePropertyValueOptions"
-            />
+            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="filterGroup"
+              :propertyOptions="propertyOptions" :repliconAccessionOptions="repliconAccessionOptions"
+              :lineageOptions="lineageOptions" :symbolOptions="symbolOptions"
+              :operators="Object.values(DjangoFilterType)" :propertyValueOptions="propertyValueOptions"
+              :propertiesDict="propertiesDict" v-on:update-property-value-options="updatePropertyValueOptions" />
           </div>
         </div>
         <div v-if="errorMessage" style="margin-top: 20px;">
@@ -142,7 +126,7 @@
       </OverlayPanel>
     </div>
 
-    <div class="input-right">
+    <div class="col input-right">
       <Statistics :filteredCount="filteredCount"></Statistics>
     </div>
   </div>
@@ -151,12 +135,7 @@
     <div class="output mb-2">
       <div style="height: 100%; overflow: auto">
         <Dialog class="flex" v-model:visible="loading" modal :closable="false" header="Loading...">
-          <ProgressSpinner
-            class="flex-1 p-3"
-            size="small"
-            v-if="loading"
-            style="color: whitesmoke"
-          />
+          <ProgressSpinner class="flex-1 p-3" size="small" v-if="loading" style="color: whitesmoke" />
         </Dialog>
 
         <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
@@ -173,13 +152,8 @@
           <SampleDetails :selectedRow="selectedRow" :allColumns="allColumns"></SampleDetails>
         </Dialog>
 
-        <Dialog
-          v-model:visible="displayDialogExport"
-          header="Export Settings"
-          modal
-          dismissableMask
-          :style="{ width: '25vw' }"
-        >
+        <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
+          :style="{ width: '25vw' }">
           <div>
             <RadioButton v-model="exportFormat" inputId="exportFormat1" value="csv" />
             <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
@@ -192,52 +166,22 @@
           <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
           <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-            <Button
-              icon="pi pi-external-link"
-              label="&nbsp;Export"
-              raised
-              @click="exportFile(exportFormat)"
-            />
+            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="exportFile(exportFormat)" />
           </div>
         </Dialog>
 
-        <DataTable
-          :value="samples"
-          ref="dt"
-          style="max-width: 90vw"
-          size="large"
-          dataKey="name"
-          stripedRows
-          scrollable
-          scrollHeight="flex"
-          sortable
-          @sort="sortingChanged($event)"
-          v-model:selection="selectedRow"
-          selectionMode="single"
-          @rowSelect="onRowSelect"
-          @rowUnselect="onRowUnselect"
-        >
+        <DataTable :value="samples" ref="dt" style="max-width: 90vw" size="large" dataKey="name" stripedRows scrollable
+          scrollHeight="flex" sortable @sort="sortingChanged($event)" v-model:selection="selectedRow"
+          selectionMode="single" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
           <template #empty> No Results </template>
           <template #header>
             <div style="display: flex; justify-content: space-between">
               <div>
-                <Button
-                  icon="pi pi-external-link"
-                  label="&nbsp;Export"
-                  raised
-                  @click="displayDialogExport = true"
-                />
+                <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
               </div>
               <div style="display: flex; justify-content: flex-end">
-                <MultiSelect
-                  v-model="selectedColumns"
-                  display="chip"
-                  :options="allColumns"
-                  filter
-                  placeholder="Select Columns"
-                  class="w-full md:w-20rem"
-                  @update:modelValue="columnSelection"
-                >
+                <MultiSelect v-model="selectedColumns" display="chip" :options="allColumns" filter
+                  placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
                   <template #value>
                     <div style="margin-top: 5px; margin-left: 5px">
                       {{ selectedColumns.length }} columns selected
@@ -252,47 +196,35 @@
               <span v-tooltip="metaDataCoverage('name')">ID</span>
             </template>
             <template #body="slotProps">
-              <div
-                style="
+              <div style="
                   height: 1.5em;
                   width: 9rem;
                   text-overflow: ellipsis;
                   overflow: hidden;
                   white-space: nowrap;
                   direction: rtl;
-                "
-                :title="slotProps.data.name"
-              >
+                " :title="slotProps.data.name">
                 {{ slotProps.data.name }}
               </div>
             </template>
           </Column>
-          <Column
-            v-for="column in selectedColumns"
-            :sortable="!notSortable.includes(column)"
-            :field="column"
-          >
+          <Column v-for="column in selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
             <template #header>
               <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
             </template>
             <template #body="slotProps">
               <div v-if="column === 'genomic_profiles'">
                 <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-                  <GenomicProfileLabel
-                    v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                    :variantString="variant"
-                    :annotations="slotProps.data.genomic_profiles[variant]"
-                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
-                  />
+                  <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                    :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                    :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
                 </div>
               </div>
               <div v-else-if="column === 'proteomic_profiles'">
                 <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-                  <GenomicProfileLabel
-                    v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                  <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
                     :variantString="variant"
-                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
-                  />
+                    :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
                 </div>
               </div>
               <div v-else-if="column === 'init_upload_date'">
@@ -311,13 +243,9 @@
             <div style="display: flex; justify-content: space-between">
               Total: {{ filteredCount }} Samples
             </div>
-            <Paginator
-              :totalRecords="filteredCount"
-              v-model:rows="perPage"
-              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
-              v-model:first="firstRow"
-              @update:rows="updateSamples()"
-            />
+            <Paginator :totalRecords="filteredCount" v-model:rows="perPage"
+              :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="firstRow"
+              @update:rows="updateSamples()" />
           </template>
         </DataTable>
       </div>
@@ -325,7 +253,7 @@
         <Chart type="bar" :data="chartData()" :options="chartOptions()" style="width: 80%" />
       </div>
     </div>
-        
+
     <Toast ref="toast" />
   </div>
 </template>
@@ -440,7 +368,7 @@ export default {
         };
       },
       lineage: '',
-      timeRange: [] as Date[], 
+      timeRange: [] as Date[],
       symbolOptions: [],
       filterGroup: {
         filterGroups: [],
@@ -674,13 +602,13 @@ export default {
         var valid = true;
         const translatedFilter = {} as Record<string, string | number | boolean>;
 
-        if (filter['label'] == 'Label'){
+        if (filter['label'] == 'Label') {
           // matches any sequence of spaces (\s), commas (,)
           const mutations = filter['value'].split(/[\s,]+/).filter(Boolean);
           const profileQuery = this.createProfileQuery(mutations, filter['exclude']);
           summary.andFilter.push(profileQuery);
 
-        }else{
+        } else {
           for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
             //snake_case conversion
             var translatedKey = key.replace('AA', '_aa');
@@ -696,7 +624,7 @@ export default {
             summary.andFilter.push(translatedFilter);
           }
         }
-        
+
       }
       for (const filter of filterGroup.filters.repliconFilters) {
         if (filter.accession) {
@@ -746,7 +674,7 @@ export default {
         }
       });
 
-      return andFilter; 
+      return andFilter;
     },
     defineProfile(mutation: string, exclude: boolean) {
       let query = { label: "" };
@@ -798,7 +726,7 @@ export default {
       if (!match) {
         this.errorMessage = (`Invalid mutation notation '${mutation}'.`);
         // this.showToastError(this.errorMessage)
-        return  {};
+        return {};
       }
 
       return query;
@@ -819,28 +747,28 @@ export default {
       const filters = {
         filters: this.getFilterGroupFilters(this.filterGroup),
       };
-      if (!filters.filters?.andFilter){
+      if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
-      } 
+      }
 
-      if(this.timeRange[0] && this.timeRange[1]) {
+      if (this.timeRange[0] && this.timeRange[1]) {
         filters.filters.andFilter.push(
           {
-          label: 'Property',
-          property_name: 'collection_date',
-          filter_type: "range",
-          value: `${this.timeRange[0].toLocaleDateString('en-CA')},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
+            label: 'Property',
+            property_name: 'collection_date',
+            filter_type: "range",
+            value: `${this.timeRange[0].toLocaleDateString('en-CA')},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
           }
         )
       }
 
-      if(this.lineage) {
+      if (this.lineage) {
         filters.filters.andFilter.push(
           {
-          label: 'Sublineages',
-          lineage: this.lineage,
-          exclude: false
-          } 
+            label: 'Sublineages',
+            lineage: this.lineage,
+            exclude: false
+          }
         )
       }
 
@@ -861,7 +789,7 @@ export default {
 
 <style scoped>
 .input {
-  height: 8rem;
+
   width: 98%;
   display: flex;
   flex-direction: row;
@@ -873,25 +801,6 @@ export default {
   box-shadow: var(--shadow);
 }
 
-.input-left {
-  height: 100%;
-  width: 50%;
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: 20%;
-  margin-left: 20px;
-  align-items: center;
-}
-
-.input-right {
-  height: 100%;
-  width: 50%;
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  align-items: center;
-}
 
 .output_box {
   height: 80%;
