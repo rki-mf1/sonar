@@ -6,6 +6,7 @@ import ast
 import csv
 import os
 from datetime import datetime
+import re
 import traceback
 from typing import Generator
 
@@ -40,7 +41,7 @@ from django.core.paginator import Paginator
 from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
-from rest_api.utils import  Response, resolve_ambiguous_NT_AA, strtobool
+from rest_api.utils import  Response, define_profile, resolve_ambiguous_NT_AA, strtobool
 from rest_api.viewsets import PropertyViewSet, LineageViewSet
 
 from . import models
@@ -83,6 +84,7 @@ class SampleViewSet(
             "Sample": self.filter_sample,
             "Sublineages": self.filter_sublineages,
             "Annotation": self.filter_annotation,
+            "Label": self.filter_label,
         }
 
     @action(detail=False, methods=["get"])
@@ -240,7 +242,10 @@ class SampleViewSet(
             timer = datetime.now()
             LOGGER.info(f'Serializer done in {datetime.now() - timer},Start to Format result')
             return self.get_paginated_response(serializer.data)
-
+        except ValueError as e:
+            return Response(
+                data={"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
             traceback.print_exc()
             return Response(
@@ -443,6 +448,77 @@ class SampleViewSet(
         serializer = SampleGenomesSerializer(sample)
         return Response(serializer.data)
 
+    def filter_label(
+        self,
+        value,
+        exclude: bool = False,
+        *args,
+        **kwargs,):
+        final_query = Q()
+       
+        # Split the input value by either commas, whitespace, or both
+        # mutations  = [x.strip() for x in value.split(',')]
+        mutations = re.split(r'[\s,]+', value.strip())
+        for mutation in mutations:                  
+            parsed_mutation = define_profile(mutation)
+
+            # Check the parsed mutation type and call the appropriate filter function
+            if parsed_mutation.get("label") == "SNP Nt":
+                q_obj = self.filter_snp_profile_nt(
+                    ref_nuc=parsed_mutation["ref_nuc"],
+                    ref_pos=int(parsed_mutation["ref_pos"]),
+                    alt_nuc=parsed_mutation["alt_nuc"],
+                )
+            
+            elif parsed_mutation.get("label") == "SNP AA":
+                q_obj = self.filter_snp_profile_aa(
+                    protein_symbol=parsed_mutation["protein_symbol"],
+                    ref_aa=parsed_mutation["ref_aa"],
+                    ref_pos=int(parsed_mutation["ref_pos"]),
+                    alt_aa=parsed_mutation["alt_aa"],
+                )
+
+            elif parsed_mutation.get("label") == "Del Nt":
+                q_obj = self.filter_del_profile_nt(
+                    first_deleted=parsed_mutation["first_deleted"],
+                    last_deleted=parsed_mutation.get("last_deleted", ""),
+                )
+
+            elif parsed_mutation.get("label") == "Del AA":
+                q_obj = self.filter_del_profile_aa(
+                    protein_symbol=parsed_mutation["protein_symbol"],
+                    first_deleted=int(parsed_mutation["first_deleted"]),
+                    last_deleted=int(parsed_mutation.get("last_deleted", parsed_mutation["first_deleted"])),
+
+                )
+
+            elif parsed_mutation.get("label") == "Ins Nt":
+                q_obj = self.filter_ins_profile_nt(
+                    ref_nuc=parsed_mutation["ref_nuc"],
+                    ref_pos=int(parsed_mutation["ref_pos"]),
+                    alt_nuc=parsed_mutation["alt_nuc"],
+                )
+
+            elif parsed_mutation.get("label") == "Ins AA":
+                q_obj = self.filter_ins_profile_aa(
+                    protein_symbol=parsed_mutation["protein_symbol"],
+                    ref_aa=parsed_mutation["ref_aa"],
+                    ref_pos=int(parsed_mutation["ref_pos"]),
+                    alt_aa=parsed_mutation["alt_aa"],
+                )
+            
+            else:
+                
+                raise ValueError(f"Unsupported mutation type: {parsed_mutation.get('label')}")
+            
+            # Combine queries with AND operator (&) for each mutation
+            final_query &= q_obj
+        
+        if exclude:
+            final_query = ~final_query
+
+        return final_query
+    
     def filter_annotation(
         self,
         property_name,

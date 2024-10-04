@@ -2,7 +2,7 @@ import pathlib
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
+import re
 from dataclasses import dataclass
 
 IUPAC_CODES = {
@@ -61,6 +61,11 @@ IUPAC_CODES = {
         "x": set("X"),
     },
 }
+
+regexes = {
+    "snv": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$"),
+    "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$"),
+}
 def write_to_file(_path: pathlib.Path, file_obj: InMemoryUploadedFile):
     _path.parent.mkdir(exist_ok=True, parents=True)
     with open(_path, "wb") as destination:
@@ -91,6 +96,72 @@ def resolve_ambiguous_NT_AA(type, char):
         raise KeyError(f"Invalid notation '{char}'.")
     
     return selected_chars
+
+
+def define_profile(mutation):  # noqa: C901
+    """
+    # check profile
+    """
+    _query = {"label": ""}
+    match = None
+    for mutation_type, regex in regexes.items():
+        match = regex.match(mutation)
+        if match:
+            if match.group(3):
+                gene_name = match.group(3)[:-1]
+            else:
+                gene_name = None
+
+            if mutation_type == "snv":
+
+                alt = match.group(6)
+
+                for x in alt:
+                    if (
+                        x not in IUPAC_CODES["aa"].keys()
+                        and x not in IUPAC_CODES["nt"].keys()
+                    ):
+                        raise ValueError(f"Invalid alternate allele notation '{alt}'.")
+
+                if gene_name is not None:  # AA
+                    _query["alt_aa"] = alt
+                    _query["ref_aa"] = match.group(4)
+                    _query["ref_pos"] = match.group(5)
+
+                    _query["protein_symbol"] = gene_name
+                    if len(alt) == 1:  # SNP AA
+                        _query["label"] = "SNP AA"
+                    else:  # Ins AA
+                        _query["label"] = "Ins AA"
+                else:  # Nt
+                    _query["alt_nuc"] = alt
+                    _query["ref_nuc"] = match.group(4)
+                    _query["ref_pos"] = match.group(5)
+
+                    if len(alt) == 1:  # SNP Nt
+                        _query["label"] = "SNP Nt"
+                    else:  # Ins Nt
+                        _query["label"] = "Ins Nt"
+
+            elif mutation_type == "del":
+                _query["first_deleted"] = match.group(4)
+                _query["last_deleted"] = match.group(5)[1:]
+
+                if gene_name is not None:  # Del AA
+                    _query["protein_symbol"] = gene_name
+                    _query["label"] = "Del AA"
+                else:  # Del Nt
+                    _query["label"] = "Del Nt"
+
+            negate = True if match.group(1) else False
+            _query["exclude"] = negate
+            break
+    if not match:
+        # fail to validate
+        raise ValueError(f"Invalid mutation notation '{mutation}'.")
+        
+
+    return _query
 
 
 @dataclass
