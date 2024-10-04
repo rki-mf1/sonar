@@ -279,66 +279,6 @@ export default {
   name: 'HomeView',
   data() {
     return {
-      IUPAC_CODES: {
-        nt: {
-          A: new Set("A"),
-          C: new Set("C"),
-          G: new Set("G"),
-          T: new Set("T"),
-          R: new Set("AGR"),
-          Y: new Set("CTY"),
-          S: new Set("GCS"),
-          W: new Set("ATW"),
-          K: new Set("GTK"),
-          M: new Set("ACM"),
-          B: new Set("CGTB"),
-          D: new Set("AGTD"),
-          H: new Set("ACTH"),
-          V: new Set("ACGV"),
-          N: new Set("ACGTRYSWKMBDHVN"),
-          n: new Set("N"),
-        },
-        aa: {
-          A: new Set("A"),
-          R: new Set("R"),
-          N: new Set("N"),
-          D: new Set("D"),
-          C: new Set("C"),
-          Q: new Set("Q"),
-          E: new Set("E"),
-          G: new Set("G"),
-          H: new Set("H"),
-          I: new Set("I"),
-          L: new Set("L"),
-          K: new Set("K"),
-          M: new Set("M"),
-          F: new Set("F"),
-          P: new Set("P"),
-          S: new Set("S"),
-          T: new Set("T"),
-          W: new Set("W"),
-          Y: new Set("Y"),
-          V: new Set("V"),
-          U: new Set("U"),
-          O: new Set("O"),
-          B: new Set("DNB"),
-          Z: new Set("EQZ"),
-          J: new Set("ILJ"),
-          Φ: new Set("VILFWYMΦ"),
-          Ω: new Set("FWYHΩ"),
-          Ψ: new Set("VILMΨ"),
-          π: new Set("PGASπ"),
-          ζ: new Set("STHNQEDKRζ"),
-          "+": new Set("KRH+"),
-          "-": new Set("DE-"),
-          X: new Set("ARNDCQEGHILKMFPSTWYVUOBZJΦΩΨπζ+-X"),
-          x: new Set("X"),
-        },
-      },
-      regexes: {
-        snv: /^(\^*)(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$/,
-        del: /^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$/
-      },
       displayDialogFilter: false,
       selectedRow: null,
       displayDialogRow: false,
@@ -402,12 +342,33 @@ export default {
         limit: this.perPage,
         offset: this.firstRow,
         ordering: this.ordering
-      }
-      this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results;
+      };
+      // API call to get samples
+      var response = await API.getInstance().getSampleGenomes(this.filters, params);
+      console.log(response);
+
+      // Update data with API response
+      this.samples = response.results;
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters);
       this.filteredCount = this.filteredStatistics["filtered_total_count"];
       this.isFiltersSet = this.filterGroup.filterGroups.length > 0 || Object.values(this.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0);
+      // Handle errors
+      if (response.response && response.response.status) {
+        const status = response.response.status;
+
+        if (status >= 400 && status < 500) {
+          this.errorMessage = 'Client error occurred. Please check your input.';
+        } else if (status >= 500) {
+          this.errorMessage = 'Server error occurred. Please try again later.';
+        } else {
+          this.errorMessage = 'An unknown error occurred.';
+        }
+
+        this.showToastError(this.errorMessage);
+      }
+
       this.loading = false;
+
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
@@ -603,11 +564,12 @@ export default {
         const translatedFilter = {} as Record<string, string | number | boolean>;
 
         if (filter['label'] == 'Label') {
-          // matches any sequence of spaces (\s), commas (,)
-          const mutations = filter['value'].split(/[\s,]+/).filter(Boolean);
-          const profileQuery = this.createProfileQuery(mutations, filter['exclude']);
-          summary.andFilter.push(profileQuery);
 
+          summary.andFilter.push({
+            label: filter.label,
+            value: filter.value,
+            exclude: filter.exclude
+          });
         } else {
           for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
             //snake_case conversion
@@ -648,6 +610,7 @@ export default {
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup));
       }
+      console.log(summary)
       return summary;
     },
     updatePropertyValueOptions(propertyName: string) {
@@ -664,72 +627,6 @@ export default {
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find(property => property.name === propertyName);
       return property ? property.value : undefined;
-    },
-    createProfileQuery(profiles: [], exclude: boolean) {
-      const andFilter = { andFilter: [] };
-      profiles.forEach(mutation => {
-        const query = this.defineProfile(mutation, exclude);
-        if (Object.keys(query).length > 0) {
-          andFilter.andFilter.push(query);
-        }
-      });
-
-      return andFilter;
-    },
-    defineProfile(mutation: string, exclude: boolean) {
-      let query = { label: "" };
-      let match = null;
-
-      for (const [mutationType, regex] of Object.entries(this.regexes)) {
-        match = mutation.match(regex);
-        if (match) {
-          const geneName = match[2] ? match[2].slice(0, -1) : null;
-          if (mutationType === "snv") {
-            const alt = match[6];
-
-            for (let x of alt) {
-              if (!this.IUPAC_CODES.aa.hasOwnProperty(x) && !this.IUPAC_CODES.nt.hasOwnProperty(x)) {
-                this.errorMessage = (`Invalid alternate allele notation '${alt}'.`);
-                // this.showToastError(this.errorMessage);
-                return {};
-              }
-            }
-            if (geneName) {
-              query.alt_aa = alt;
-              query.ref_aa = match[4];
-              query.ref_pos = match[5];
-              query.protein_symbol = geneName;
-              query.label = alt.length === 1 ? "SNP AA" : "Ins AA";
-            } else {
-              query.alt_nuc = alt;
-              query.ref_nuc = match[4];
-              query.ref_pos = match[5];
-              query.label = alt.length === 1 ? "SNP Nt" : "Ins Nt";
-            }
-          } else if (mutationType === "del") {
-            query.first_deleted = match[4];
-            query.last_deleted = match[5]?.slice(1) || "";
-
-            if (geneName) {
-              query.protein_symbol = geneName;
-              query.label = "Del AA";
-            } else {
-              query.label = "Del Nt";
-            }
-          }
-
-          query.exclude = exclude;
-          break;
-        }
-      }
-
-      if (!match) {
-        this.errorMessage = (`Invalid mutation notation '${mutation}'.`);
-        // this.showToastError(this.errorMessage)
-        return {};
-      }
-
-      return query;
     },
     showToastError(message: string) {
 
