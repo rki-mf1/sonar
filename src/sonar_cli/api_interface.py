@@ -315,11 +315,13 @@ class APIClient:
     #     else:
     #         return None
 
-    def post_import_upload(self, files, job_id):
+    def post_import_upload(self, files, job_id=None, data={}):
         """
         send compressed sample, var, vcf file.
         """
-        data = {"job_id": job_id}
+        if job_id and not data:
+            data = {"job_id": job_id}
+
         json_response = self._make_request(
             "POST", endpoint=self.post_import_upload_endpoint, data=data, files=files
         )

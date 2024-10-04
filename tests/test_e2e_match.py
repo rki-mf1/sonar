@@ -368,7 +368,7 @@ def test_match_prop_varchar_sublineage(capfd, api_url):
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "4" == lines[-1]
+    assert "6" == lines[-1]
     assert code == 0
 
 

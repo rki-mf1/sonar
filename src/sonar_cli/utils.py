@@ -40,6 +40,7 @@ from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
 from sonar_cli.config import CHUNK_SIZE
+from sonar_cli.config import PROP_CHUNK_SIZE
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
 
@@ -181,7 +182,9 @@ class sonarUtils:
                 )
 
         end_import_time = get_current_time()
-        LOGGER.info(f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}")
+        LOGGER.info(
+            f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}"
+        )
         LOGGER.info(f"---- Done: {end_import_time} ----\n")
         cache.logfile_obj.write(
             f"[runtime] Import total: {calculate_time_difference(start_import_time, end_import_time)}\n"
@@ -285,7 +288,9 @@ class sonarUtils:
                 LOGGER.error(f"Error in multiprocessing pool: {outer_exception}")
                 sys.exit(1)
 
-        LOGGER.info(f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}")
+        LOGGER.info(
+            f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}"
+        )
         cache.logfile_obj.write(
             f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}\n"
         )
@@ -294,7 +299,9 @@ class sonarUtils:
         passed_samples_list = cache.perform_paranoid_cached_samples(
             sample_data_dict_list
         )
-        LOGGER.info(f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}")
+        LOGGER.info(
+            f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}"
+        )
         cache.logfile_obj.write(
             f"Paranoid test usage time: {calculate_time_difference(start_paranoid_time, get_current_time())}\n"
         )
@@ -328,7 +335,9 @@ class sonarUtils:
                     },
                 )
 
-            LOGGER.info(f"[runtime] Sample annotation: {calculate_time_difference(start_anno_time, get_current_time())}")
+            LOGGER.info(
+                f"[runtime] Sample annotation: {calculate_time_difference(start_anno_time, get_current_time())}"
+            )
             cache.logfile_obj.write(
                 f"Sample anno usage time: {calculate_time_difference(start_anno_time, get_current_time())}\n"
             )
@@ -364,7 +373,9 @@ class sonarUtils:
                         },
                     )
 
-            LOGGER.info(f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}")
+            LOGGER.info(
+                f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
+            )
             cache.logfile_obj.write(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}\n"
             )
@@ -455,14 +466,16 @@ class sonarUtils:
             LOGGER.error(msg)
         job_status = None
         sleep_time = 3
-        while job_status not in ['C', 'F']:
+        while job_status not in ["C", "F"]:
             resp = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])
             job_status = resp["status"]
-            if job_status in ['Q', 'IP']:
+            if job_status in ["Q", "IP"]:
                 LOGGER.info(f"Job {shared_objects['job_id']} is {job_status}.")
                 time.sleep(sleep_time)
         time_diff = calculate_time_difference(start_time, get_current_time())
-        LOGGER.info(f"Job {shared_objects['job_id']} is {job_status} after {time_diff}.")
+        LOGGER.info(
+            f"Job {shared_objects['job_id']} is {job_status} after {time_diff}."
+        )
 
     @staticmethod
     def _import_properties(
@@ -474,44 +487,97 @@ class sonarUtils:
         progress: bool,
     ):
         """
-        Imports properties to the database.
+        Imports properties to the database in a single request by zipping all files in memory.
 
         Args:
-            properties: A dictionary of properties, where the key is a sample name and
-                        the value is another dictionary of properties for that sample.
-            db: The database where the properties will be imported.
+            sample_id_column: Column name for sample IDs.
+            properties: A dictionary of properties where the key is a sample name, and the value is another dictionary of properties for that sample.
+            csv_files: List of CSV files to include.
+            tsv_files: List of TSV files to include.
             progress: If True, displays a progress bar.
-
         """
-        LOGGER.info("Send property")
+        start_time = get_current_time()
 
+        job_id = "cli_prop_" + str(uuid.uuid4())
         all_files = tsv_files + csv_files
-        for _file in tqdm(
-            all_files,
-            desc="Sending property...",
-            total=len(all_files),
-            unit="files",
-            bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-            disable=not progress,
-        ):
-            if _file in tsv_files:
-                file_key = "properties_tsv"
-            elif _file in csv_files:
-                file_key = "properties_csv"
 
-            file = {file_key: open(_file, "rb")}
-            data = {
-                "sample_id_column": sample_id_column,
-                "column_mapping": json.dumps(properties),
-            }
-            json_response = APIClient(base_url=BASE_URL).post_import_property_upload(
-                data=data, file=file
+        # Create an in-memory ZIP file
+        for _file in all_files:
+            LOGGER.info(f"Processing file: {_file}")
+            file_extension = os.path.splitext(_file)[-1].lower()
+
+            # Use pandas to read the file in chunks and process it
+            chunk_iter = pd.read_csv(
+                _file,
+                sep="\t" if file_extension == ".tsv" else ",",
+                chunksize=PROP_CHUNK_SIZE,
             )
-            msg = json_response["detail"]
-            if msg != "File uploaded successfully":
-                LOGGER.error(msg)
+            chunk_num = 0
+            for chunk in tqdm(
+                chunk_iter, desc=f"Processing {_file} in chunks", disable=not progress
+            ):
+                chunk_num += 1
+                zip_buffer = (
+                    BytesIO()
+                )  # f'/mnt/c/works/tmp/_import_properties/{chunk_num}.zip'  # BytesIO()
 
-        LOGGER.info("Sending Complete")
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_LZMA) as zip_file:
+                    # Create a temporary in-memory file for the chunk
+                    chunk_filename = (
+                        f"{os.path.basename(_file)}_chunk_{chunk_num}{file_extension}"
+                    )
+                    csv_buffer = BytesIO()
+
+                    # Write the chunk to the in-memory buffer
+                    chunk.to_csv(
+                        csv_buffer,
+                        index=False,
+                        sep="\t" if file_extension == ".tsv" else ",",
+                    )
+                    csv_buffer.seek(0)
+
+                    # Add the in-memory CSV/TSV to the ZIP archive
+                    arcname = f"{file_extension[1:]}/{chunk_filename}"
+                    zip_file.writestr(arcname, csv_buffer.getvalue())
+
+                # Ensure we seek back to the beginning of the buffer
+                zip_buffer.seek(0)
+
+                # Prepare data for the API call
+                file = {"zip_file": ("properties.zip", zip_buffer, "application/zip")}
+                data = {
+                    "sample_id_column": sample_id_column,
+                    "column_mapping": json.dumps(properties),
+                    "job_id": job_id,
+                }
+
+                # Send the chunk to the backend
+                # LOGGER.info("Uploading chunk...")
+                json_response = APIClient(base_url=BASE_URL).post_import_upload(
+                    data=data, files=file
+                )
+
+                msg = json_response.get("detail", "Unknown error")
+                if msg != "File uploaded successfully":
+                    LOGGER.error(msg)
+                    return
+                else:
+                    continue
+                    # LOGGER.info(f"Chunk {chunk_num} from {_file} uploaded successfully.")
+        # Final status checking
+        LOGGER.info(f"All chunks for job {job_id} uploaded. Monitoring job status...")
+        job_status = None
+        sleep_time = 2
+
+        while job_status not in ["C", "F"]:
+            resp = APIClient(base_url=BASE_URL).get_job_byID(job_id)
+            job_status = resp["status"]
+            if job_status in ["Q", "IP"]:
+                LOGGER.info(f"Job {job_id} is {job_status}.")
+                time.sleep(sleep_time)
+
+        time_diff = calculate_time_difference(start_time, get_current_time())
+        LOGGER.info(f"[runtime] Job {job_id} is {job_status}: {time_diff}")
 
     @staticmethod
     def _get_prop_names(  # noqa: C901

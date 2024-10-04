@@ -610,7 +610,7 @@ def construct_query(  # noqa: C901
         final_query["andFilter"].append(_prop_query)
 
     # Traverse to add reference.
-    add_reference_query(final_query, reference_query=reference_query)
+    # add_reference_query(final_query, reference_query=reference_query)
     # final_query = remove_empty_lists(final_query)
     return final_query
 
