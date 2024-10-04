@@ -794,7 +794,7 @@ class sonarUtils:
             None.
         """
         reference = _check_reference(db, reference)
-        _check_property(db, output_column)
+        default_columns = _check_property(db, output_column)
         # if not reference:
         #    reference = dbm.get_default_reference_accession()
         #    LOGGER.info(f"Using Default Reference: {reference}")
@@ -840,6 +840,7 @@ class sonarUtils:
             rows,
             format,
             reference,
+            default_columns=default_columns,
             outfile=outfile,
             exclude_annotation=exclude_annotation,
             output_column=output_column,
@@ -850,6 +851,7 @@ class sonarUtils:
         cursor: object,
         format: str,
         reference: str,
+        default_columns: List[str],
         outfile: Optional[str],
         exclude_annotation: bool = False,
         output_column: Optional[List[str]] = [],
@@ -871,6 +873,7 @@ class sonarUtils:
             cursor = flatten_json_output(cursor["results"], exclude_annotation)
             sonarUtils.export_csv(
                 cursor,
+                default_columns=default_columns,
                 output_column=output_column,
                 outfile=outfile,
                 na="*** no match ***",
@@ -897,6 +900,7 @@ class sonarUtils:
     @staticmethod
     def export_csv(
         data: Union[List[Dict[str, Any]], Iterator[Dict[str, Any]]],
+        default_columns: List[str],
         output_column: Optional[List[str]] = [],
         outfile: Optional[str] = None,
         na: str = "*** no data ***",
@@ -907,6 +911,8 @@ class sonarUtils:
 
         Parameters:
         data: An iterator over the rows of the query result, or a list of rows.
+        default_columns: List of default columns to use if output_column is not provided.
+        output_column: List of specific columns to output. If None, default_columns are used.
         outfile: The path to the output file. If None, the output is printed to stdout.
         na: The string to print when no data is available.
         tsv: If True, the output is formatted as a TSV (Tab-Separated Values) file. Otherwise, it is formatted as a CSV (Comma-Separated Values) file.
@@ -920,29 +926,33 @@ class sonarUtils:
 
         try:
             first_row = next(data_iter)
-            # get only selected columns
-            if output_column:
-                first_row = {k: first_row[k] for k in output_column}
         except StopIteration:
             print(na)
-            return
+            first_row = None
+
+        columns = output_column if output_column else default_columns
 
         with out_autodetect(outfile) as handle:
             try:
                 sep = "\t" if tsv else ","
                 writer = csv.DictWriter(
                     handle,
-                    fieldnames=first_row.keys(),
+                    fieldnames=columns,
                     delimiter=sep,
                     lineterminator=os.linesep,
                 )
+                # Write the header regardless of whether we have rows
                 writer.writeheader()
-                writer.writerow(first_row)
+                # If there is no data, we return after writing the header
+                if first_row is None:
+                    return
 
+                # Write the first row, selecting only the necessary columns
+                writer.writerow({k: first_row.get(k, None) for k in columns})
+
+                # Write the remaining rows
                 for row in data_iter:
-                    if output_column:
-                        row = {k: row.get(k, None) for k in output_column}
-                    writer.writerow(row)
+                    writer.writerow({k: row.get(k, None) for k in columns})
             except ValueError as e:
                 LOGGER.error(f" error at row: {row}")
                 LOGGER.error(e)

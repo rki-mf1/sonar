@@ -1,4 +1,5 @@
 import base64
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 import datetime
 import gzip
@@ -17,8 +18,6 @@ import zipfile
 from Bio.Seq import Seq
 import magic
 from sonar_cli.logging import LoggingConfigurator
-
-from concurrent.futures import ThreadPoolExecutor
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()

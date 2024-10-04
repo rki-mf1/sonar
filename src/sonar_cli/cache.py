@@ -870,10 +870,12 @@ class sonarCache:
                                     handle.write(str(vardata) + "\n")
 
                             qryfile = os.path.join(
-                                self.error_dir, sample_name + ".error.restored_sample.fa"
+                                self.error_dir,
+                                sample_name + ".error.restored_sample.fa",
                             )
                             reffile = os.path.join(
-                                self.error_dir, sample_name + ".error.original_sample.fa"
+                                self.error_dir,
+                                sample_name + ".error.original_sample.fa",
                             )
 
                             # NOTE: comment this part, for now, we need to discuss which

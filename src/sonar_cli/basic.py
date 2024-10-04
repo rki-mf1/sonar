@@ -651,6 +651,22 @@ def _check_property(db=None, prop_name_list: list[str] = []):
                 f"Key '{k}' not found in database, please check the typo or add it (add-prop) or list all properties (list-prop)."
             )
             sys.exit(1)
+    rearranged_names = list(available_names)
+    first = "name"
+    special_last = [
+        "genomic_profiles",
+        "proteomic_profiles",
+        "init_upload_date",
+        "last_update_date",
+    ]
+    # Remove these keys from their current positions
+    remaining_names = [
+        name for name in rearranged_names if name not in special_last and name != first
+    ]
+    # Build the final list
+    final_order = [first] + remaining_names + special_last
+
+    return final_order
 
 
 def _check_reference(db=None, reference=None):

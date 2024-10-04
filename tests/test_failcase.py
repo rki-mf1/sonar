@@ -1,7 +1,8 @@
+import logging
 from pathlib import Path
 
 import pytest
-import logging
+
 from .conftest import run_cli
 
 
