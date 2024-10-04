@@ -40,8 +40,8 @@ from django.core.paginator import Paginator
 from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
-from rest_api.utils import Response, resolve_ambiguous_NT_AA, strtobool
-from rest_api.viewsets import PropertyColumnMapping, PropertyViewSet, LineageViewSet
+from rest_api.utils import  Response, resolve_ambiguous_NT_AA, strtobool
+from rest_api.viewsets import PropertyViewSet, LineageViewSet
 
 from . import models
 from .serializers import (
@@ -740,168 +740,51 @@ class SampleViewSet(
         datetime_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
         return datetime_obj.date()
 
-    @action(detail=False, methods=["post"])
-    def import_properties_tsv(self, request: Request, *args, **kwargs):
-        """
-        NOTE:
-        1. if prop is not exist in the database, it will not be created automatically
-        """
-        print("Importing properties...")
-        timer = datetime.now()
-        sample_id_column = request.data.get("sample_id_column")
+    # @action(detail=False, methods=["post"])
+    # def import_properties_tsv(self, request: Request, *args, **kwargs):
+    #     """
+    #     NOTE:
+    #     1. if prop is not exist in the database, it will not be created automatically
+    #     """
+    #     print("Importing properties...")
+    #     timer = datetime.now()
+    #     sample_id_column = request.data.get("sample_id_column")
 
-        column_mapping = self._convert_property_column_mapping(
-            json.loads(request.data.get("column_mapping"))
-        )
-        if not sample_id_column:
-            return Response(
-                {"detail": "No sample_id_column is provided"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if not column_mapping:
-            return Response(
-                {"detail": "No column_mapping is provided, nothing to import."},
-                status=status.HTTP_200_OK,
-            )
+    #     column_mapping = self._convert_property_column_mapping(
+    #         json.loads(request.data.get("column_mapping"))
+    #     )
+    #     if not sample_id_column:
+    #         return Response(
+    #             {"detail": "No sample_id_column is provided"},
+    #             status=status.HTTP_400_BAD_REQUEST,
+    #         )
+    #     if not column_mapping:
+    #         return Response(
+    #             {"detail": "No column_mapping is provided, nothing to import."},
+    #             status=status.HTTP_200_OK,
+    #         )
 
-        if not request.FILES or "properties_tsv" not in request.FILES:
-            return Response("No file uploaded.", status=400)
+    #     if not request.FILES or "properties_tsv" not in request.FILES:
+    #         return Response("No file uploaded.", status=400)
 
-        tsv_file = request.FILES.get("properties_tsv")
-        # Determine the separator based on the file extension
-        file_name = tsv_file.name.lower()
-        if file_name.endswith(".csv"):
-            sep = ","
-        elif file_name.endswith(".tsv"):
-            sep = "\t"
-        else:
-            return Response(
-                {"detail": "Unsupported file format, please upload a CSV or TSV file."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        properties_df = pd.read_csv(
-            self._temp_save_file(tsv_file),
-            sep=sep,
-            dtype=object,
-            keep_default_na=False,
-        )
-        if sample_id_column not in properties_df.columns:
-            return Response(
-                {
-                    "detail": f"Incorrect mapping column: '{sample_id_column}', please check property file."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        sample_property_names = []
-        custom_property_names = []
-        for property_name in properties_df.columns:
-            if property_name in column_mapping.keys():
-                db_property_name = column_mapping[property_name].db_property_name
-                try:
-                    models.Sample._meta.get_field(db_property_name)
-                    sample_property_names.append(db_property_name)
-                except FieldDoesNotExist:
-                    custom_property_names.append(property_name)
-
-        sample_id_set = set(properties_df[sample_id_column])
-        samples = models.Sample.objects.filter(name__in=sample_id_set).iterator()
-        sample_updates = []
-        property_updates = []
-        print("Generate/Format data...")
-        properties_df.convert_dtypes()
-        properties_df.set_index(sample_id_column, inplace=True)
-        for sample in samples:
-            row = properties_df[properties_df.index == sample.name]
-            sample.last_update_date = timezone.now()
-            for name, value in row.items():
-                if name in column_mapping.keys():
-                    db_name = column_mapping[name].db_property_name
-                    if db_name in sample_property_names:
-                        setattr(sample, db_name, value.values[0])
-            sample_updates.append(sample)
-
-            property_updates += self._create_property_updates(
-                sample,
-                {
-                    column_mapping[name].db_property_name: {
-                        "value": value.values[0],
-                        "datatype": column_mapping[name].data_type,
-                    }
-                    for name, value in row.items()
-                    if name in custom_property_names
-                },
-                True,
-            )
-
-        print("Saving...")
-        with transaction.atomic():
-            # update based prop. for Sample
-            print("Updating Sample...")
-            if (
-                len(sample_property_names) > 0
-            ):  # when there is no update/add to based prop.
-                models.Sample.objects.bulk_update(
-                    sample_updates, sample_property_names + ["last_update_date"], batch_size=1000
-                )
-
-            # update custom prop. for Sample
-            serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
-                data=property_updates, many=True
-            )
-            serializer.is_valid(raise_exception=True)
-            print("Updating Sample2Property...")
-            models.Sample2Property.objects.bulk_create(
-                [models.Sample2Property(**data) for data in serializer.validated_data],
-                update_conflicts=True,
-                update_fields=[
-                    "value_integer",
-                    "value_float",
-                    "value_text",
-                    "value_varchar",
-                    "value_blob",
-                    "value_date",
-                    "value_zip",
-                ],
-                unique_fields=["sample", "property"], batch_size=1000
-            )
-
-        print("Done.")
-        print(f"Import done in {datetime.now() - timer}")
-        return Response(
-            {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
-        )
-
-    def _convert_property_column_mapping(
-        self, column_mapping: dict[str, str]
-    ) -> dict[str, PropertyColumnMapping]:
-        return {
-            db_property_name: PropertyColumnMapping(**db_property_info)
-            for db_property_name, db_property_info in column_mapping.items()
-        }
-
-    def _create_property_updates(
-        self, sample, properties: dict, use_property_cache=False
-    ) -> list[dict]:
-        property_objects = []
-        if use_property_cache and not hasattr(self, "property_cache"):
-            self.property_cache = {}
-        for name, value in properties.items():
-            property = {"sample": sample.id, value["datatype"]: value["value"]}
-            if use_property_cache:
-                if name in self.property_cache.keys():
-                    property["property"] = self.property_cache[name]
-                else:
-                    property["property"] = self.property_cache[name] = (
-                        models.Property.objects.get_or_create(
-                            name=name, datatype=value["datatype"]
-                        )[0].id
-                    )
-            else:
-                property["property__name"] = name
-            property_objects.append(property)
-        return property_objects
-
+    #     tsv_file = request.FILES.get("properties_tsv")
+    #     # Determine the separator based on the file extension
+    #     file_name = tsv_file.name.lower()
+    #     if file_name.endswith(".csv"):
+    #         sep = ","
+    #     elif file_name.endswith(".tsv"):
+    #         sep = "\t"
+    #     else:
+    #         return Response(
+    #             {"detail": "Unsupported file format, please upload a CSV or TSV file."},
+    #             status=status.HTTP_400_BAD_REQUEST,
+    #         )
+    #     self._temp_save_file(tsv_file)
+    #     return Response(
+    #         {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
+    #     )
+    
+    
     def _import_tsv(self, file_path):
         header = None
         with open(file_path, "r") as f:

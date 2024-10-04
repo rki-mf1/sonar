@@ -1,17 +1,22 @@
 import os
 import pathlib
 from datetime import datetime
+from django.utils import timezone
 import shutil
 import zipfile
 import traceback
+import pickle
 from covsonar_backend.settings import (
     LOGGER,
+    PROPERTY_BATCH_SIZE,
     REDIS_URL,
     SAMPLE_BATCH_SIZE,
     SONAR_DATA_ARCHIVE,
     SONAR_DATA_ENTRY_FOLDER,
     SONAR_DATA_PROCESSING_FOLDER,
 )
+from django.core.exceptions import FieldDoesNotExist
+from rest_api import models
 from rest_api.data_entry.sample_import import SampleImport
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.models import (
@@ -31,12 +36,19 @@ from celery.utils.log import get_task_logger
 from django.core.cache import cache
 from django.db import transaction
 import environ
+import pandas as pd
+
+from rest_api.serializers import Sample2PropertyBulkCreateOrUpdateSerializer
+from rest_api.utils import PropertyColumnMapping
 
 
+property_cache = {}
+
+# Beginning of import process
 def check_for_new_data():
     processing_dir = pathlib.Path(SONAR_DATA_PROCESSING_FOLDER)
     # processing_dir.mkdir(parents=True, exist_ok=True)
-    # NOTE: Order is matter 
+    # NOTE: Order is matter!!
     zip_files = sorted(list(pathlib.Path(SONAR_DATA_ENTRY_FOLDER).glob("*.zip")))
 
     if REDIS_URL is None:
@@ -47,23 +59,33 @@ def check_for_new_data():
 
     if zip_files:
         print("# New data found")
-        for file in zip_files:
-            LOGGER.info(f"## Processing: {file} ---")
-            # create name file with processing dir (move to SONAR_DATA_PROCESSING_FOLDER)
-            new_path = file.rename(processing_dir.joinpath(file.name))
-            import_archive(new_path)
-        check_for_new_data()
+        for zip_file in zip_files:
+            LOGGER.info(f"## Processing: {zip_file} ---")
+            if '_prop' in str(zip_file):
+                # Handle corresponding .pkl file for property imports
+                # Check a .pkl file (column_mapping) with the same name
+                pkl_file = zip_file.with_suffix('.pkl')  
+                new_zip_path = zip_file.rename(processing_dir.joinpath(zip_file.name))
+                new_pkl_path = pkl_file.rename(processing_dir.joinpath(pkl_file.name))
+                import_archive(new_zip_path, pkl_path=new_pkl_path)  # Pass the .pkl path to import_archive
 
+            else:
+                # process as normal sample or annotation import
+                new_zip_path = zip_file.rename(processing_dir.joinpath(zip_file.name))
+                import_archive(new_zip_path)    
+        # Recursively check for new data after processing current batch
+        check_for_new_data()  
 
-def import_archive(process_file_path: pathlib.Path):
+def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = None):
+    """
+        TODO: if it just start update the ProcessingJob (IP) optional
+    """
     temp_dir = (
         pathlib.Path(SONAR_DATA_ARCHIVE)
         .joinpath("temp")
         .joinpath(process_file_path.stem)
     )
     try:
-        # TODO: if it just start update the ProcessingJob (IP) optional
-
 
         filename_ID = process_file_path.name
         # get JOB ID
@@ -82,85 +104,109 @@ def import_archive(process_file_path: pathlib.Path):
             zip_ref.extractall(temp_dir)
 
         print(f"Running data entry for {temp_dir}")
-        sample_files = list(temp_dir.joinpath("samples").glob("**/*.sample"))
-        anno_files = list(temp_dir.joinpath("anno").glob("**/*.vcf"))
-        print(f"Sample: {len(sample_files)} files found")
-        print(f"Annotation (vcfs): {len(anno_files)} files found")
-        if len(sample_files) > 0:
-            import_type = ImportLog.ImportType.SAMPLE
-        elif len(anno_files) > 0:
-            import_type = ImportLog.ImportType.ANNOTATION
+        if pkl_path and pkl_path.exists():
+            # property import
+            import_type = ImportLog.ImportType.PROPERTY
+            print(f"Property import detected")
+            batch_size = PROPERTY_BATCH_SIZE
+            print("Batch size:", batch_size)
+            property_files_tsv = list(temp_dir.glob("**/*.tsv"))
+            property_files_csv = list(temp_dir.glob("**/*.csv"))
+            property_files = property_files_tsv + property_files_csv  # Combine both types
+
+            if property_files:
+                # Load the column mapping from the .pkl file
+                with open(pkl_path, 'rb') as pkl_file:
+                    column_mapping = pickle.load(pkl_file)  # Load the .pkl file into column_mapping
+
+                use_celery = bool(REDIS_URL)  # Use Celery if Redis is configured
+                for property_file in property_files:
+                    sep = ',' if property_file.suffix == '.csv' else '\t'
+                    import_property(str(property_file), sep, use_celery, column_mapping, batch_size=batch_size)  # Pass column_mapping
+
         else:
-            import_type = ImportLog.ImportType.SAMPLE_ANNOTATION_ARCHIVE
-
-        timer = datetime.now()
-        batch_size = SAMPLE_BATCH_SIZE
-
-        number_of_batches = (
-            (len(sample_files) + batch_size - 1) // batch_size
-            if sample_files
-            else (len(anno_files) + batch_size - 1) // batch_size
-        )
-
-        print("Batch size:", batch_size)
-        print(f"Total number of batches: {number_of_batches}")
-        sample_files = [str(file) for file in sample_files]
-        if batch_size:
-            replicon_cache = {}
-            gene_cache = {}
-            if REDIS_URL:
-                print("setting up sample import celery jobs..")
-                sample_jobs = []
-                for i in range(0, len(sample_files), batch_size):
-                    batch = sample_files[i : i + batch_size]
-                    sample_jobs.append(
-                        process_batch.s(
-                            batch, replicon_cache, gene_cache, str(temp_dir)
-                        )
-                    )
-                results = group(sample_jobs).apply_async().get()
-                for result in results:
-                    if not result[0]:
-                        raise Exception(
-                            f"Sample Import Error: {result[1]} - {result[2]}"
-                        )
-                results = (
-                    group([process_annotation.s(str(file)) for file in anno_files])
-                    .apply_async()
-                    .get()
-                )
-                for result in results:
-                    if not result[0]:
-                        raise Exception(
-                            f"Annotation Import Error: {result[1]} - {result[2]}"
-                        )
+            batch_size = SAMPLE_BATCH_SIZE
+            print("Batch size:", batch_size)
+            # var and vcf
+            sample_files = list(temp_dir.joinpath("samples").glob("**/*.sample"))
+            anno_files = list(temp_dir.joinpath("anno").glob("**/*.vcf"))
+            print(f"Sample: {len(sample_files)} files found")
+            print(f"Annotation (vcfs): {len(anno_files)} files found")
+            if len(sample_files) > 0:
+                import_type = ImportLog.ImportType.SAMPLE
+            elif len(anno_files) > 0:
+                import_type = ImportLog.ImportType.ANNOTATION
             else:
+                import_type = ImportLog.ImportType.SAMPLE_ANNOTATION_ARCHIVE
+
+            timer = datetime.now()
+
+            number_of_batches = (
+                (len(sample_files) + batch_size - 1) // batch_size
+                if sample_files
+                else (len(anno_files) + batch_size - 1) // batch_size
+            )
+
+            print(f"Total number of batches: {number_of_batches}")
+            sample_files = [str(file) for file in sample_files]
+            if batch_size:
                 replicon_cache = {}
                 gene_cache = {}
-                # Samples
-                for i in range(0, len(sample_files), batch_size):
-                # print(
-                #     f"processing batch {(i//batch_size) + 1} of {number_of_batches}"
-                # )                   
-                    # batchtimer = datetime.now()
-                    batch = sample_files[i : i + batch_size]
-                    process_batch_single_thread(
-                        batch, replicon_cache, gene_cache, str(temp_dir)
+                if REDIS_URL:
+                    print("setting up sample import celery jobs..")
+                    sample_jobs = []
+                    for i in range(0, len(sample_files), batch_size):
+                        batch = sample_files[i : i + batch_size]
+                        sample_jobs.append(
+                            process_batch.s(
+                                batch, replicon_cache, gene_cache, str(temp_dir)
+                            )
+                        )
+                    results = group(sample_jobs).apply_async().get()
+                    for result in results:
+                        if not result[0]:
+                            raise Exception(
+                                f"Sample Import Error: {result[1]} - {result[2]}"
+                            )
+                    results = (
+                        group([process_annotation.s(str(file)) for file in anno_files])
+                        .apply_async()
+                        .get()
                     )
-                # annotation 
-                for file in anno_files:
-                    process_annotation(str(file)) 
-  
-                # print(
-                #     f"batch {(i//batch_size) + 1} done in {datetime.now() - batchtimer}"
-                # )
+                    for result in results:
+                        if not result[0]:
+                            raise Exception(
+                                f"Annotation Import Error: {result[1]} - {result[2]}"
+                            )
+                else:
+                    replicon_cache = {}
+                    gene_cache = {}
+                    # Samples
+                    for i in range(0, len(sample_files), batch_size):
+                    # print(
+                    #     f"processing batch {(i//batch_size) + 1} of {number_of_batches}"
+                    # )                   
+                        # batchtimer = datetime.now()
+                        batch = sample_files[i : i + batch_size]
+                        process_batch_single_thread(
+                            batch, replicon_cache, gene_cache, str(temp_dir)
+                        )
+                    # annotation 
+                    for file in anno_files:
+                        process_annotation(str(file)) 
+    
+                    # print(
+                    #     f"batch {(i//batch_size) + 1} done in {datetime.now() - batchtimer}"
+                    # )
 
-        LOGGER.info(f"import done in {datetime.now() - timer}")
+            LOGGER.info(f"import done in {datetime.now() - timer}")
     except Exception as e:
-        LOGGER.error(f"Error in import_archive: {e}")
+        LOGGER.error(f"Error : {e}")
         error_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("error")
         error_dir.mkdir(parents=True, exist_ok=True)
         process_file_path.rename(error_dir.joinpath(process_file_path.name))
+        if pkl_path and pkl_path.exists():
+            pkl_path.rename(error_dir.joinpath(pkl_path.name))
         ImportLog.objects.create(
             type=import_type,
             file=FileProcessing.objects.get(file_name=filename_ID),
@@ -170,11 +216,13 @@ def import_archive(process_file_path: pathlib.Path):
         )
         LOGGER.error(f"--- Exception: move to {error_dir} ---")
 
-        # TODO: if fail update the ProcessingJob optional
-    else:
+    # TODO: if fail update the ProcessingJob optional
+    else: # no exception occurs
         completed_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("completed")
         completed_dir.mkdir(parents=True, exist_ok=True)
         process_file_path.rename(completed_dir.joinpath(process_file_path.name))
+        if pkl_path and pkl_path.exists():
+            pkl_path.rename(completed_dir.joinpath(pkl_path.name))
         ImportLog.objects.create(
             type=import_type,
             file=FileProcessing.objects.get(file_name=filename_ID),
@@ -374,3 +422,192 @@ def process_batch_single_thread(batch, replicon_cache, gene_cache, temp_dir):
         # Handle other exceptions if necessary
         LOGGER.critical(f"An unexpected error occurred: {e}")
         raise
+
+def import_property(property_file, sep, use_celery=False, column_mapping=None, batch_size=1000):
+    try:
+        # Load the CSV file in batches
+        properties_df = pd.read_csv(
+            property_file,
+            sep=sep,
+            dtype=object,
+            keep_default_na=False,
+            # chunksize=batch_size,
+        )
+        timer = datetime.now()
+
+        # Use Celery if parallel processing is enabled
+        # Convert column_mapping to a JSON-serializable format
+        if column_mapping is not None:
+            serializable_column_mapping = {
+                k: {'db_property_name': v.db_property_name, 'data_type': v.data_type}
+                for k, v in column_mapping['column_mapping'].items()
+            }
+            sample_id_column = column_mapping['sample_id_column']
+        else:
+            serializable_column_mapping = None
+            sample_id_column = 'ID'
+
+ 
+        if use_celery:
+            print("Setting up property import celery jobs...")
+
+            property_jobs = []
+            for i in range(0, len(properties_df), batch_size):
+                batch = properties_df.iloc[i: i + batch_size]
+                batch_as_dict = batch.to_dict(orient='records')
+                property_jobs.append(
+                    process_property_batch.s(batch_as_dict, sample_id_column, serializable_column_mapping)  # Pass column_mapping
+                )
+
+            # Run the Celery group of tasks and collect results
+            results = group(property_jobs).apply_async().get()
+
+            for result in results:
+                if not result[0]:
+                    raise Exception(f"Property Import Error: {result[1]}")
+
+
+        else:
+            print("Processing properties in single-threaded mode...")
+
+            # Process the CSV file in a single-threaded manner         
+            batch_as_dict= properties_df.to_dict(orient='records')
+            # column_mapping does not need to be JSON-serializable format, because we use only single thread
+            _process_property_file(batch_as_dict, sample_id_column, column_mapping['column_mapping'])
+
+        print(f"Property import usage time: {datetime.now() - timer}")
+
+    except Exception as e:
+        print(f"Error in import_property: {e}")
+        print(f"error in process_property_batch line#: {e.__traceback__.tb_lineno}")
+        raise # Re-raise the exception to propagate it up the stack?
+
+
+@shared_task
+def process_property_batch(batch_as_dict, sample_id_column, serialized_column_mapping):
+    # Reconstruct column_mapping from the serialized format
+    if serialized_column_mapping is not None:
+        column_mapping = {
+            k: PropertyColumnMapping(db_property_name=v['db_property_name'], data_type=v['data_type'])
+            for k, v in serialized_column_mapping.items()
+        }
+    else:
+        column_mapping = None
+
+    try:
+        _process_property_file(batch_as_dict, sample_id_column, column_mapping)
+    except Exception as e:
+        print(f"error in process_property_batch line#: {e.__traceback__}")
+        raise Exception(f"Error message : {str(e)}")
+    return True, "Batch processed successfully"
+
+
+def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
+    """
+    Logic for processing a batch of the property file
+    """ 
+
+    properties_df = pd.DataFrame.from_dict(batch_as_dict, dtype=object)
+    sample_property_names = []
+    custom_property_names = []
+
+    for property_name in properties_df.columns:
+
+        if property_name in column_mapping.keys():
+            db_property_name = column_mapping[property_name].db_property_name
+            try:
+                models.Sample._meta.get_field(db_property_name)
+                sample_property_names.append(db_property_name)
+            except FieldDoesNotExist:
+                custom_property_names.append(property_name)
+
+    sample_id_set = set(properties_df[sample_id_column])
+    samples = models.Sample.objects.filter(name__in=sample_id_set).iterator()
+
+    sample_updates = []
+    property_updates = []
+    properties_df.convert_dtypes()
+    properties_df.set_index(sample_id_column, inplace=True)
+    try:
+        for sample in samples:
+
+            row = properties_df[properties_df.index == sample.name]
+            
+            sample.last_update_date = timezone.now()
+            for name, value in row.items():
+                if name in column_mapping.keys():
+                    db_name = column_mapping[name].db_property_name
+                    if db_name in sample_property_names:
+                        setattr(sample, db_name, value.values[0])
+            sample_updates.append(sample)
+
+            # Update custom properties
+
+            property_updates += _create_property_updates(
+                sample,
+                {
+                   
+                    column_mapping[name].db_property_name: {
+                        "value": value.values[0],
+                        "datatype": column_mapping[name].data_type,
+                    }
+                    for name, value in row.items()
+                    if name in custom_property_names
+                },
+                True,
+                property_cache  # global variable
+            )
+    except Exception as e:
+        print(f"Error :{e}")
+        print(f"Error processing sample data: {row.to_dict(orient='records')}")
+        print(f"error in _process_property_file line#: {e.__traceback__.tb_lineno}")
+        raise  # Or raise the exception
+    
+    with transaction.atomic():
+        # Bulk update samples
+        # when there is no update/add to based prop.
+        if sample_property_names:
+            models.Sample.objects.bulk_update(
+                sample_updates, sample_property_names + ["last_update_date"]
+            )
+
+        # update custom prop. for Sample
+        serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
+            data=property_updates, many=True
+        )
+        serializer.is_valid(raise_exception=True)
+        models.Sample2Property.objects.bulk_create(
+            [models.Sample2Property(**data) for data in serializer.validated_data],
+            update_conflicts=True,
+            update_fields=[
+                "value_integer",
+                "value_float",
+                "value_text",
+                "value_varchar",
+                "value_blob",
+                "value_date",
+                "value_zip",
+            ],
+            unique_fields=["sample", "property"]
+        )
+
+def _create_property_updates(sample, properties: dict, use_property_cache=False,property_cache=None
+    ) -> list[dict]:
+        property_objects = []
+        if use_property_cache and property_cache is None:
+            property_cache = {}
+        for name, value in properties.items():
+            property = {"sample": sample.id, value["datatype"]: value["value"]}
+            if use_property_cache:
+                if name in property_cache.keys():
+                    property["property"] = property_cache[name]
+                else:
+                    property["property"] = property_cache[name] = (
+                        models.Property.objects.get_or_create(
+                            name=name, datatype=value["datatype"]
+                        )[0].id
+                    )
+            else:
+                property["property__name"] = name
+            property_objects.append(property)
+        return property_objects

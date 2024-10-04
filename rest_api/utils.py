@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
+from dataclasses import dataclass
+
 IUPAC_CODES = {
     "nt": {
         "A": set("A"),
@@ -89,3 +91,9 @@ def resolve_ambiguous_NT_AA(type, char):
         raise KeyError(f"Invalid notation '{char}'.")
     
     return selected_chars
+
+
+@dataclass
+class PropertyColumnMapping:
+    db_property_name: str
+    data_type: str

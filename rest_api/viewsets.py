@@ -5,8 +5,6 @@ import os
 import uuid
 import pickle
 
-from dataclasses import dataclass
-
 from rest_framework import generics
 import zipfile
 from datetime import datetime
@@ -19,6 +17,7 @@ from rest_api.data_entry.property_job import delete_property, find_or_create_pro
 from rest_api.data_entry.reference_job import delete_reference
 
 from rest_api.utils import (
+    PropertyColumnMapping,
     write_to_file,
 )
 from rest_framework import generics, serializers, viewsets
@@ -33,6 +32,7 @@ from rest_framework import status
 from rest_api.data_entry.gbk_import import import_gbk_file
 from rest_api.data_entry.sample_entry_job import check_for_new_data
 from rest_api.management.commands.import_lineage import LineageImport
+
 from . import models
 from .serializers import (
     AlignmentSerializer,
@@ -57,11 +57,6 @@ class Echo:
         """Write the value by returning it, instead of storing in a buffer."""
         return value
 
-
-@dataclass
-class PropertyColumnMapping:
-    db_property_name: str
-    data_type: str
 
 
 class AlignmentViewSet(
@@ -755,9 +750,19 @@ class ResourceViewSet(viewsets.ViewSet):
 
 
 class FileUploadViewSet(viewsets.ViewSet):
+
+    def _convert_property_column_mapping(
+        self, column_mapping: dict[str, str]
+    ) -> dict[str, PropertyColumnMapping]:
+        return {
+            db_property_name: PropertyColumnMapping(**db_property_info)
+            for db_property_name, db_property_info in column_mapping.items()
+        }
+    
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
 
+         # Step 1: Check if zip file is present in the request
         if "zip_file" not in request.FILES:
             return Response(
                 {"detail": "No zip file uploaded."}, status=status.HTTP_400_BAD_REQUEST
@@ -765,15 +770,67 @@ class FileUploadViewSet(viewsets.ViewSet):
 
         zip_file = request.FILES.get("zip_file")
         jobID = request.data.get("job_id", None)
+        # Generate jobID if not provided
         if jobID is None or jobID == "":
             jobID = "backend_" + str(uuid.uuid4())  # 32 chars
 
-        filename = (
-            datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
-            + "."
-            + str(uuid.uuid4().hex)[:6]
-            + ".zip"
-        )
+
+        # Step 2: Check if this is a property upload (based on jobID)
+        if "_prop" in jobID:
+            # Property upload: Check for sample_id_column and column_mapping
+            sample_id_column = request.data.get("sample_id_column")
+            column_mapping_json = request.data.get("column_mapping")
+
+            # Validate sample_id_column
+            if not sample_id_column:
+                return Response(
+                    {"detail": "No sample_id_column is provided"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Validate column_mapping
+            if not column_mapping_json:
+                return Response(
+                    {"detail": "No column_mapping is provided, nothing to import."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # Convert column_mapping from JSON to dict
+            column_mapping = self._convert_property_column_mapping(
+                json.loads(column_mapping_json)
+            )
+
+            if not column_mapping:
+                return Response(
+                    {"detail": "No column_mapping could be processed."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            filename = (
+                datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
+                + "."
+                + jobID
+            )
+            pickle_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, f"{filename}.pkl")
+            with open(pickle_path, "wb") as pickle_file:
+                # Save the sample_id_column and column_mapping as a dictionary
+                pickle.dump(
+                    {
+                        "sample_id_column": sample_id_column,
+                        "column_mapping": column_mapping,
+                    },
+                    pickle_file,
+                )
+            # after save the pickle
+            filename = filename + ".zip"
+        else:
+            filename = (
+                datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
+                + "."
+                + str(uuid.uuid4().hex)[:6]
+                + ".zip"
+            )
+
+        # Step 3: Save the zip file
         save_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, filename)
         with open(save_path, "wb") as destination:
             for chunk in zip_file.chunks():
@@ -786,7 +843,7 @@ class FileUploadViewSet(viewsets.ViewSet):
         # for file_info in zip_ref.infolist():
         #    print(file_info)
 
-        # Register job in database.
+        # Step 4: Register job in database
         try:
             proJobID_obj, _ = models.ProcessingJob.objects.get_or_create(
                 status="Q", job_name=jobID

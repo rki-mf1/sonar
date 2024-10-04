@@ -184,10 +184,27 @@ class SampleImport:
             sample_mutations.append(mutation)
         return sample_mutations
 
-    def get_mutation2alignment_objs(self, batch_size=100) -> list:
+    def get_mutation2alignment_objs(self) -> list:
         self.alignment = Alignment.objects.get(
             sequence=self.sequence, replicon=self.replicon
         )
+        # Determine batch size dynamically based on the length of mutation_query_data
+        data_length = len(self.mutation_query_data)
+        
+        #a minimum and maximum batch size
+        MIN_BATCH_SIZE = 100
+        MAX_BATCH_SIZE = 5000
+
+        # Dynamic batch size based on data length
+        if data_length <= MAX_BATCH_SIZE:
+             # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
+             # of the data length as the batch size.
+            # we can adjust 0.40 to other percentages like 0.50
+            batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50)) 
+        else:
+            # Set batch size to 1% of the total dataset size
+            batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
+        print(f'{data_length} data_length: {batch_size} batch_size')
 
         mutation_alignment_objs = []
         for i in range(0, len(self.mutation_query_data), batch_size):

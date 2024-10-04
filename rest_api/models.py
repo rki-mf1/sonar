@@ -342,6 +342,7 @@ class ImportLog(models.Model):
         ANNOTATION = "ANN", _("Annotation")
         GENEBANK = "GBK", _("Genebank")
         SAMPLE_ANNOTATION_ARCHIVE = "SAA", _("Sample Annotation Archive")
+        PROPERTY = "PTY", _("Property")
 
     type = models.CharField(
         max_length=3,
