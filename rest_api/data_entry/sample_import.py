@@ -204,7 +204,6 @@ class SampleImport:
         else:
             # Set batch size to 1% of the total dataset size
             batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
-        print(f'{data_length} data_length: {batch_size} batch_size')
 
         mutation_alignment_objs = []
         for i in range(0, len(self.mutation_query_data), batch_size):
