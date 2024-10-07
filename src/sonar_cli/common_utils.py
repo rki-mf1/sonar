@@ -319,16 +319,21 @@ def chunk(arr_range, arr_size):
 
 def clear_sample_cache(sample):
     try:
-        if sample["mafft_seqfile"] is not None and os.path.exists(
-            sample["mafft_seqfile"]
-        ):
-            os.remove(sample["mafft_seqfile"])
+        if sample["mafft_seqfile"] is not None:
+            try:
+                os.remove(sample["mafft_seqfile"])
+            except FileNotFoundError:
+                pass  # File was already deleted
+        try:
+            os.remove(sample["vcffile"] + ".gz")
+        except FileNotFoundError:
+            pass
+        try:
+            os.remove(sample["vcffile"] + ".gz.tbi")
+        except FileNotFoundError:
+            pass
         # if os.path.exists(sample["vcffile"]):
         #     os.remove(sample["vcffile"])
-        if os.path.exists(sample["vcffile"] + ".gz"):
-            os.remove(sample["vcffile"] + ".gz")
-        if os.path.exists(sample["vcffile"] + ".gz.tbi"):
-            os.remove(sample["vcffile"] + ".gz.tbi")
         # if sample["anno_vcf_file"]:
         #    os.remove(sample["anno_vcf_file"])
         # if sample["anno_tsv_file"]:
