@@ -29,11 +29,11 @@ import Accordion from 'primevue/accordion';
 import AccordionTab from 'primevue/accordiontab';
 import OverlayPanel from 'primevue/overlaypanel';
 import Chip from 'primevue/chip';
-
+import Message from 'primevue/message';
 import { OhVueIcon, addIcons } from 'oh-vue-icons'
 import { FaDna } from 'oh-vue-icons/icons'
 import { FaCalendarAlt } from "oh-vue-icons/icons";
-
+import Toast from 'primevue/toast';
 addIcons(FaDna, FaCalendarAlt)
 
 import { createApp } from 'vue'
@@ -88,6 +88,7 @@ app.component("v-icon", OhVueIcon);
 app.component('OverlayPanel', OverlayPanel)
 app.component('Chip', Chip)
 app.directive('tooltip', Tooltip);
-
+app.component('Message', Message)
+app.component('Toast', Toast)
 
 app.mount('#app')
