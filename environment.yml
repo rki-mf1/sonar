@@ -10,3 +10,6 @@ dependencies:
   - python=3.11
   - snpeff=5.2
   - pre-commit
+variables:
+  REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+  _JAVA_OPTIONS: -Xms128m -Xmx4g

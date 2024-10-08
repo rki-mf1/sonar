@@ -52,14 +52,14 @@ conda env update -p ./env -f environment.yml --prune
 conda activate ./env
 ```
 
-optional: use this if you get SSL errors. You need to reload your env to refresh the environment variables:
-
-```sh
-conda env config vars set REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-conda activate ./env
-```
-
 The same `conda env update` command can be used any time if you change your environment.yml file and want to update your environment to reflect the changes.
+
+Environment variables:
+
+The above environment file sets two environment variables to work around issues we've encountered so far. These are automatically set when you activate the environment:
+
+1) SSL errors: `REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`
+2) [snpEff OutOfMemoryError](https://github.com/rki-mf1/sonar-cli/issues/72) (this bumps the memory up from 2GB to 4GB): `_JAVA_OPTIONS="-Xms128m -Xmx4g"`
 
 ### 2.4 Install sonar-cli
 
