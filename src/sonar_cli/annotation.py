@@ -1,5 +1,4 @@
 import subprocess
-import sys
 from typing import Optional
 
 from sonar_cli.cache import sonarCache
@@ -41,28 +40,40 @@ class Annotator:
                 )
             # result = subprocess.run(['java', '-version'], stderr=subprocess.STDOUT)
             if result.returncode != 0:
-                LOGGER.error("Output failed with exit code: %s", result.returncode)
+                LOGGER.error(
+                    "SnpEff annotation failed with exit code: %s", result.returncode
+                )
                 LOGGER.error("Command to reproduce the error: %s", command)
 
                 with open(self.sonar_cache.error_logfile_name, "a+") as writer:
                     writer.write("Fail anno:" + command + "\n")
 
                 LOGGER.error(result.stderr.decode("utf-8").splitlines())
+                # Raise an exception to stop the worker
+                raise RuntimeError("SnpEff annotation failed")
 
         except subprocess.CalledProcessError as e:
-            LOGGER.error("Annotation failed: %s", e)
+            LOGGER.error("SnpEff annotation failed: %s", e)
             with open(self.sonar_cache.error_logfile_name, "a+") as writer:
                 writer.write("Annotation failed:" + e + "\n")
+            raise  # Raise exception to stop the process
 
     def bcftools_filter(self, input_vcf, output_vcf):
         filter_command = f"bcftools view -e 'INFO/ANN=\".\"' {input_vcf} > {output_vcf}"
 
         # Execute the filter command
-        filter_process = subprocess.run(filter_command, shell=True)
+        filter_process = subprocess.run(
+            filter_command, shell=True, stderr=subprocess.PIPE
+        )
         if filter_process.returncode != 0:
             LOGGER.error("Error occurred while filtering the VCF file.")
+            error_message = filter_process.stderr.decode("utf-8").strip()
+            LOGGER.error(f"Error message: {error_message}")
             with open(self.sonar_cache.error_logfile_name, "a+") as writer:
                 writer.write("Fail bcftools_filter:" + filter_command + "\n")
+            raise RuntimeError(
+                f"bcftools filter failed with exit code {filter_process.returncode}"
+            )
 
     # def bcftools_split(
     #     self, input_vcf, output_vcfs=[], map_name_annovcf_dict: dict = {}
@@ -118,9 +129,25 @@ class Annotator:
             compressed_vcf_list.append(compressed_vcf)
             # Execute bgzip command
             result = subprocess.run(bgzip_cmd, shell=True, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                LOGGER.error("bgzip failed for VCF %s", vcf_path)
+                # Decode and log the error message
+                error_message = result.stderr.decode("utf-8").strip()
+                LOGGER.error(f"Error message: {error_message}")
+                raise RuntimeError(
+                    f"bgzip failed for VCF {vcf_path} with exit code {result.returncode}"
+                )
 
             # Execute tabix command
             result = subprocess.run(tabix_cmd, shell=True, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                LOGGER.error("tabix indexing failed for VCF %s", compressed_vcf)
+                error_message = result.stderr.decode("utf-8").strip()
+                LOGGER.error(f"Error message: {error_message}")
+                raise RuntimeError(
+                    f"tabix indexing failed for VCF {compressed_vcf} with exit code {result.returncode}"
+                )
+
         # Merge.
         # bcftools = can use --use-header to modify VCF header or reheader command
         full_inputs = " ".join(compressed_vcf_list)
@@ -128,16 +155,18 @@ class Annotator:
         result = subprocess.run(command, shell=True, stderr=subprocess.PIPE)
 
         if result.returncode != 0:
-            LOGGER.error("Output failed with exit code: %s", result.returncode)
+            LOGGER.error("bcftools merge failed with exit code: %s", result.returncode)
             LOGGER.error(result.stderr.decode("utf-8"))
             LOGGER.error("Input file: %s", input_vcfs)
             LOGGER.error("Output file: %s", output_vcf)
+            error_message = result.stderr.decode("utf-8").strip()
+            LOGGER.error(f"Error message: {error_message}")
             with open(self.sonar_cache.error_logfile_name, "a+") as writer:
-                writer.write(
-                    "Fail bcftools_merge:" + result.stderr.decode("utf-8") + "\n"
-                )
+                writer.write("Fail bcftools_merge:" + error_message + "\n")
                 writer.write(command + "\n")
-            sys.exit(1)
+            raise RuntimeError(
+                f"bcftools merge failed with exit code {result.returncode}"
+            )
         return output_vcf
 
     # def snpeff_transform_output(self, annotated_vcf, output_tsv):

@@ -315,25 +315,33 @@ class sonarUtils:
         if auto_anno:
             anno_result_list = []
             start_anno_time = get_current_time()
-            with WorkerPool(
-                n_jobs=threads,
-                start_method="fork",
-                shared_objects=cache,
-                pass_worker_id=True,
-                use_worker_state=False,
-            ) as pool:
-                pool.set_shared_objects(cache)
-                anno_result_list = pool.map_unordered(
-                    sonarUtils.annotate_sample,
-                    passed_samples_chunk_list,
-                    progress_bar=True,
-                    progress_bar_options={
-                        "position": 0,
-                        "desc": "Annotate samples...",
-                        "unit": "chunks",
-                        "bar_format": bar_format,
-                    },
+            try:
+                with WorkerPool(
+                    n_jobs=threads,
+                    start_method="fork",
+                    shared_objects=cache,
+                    pass_worker_id=True,
+                    use_worker_state=False,
+                ) as pool:
+                    pool.set_shared_objects(cache)
+                    anno_result_list = pool.map_unordered(
+                        sonarUtils.annotate_sample,
+                        passed_samples_chunk_list,
+                        progress_bar=True,
+                        progress_bar_options={
+                            "position": 0,
+                            "desc": "Annotate samples...",
+                            "unit": "chunks",
+                            "bar_format": bar_format,
+                        },
+                    )
+            except Exception as e:
+                LOGGER.error(
+                    f"Annotation process failed with error: {e}, abort all workers"
                 )
+                # Abort all pool workers
+                pool.terminate()  # Or pool.close()
+                sys.exit(1)  # raise # Re-raise to stop the program entirely
 
             LOGGER.info(
                 f"[runtime] Sample annotation: {calculate_time_difference(start_anno_time, get_current_time())}"
@@ -676,82 +684,89 @@ class sonarUtils:
         return propnames
 
     @staticmethod
-    def annotate_sample(
+    def annotate_sample(  # noqa: C901
         worker_id, shared_objects: sonarCache, *sample_list
     ):  # **kwargs):
         """
 
         kwargs are sample dict object
         """
+        try:
+            cache = shared_objects
+            refmol = cache.default_refmol_acc
+            input_vcf_list = []
+            # map_name_annovcf_dict = {}
+            _unique_name = ""
 
-        cache = shared_objects
-        refmol = cache.default_refmol_acc
-        input_vcf_list = []
-        # map_name_annovcf_dict = {}
-        _unique_name = ""
+            # export_vcf:
+            for kwargs in sample_list:
+                _unique_name = _unique_name + kwargs["name"]
+                input_vcf_list.append(kwargs["vcffile"])
+                if cache.allow_updates is False:
+                    if os.path.exists(kwargs["vcffile"]):
+                        continue
 
-        # export_vcf:
-        for kwargs in sample_list:
-            _unique_name = _unique_name + kwargs["name"]
-            input_vcf_list.append(kwargs["vcffile"])
-            if cache.allow_updates is False:
-                if os.path.exists(kwargs["vcffile"]):
-                    continue
+                sonarUtils.export_vcf(
+                    cursor=kwargs,
+                    cache=cache,
+                    reference=kwargs["refmol"],
+                    outfile=kwargs["vcffile"],
+                    from_var_file=True,
+                )
+                # for split vcf
+                # map_name_annovcf_dict[kwargs["name"]] = kwargs["anno_vcf_file"]
 
-            sonarUtils.export_vcf(
-                cursor=kwargs,
+            annotator = Annotator(
+                annotator_exe_path=ANNO_TOOL_PATH,
+                config_path=ANNO_CONFIG_FILE,
                 cache=cache,
-                reference=kwargs["refmol"],
-                outfile=kwargs["vcffile"],
-                from_var_file=True,
             )
-            # for split vcf
-            # map_name_annovcf_dict[kwargs["name"]] = kwargs["anno_vcf_file"]
+            merged_vcf = os.path.join(
+                cache.anno_dir, get_fname(_unique_name, extension=".vcf")
+            )
+            merged_anno_vcf = os.path.join(
+                cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
+            )
+            filtered_vcf = os.path.join(
+                cache.anno_dir, get_fname(_unique_name, extension=".filtered.anno.vcf")
+            )
+            if cache.allow_updates is False:
+                if os.path.exists(filtered_vcf):
+                    return filtered_vcf
+            # merge vcf:
+            if len(input_vcf_list) == 1:
+                merged_vcf = input_vcf_list[0]
+            else:
+                annotator.bcftools_merge(
+                    input_vcfs=input_vcf_list, output_vcf=merged_vcf
+                )
 
-        annotator = Annotator(
-            annotator_exe_path=ANNO_TOOL_PATH, config_path=ANNO_CONFIG_FILE, cache=cache
-        )
-        merged_vcf = os.path.join(
-            cache.anno_dir, get_fname(_unique_name, extension=".vcf")
-        )
-        merged_anno_vcf = os.path.join(
-            cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
-        )
-        filtered_vcf = os.path.join(
-            cache.anno_dir, get_fname(_unique_name, extension=".filtered.anno.vcf")
-        )
-        if cache.allow_updates is False:
-            if os.path.exists(filtered_vcf):
-                return filtered_vcf
-        # merge vcf:
-        if len(input_vcf_list) == 1:
-            merged_vcf = input_vcf_list[0]
-        else:
-            annotator.bcftools_merge(input_vcfs=input_vcf_list, output_vcf=merged_vcf)
+            # #  check if it is already exist
+            # # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
+            # if cache.allow_updates is False:
+            #     if os.path.exists(kwargs["anno_vcf_file"]):
+            #         return
 
-        # #  check if it is already exist
-        # # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
-        # if cache.allow_updates is False:
-        #     if os.path.exists(kwargs["anno_vcf_file"]):
-        #         return
-
-        annotator.snpeff_annotate(
-            merged_vcf,
-            merged_anno_vcf,
-            refmol,
-        )
-        annotator.bcftools_filter(merged_anno_vcf, filtered_vcf)
-        # dont forget to change the name
-        # split vcf back
-        # annotator.bcftools_split(
-        #     input_vcf=merged_anno_vcf,
-        #     map_name_annovcf_dict=map_name_annovcf_dict,
-        # )
-        # clean unncessery file
-        if os.path.exists(merged_vcf):
-            os.remove(merged_vcf)
-        if os.path.exists(merged_anno_vcf):
-            os.remove(merged_anno_vcf)
+            annotator.snpeff_annotate(
+                merged_vcf,
+                merged_anno_vcf,
+                refmol,
+            )
+            annotator.bcftools_filter(merged_anno_vcf, filtered_vcf)
+            # dont forget to change the name
+            # split vcf back
+            # annotator.bcftools_split(
+            #     input_vcf=merged_anno_vcf,
+            #     map_name_annovcf_dict=map_name_annovcf_dict,
+            # )
+            # clean unncessery file
+            if os.path.exists(merged_vcf):
+                os.remove(merged_vcf)
+            if os.path.exists(merged_anno_vcf):
+                os.remove(merged_anno_vcf)
+        except Exception as e:
+            LOGGER.error(f"Worker {worker_id} stopped: {e}")
+            raise  # Raise to ensure the failure is propagated back to the worker pool
         return filtered_vcf
 
     # MATCHING
