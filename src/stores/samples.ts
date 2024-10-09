@@ -1,16 +1,18 @@
 import { defineStore } from 'pinia';
 import API from '@/api/API';
-import { type FilterGroup, 
-         type FilterGroupRoot,
-         type FilterGroupFilters,
-         type GenomeFilter,
-         type ProfileFilter,
-         type LineageFilter,
-         type PropertyFilter,
-         type Property,
-         DjangoFilterType,
-         StringDjangoFilterType,
-         DateDjangoFilterType } from '@/util/types'
+import {
+  type FilterGroup,
+  type FilterGroupRoot,
+  type FilterGroupFilters,
+  type GenomeFilter,
+  type ProfileFilter,
+  type LineageFilter,
+  type PropertyFilter,
+  type Property,
+  DjangoFilterType,
+  StringDjangoFilterType,
+  DateDjangoFilterType
+} from '@/util/types'
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
@@ -22,11 +24,15 @@ export const useSamplesStore = defineStore('samples', {
     firstRow: 0,
     ordering: '-collection_date',
     lineage: [] as string[],
-    timeRange: [] as Date[],
-    propertiesDict: {} as { [key: string]: string[] }, 
+    timeRange: [] as (Date | null)[],
+    propertiesDict: {} as { [key: string]: string[] },
     propertyOptions: [] as string[],
-    propertyValueOptions: {} as {[key: string]: {options: string[]
-                                                 loading: boolean}},
+    propertyValueOptions: {} as {
+      [key: string]: {
+        options: string[]
+        loading: boolean
+      }
+    },
     repliconAccessionOptions: [] as string[],
     lineageOptions: [] as string[],
     symbolOptions: [] as string[],
@@ -45,9 +51,9 @@ export const useSamplesStore = defineStore('samples', {
     async updateSamples() {
       this.loading = true
       const params = {
-          limit: this.perPage,
-          offset: this.firstRow,
-          ordering: this.ordering
+        limit: this.perPage,
+        offset: this.firstRow,
+        ordering: this.ordering
       }
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
 
@@ -58,8 +64,8 @@ export const useSamplesStore = defineStore('samples', {
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
       this.timeRange = [
-          new Date(statistics.first_sample_date),
-          new Date(statistics.latest_sample_date)
+        new Date(statistics.first_sample_date),
+        new Date(statistics.latest_sample_date ?? Date.now())
       ]
       this.updateSamples()
     },
@@ -187,7 +193,7 @@ export const useSamplesStore = defineStore('samples', {
   },
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
-      return {filters: this.getFilterGroupFilters(this.filterGroup)}
+      return { filters: this.getFilterGroupFilters(this.filterGroup) }
     },
     filterGroupFiltersHasLineageFilter(state): boolean {
       return this.filterGroupsFilters.filters.andFilter.some(item => item.label === "Sublineages") || this.filterGroupsFilters.filters.orFilter.some(item => item.label === "Sublineages");

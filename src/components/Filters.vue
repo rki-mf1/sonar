@@ -1,44 +1,52 @@
 <template>
-<div class="input my-2">
+  <div class="input my-2">
     <div class="input-left">
       <div style="max-width: 500px;">
         <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
           <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
-          
-          <Calendar v-model="samplesStore.timeRange" style="flex: auto" showIcon dateFormat="yy-mm-dd" selectionMode="range" 
-            :disabled="samplesStore.filterGroupFiltersHasDateFilter" :invalid="isTimeRangeInvalid" @date-select="handleDateSelect">
-              <template #footer>
-                <div class="flex justify-content-center align-items-center" style="width: 100%;">
-                  <Button style="font-size: 13px;" icon="pi pi-arrow-circle-left" label="Set Default Time Range" @click="samplesStore.setDefaultTimeRange" />
-                </div>
-              </template>
+          <Calendar v-model="samplesStore.timeRange[0]" style="flex: auto; min-width: 10rem;" showIcon
+            dateFormat="yy-mm-dd" :disabled="samplesStore.filterGroupFiltersHasDateFilter" :invalid="isTimeRangeInvalid"
+            @date-select="handleDateSelect">
           </Calendar>
+          <Calendar v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" showIcon
+            dateFormat="yy-mm-dd" :disabled="samplesStore.filterGroupFiltersHasDateFilter" :invalid="isTimeRangeInvalid"
+            @date-select="handleDateSelect">
+          </Calendar>
+          <Button style="font-size: 10px; padding:3px; min-width: min-content;" @click="samplesStore.setDefaultTimeRange">
+          <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
+          </Button>
+          <Button style="font-size: 10px; padding:3px; min-width: min-content;" @click="removeTimeRange">
+          <i class="pi pi-trash" style="font-size: medium"/>
+          </Button>
         </div>
 
         <div class="flex align-items-center" style="gap: 10px;">
           <span style="font-weight: 500">Lineage</span>
-          <MultiSelect v-model="samplesStore.lineage" display="chip" :options="samplesStore.lineageOptions" filter placeholder="Select Lineages"
-            class="w-full md:w-80" :disabled="samplesStore.filterGroupFiltersHasLineageFilter" @change="samplesStore.updateSamples" />
-          <Button icon="pi pi-times" class="ml-2 p-button-sm" v-if="samplesStore.lineage.length" @click="clearLineaegInput" />
+          <MultiSelect v-model="samplesStore.lineage" display="chip" :options="samplesStore.lineageOptions" filter
+            placeholder="Select Lineages" class="w-full md:w-80"
+            :disabled="samplesStore.filterGroupFiltersHasLineageFilter" @change="samplesStore.updateSamples" />
+          <Button icon="pi pi-times" class="ml-2 p-button-sm" v-if="samplesStore.lineage.length"
+            @click="clearLineageInput" />
         </div>
       </div>
 
       <Button type="button" icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised
-        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter=true" />
-      
+        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
+
       <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
             <FilterGroup style="width: fit-content; margin: auto" :filterGroup="samplesStore.filterGroup"
-              :propertyOptions="samplesStore.propertyOptions" :repliconAccessionOptions="samplesStore.repliconAccessionOptions"
+              :propertyOptions="samplesStore.propertyOptions"
+              :repliconAccessionOptions="samplesStore.repliconAccessionOptions"
               :lineageOptions="samplesStore.lineageOptions" :symbolOptions="samplesStore.symbolOptions"
               :operators="Object.values(DjangoFilterType)" :propertyValueOptions="samplesStore.propertyValueOptions"
-              :propertiesDict="samplesStore.propertiesDict" v-on:update-property-value-options="samplesStore.updatePropertyValueOptions" />
+              :propertiesDict="samplesStore.propertiesDict"
+              v-on:update-property-value-options="samplesStore.updatePropertyValueOptions" />
           </div>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button type="button" style="margin-top: 10px" label="OK"
-            @click="closeAdvancedFilterDialog()"></Button>
+          <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialog()"></Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -132,60 +140,62 @@
     <div class="input-right">
       <Statistics :filteredCount="samplesStore.filteredCount"></Statistics>
     </div>
-</div>
+  </div>
 
 </template>
 
 <script lang="ts">
 
-import API from '@/api/API';
 import { useSamplesStore } from '@/stores/samples';
-import { DjangoFilterType} from '@/util/types'
+import { DjangoFilterType } from '@/util/types'
 
 export default {
-    name: "Filters",
-    data() {
-        return {
-            samplesStore: useSamplesStore(), 
-            displayDialogFilter: false,
-            DjangoFilterType
-        }
+  name: "Filters",
+  data() {
+    return {
+      samplesStore: useSamplesStore(),
+      displayDialogFilter: false,
+      DjangoFilterType
+    }
+  },
+  methods: {
+    removeTimeRange(){
+      this.samplesStore.timeRange = [null, null];
+      this.samplesStore.updateSamples();
     },
-    methods: {
-      handleDateSelect() {
-        if (!this.isTimeRangeInvalid) {
-          this.samplesStore.updateSamples();
-        }
-      },
-      clearLineaegInput() {
-        this.samplesStore.lineage = [];
-        this.samplesStore.updateSamples(); 
-      },
-      closeAdvancedFilterDialog() {
-        this.displayDialogFilter = false;
-        this.samplesStore.updateSamples()
-      },
-      toggle(event) {
-        if (this.$refs.op) {
-          this.$refs.op.toggle(event); 
-        }
+    handleDateSelect() {
+      if (!this.isTimeRangeInvalid) {
+        this.samplesStore.updateSamples();
       }
     },
-    computed: {
-      isFiltersSet(): boolean {
-        return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
-      },
-      isTimeRangeInvalid(): boolean {
-        return this.samplesStore.timeRange.includes(null) 
-      },
+    clearLineageInput() {
+      this.samplesStore.lineage = [];
+      this.samplesStore.updateSamples();
     },
-    mounted() {
+    closeAdvancedFilterDialog() {
+      this.displayDialogFilter = false;
+      this.samplesStore.updateSamples()
+    },
+    toggle(event) {
+      if (this.$refs.op) {
+        this.$refs.op.toggle(event);
+      }
     }
+  },
+  computed: {
+    isFiltersSet(): boolean {
+      return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
+    },
+    isTimeRangeInvalid(): boolean {
+      return this.samplesStore.timeRange.includes(null)
+    },
+  },
+  mounted() {
+  }
 }
 </script>
 
 <style scoped>
-
 .input {
   height: 8rem;
   width: 98%;
@@ -253,5 +263,4 @@ export default {
 :deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
   background: var(--primary-color);
 }
-
 </style>
