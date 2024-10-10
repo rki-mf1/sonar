@@ -69,7 +69,6 @@ export default {
 
 <style scoped>
 body {
-  height: 100vh;
   width: 100vw;
   margin: -0.5em;
   display: flex;
@@ -79,13 +78,12 @@ body {
 }
 
 main {
-  height: 97vh;
   width: 98vw;
   display: flex;
   align-items: stretch;
   flex-direction: column;
   border-radius: 20px;
-  overflow: hidden;
+  overflow: scroll;
   box-shadow: var(--shadow);
 }
 
