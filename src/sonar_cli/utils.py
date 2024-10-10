@@ -364,22 +364,33 @@ class sonarUtils:
                 sonarUtils.zip_import_upload_multithread(cache_dict, sample_chunk)
 
             if auto_anno:
-                with WorkerPool(
-                    n_jobs=threads,
-                    start_method="fork",
-                    shared_objects=cache_dict,
-                ) as pool:
-                    pool.map_unordered(
-                        sonarUtils.zip_import_upload_annotaion,
-                        anno_result_list,
-                        progress_bar=True,
-                        progress_bar_options={
-                            "position": 0,
-                            "desc": "Sending annotated variant...",
-                            "unit": "chunks",
-                            "bar_format": bar_format,
-                        },
-                    )
+
+                for each_file in tqdm(
+                    anno_result_list,
+                    desc="Uploading and importing annotations",
+                    unit="file",
+                    bar_format=bar_format,
+                    position=0,
+                    disable=not progress,
+                ):
+                    # LOGGER.info("Uploading and importing chunk.")
+                    sonarUtils.zip_import_upload_annotaion(cache_dict, each_file)
+                # with WorkerPool(
+                #     n_jobs=threads,
+                #     start_method="fork",
+                #     shared_objects=cache_dict,
+                # ) as pool:
+                #     pool.map_unordered(
+                #         sonarUtils.zip_import_upload_annotaion,
+                #         anno_result_list,
+                #         progress_bar=True,
+                #         progress_bar_options={
+                #             "position": 0,
+                #             "desc": "Sending annotated variant...",
+                #             "unit": "chunks",
+                #             "bar_format": bar_format,
+                #         },
+                #     )
 
             LOGGER.info(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
