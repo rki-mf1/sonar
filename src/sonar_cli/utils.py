@@ -193,6 +193,7 @@ class sonarUtils:
         cache.logfile_obj.close()
         cache.error_logfile_obj.write(f"---- Done: {end_import_time} ----\n")
         cache.error_logfile_obj.close()
+        cache.__exit__(None, None, None)
 
     @staticmethod
     def _setup_cache(
