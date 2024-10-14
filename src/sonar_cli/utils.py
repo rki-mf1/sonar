@@ -12,7 +12,6 @@ from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Union
-import uuid
 import zipfile
 
 from mpire import WorkerPool
@@ -173,13 +172,14 @@ class sonarUtils:
                     "Skip sending properties: no column in the file is mapped to the corresponding variables in the database."
                 )
             else:
-                sonarUtils._import_properties(
-                    sample_id_column,
-                    properties,
-                    csv_files,
-                    tsv_files,
-                    progress=progress,
-                )
+                if not no_upload_sample:
+                    sonarUtils._import_properties(
+                        sample_id_column,
+                        properties,
+                        csv_files,
+                        tsv_files,
+                        progress=progress,
+                    )
 
         end_import_time = get_current_time()
         LOGGER.info(
@@ -240,7 +240,8 @@ class sonarUtils:
             method: Alignment method 1 MAFFT, 2 Parasail, 3 WFA2-lib
         """
         if not no_upload_sample:
-            job_id = "cli_" + str(uuid.uuid4())
+            json_resp = APIClient(base_url=BASE_URL).get_jobID()
+            job_id = json_resp["job_id"]
 
         if not fasta_files:
             return
@@ -507,7 +508,8 @@ class sonarUtils:
         """
         start_time = get_current_time()
 
-        job_id = "cli_prop_" + str(uuid.uuid4())
+        json_resp = APIClient(base_url=BASE_URL).get_jobID(is_prop_job=True)
+        job_id = json_resp["job_id"]
         all_files = tsv_files + csv_files
 
         # Create an in-memory ZIP file
