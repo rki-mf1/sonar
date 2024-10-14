@@ -1,4 +1,5 @@
 import pathlib
+import uuid
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -168,3 +169,13 @@ def define_profile(mutation):  # noqa: C901
 class PropertyColumnMapping:
     db_property_name: str
     data_type: str
+
+
+def generate_job_ID(is_prop: bool):
+    job = str(uuid.uuid4())
+
+    if is_prop:
+        job_id = "cli_prop_" + job
+    else:
+        job_id = "cli_" + job
+    return job_id

@@ -18,6 +18,8 @@ from rest_api.data_entry.reference_job import delete_reference
 
 from rest_api.utils import (
     PropertyColumnMapping,
+    generate_job_ID,
+    strtobool,
     write_to_file,
 )
 from rest_framework import generics, serializers, viewsets
@@ -924,6 +926,13 @@ class TasksView(
     serializer_class = (
         ProcessingJobSerializer  # Specify the serializer class for the model
     )
+
+    @action(detail=False, methods=["get"])  # detail=False means it's a list action
+    def generate_job_id(self, request, *args, **kwargs):
+        is_prop =  strtobool(request.query_params.get("is_prop", "False"))
+        job_id = generate_job_ID(is_prop)
+
+        return Response(data={"job_id": job_id}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])  # detail=False means it's a list action
     def get_all_jobs(self, request, *args, **kwargs):
