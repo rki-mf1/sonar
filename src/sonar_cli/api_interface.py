@@ -38,6 +38,8 @@ class APIClient:
     post_add_property_endpoint = "properties/add_property/"
     post_delete_property_endpoint = "properties/delete_property/"
 
+    put_lineage_import_endpoint = "lineages/update_lineages/"
+
     def __init__(self, base_url, token=""):
         self.base_url = base_url
         self.headers = {"Authorization": f"Bearer {token}"}
@@ -417,6 +419,19 @@ class APIClient:
         )
         return json_response
 
+
+    def put_lineage_import(self, lineage_obj):
+        """
+        send lineage file.
+        """
+
+        file = {"lineages_file": lineage_obj}
+
+        json_response = self._make_request(
+            "PUT", endpoint=self.put_lineage_import_endpoint, files=file
+        )
+        return json_response
+    
     def get_jobID(self, is_prop_job: bool = False):
         """
         Returns:
