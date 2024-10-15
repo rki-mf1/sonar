@@ -2,6 +2,7 @@ import sys
 import time
 
 from sonar_cli.api_interface import APIClient
+from sonar_cli.common_utils import _files_exist
 from sonar_cli.config import BASE_URL
 from sonar_cli.logging import LoggingConfigurator
 
@@ -102,3 +103,22 @@ class sonarUtils1:
                 sys.exit(1)
         else:
             return sonarUtils1.fetch_job_status(API_URL, job_id)
+
+    @staticmethod
+    def upload_lineage(lineage_file):
+        if lineage_file:
+
+            _files_exist(lineage_file)
+            lineage_obj = open(lineage_file, "rb")
+            try:
+                json_response = APIClient(base_url=BASE_URL).put_lineage_import(
+                    lineage_obj
+                )
+                if json_response["detail"] == "Lineages updated successfully":
+                    LOGGER.info("The lineage has been updated successfully.")
+                else:
+                    LOGGER.error("The lineage failed to be updated.")
+            except Exception as e:
+                LOGGER.exception(e)
+                LOGGER.error("Fail to process lineage file")
+                raise

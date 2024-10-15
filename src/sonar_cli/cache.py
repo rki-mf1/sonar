@@ -82,6 +82,10 @@ class sonarCache:
         self._molregex = re.compile(r"\[molecule=([^\[\]=]+)\]")
 
         self.basedir = TMP_CACHE if not outdir else os.path.abspath(outdir)
+        if self.temp:
+            LOGGER.warning(
+                f"A cache directory has not been provided. \n The temporary cache is located {self.basedir}. \n Please note that the cache directory is deleted upon successful import."
+            )
 
         if not os.path.exists(self.basedir):
             os.makedirs(self.basedir, exist_ok=True)

@@ -47,7 +47,7 @@ def parse_args(args=None):
     property_parser = create_parser_property()
     reference_parser = create_parser_reference()
     thread_parser = create_parser_thread()
-
+    lineage_parser = create_parser_lineage()
     # Create all subparsers for the command-line interface
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -75,6 +75,9 @@ def parse_args(args=None):
 
     # property
     subparsers, _ = create_subparser_list_prop(subparsers, database_parser)
+
+    # lineage
+    subparsers, _ = create_subparser_lineage_import(subparsers, lineage_parser)
     # match
     subparsers, subparser_match = create_subparser_match(
         subparsers,
@@ -126,6 +129,19 @@ def is_match_selected(namespace: Optional[argparse.Namespace] = None) -> bool:
     # Check if the 'match' command is selected and the 'db' attribute is present
     match_selected = namespace.command == "match"
     return match_selected
+
+
+def create_parser_lineage() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument(
+        "-l",
+        "--lineage",
+        metavar="STR",
+        help="The lineage file that is generated from the sc2_lineages.py script (lineages.tsv)",
+        type=str,
+        required=True,
+    )
+    return parser
 
 
 def create_parser_general() -> argparse.ArgumentParser:
@@ -358,6 +374,18 @@ def create_subparser_list_reference(
         "list-ref",
         parents=parent_parsers,
         help="Lists all available references in the database",
+    )
+    return subparsers, parser
+
+
+def create_subparser_lineage_import(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+
+    parser = subparsers.add_parser(
+        "import-lineage",
+        parents=parent_parsers,
+        help="Perform lineage import to the database",
     )
     return subparsers, parser
 
@@ -917,6 +945,10 @@ def handle_delete_sample(args: argparse.Namespace):
         sonarUtils.delete_sample(samples=samples)  # reference=args.reference,
 
 
+def handle_lineage(args: argparse.Namespace):
+    sonarUtils1.upload_lineage(lineage_file=args.lineage)
+
+
 def execute_commands(args):  # noqa: C901
     """
     Execute the appropriate function based on the provided command.
@@ -957,6 +989,8 @@ def execute_commands(args):  # noqa: C901
             handle_delete_sample(args)
     elif args.command == "tasks":
         handle_tasks(args)
+    elif args.command == "import-lineage":
+        handle_lineage(args)
 
 
 def main(args: Optional[argparse.Namespace] = None) -> int:

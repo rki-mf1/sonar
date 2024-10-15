@@ -27,6 +27,7 @@ class APIClient:
     get_properties_endpont = "properties/get_all_properties"
 
     get_all_jobs_endpont = "tasks/get_all_jobs"
+    get_jobID_endpont = "tasks/generate_job_id"
     get_job_byID_endpont = "tasks/get_files_by_job_id"
 
     post_add_reference_endpoint = "references/import_gbk/"
@@ -36,6 +37,8 @@ class APIClient:
     post_import_upload_endpoint = "file_uploads/import_upload/"
     post_add_property_endpoint = "properties/add_property/"
     post_delete_property_endpoint = "properties/delete_property/"
+
+    put_lineage_import_endpoint = "lineages/update_lineages/"
 
     def __init__(self, base_url, token=""):
         self.base_url = base_url
@@ -413,5 +416,30 @@ class APIClient:
         params["job_id"] = job_id
         json_response = self._make_request(
             "GET", endpoint=self.get_job_byID_endpont, params=params
+        )
+        return json_response
+
+
+    def put_lineage_import(self, lineage_obj):
+        """
+        send lineage file.
+        """
+
+        file = {"lineages_file": lineage_obj}
+
+        json_response = self._make_request(
+            "PUT", endpoint=self.put_lineage_import_endpoint, files=file
+        )
+        return json_response
+    
+    def get_jobID(self, is_prop_job: bool = False):
+        """
+        Returns:
+            List[str]: A list of references
+        """
+        params = {}
+        params["is_prop"] = is_prop_job
+        json_response = self._make_request(
+            "GET", endpoint=self.get_jobID_endpont, params=params
         )
         return json_response
