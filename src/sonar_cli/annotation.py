@@ -1,3 +1,4 @@
+import os
 import subprocess
 from typing import Optional
 
@@ -49,11 +50,17 @@ class Annotator:
                     writer.write("Fail anno:" + command + "\n")
 
                 LOGGER.error(result.stderr.decode("utf-8").splitlines())
+                # in case the file is corrupted during annotation
+                if os.path.exists(output_vcf):
+                    os.remove(output_vcf)
                 # Raise an exception to stop the worker
                 raise RuntimeError("SnpEff annotation failed")
 
         except subprocess.CalledProcessError as e:
             LOGGER.error("SnpEff annotation failed: %s", e)
+            # in case the file is corrupted during annotation
+            if os.path.exists(output_vcf):
+                os.remove(output_vcf)
             with open(self.sonar_cache.error_logfile_name, "a+") as writer:
                 writer.write("Annotation failed:" + e + "\n")
             raise  # Raise exception to stop the process
@@ -66,6 +73,10 @@ class Annotator:
             filter_command, shell=True, stderr=subprocess.PIPE
         )
         if filter_process.returncode != 0:
+            # in case the file is corrupted during bcftool
+            if os.path.exists(output_vcf):
+                os.remove(output_vcf)
+
             LOGGER.error("Error occurred while filtering the VCF file.")
             error_message = filter_process.stderr.decode("utf-8").strip()
             LOGGER.error(f"Error message: {error_message}")
@@ -155,6 +166,10 @@ class Annotator:
         result = subprocess.run(command, shell=True, stderr=subprocess.PIPE)
 
         if result.returncode != 0:
+            # in case the file is corrupted during bcftool
+            if os.path.exists(output_vcf):
+                os.remove(output_vcf)
+
             LOGGER.error("bcftools merge failed with exit code: %s", result.returncode)
             LOGGER.error(result.stderr.decode("utf-8"))
             LOGGER.error("Input file: %s", input_vcfs)
