@@ -1,275 +1,3 @@
-<script lang="ts">
-
-import API from '@/api/API';
-import {
-  type FilterGroup,
-  type ClassicFilter,
-  type PropertyFilter,
-  type SNPProfileNtFilter,
-  type SNPProfileAAFilter,
-  type DelProfileNtFilter,
-  type DelProfileAAFilter,
-  type InsProfileNtFilter,
-  type InsProfileAAFilter,
-  type ProfileFilter,
-  type RepliconFilter,
-  type LineageFilter,
-  DjangoFilterType,
-  StringDjangoFilterType,
-  DateDjangoFilterType,
-  IntegerDjangoFilterType,
-} from '@/util/types'
-
-import type { MenuItem } from 'primevue/menuitem'
-
-export default {
-  name: 'FilterGroup',
-  props: {
-    filterGroup: {
-      type: Object as () => FilterGroup,
-      required: true
-    },
-    propertyOptions: {
-      type: Array as () => string[],
-      required: true
-    },
-    symbolOptions: {
-      type: Array as () => string[],
-      required: true
-    },
-    repliconAccessionOptions: {
-      type: Array as () => string[],
-      required: true
-    },
-    lineageOptions: {
-      type: Array as () => string[],
-      required: true
-    },
-    operators: {
-      type: Array as () => string[],
-      required: true
-    },
-    propertyValueOptions: {
-      type: Object as () => { [key: string]: { options: string[]; loading: boolean } },
-      required: true
-    },
-    propertiesDict: Object
-  },
-  data() {
-    return {
-      localOperators: [...this.operators],
-      fetchOptionsProperties: ['genome_completeness',
-        'sequencing_tech',
-        'sequencing_reason',
-        'sample_type',
-        'zip_code',
-        'country',
-        'host',
-        'lab'],
-      ClassicFilter: {
-        label: 'Label',
-        value: '',
-        exclude: false
-      } as ClassicFilter,
-      PropertyFilter: {
-        label: 'Property',
-        value: '',
-        propertyName: '',
-        filterType: null
-      } as PropertyFilter,
-      RepliconFilter: {
-        label: 'Replicon',
-        accession: '',
-        exclude: false
-      } as RepliconFilter,
-      LineageFilter: {
-        label: 'Sublineages',
-        lineage: '',
-        exclude: false
-      } as LineageFilter,
-      profileFilterTypes: {
-        SNPProfileNt: {
-          label: 'SNP Nt',
-          refNuc: '',
-          refPos: '',
-          altNuc: '',
-          exclude: false
-        } as SNPProfileNtFilter,
-        SNPProfileAA: {
-          label: 'SNP AA',
-          proteinSymbol: '',
-          refAA: '',
-          refPos: '',
-          altAA: '',
-          exclude: false
-        } as SNPProfileAAFilter,
-        DelProfileNt: {
-          label: 'Del Nt',
-          firstDeleted: '',
-          lastDeleted: '',
-          exclude: false
-        } as DelProfileNtFilter,
-        DelProfileAA: {
-          label: 'Del AA',
-          proteinSymbol: '',
-          firstDeleted: '',
-          lastDeleted: '',
-          exclude: false
-        } as DelProfileAAFilter,
-        InsProfileNt: {
-          label: 'Ins Nt',
-          refNuc: '',
-          refPos: '',
-          altNuc: '',
-          exclude: false
-        } as InsProfileNtFilter,
-        InsProfileAA: {
-          label: 'Ins AA',
-          proteinSymbol: '',
-          refAA: '',
-          refPos: '',
-          altAA: '',
-          exclude: false
-        } as InsProfileAAFilter
-      } as { [key: string]: ProfileFilter },
-      // to store the earliest and latest dates for each property.
-      dateRanges: {} as { [key: string]: { earliest: string; latest: string } },
-    }
-  },
-  computed: {
-    filterTypeMethods(): MenuItem[] {
-      const menuItems = []
-      for (const [key, value] of Object.entries(this.profileFilterTypes)) {
-        menuItems.push({
-          label: key,
-          icon: 'pi pi-plus',
-          command: () => {
-            this.filterGroup.filters.profileFilters.push({ ...value })
-          }
-        })
-      }
-      menuItems.push({
-        label: 'PropertyFilter',
-        icon: 'pi pi-plus',
-        command: () => {
-          this.filterGroup.filters.propertyFilters.push({ ...this.PropertyFilter })
-        }
-      })
-      menuItems.push({
-        label: 'RepliconFilter',
-        icon: 'pi pi-plus',
-        command: () => {
-          this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
-        }
-      })
-      menuItems.push({
-        label: 'LineageFilter',
-        icon: 'pi pi-plus',
-        command: () => {
-          this.filterGroup.filters.lineageFilters.push({ ...this.LineageFilter })
-        }
-      })
-      return menuItems
-    },
-    cantAddOrGroup(): boolean {
-      return (
-        this.filterGroup.filters.propertyFilters.length +
-        this.filterGroup.filters.profileFilters.length +
-        this.filterGroup.filters.repliconFilters.length +
-        this.filterGroup.filters.lineageFilters.length ==
-        0
-      )
-    }
-  },
-  methods: {
-    async get_defaults_earliest_latest_collect_date(propertyName: string) {
-      // Check if the property already has a stored date range
-      if (this.dateRanges[propertyName]) {
-        return this.dateRanges[propertyName]; // Return the cached date range
-      }
-
-      // Fetch the date range if not already cached
-      const response = await API.getInstance().getSampleGenomePropertyValueOptions(propertyName);
-      const dateArray = response.values;
-
-      // Sort dates and store the earliest and latest dates in the dictionary
-      if (dateArray) {
-        const sortedDates = dateArray.sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
-        this.dateRanges[propertyName] = {
-          earliest: sortedDates[0],
-          latest: sortedDates[sortedDates.length - 1],
-        };
-      }
-
-      console.log(`Earliest Date for ${propertyName}:`, this.dateRanges[propertyName]?.earliest);
-      console.log(`Latest Date for ${propertyName}:`, this.dateRanges[propertyName]?.latest);
-
-      return this.dateRanges[propertyName];
-    },
-    addOrFilterGroup() {
-      this.filterGroup.filterGroups.push({
-        filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
-      })
-    },
-    markGroup(group: FilterGroup, mark: boolean) {
-      group.marked = mark
-    },
-    addClassicFilter() {
-      this.filterGroup.filters.profileFilters.push({ ...this.ClassicFilter })
-    },
-    async updatePropertyValueOptions(filter: PropertyFilter) {
-      if (this.fetchOptionsProperties.includes(filter.propertyName)) {
-        this.$emit('update-property-value-options', filter.propertyName)
-      }
-      this.initializeOperators(filter);
-
-      // If the property is a date, set the default value to the date range
-      if (filter.propertyName?.includes('date')) {
-        const dateRange = await this.get_defaults_earliest_latest_collect_date(filter.propertyName);
-        if (dateRange) {
-          filter.value = [new Date(dateRange.earliest), new Date(dateRange.latest)];
-        }
-      } else {
-        // default 
-        filter.value = ""
-      }
-    },
-    initializeOperators(filter: { fetchOptions?: boolean; label?: string; value?: string; propertyName: any; filterType?: DjangoFilterType | null; }) {
-      console.log("initializeOperators: " + filter.propertyName)
-      const propertyType = this.propertiesDict[filter.propertyName];
-      let newOperators = [];
-
-      if (propertyType === 'value_varchar') {
-        newOperators = Object.values(StringDjangoFilterType);
-      }
-      else if (propertyType === 'value_integer') {
-        newOperators = Object.values(IntegerDjangoFilterType);
-      }
-      else if (propertyType === 'value_date') {
-        newOperators = Object.values(DateDjangoFilterType);
-      } else {
-        newOperators = Object.values(DjangoFilterType);
-      }
-      this.localOperators = newOperators;
-      filter.filterType = newOperators[0]
-    },
-  },
-  watch: {
-
-  },
-  mounted() {
-    // Initialize the operators array when the component is mounted
-    // also use when the set filter dialog open again to prevent lost of filter type
-    this.filterGroup.filters.propertyFilters.forEach((filter) => {
-      this.initializeOperators(filter);
-    });
-
-  },
-}
-</script>
-
-
 <template>
   <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
     <!-- Property Filters -->
@@ -411,9 +139,286 @@ export default {
         <i class="pi pi-trash"></i>
       </Button>
     </div>
-
   </div>
 </template>
+
+<script lang="ts">
+
+import API from '@/api/API';
+import {
+  type FilterGroup,
+  type ClassicFilter,
+  type PropertyFilter,
+  type SNPProfileNtFilter,
+  type SNPProfileAAFilter,
+  type DelProfileNtFilter,
+  type DelProfileAAFilter,
+  type InsProfileNtFilter,
+  type InsProfileAAFilter,
+  type ProfileFilter,
+  type RepliconFilter,
+  type LineageFilter,
+  DjangoFilterType,
+  StringDjangoFilterType,
+  DateDjangoFilterType,
+  IntegerDjangoFilterType,
+} from '@/util/types'
+
+import type { MenuItem } from 'primevue/menuitem'
+
+export default {
+  name: 'FilterGroup',
+  props: {
+    filterGroup: {
+      type: Object as () => FilterGroup,
+      required: true
+    },
+    propertyOptions: {
+      type: Array as () => string[],
+      required: true
+    },
+    symbolOptions: {
+      type: Array as () => string[],
+      required: true
+    },
+    repliconAccessionOptions: {
+      type: Array as () => string[],
+      required: true
+    },
+    lineageOptions: {
+      type: Array as () => string[],
+      required: true
+    },
+    operators: {
+      type: Array as () => string[],
+      required: true
+    },
+    propertyValueOptions: {
+      type: Object as () => { [key: string]: { options: string[]; loading: boolean } },
+      required: true
+    },
+    propertiesDict: {
+      type: Object as () => { [key: string]: string[] },
+      required: true
+    },
+  },
+  data() {
+    return {
+      localOperators: [...this.operators],
+      fetchOptionsProperties: ['genome_completeness',
+        'sequencing_tech',
+        'sequencing_reason',
+        'zip_code',
+        'country',
+        'host'],
+      ClassicFilter: {
+        label: 'Label',
+        value: '',
+        exclude: false
+      } as ClassicFilter,
+      PropertyFilter: {
+        label: 'Property',
+        value: '',
+        propertyName: '',
+        filterType: null
+      } as PropertyFilter,
+      RepliconFilter: {
+        label: 'Replicon',
+        accession: '',
+        exclude: false
+      } as RepliconFilter,
+      LineageFilter: {
+        label: 'Sublineages',
+        lineage: '',
+        exclude: false
+      } as LineageFilter,
+      profileFilterTypes: {
+        SNPProfileNt: {
+          label: 'SNP Nt',
+          refNuc: '',
+          refPos: '',
+          altNuc: '',
+          exclude: false
+        } as SNPProfileNtFilter,
+        SNPProfileAA: {
+          label: 'SNP AA',
+          proteinSymbol: '',
+          refAA: '',
+          refPos: '',
+          altAA: '',
+          exclude: false
+        } as SNPProfileAAFilter,
+        DelProfileNt: {
+          label: 'Del Nt',
+          firstDeleted: '',
+          lastDeleted: '',
+          exclude: false
+        } as DelProfileNtFilter,
+        DelProfileAA: {
+          label: 'Del AA',
+          proteinSymbol: '',
+          firstDeleted: '',
+          lastDeleted: '',
+          exclude: false
+        } as DelProfileAAFilter,
+        InsProfileNt: {
+          label: 'Ins Nt',
+          refNuc: '',
+          refPos: '',
+          altNuc: '',
+          exclude: false
+        } as InsProfileNtFilter,
+        InsProfileAA: {
+          label: 'Ins AA',
+          proteinSymbol: '',
+          refAA: '',
+          refPos: '',
+          altAA: '',
+          exclude: false
+        } as InsProfileAAFilter
+      } as { [key: string]: ProfileFilter },
+      // to store the earliest and latest dates for each property.
+      dateRanges: {} as { [key: string]: { earliest: string; latest: string } },
+    }
+  },
+  computed: {
+    sliderValue: {
+      get() {
+        // Convert filter.value to a number for the Slider
+        const numericValue = parseFloat(this.filter?.value);
+        return isNaN(numericValue) ? 0 : numericValue;
+      },
+      set(newValue) {
+        // Convert the Slider value back to a string for filter.value
+        return newValue.toString();
+      },
+    },
+    filterTypeMethods(): MenuItem[] {
+      const menuItems = []
+      for (const [key, value] of Object.entries(this.profileFilterTypes)) {
+        menuItems.push({
+          label: key,
+          icon: 'pi pi-plus',
+          command: () => {
+            this.filterGroup.filters.profileFilters.push({ ...value })
+          }
+        })
+      }
+      menuItems.push({
+        label: 'PropertyFilter',
+        icon: 'pi pi-plus',
+        command: () => {
+          this.filterGroup.filters.propertyFilters.push({ ...this.PropertyFilter })
+        }
+      })
+      menuItems.push({
+        label: 'RepliconFilter',
+        icon: 'pi pi-plus',
+        command: () => {
+          this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
+        }
+      })
+      menuItems.push({
+        label: 'LineageFilter',
+        icon: 'pi pi-plus',
+        command: () => {
+          this.filterGroup.filters.lineageFilters.push({ ...this.LineageFilter })
+        }
+      })
+      return menuItems
+    },
+    cantAddOrGroup(): boolean {
+      return (
+        this.filterGroup.filters.propertyFilters.length +
+        this.filterGroup.filters.profileFilters.length +
+        this.filterGroup.filters.repliconFilters.length +
+        this.filterGroup.filters.lineageFilters.length ==
+        0
+      )
+    }
+  },
+  methods: {
+    async get_defaults_earliest_latest_collect_date(propertyName: string) {
+      // Check if the property already has a stored date range
+      if (this.dateRanges[propertyName]) {
+        return this.dateRanges[propertyName]; // Return the cached date range
+      }
+
+      // Fetch the date range if not already cached
+      const response = await API.getInstance().getSampleGenomePropertyValueOptions(propertyName);
+      const dateArray = response.values;
+
+      // Sort dates and store the earliest and latest dates in the dictionary
+      if (dateArray) {
+        const sortedDates = dateArray.sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
+        this.dateRanges[propertyName] = {
+          earliest: sortedDates[0],
+          latest: sortedDates[sortedDates.length - 1],
+        };
+      }
+      return this.dateRanges[propertyName];
+    },
+    addOrFilterGroup() {
+      this.filterGroup.filterGroups.push({
+        filterGroups: [],
+        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
+      })
+    },
+    markGroup(group: FilterGroup, mark: boolean) {
+      group.marked = mark
+    },
+    addClassicFilter() {
+      this.filterGroup.filters.profileFilters.push({ ...this.ClassicFilter })
+    },
+    async updatePropertyValueOptions(filter: PropertyFilter) {
+      filter.value = null;
+      if (this.fetchOptionsProperties.includes(filter.propertyName)) {
+        this.$emit('update-property-value-options', filter.propertyName)
+      }
+      // If the property is a date, set the default value to the date range
+      if (filter.propertyName?.includes('date')) {
+        const dateRange = await this.get_defaults_earliest_latest_collect_date(filter.propertyName);
+        if (dateRange) {
+          filter.value = [new Date(dateRange.earliest), new Date(dateRange.latest)];
+        }
+      } else {
+        // default 
+        filter.value = ""
+      }
+    },
+    initializeOperators(filter: { fetchOptions?: boolean; label?: string; value?: string; propertyName: any; filterType?: DjangoFilterType | null; }) {
+      console.log("initializeOperators: " + filter.propertyName)
+      const propertyType = this.propertiesDict[filter.propertyName];
+      let newOperators = [];
+
+      if (propertyType === 'value_varchar') {
+        newOperators = Object.values(StringDjangoFilterType);
+      }
+      else if (propertyType === 'value_integer') {
+        newOperators = Object.values(IntegerDjangoFilterType);
+      }
+      else if (propertyType === 'value_date') {
+        newOperators = Object.values(DateDjangoFilterType);
+      } else {
+        newOperators = Object.values(DjangoFilterType);
+      }
+      this.localOperators = newOperators;
+      filter.filterType = newOperators[0]
+    },
+  },
+  watch: {
+
+  },
+  mounted() {
+    // Initialize the operators array when the component is mounted
+    // also use when the set filter dialog open again to prevent lost of filter type
+    this.filterGroup.filters.propertyFilters.forEach((filter) => {
+      this.initializeOperators(filter);
+    });
+
+  },
+}
+</script>
 
 
 <style scoped>

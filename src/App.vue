@@ -30,7 +30,8 @@
       </header>
 
       <div class="content">
-        <RouterView />
+        <Filters v-if="showFilters" />
+        <RouterView/>
       </div>
     </main>
   </body>
@@ -41,19 +42,28 @@
 
 import { RouterView } from 'vue-router'
 import 'primeicons/primeicons.css';
+import Filters from './components/Filters.vue';
+import { useSamplesStore } from '@/stores/samples';
 
 export default {
   name: 'App',
   components: {
-    RouterView
+    RouterView,
+    Filters
   },
   data() {
     return {
+      samplesStore: useSamplesStore(),
       menuItems: [
         {
           label: 'Home',
           icon: 'pi pi-home',
           route: '/'
+        },
+        {
+          label: 'Plots',
+          icon: 'pi pi-chart-bar',
+          route: '/plots'
         },
         {
           label: 'About',
@@ -62,7 +72,20 @@ export default {
         }
       ]
     }
-  }
+  },
+  computed: {
+    showFilters() {
+      return this.$route.name === 'Home' || this.$route.name === 'Plots';
+    }
+  },
+  mounted() {
+    this.samplesStore.updateSamples()
+    this.samplesStore.setDefaultTimeRange()
+    this.samplesStore.updateLineageOptions()
+    this.samplesStore.updatePropertyOptions()
+    this.samplesStore.updateSymbolOptions()
+    this.samplesStore.updateRepliconAccessionOptions()
+  },
 } 
 </script>
 
@@ -139,4 +162,40 @@ header {
   background: grey;
   border-radius: 10px;
 }
+
+:deep(.p-button) {
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color-darker);
+}
+
+:deep(.p-button):hover {
+  background: var(--primary-color-lighter);
+}
+
+:deep(.p-button.p-button-outlined) {
+  background: transparent;
+  color: var(--primary-color);
+}
+
+:deep(.p-button.p-button-outlined):hover {
+  background: rgb(248, 247, 247);
+}
+
+:deep(.p-button.p-button-warning) {
+  background: var(--secondary-color);
+  border: 1px solid var(--secondary-color-darker);
+}
+
+:deep(.p-button.p-button-warning):hover {
+  background: var(--secondary-color-lighter);
+}
+
+:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+  background: var(--primary-color);
+}
+
+:deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
+  background: var(--primary-color);
+}
+
 </style>

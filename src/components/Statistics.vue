@@ -5,7 +5,7 @@
             <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
             <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ filteredCount }} / {{
                 statistics.samples_total }}</div>
-            <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">sequences
+            <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">Sequences
                 selected from database</div>
         </template>
     </Card>
