@@ -1,0 +1,7 @@
+name: sonar-sc2-lineages
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - pandas
+  - pango_aliasor
