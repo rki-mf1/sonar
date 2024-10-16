@@ -6,6 +6,7 @@ import shutil
 import zipfile
 import traceback
 import pickle
+from django.db.models import Q
 from covsonar_backend.settings import (
     LOGGER,
     PROPERTY_BATCH_SIZE,
@@ -151,7 +152,8 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
             sample_files = [str(file) for file in sample_files]
             if batch_size:
                 replicon_cache = {}
-                gene_cache = {}
+                gene_cache_by_accession = {}
+                gene_cache_by_var_pos = {}
                 if REDIS_URL:
                     print("setting up sample import celery jobs..")
                     sample_jobs = []
@@ -159,7 +161,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                         batch = sample_files[i : i + batch_size]
                         sample_jobs.append(
                             process_batch.s(
-                                batch, replicon_cache, gene_cache, str(temp_dir)
+                                batch, replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, str(temp_dir)
                             )
                         )
                     results = group(sample_jobs).apply_async().get()
@@ -180,7 +182,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                             )
                 else:
                     replicon_cache = {}
-                    gene_cache = {}
+                    gene_cache_by_accession = {}
                     # Samples
                     for i in range(0, len(sample_files), batch_size):
                     # print(
@@ -189,7 +191,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                         # batchtimer = datetime.now()
                         batch = sample_files[i : i + batch_size]
                         process_batch_single_thread(
-                            batch, replicon_cache, gene_cache, str(temp_dir)
+                            batch, replicon_cache, gene_cache_by_accession, str(temp_dir)
                         )
                     # annotation 
                     for file in anno_files:
@@ -269,7 +271,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                 LOGGER.info(f"### Job ID: {job_ID} \nRun status: Completed")
 
 @shared_task
-def process_batch(batch: list[str], replicon_cache, gene_cache, temp_dir):
+def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, temp_dir):
     try:
         sample_import_objs = [
             SampleImport(pathlib.Path(file), import_folder=temp_dir) for file in batch
@@ -293,19 +295,27 @@ def process_batch(batch: list[str], replicon_cache, gene_cache, temp_dir):
             )
         [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
         alignments = [
-            sample_import_obj.get_alignment_obj()
+            sample_import_obj.create_alignment()
             for sample_import_obj in sample_import_objs
         ]
-        with cache.lock("alignment"):
-            Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
+        # with cache.lock("alignment"):
+        #     Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
         mutations = []
         for sample_import_obj in sample_import_objs:
-            mutations.extend(sample_import_obj.get_mutation_objs(gene_cache))
+            mutations.extend(sample_import_obj.get_mutation_objs(gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos))
         with cache.lock("mutation"):
             Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
         mutations2alignments = []
+        alignments2relations = {}
         for sample_import_obj in sample_import_objs:
-            mutations2alignments.extend(sample_import_obj.get_mutation2alignment_objs())
+            if sample_import_obj.alignment not in alignments2relations:
+                alignments2relations[sample_import_obj.alignment] = []
+            alignments2relations[sample_import_obj.alignment].extend(
+                sample_import_obj.mutation_query_data)
+        for alignment, mutation_query_data in alignments2relations.items():
+            mutations2alignments.extend(
+                get_mutation2alignment_objs(alignment, mutation_query_data)
+            )
         with cache.lock("mutation2alignment"):
             Mutation.alignments.through.objects.bulk_create(
                 mutations2alignments, ignore_conflicts=True
@@ -321,6 +331,54 @@ def process_batch(batch: list[str], replicon_cache, gene_cache, temp_dir):
         # Perform additional error handling or logging as needed
         LOGGER.error("Error happens on this batch")
         return (False, str(e), traceback.format_exc())
+
+def get_mutation2alignment_objs(alignment, mutation_query_data) -> list:
+        # self.alignment = Alignment.objects.get(
+        #     sequence=self.sequence, replicon=self.replicon
+        # )
+        # Determine batch size dynamically based on the length of mutation_query_data
+        data_length = len(mutation_query_data)
+
+        # a minimum and maximum batch size
+        MIN_BATCH_SIZE = 100
+        MAX_BATCH_SIZE = 5000
+
+        # Dynamic batch size based on data length
+        if data_length <= MAX_BATCH_SIZE:
+            # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
+            # of the data length as the batch size.
+            # we can adjust 0.40 to other percentages like 0.50
+            batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50))
+        else:
+            # Set batch size to 1% of the total dataset size
+            batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
+
+        mutation_alignment_objs = []
+        for i in range(0, len(mutation_query_data), batch_size):
+            batch_mutation_query_data = mutation_query_data[i : i + batch_size]
+            db_mutations_query = Q()
+            for mutation in batch_mutation_query_data:
+                db_mutations_query |= Q(**mutation)
+
+            db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
+                "id",
+                "start",
+                "ref",
+                "alt",
+                "replicon__accession",
+            )
+            for j in range(0, len(db_sample_mutations), batch_size):
+                batch_mutations = db_sample_mutations[j : j + batch_size]
+                batch_alignment_objs = []
+                for mutation in batch_mutations:
+                    batch_alignment_objs.append(
+                        Mutation.alignments.through(
+                            alignment=alignment, mutation_id=mutation["id"]
+                        )
+                    )
+                mutation_alignment_objs.extend(batch_alignment_objs)
+
+        return mutation_alignment_objs
 
 
 @shared_task
@@ -351,7 +409,7 @@ def process_annotation(file_name):
     return (True, None, None)
 
 
-def process_batch_single_thread(batch, replicon_cache, gene_cache, temp_dir):
+def process_batch_single_thread(batch, replicon_cache, gene_cache_by_accession, temp_dir):
     try:
         sample_import_objs = [
             SampleImport(file, import_folder=temp_dir) for file in batch
@@ -375,13 +433,13 @@ def process_batch_single_thread(batch, replicon_cache, gene_cache, temp_dir):
             )
             [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
             alignments = [
-                sample_import_obj.get_alignment_obj()
+                sample_import_obj.create_alignment()
                 for sample_import_obj in sample_import_objs
             ]
             Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
             mutations = []
             for sample_import_obj in sample_import_objs:
-                mutations.extend(sample_import_obj.get_mutation_objs(gene_cache))
+                mutations.extend(sample_import_obj.get_mutation_objs(gene_cache_by_accession))
             Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
             mutations2alignments = []
             for sample_import_obj in sample_import_objs:

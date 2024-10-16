@@ -108,7 +108,7 @@ class SampleImport:
         if self.sample_raw.var_file:
             self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
         else:
-            raise Exception("No var file found")        
+            raise Exception("No var file found")
 
     def get_sample_name(self):
         return self.sample_raw.name
@@ -124,7 +124,7 @@ class SampleImport:
         self.sample = Sample(
             name=self.sample_raw.name,
             sequence=self.sequence,
-            last_update_date=timezone.now()
+            last_update_date=timezone.now(),
             # properties=self.sample_raw.properties,
         )
         return self.sample
@@ -136,39 +136,60 @@ class SampleImport:
             )
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
-    def get_alignment_obj(self):
-        self.alignment = Alignment(sequence=self.sequence, replicon=self.replicon)
+    def create_alignment(self):
+        self.alignment = Alignment.objects.get_or_create(sequence=self.sequence, replicon=self.replicon)[0]
         return self.alignment
 
-    def get_mutation_objs(self, gene_cache: dict[str, Gene | None]) -> list[Mutation]:
+    def get_mutation_objs(
+        self,
+        gene_cache_by_accession: dict[str, Gene | None],
+        replicon_cache: dict[str, Replicon | None],
+        gene_cache_by_var_pos: dict[Replicon | None, dict[int, dict[int, Gene | None]]],
+    ) -> list[Mutation]:
         sample_mutations = []
         self.mutation_query_data = []
         for var_raw in self.vars_raw:
             gene = None
             replicon = None
             if var_raw.type == "nt":
-                replicon = Replicon.objects.get(
-                    accession=var_raw.replicon_or_cds_accession
-                )
-                gene = Gene.objects.filter(
-                    replicon=replicon, start__gte=var_raw.start, end__lte=var_raw.end
-                ).first()
+                if not var_raw.replicon_or_cds_accession in replicon_cache:
+                    replicon_cache[var_raw.replicon_or_cds_accession] = (
+                        Replicon.objects.get(
+                            accession=var_raw.replicon_or_cds_accession
+                        )
+                    )
+                replicon = replicon_cache[var_raw.replicon_or_cds_accession]
+                if not replicon in gene_cache_by_var_pos:
+                    gene_cache_by_var_pos[replicon] = {}
+                if not var_raw.start in gene_cache_by_var_pos[replicon]:
+                    gene_cache_by_var_pos[replicon][var_raw.start] = {}
+                if not var_raw.end in gene_cache_by_var_pos[replicon][var_raw.start]:
+                    gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end] = (
+                        Gene.objects.filter(
+                            replicon=replicon,
+                            start__gte=var_raw.start,
+                            end__lte=var_raw.end,
+                        ).first()
+                    )
+                gene = gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end]
             elif var_raw.type == "cds":
-                if not var_raw.replicon_or_cds_accession in gene_cache:
+                if not var_raw.replicon_or_cds_accession in gene_cache_by_accession:
                     try:
-                        gene_cache[
-                            var_raw.replicon_or_cds_accession
-                        ] = Gene.objects.get(
-                            cds_accession=var_raw.replicon_or_cds_accession
+                        gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
+                            Gene.objects.get(
+                                cds_accession=var_raw.replicon_or_cds_accession
+                            )
                         )
                     except Gene.DoesNotExist:
-                        gene_cache[var_raw.replicon_or_cds_accession] = None
-                gene = gene_cache[var_raw.replicon_or_cds_accession]
+                        gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
+                            None
+                        )
+                gene = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
                 replicon = gene.replicon if gene else None
-            # in DEL, we dont keep REF in the database.    
+            # in DEL, we dont keep REF in the database.
             if var_raw.alt is None:
                 var_raw.ref = ""
-  
+
             mutation_data = {
                 "gene": gene if gene else None,
                 "ref": var_raw.ref,
@@ -185,33 +206,33 @@ class SampleImport:
         return sample_mutations
 
     def get_mutation2alignment_objs(self) -> list:
-        self.alignment = Alignment.objects.get(
-            sequence=self.sequence, replicon=self.replicon
-        )
+        # self.alignment = Alignment.objects.get(
+        #     sequence=self.sequence, replicon=self.replicon
+        # )
         # Determine batch size dynamically based on the length of mutation_query_data
         data_length = len(self.mutation_query_data)
-        
-        #a minimum and maximum batch size
+
+        # a minimum and maximum batch size
         MIN_BATCH_SIZE = 100
         MAX_BATCH_SIZE = 5000
 
         # Dynamic batch size based on data length
         if data_length <= MAX_BATCH_SIZE:
-             # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
-             # of the data length as the batch size.
+            # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
+            # of the data length as the batch size.
             # we can adjust 0.40 to other percentages like 0.50
-            batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50)) 
+            batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50))
         else:
             # Set batch size to 1% of the total dataset size
             batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
 
         mutation_alignment_objs = []
         for i in range(0, len(self.mutation_query_data), batch_size):
-            batch_mutation_query_data = self.mutation_query_data[i:i+batch_size]
+            batch_mutation_query_data = self.mutation_query_data[i : i + batch_size]
             db_mutations_query = Q()
             for mutation in batch_mutation_query_data:
                 db_mutations_query |= Q(**mutation)
-            
+
             db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
                 "id",
                 "start",
@@ -220,7 +241,7 @@ class SampleImport:
                 "replicon__accession",
             )
             for j in range(0, len(db_sample_mutations), batch_size):
-                batch_mutations = db_sample_mutations[j:j+batch_size]
+                batch_mutations = db_sample_mutations[j : j + batch_size]
                 batch_alignment_objs = []
                 for mutation in batch_mutations:
                     batch_alignment_objs.append(
@@ -231,7 +252,7 @@ class SampleImport:
                 mutation_alignment_objs.extend(batch_alignment_objs)
 
         return mutation_alignment_objs
-    
+
     # deprecated function
     # def get_annotation_objs(self) -> list[AnnotationType]:
     #     if self.db_sample_mutations is None:
