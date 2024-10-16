@@ -116,7 +116,6 @@
         <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading" @click="exportFile(exportFormat)" />
       </div>
     </Dialog>
-
   </div>
   
 </template>
@@ -192,7 +191,6 @@ export default {
     },
   },
   computed: {
-  
   },
   mounted() {
 
