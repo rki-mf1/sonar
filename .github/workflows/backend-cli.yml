@@ -1,0 +1,58 @@
+name: test cli with backend
+
+on:
+  pull_request:
+    #  paths:
+    #    - './apps/backend/**'
+    #    - './apps/cli/**'
+  push:
+    #  paths:
+    #    - './apps/backend/**'
+    #    - './apps/cli/**'
+  workflow_dispatch:
+
+jobs:
+    test:
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          shell: bash -el {0}
+      steps:
+        - name: Checkout 🐶
+          uses: actions/checkout@v4
+        - name: Set up Python 🐶
+          uses: conda-incubator/setup-miniconda@v3
+          with:
+            miniconda-version: "latest"
+            channels: conda-forge,bioconda
+            activate-environment: "sonar-cli"
+            python-version: 3.11
+        - name: Install dependencies 🐶
+          working-directory: ./apps/cli
+          run: |
+            conda install poetry snpeff mafft bcftools
+            conda info
+            poetry lock --no-update
+            poetry install
+            poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
+        - name: Hello sonar-cli 🐶
+          run: sonar-cli -v
+        - name: Start backend containers 🙈
+          working-directory: ./apps/backend
+          id: docker_compose_build
+          run: |
+            ./scripts/linux/build-docker-dev.sh
+            ./scripts/linux/dc-dev.sh up -d --build
+        - name: Run Pytest 🐶
+          working-directory: ./apps/cli
+          env:
+            API_URL: "http://127.0.0.1:8000/api"
+            LOG_LEVEL: "DEBUG"
+            CHUNK_SIZE: 100
+            ANNO_TOOL_PATH: "snpEff"
+            ANNO_CHUNK_SIZE: 50
+          run:  poetry run pytest --cov -n 2 --cache-clear --dist loadgroup -rfeP -x tests/
+        # - name: Stop containers 🙈
+        #   working-directory: sonar-backend
+        #   if: always()
+        #   run: docker compose -f "docker-compose.test-gh.yml" down
