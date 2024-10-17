@@ -1,7 +1,9 @@
-name: coverage-report
+name: backend coverage report
 
 on:
   pull_request:
+    paths:
+      - './apps/backend/**'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -19,13 +21,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  coverage:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     env:
       COMPOSE_ARGS: "-f compose.yml -f compose-dev.yml --env-file conf/docker/common.env --env-file conf/docker/dev.env --env-file conf/docker/dev-secrets.env"
     runs-on: ubuntu-latest
+    defaults:
+      working-directory: ./apps/backend
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4

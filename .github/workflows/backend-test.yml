@@ -1,7 +1,9 @@
-name: test
+name: backend test
 
 on:
   push:
+    paths:
+      - './apps/backend/**'
   workflow_dispatch:
 
 permissions: write-all
@@ -18,6 +20,8 @@ jobs:
     env:
       COMPOSE_ARGS: "-f compose.yml -f compose-dev.yml --env-file conf/docker/common.env --env-file conf/docker/dev.env --env-file conf/docker/dev-secrets.env"
     runs-on: ubuntu-latest
+    defaults:
+      working-directory: ./apps/backend
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
