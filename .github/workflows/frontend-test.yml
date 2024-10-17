@@ -1,0 +1,19 @@
+name: Frontend test build
+
+on: push
+
+jobs:
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      working-directory: ./apps/frontend
+    steps:
+      - name: Check out pipeline code
+        uses: actions/checkout@v4
+      - name: Run CI and build
+        run: |
+          npm ci
+          npm run build
+          # npm run lint
+          # npm run format
+
