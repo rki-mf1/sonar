@@ -419,7 +419,6 @@ class APIClient:
         )
         return json_response
 
-
     def put_lineage_import(self, lineage_obj):
         """
         send lineage file.
@@ -431,7 +430,7 @@ class APIClient:
             "PUT", endpoint=self.put_lineage_import_endpoint, files=file
         )
         return json_response
-    
+
     def get_jobID(self, is_prop_job: bool = False):
         """
         Returns:
