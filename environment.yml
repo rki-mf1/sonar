@@ -1,0 +1,15 @@
+name: sonar-cli
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bcftools=1.20
+  - mafft=7.526
+  - nox=2023.4.22
+  - poetry=1.6.1
+  - python=3.11
+  - snpeff=5.2
+  - pre-commit
+variables:
+  REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+  _JAVA_OPTIONS: -Xms128m -Xmx4g
