@@ -2,13 +2,9 @@ name: test cli with backend
 
 on:
   pull_request:
-    #  paths:
-    #    - './apps/backend/**'
-    #    - './apps/cli/**'
-  push:
-    #  paths:
-    #    - './apps/backend/**'
-    #    - './apps/cli/**'
+    paths:
+      - './apps/backend/**'
+      - './apps/cli/**'
   workflow_dispatch:
 
 jobs:

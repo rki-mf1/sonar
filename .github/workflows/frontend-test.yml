@@ -1,6 +1,10 @@
-name: Frontend test build
+name: frontend test build
 
-on: push
+on:
+  pull_request:
+    paths:
+      - './apps/frontend/**'
+  workflow_dispatch:
 
 jobs:
   frontend-test:

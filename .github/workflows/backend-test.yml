@@ -1,9 +1,9 @@
 name: backend test
 
 on:
-  push:
-    #  paths:
-    #    - './apps/backend/**'
+  pull_request:
+    paths:
+      - './apps/backend/**'
   workflow_dispatch:
 
 permissions: write-all
