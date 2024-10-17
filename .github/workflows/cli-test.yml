@@ -1,18 +1,18 @@
-name: Test&Check
+name: cli lint and test
+
 on:
   pull_request:
   push:
-    branches:
-      - dev
+
 jobs:
-    Lint:
+    lint:
       runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: ./apps/cli
       steps:
         - name: Checkout 🐱
           uses: actions/checkout@v4
-          with:
-            repository: rki-mf1/sonar-cli
-            # token: ${{ secrets.SONAR_CLI_GH_ACTION }} # `secrets.GH_PAT` is a secret that contains your PAT
         - name: Set up Python 🐱
           uses: actions/setup-python@v5
           with:
@@ -22,7 +22,7 @@ jobs:
         - name: Run flake8 - Code style check 🐱
           run: poetry run flake8 src/ --config=.flake8 -v
 
-    Test:
+    test:
       runs-on: ubuntu-latest
       defaults:
         run:
@@ -30,19 +30,15 @@ jobs:
       steps:
         - name: Checkout 🐶
           uses: actions/checkout@v4
-          with:
-            repository: rki-mf1/sonar-cli
-            path: sonar-cli
-            # token: ${GH_PAT}
         - name: Set up Python 🐶
           uses: conda-incubator/setup-miniconda@v3
           with:
             miniconda-version: "latest"
-            channels: conda-forge,bioconda,defaults
+            channels: conda-forge,bioconda
             activate-environment: "sonar-cli"
             python-version: 3.11
         - name: Install dependencies 🐶
-          working-directory: sonar-cli
+          working-directory: ./apps/cli
           run: |
             conda install poetry snpeff mafft bcftools
             conda info
@@ -51,21 +47,14 @@ jobs:
             poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
         - name: Hello sonar-cli 🐶
           run: sonar-cli -v
-        - name: Checkout 🙈
-          uses: actions/checkout@v4
-          with:
-            repository: rki-mf1/sonar-backend
-            ref: main
-            token:  ${{ secrets.SONAR_TOKEN }}
-            path: sonar-backend
-        - name: Start containers 🙈
-          working-directory: sonar-backend
+        - name: Start backend containers 🙈
+          working-directory: ./apps/backend
           id: docker_compose_build
           run: |
-            docker build --no-cache -t backend_dev:local -f Dockerfile .
-            docker compose -f "docker-compose.test-gh.yml" up -d --build
+            ./scripts/linux/build-docker-dev.sh
+            ./scripts/linux/dc-dev.sh up -d --build
         - name: Run Pytest 🐶
-          working-directory: sonar-cli
+          working-directory: ./apps/cli
           env:
             API_URL: "http://127.0.0.1:8000/api"
             LOG_LEVEL: "DEBUG"
