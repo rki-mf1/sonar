@@ -1,0 +1,33 @@
+:root {
+    --primary-color: #385880;
+    --primary-color-lighter: #456ea0;
+    --primary-color-darker: #314e72;
+    --secondary-color: #f97316;
+    --secondary-color-lighter: #fd8a38;
+    --secondary-color-darker: #df6813;
+    --text-color: white;
+    --grayish: #d9d9d9;
+    --shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+}
+
+
+.loading-dialog-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  }
+  
+  .loading-spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100px;
+  }
+  
+  .custom-spinner {
+    --p-progress-spinner-color: whitesmoke; /* Apply the spinner color */
+    width: 50px; /* Adjust spinner size */
+    height: 50px;
+  }
