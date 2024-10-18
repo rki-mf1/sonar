@@ -44,20 +44,29 @@
               Exclude?
               <InputSwitch v-model="filter[key]" />
             </div>
-            <Dropdown v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" :placeholder="key"
-              :options="symbolOptions" v-model="filter[key]" style="flex: auto" class="mr-1" />
-            <InputText v-else-if="key != 'label'" v-model="filter[key]" style="flex: auto" :placeholder="key"
+            <Dropdown 
+              v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" 
+              :placeholder="key"
+              :options="symbolOptions" 
+              v-model="filter[key]" 
+              style="flex: auto" class="mr-1" />
+            <InputText 
+              v-else-if="key != 'label'" 
+              v-model="filter[key]" 
+              style="flex: auto" 
+              :placeholder="key"
               class="mr-1" />
-
           </div>
 
           <!-- the button has to stay outside-->
-          <Button type="button" severity="danger" size="small" @click="
-            filterGroup.filters?.profileFilters?.splice(
-              filterGroup.filters?.profileFilters?.indexOf(filter),
-              1
-            )
-            " icon="pi pi-trash" />
+          <Button 
+            type="button" 
+            severity="danger" 
+            size="small" 
+            @click="filterGroup.filters?.profileFilters?.splice(
+              filterGroup.filters?.profileFilters?.indexOf(filter), 1)" 
+            icon="pi pi-trash" 
+          />
         </div>
 
       </div>

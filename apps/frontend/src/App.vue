@@ -91,23 +91,31 @@ export default {
 
 
 <style scoped>
+
+html, body {
+    height: 100%;               
+    margin: 0;                 
+}
+
 body {
   width: 100vw;
-  margin: -0.5em;
+  margin: -0.5em;   
   display: flex;
+  flex-direction: column;   
   justify-content: center;
   align-items: center;
   background-color: #adbed3;
 }
 
+
 main {
+  flex: 1; 
+
   width: 98vw;
-  display: flex;
-  align-items: stretch;
-  flex-direction: column;
   border-radius: 20px;
-  overflow: scroll;
+  overflow: auto;
   box-shadow: var(--shadow);
+
 }
 
 header {
@@ -116,13 +124,12 @@ header {
 }
 
 .content {
-  width: 100%;
-  height: 90%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-evenly;
+  justify-content: flex-start;
   background-color: white;
+  min-height: 100vh;  
 }
 
 .menu {

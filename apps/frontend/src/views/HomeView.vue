@@ -1,9 +1,24 @@
 <template>
 
-  <div class="content">
+  <div class="table-content">
     
-    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
-      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
+    <DataTable 
+      :value="samplesStore.samples" 
+      style="max-width: 95vw" 
+      size="large" 
+      dataKey="name" 
+      stripedRows 
+      :reorderableColumns="true" 
+      @columnReorder="onColReorder" 
+      scrollable 
+      scrollHeight="flex" 
+      sortable
+      @sort="sortingChanged($event)" 
+      selectionMode="single" 
+      v-model:selection="selectedRow" 
+      @rowSelect="onRowSelect" 
+      @rowUnselect="onRowUnselect"
+      >
       <template #empty> No Results </template>
       <template #header>
         <div style="display: flex; justify-content: space-between">
@@ -11,7 +26,15 @@
             <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true"/>
           </div>
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+            <MultiSelect 
+              v-model="selectedColumns" 
+              display="chip" 
+              :options="samplesStore.propertyOptions" 
+              filter 
+              placeholder="Select Columns" 
+              class="w-full md:w-20rem" 
+              @update:modelValue="columnSelection"
+              >
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
                   {{ selectedColumns.length }} columns selected
@@ -200,7 +223,7 @@ export default {
 
 <style scoped>
 
-.content {
+.table-content {
   height: 80%;
   width: 98%;
   display: flex;

@@ -1,5 +1,13 @@
 <template>
-    <div class="flex">
+    <div class="card-container">
+        <Card class="card">
+            <template #content>
+                <v-icon name="fa-calendar-alt" fill="var(--text-color)" scale="2.5" style="float: right;" />
+                <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ statistics.latest_sample_date }}</div>
+                <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">Date of newest
+                    sequence in database</div>
+            </template>
+        </Card>
         <Card class="card" style="background-color: var(--secondary-color);">
         <template #content>
             <v-icon name="fa-dna" scale="2.5" fill="var(--text-color)" style="float: right;" />
@@ -8,15 +16,7 @@
             <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">Sequences
                 selected from database</div>
         </template>
-    </Card>
-    <Card class="card">
-        <template #content>
-            <v-icon name="fa-calendar-alt" fill="var(--text-color)" scale="2.5" style="float: right;" />
-            <div style="color: var(--text-color); font-size: 22px; font-weight: bold;">{{ statistics.latest_sample_date }}</div>
-            <div style="color: var(--text-color); font-size: 12px; font-weight: 500; margin-top: 10px;">Date of newest
-                sequence in database</div>
-        </template>
-    </Card>
+        </Card>
     </div>
 
 </template>
@@ -61,8 +61,14 @@ export default {
 .card {
     background-color: var(--primary-color);
     width: 350px;
-    margin: 20px;
+    margin: 10px;
     height: 6rem;
     box-shadow: var(--shadow);
+};
+.card-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; 
+    align-items: flex-start; 
 }
 </style>

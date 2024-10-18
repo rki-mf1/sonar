@@ -1,8 +1,8 @@
 <template>
-  <div class="input my-2">
-    <div class="input-left">
-      <div style="max-width: 500px;">
-        <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
+  <div class="filter-and-statistic-panel my-2">
+    <div class="filter-left">
+      <div >
+        <div class="filter-container">
           <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
             v-model="samplesStore.timeRange[0]" 
@@ -11,7 +11,6 @@
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
             :invalid="isTimeRangeInvalid"
-            @date-select="handleDateSelect"
             ></Calendar>
           <Calendar 
             v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" 
@@ -19,21 +18,20 @@
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
             :invalid="isTimeRangeInvalid"
-            @date-select="handleDateSelect"
           ></Calendar>
           <Button 
-            style="font-size: 10px; padding:3px; min-width: min-content;" 
+            style="font-size: 10px; min-width: min-content;" 
             @click="samplesStore.setDefaultTimeRange">
           <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
           </Button>
           <Button 
-            style="font-size: 10px; padding:3px; min-width: min-content;" 
+            
             @click="removeTimeRange">
           <i class="pi pi-trash" style="font-size: medium"/>
           </Button>
         </div>
 
-        <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
+        <div class="filter-container">
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect 
             v-model="samplesStore.lineage" 
@@ -44,20 +42,48 @@
             class="w-full md:w-80"
             :virtualScrollerOptions="{ itemSize: 50 }"
             :disabled="samplesStore.filterGroupFiltersHasLineageFilter" 
-            @change="samplesStore.updateSamples" 
             />
-          <Button icon="pi pi-times" class="ml-2 p-button-sm" v-if="samplesStore.lineage.length"
-            @click="clearLineageInput" />
+            <Button 
+            icon="pi pi-trash" 
+            class="ml-2 p-button-sm" 
+            v-if="samplesStore.lineage.length"
+            @click="clearLineageInput" 
+            />
         </div>
 
-      <Button 
-        type="button" 
-        icon="pi pi-filter" 
-        label="&nbsp;Set Advanced Filters" 
-        raised
-        :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" 
-        @click="displayDialogFilter = true" 
-      />
+
+        <div class="filter-container">
+          <span style="font-weight: 500">DNA/AA Profile</span>
+          <InputText
+            v-model="profileFilter.value" 
+            style="flex: auto" 
+            :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
+            class="mr-1" 
+            />
+          <div class="exclude-switch">
+              Exclude?
+            <InputSwitch v-model="profileFilter.exclude" />
+          </div>
+          <Button 
+            @click="removeProfileFilter" 
+            icon="pi pi-trash"  
+          />
+        </div>
+
+        <div class="button-1">
+          <Button 
+            icon="pi pi-filter" 
+            label="&nbsp;Set Advanced Filters" 
+            raised
+            :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" 
+            @click="displayDialogFilter = true" 
+        />
+            <Button 
+              style="background-color: var(--secondary-color); border: 4px solid #cf3004 "
+              label="Update sample selection" 
+              @click="filterSamples">
+            </Button>
+        </div>
       </div>
 
       <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
@@ -168,7 +194,7 @@
       </OverlayPanel>
     </div>
 
-    <div class="input-right">
+    <div class="statistics-right">
       <Statistics :filteredCount="samplesStore.filteredCount"></Statistics>
     </div>
   </div>
@@ -183,29 +209,50 @@ import { DjangoFilterType } from '@/util/types'
 export default {
   name: "Filters",
   data() {
-    return {
-      samplesStore: useSamplesStore(),
-      displayDialogFilter: false,
-      DjangoFilterType
+    const samplesStore = useSamplesStore();
+    if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
+      samplesStore.filterGroup.filters.profileFilters.push({
+        label: 'Label',
+        value: '',
+        exclude: false,
+      });
     }
+    return {
+      samplesStore,
+      displayDialogFilter: false,
+      DjangoFilterType,
+    };
   },
   methods: {
     removeTimeRange() {
       this.samplesStore.timeRange = [null, null];
-      this.samplesStore.updateSamples();
     },
-    handleDateSelect() {
+    removeProfileFilter() {
+      if (this.samplesStore.filterGroup.filters.profileFilters.length <= 1) {
+      this.samplesStore.filterGroup.filters.profileFilters[0] = {
+        label: 'Label',
+        value: '',
+        exclude: false,
+      };
+    }
+      else {
+        this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
+      }
+    },
+    filterSamples() {
       if (!this.isTimeRangeInvalid) {
+        this.samplesStore.updateSamples();
+      }
+      else {
+        this.samplesStore.timeRange = [null, null]
         this.samplesStore.updateSamples();
       }
     },
     clearLineageInput() {
       this.samplesStore.lineage = [];
-      this.samplesStore.updateSamples();
     },
     closeAdvancedFilterDialog() {
       this.displayDialogFilter = false;
-      this.samplesStore.updateSamples()
     },
     toggle(event) {
       if (this.$refs.op) {
@@ -220,44 +267,66 @@ export default {
     isTimeRangeInvalid(): boolean {
       return this.samplesStore.timeRange.includes(null)
     },
+    profileFilter() {
+      return this.samplesStore.filterGroup.filters.profileFilters[0];
+    },
   },
   mounted() {
-  }
+  },
 }
 </script>
 
 <style scoped>
-.input {
-  height: 10rem;
+.filter-and-statistic-panel {
+  height: 14rem;
   width: 98%;
   display: flex;
-  flex-direction: row;
-  justify-content: space-evenly;
-  align-items: center;
+  justify-content: space-between;
   background-color: var(--text-color);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow);
 }
 
-.input-left {
-  height: 100%;
-  width: 50%;
+.filter-left {
   display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: 20%;
-  margin-left: 20px;
-  align-items: center;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start; 
+  width: 50%;
+  margin: 10px;
+  gap: 10px;
 }
 
-.input-right {
-  height: 100%;
-  width: 50%;
+.statistics-right {
+  height: auto; 
+  gap: 10px;
+  margin-left: auto; 
+  align-items: flex-end;  
+}
+
+.filter-container {
   display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
+  align-items: center; 
+  gap: 10px;        
+  margin-bottom: 10px;
+}
+
+.button-1{
+  display: flex;
+  justify-content: space-between; 
+  align-items: flex-end; 
+  gap: 10px;        
+  margin-bottom: 10px;
+}
+
+.exclude-switch {
+  /* font-variant: small-caps; */
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  font-size: 0.7em;
+  margin: 2.5px;
 }
 
 :deep(.p-button) {
