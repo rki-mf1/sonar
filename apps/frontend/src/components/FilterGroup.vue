@@ -126,12 +126,23 @@
 
     <!-- Button Bar -->
     <div class="button-bar">
-      <SplitButton size="small" label="" :model="filterTypeMethods" @click="addClassicFilter()">
-        <i class="pi pi-filter"></i>
-        <span style="font-weight: 500;">&nbsp; Add AND Filter</span>
+      <SplitButton 
+        size="small" 
+        label="" 
+        :model="filterTypeMethods">
+        <div class="filter-circle">
+          <i class="pi pi-filter"></i>
+        </div>
+        <span style="font-weight: 500;">
+          &nbsp; Add AND Filter
+        </span>
       </SplitButton>
       <!-- OR part -->
-      <Button size="small" icon="pi pi-filter" label="Add OR Group" @click="addOrFilterGroup"
+      <Button 
+        size="small" 
+        icon="pi pi-filter-fill" 
+        label="Add OR Group" 
+        @click="addOrFilterGroup"
         :disabled="cantAddOrGroup" />
     </div>
 
@@ -223,7 +234,7 @@ export default {
       ClassicFilter: {
         label: 'Label',
         value: '',
-        exclude: false
+        exclude: false,
       } as ClassicFilter,
       PropertyFilter: {
         label: 'Property',
@@ -242,6 +253,11 @@ export default {
         exclude: false
       } as LineageFilter,
       profileFilterTypes: {
+        ProfileFilter: {
+          label: 'Label',
+          value: '',
+          exclude: false,
+        } as ClassicFilter,
         SNPProfileNt: {
           label: 'SNP Nt',
           refNuc: '',
