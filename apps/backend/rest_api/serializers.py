@@ -248,8 +248,11 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                             )
                     list.append(label)
                 except AttributeError as e:
-                    print(e)
-                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")
+                    # most of the time this AttributeError outputs
+                    # 'NoneType' object has no attribute 'gene_symbol', so I comment it for now
+                    # to reduce logs print out to a console
+                    # print(e)
+                    # print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue
         return list
 
