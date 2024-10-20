@@ -1,17 +1,20 @@
 <template>
 
   <div class="content">
-    
-    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
-      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
+
+    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows
+      :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
+      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect"
+      @rowUnselect="onRowUnselect">
       <template #empty> No Results </template>
       <template #header>
         <div style="display: flex; justify-content: space-between">
           <div>
-            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true"/>
+            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
           </div>
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+            <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter
+              placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
                   {{ selectedColumns.length }} columns selected
@@ -26,7 +29,9 @@
           <span v-tooltip="metaDataCoverage('name')">ID</span>
         </template>
         <template #body="slotProps">
-          <div style="height: 1.5em; width: 9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction: rtl;" :title="slotProps.data.name">
+          <div
+            style="height: 1.5em; width: 9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction: rtl;"
+            :title="slotProps.data.name">
             {{ slotProps.data.name }}
           </div>
         </template>
@@ -38,21 +43,16 @@
         <template #body="slotProps">
           <div v-if="column === 'genomic_profiles'">
             <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-              <GenomicProfileLabel
-                v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                :variantString="variant"
-                :annotations="slotProps.data.genomic_profiles[variant]"
-                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
-              />
+              <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
             </div>
           </div>
           <div v-else-if="column === 'proteomic_profiles'">
             <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-              <GenomicProfileLabel
-                v-for="(variant, index) in slotProps.data.proteomic_profiles"
+              <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
                 :variantString="variant"
-                :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
-              />
+                :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
             </div>
           </div>
           <div v-else-if="column === 'init_upload_date'">
@@ -71,18 +71,14 @@
         <div style="display: flex; justify-content: space-between">
           Total: {{ samplesStore.filteredCount }} Samples
         </div>
-        <Paginator
-          :totalRecords="samplesStore.filteredCount"
-          v-model:rows="samplesStore.perPage"
-          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
-          v-model:first="samplesStore.firstRow"
-          @update:rows="samplesStore.updateSamples()"
-        />
+        <Paginator :totalRecords="samplesStore.filteredCount" v-model:rows="samplesStore.perPage"
+          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="samplesStore.firstRow"
+          @update:rows="samplesStore.updateSamples()" />
       </template>
     </DataTable>
 
     <Dialog class="flex" v-model:visible="samplesStore.loading" modal :closable="false" header="Loading...">
-          <ProgressSpinner class="flex-1 p-3" size="small" v-if="samplesStore.loading" style="color: whitesmoke" />
+      <ProgressSpinner class="flex-1 p-3" size="small" v-if="samplesStore.loading" style="color: whitesmoke" />
     </Dialog>
 
     <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
@@ -113,11 +109,12 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading" @click="exportFile(exportFormat)" />
+        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading"
+          @click="exportFile(exportFormat)" />
       </div>
     </Dialog>
   </div>
-  
+  <Toast ref="toast" />
 </template>
 
 <script lang="ts">
@@ -153,7 +150,7 @@ export default {
       this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
     },
     onColReorder(event) {
-     const { dragIndex, dropIndex } = event; 
+      const { dragIndex, dropIndex } = event;
       // Rearrange columns based on dragIndex and dropIndex
       const reorderedColumns = ['name', ...this.selectedColumns]; // note: 'name' is fixed and cant be reordered
       const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
@@ -189,17 +186,34 @@ export default {
         return '';
       }
     },
+    showToastError(message: string) {
+      this.$refs.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: message,
+        life: 10000
+      });
+    }
   },
   computed: {
   },
   mounted() {
 
   },
+  watch: {
+    "samplesStore.errorMessage"(newValue) {
+      if (newValue) {
+        this.showToastError(newValue);
+        // Reset the state to prevent multiple calls
+        this.samplesStore.errorMessage = "";
+      }
+    }
+  }
 }
+
 </script>
 
 <style scoped>
-
 .content {
   height: 80%;
   width: 98%;
@@ -248,5 +262,4 @@ export default {
 :deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
   background: var(--primary-color);
 }
-
 </style>
