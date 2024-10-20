@@ -54,6 +54,7 @@ export const useSamplesStore = defineStore('samples', {
   }) as FilterGroup,
   
     DjangoFilterType,
+    errorMessage: '',
     lastSentFilterGroup: JSON.stringify({
       filterGroups: [],
       filters: {
@@ -79,9 +80,23 @@ export const useSamplesStore = defineStore('samples', {
         ordering: this.ordering
       }
       this.lastSentFilterGroup = JSON.stringify(this.filterGroup);
-      this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
-      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-      this.filteredCount = this.filteredStatistics.filtered_total_count
+      var response = (await API.getInstance().getSampleGenomes(this.filters, params))
+      // Handle errors
+      if (response.response && response.response.status) {
+        const status = response.response.status;
+        if (status >= 400 && status < 500) {
+          this.errorMessage = 'Client error occurred. Please check your input.';
+        } else if (status >= 500) {
+          this.errorMessage = 'Server error occurred. Please try again later.';
+        } else {
+          this.errorMessage = 'An unknown error occurred.';
+        }
+      }else{
+        this.samples = response.results;
+        this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+        this.filteredCount = this.filteredStatistics.filtered_total_count
+
+      }
       this.loading = false
       this.filtersChanged = false
     },

@@ -429,10 +429,11 @@ export default {
       this.filterGroup.filters.profileFilters.push({ ...this.ClassicFilter })
     },
     async updatePropertyValueOptions(filter: PropertyFilter) {
-      filter.value = null;
+
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter.propertyName)
       }
+      this.initializeOperators(filter);
       // If the property is a date, set the default value to the date range
       if (filter.propertyName?.includes('date')) {
         const dateRange = await this.get_defaults_earliest_latest_collect_date(filter.propertyName);
