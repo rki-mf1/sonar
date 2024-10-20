@@ -85,18 +85,15 @@
         </div>
       </div>
 
+
       <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
-            <FilterGroup 
-              style="width: fit-content; margin: auto" 
-              :filterGroup="samplesStore.filterGroup"
+            <FilterGroup style="width: fit-content; margin: auto" :filterGroup="samplesStore.filterGroup"
               :propertyOptions="samplesStore.propertyOptions"
               :repliconAccessionOptions="samplesStore.repliconAccessionOptions"
-              :lineageOptions="samplesStore.lineageOptions" 
-              :symbolOptions="samplesStore.symbolOptions"
-              :operators="Object.values(DjangoFilterType)" 
-              :propertyValueOptions="samplesStore.propertyValueOptions"
+              :lineageOptions="samplesStore.lineageOptions" :symbolOptions="samplesStore.symbolOptions"
+              :operators="Object.values(DjangoFilterType)" :propertyValueOptions="samplesStore.propertyValueOptions"
               :propertiesDict="samplesStore.propertiesDict"
               v-on:update-property-value-options="samplesStore.updatePropertyValueOptions" />
           </div>

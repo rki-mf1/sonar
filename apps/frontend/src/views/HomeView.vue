@@ -23,7 +23,7 @@
       <template #header>
         <div style="display: flex; justify-content: space-between; ">
           <div>
-            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true"/>
+            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
           </div>
           <div style="display: flex; justify-content: flex-end">
             <MultiSelect 
@@ -75,8 +75,7 @@
               <GenomicProfileLabel
                 v-for="(variant, index) in slotProps.data.proteomic_profiles"
                 :variantString="variant"
-                :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
-              />
+                :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
             </div>
           </div>
           <div v-else-if="column === 'init_upload_date'" class="cell-content" >
@@ -95,18 +94,14 @@
         <div style="display: flex; justify-content: space-between">
           Total: {{ samplesStore.filteredCount }} Samples
         </div>
-        <Paginator
-          :totalRecords="samplesStore.filteredCount"
-          v-model:rows="samplesStore.perPage"
-          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
-          v-model:first="samplesStore.firstRow"
-          @update:rows="samplesStore.updateSamples()"
-        />
+        <Paginator :totalRecords="samplesStore.filteredCount" v-model:rows="samplesStore.perPage"
+          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="samplesStore.firstRow"
+          @update:rows="samplesStore.updateSamples()" />
       </template>
     </DataTable>
 
     <Dialog class="flex" v-model:visible="samplesStore.loading" modal :closable="false" header="Loading...">
-          <ProgressSpinner class="flex-1 p-3" size="small" v-if="samplesStore.loading" style="color: whitesmoke" />
+      <ProgressSpinner class="flex-1 p-3" size="small" v-if="samplesStore.loading" style="color: whitesmoke" />
     </Dialog>
 
     <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
@@ -137,11 +132,12 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading" @click="exportFile(exportFormat)" />
+        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading"
+          @click="exportFile(exportFormat)" />
       </div>
     </Dialog>
   </div>
-  
+  <Toast ref="toast" />
 </template>
 
 <script lang="ts">
@@ -177,7 +173,7 @@ export default {
       this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
     },
     onColReorder(event) {
-     const { dragIndex, dropIndex } = event; 
+      const { dragIndex, dropIndex } = event;
       // Rearrange columns based on dragIndex and dropIndex
       const reorderedColumns = ['name', ...this.selectedColumns]; // note: 'name' is fixed and cant be reordered
       const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
@@ -213,13 +209,31 @@ export default {
         return '';
       }
     },
+    showToastError(message: string) {
+      this.$refs.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: message,
+        life: 10000
+      });
+    }
   },
   computed: {
   },
   mounted() {
 
   },
+  watch: {
+    "samplesStore.errorMessage"(newValue) {
+      if (newValue) {
+        this.showToastError(newValue);
+        // Reset the state to prevent multiple calls
+        this.samplesStore.errorMessage = "";
+      }
+    }
+  }
 }
+
 </script>
 
 <style scoped>
@@ -289,5 +303,4 @@ export default {
 :deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
   background: var(--primary-color);
 }
-
 </style>
