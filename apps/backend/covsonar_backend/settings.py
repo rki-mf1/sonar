@@ -37,13 +37,11 @@ env = environ.Env(
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent
+STATIC_ROOT = BASE_DIR / "covsonar2_server/test/static"
 
 # Take environment variables from .env file
-environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
-
-PROJECT_ROOT = os.path.normpath(os.path.dirname(__file__))
-
-STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
+environ.Env.read_env(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/

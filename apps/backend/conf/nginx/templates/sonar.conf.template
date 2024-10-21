@@ -14,9 +14,9 @@ server {
     proxy_read_timeout 600;
   }
 
-  # Serve Django static files
+  # Serve Django static files from Nginx
   location /static/ {
-    proxy_pass http://sonar-django-backend:9080/static/;
+    alias /staticfiles/;
   }
 
 
