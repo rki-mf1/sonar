@@ -21,7 +21,7 @@
       >
       <template #empty> No Results </template>
       <template #header>
-        <div style="display: flex; justify-content: space-between">
+        <div style="display: flex; justify-content: space-between; ">
           <div>
             <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true"/>
           </div>
@@ -46,10 +46,11 @@
       </template>
       <Column field="name" sortable :reorderableColumn="false">
         <template #header>
-          <span v-tooltip="metaDataCoverage('name')">ID</span>
+          <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
-        <template #body="slotProps">
-          <div style="height: 1.5em; width: 9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction: rtl;" :title="slotProps.data.name">
+        <template #body="slotProps" >
+          <div class="cell-content" 
+            :title="slotProps.data.name">
             {{ slotProps.data.name }}
           </div>
         </template>
@@ -58,9 +59,9 @@
         <template #header>
           <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
         </template>
-        <template #body="slotProps">
-          <div v-if="column === 'genomic_profiles'">
-            <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
+        <template #body="slotProps" >
+          <div v-if="column === 'genomic_profiles'" class="cell-content" >
+            <div>
               <GenomicProfileLabel
                 v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
                 :variantString="variant"
@@ -69,8 +70,8 @@
               />
             </div>
           </div>
-          <div v-else-if="column === 'proteomic_profiles'">
-            <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
+          <div v-else-if="column === 'proteomic_profiles'" class="cell-content"  >
+            <div >
               <GenomicProfileLabel
                 v-for="(variant, index) in slotProps.data.proteomic_profiles"
                 :variantString="variant"
@@ -78,14 +79,14 @@
               />
             </div>
           </div>
-          <div v-else-if="column === 'init_upload_date'">
+          <div v-else-if="column === 'init_upload_date'" class="cell-content" >
             {{ formatDate(slotProps.data.init_upload_date) }}
           </div>
 
-          <div v-else-if="column === 'last_update_date'">
+          <div v-else-if="column === 'last_update_date'" class="cell-content" >
             {{ formatDate(slotProps.data.last_update_date) }}
           </div>
-          <span v-else>
+          <span v-else class="cell-content">
             {{ findProperty(slotProps.data.properties, column) }}
           </span>
         </template>
@@ -236,6 +237,23 @@ export default {
   box-shadow: var(--shadow);
 }
 
+.cell-content {
+  height: 2em; 
+  flex: 1;
+  min-width: 5rem;
+  max-width: 20rem;
+  overflow-x: auto; 
+  white-space: nowrap;
+  padding: 0;
+  margin: 0;
+}
+
+:deep(.p-datatable.p-datatable-lg .p-datatable-tbody  > tr > td ) {
+  padding-top: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: 0.5rem!important;
+}
 
 :deep(.p-button) {
   background: var(--primary-color);

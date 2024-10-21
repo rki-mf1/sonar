@@ -51,7 +51,6 @@
             />
         </div>
 
-
         <div class="filter-container">
           <span style="font-weight: 500">DNA/AA Profile</span>
           <InputText
@@ -75,11 +74,11 @@
             icon="pi pi-filter" 
             label="&nbsp;Set Advanced Filters" 
             raised
-            :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" 
+            :style="{ border: isFiltersSet ? '4px solid var(--secondary-color)' : '' }" 
             @click="displayDialogFilter = true" 
         />
             <Button 
-              style="background-color: var(--secondary-color); border: 4px solid #cf3004 "
+              style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
               label="Update sample selection" 
               @click="filterSamples">
             </Button>
@@ -278,7 +277,6 @@ export default {
 
 <style scoped>
 .filter-and-statistic-panel {
-  height: 14rem;
   width: 98%;
   display: flex;
   justify-content: space-between;
@@ -295,29 +293,28 @@ export default {
   align-items: flex-start; 
   width: 50%;
   margin: 10px;
-  gap: 10px;
 }
 
 .statistics-right {
+  display: flex;
   height: auto; 
   gap: 10px;
   margin-left: auto; 
-  align-items: flex-end;  
+  align-items: center;  
 }
 
 .filter-container {
   display: flex;
   align-items: center; 
   gap: 10px;        
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 
 .button-1{
   display: flex;
   justify-content: space-between; 
-  align-items: flex-end; 
-  gap: 10px;        
-  margin-bottom: 10px;
+  align-items: flex-end;      
+  margin-bottom: 0px;
 }
 
 .exclude-switch {

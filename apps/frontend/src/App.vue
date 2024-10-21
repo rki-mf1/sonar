@@ -110,12 +110,10 @@ body {
 
 main {
   flex: 1; 
-
   width: 98vw;
   border-radius: 20px;
   overflow: auto;
   box-shadow: var(--shadow);
-
 }
 
 header {
@@ -132,8 +130,11 @@ header {
   min-height: 100vh;  
 }
 
-.menu {
-  margin-left: 35%;
+:deep(.p-menuitem-content){
+  font-size: 24px;
+}
+:deep(.p-menubar){
+  padding: 0px
 }
 
 /* .p-menubar {
