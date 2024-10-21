@@ -88,7 +88,7 @@ export default {
     margin: 5px;
 }
 
-::v-deep .p-card .p-card-body {
+:deep(.p-card .p-card-body) {
     padding: 0.8rem !important;
 }
 </style>
