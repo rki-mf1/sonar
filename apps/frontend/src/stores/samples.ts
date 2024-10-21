@@ -61,7 +61,7 @@ export const useSamplesStore = defineStore('samples', {
       if (response.response && response.response.status) {
         const status = response.response.status;
         if (status >= 400 && status < 500) {
-          this.errorMessage = 'Client error occurred. Please check your input.';
+          this.errorMessage = 'Client error:\n'+ response.response.data.detail;
         } else if (status >= 500) {
           this.errorMessage = 'Server error occurred. Please try again later.';
         } else {
