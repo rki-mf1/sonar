@@ -34,23 +34,22 @@
         <div class="filter-container">
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect 
-            v-model="samplesStore.lineageTuple[0]" 
+            v-model="lineageFilter.lineageList" 
             display="chip" 
             :options="samplesStore.lineageOptions" 
             filter
             placeholder="Select Lineages" 
             class="w-full md:w-80"
             :virtualScrollerOptions="{ itemSize: 30 }"
-            :disabled="samplesStore.filterGroupFiltersHasLineageFilter" 
             />
             <Button 
             icon="pi pi-trash" 
             class="ml-2 p-button-sm" 
-            v-if="samplesStore.lineageTuple[0].length"
-            @click="clearLineageInput" 
+            v-if="lineageFilter.lineageList.length"
+            @click="removeLineageFilter" 
             />
             <div class="include-switch">
-              <InputSwitch v-model="samplesStore.lineageTuple[1]" />
+              <InputSwitch v-model="lineageFilter.includeSublineages" />
               Include Sublineages?
             </div>
         </div>
@@ -220,6 +219,14 @@ export default {
         exclude: false,
       });
     }
+    if (samplesStore.filterGroup.filters.lineageFilters.length === 0) {
+      samplesStore.filterGroup.filters.lineageFilters.push({
+        label: 'Lineages',
+        lineageList: [],
+        exclude: false,
+        includeSublineages: true,
+      });
+    }
     return {
       samplesStore,
       displayDialogFilter: false,
@@ -251,8 +258,18 @@ export default {
         this.samplesStore.updateSamples();
       }
     },
-    clearLineageInput() {
-      this.samplesStore.lineageTuple[0]  = [];
+    removeLineageFilter() {
+      if (this.samplesStore.filterGroup.filters.lineageFilters.length <= 1) {
+      this.samplesStore.filterGroup.filters.lineageFilters[0] = {
+        label: 'Lineages',
+        lineageList: [],
+        exclude: false,
+        includeSublineages: true,
+      };
+    }
+      else {
+        this.samplesStore.filterGroup.filters.lineageFilters.splice(0, 1);
+      }
     },
     closeAdvancedFilterDialog() {
       this.displayDialogFilter = false;
@@ -273,6 +290,9 @@ export default {
     profileFilter() {
       return this.samplesStore.filterGroup.filters.profileFilters[0];
     },
+    lineageFilter(){
+      return this.samplesStore.filterGroup.filters.lineageFilters[0];
+    }
   },
   mounted() {
   },

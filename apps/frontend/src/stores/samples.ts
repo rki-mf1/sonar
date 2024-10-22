@@ -23,7 +23,6 @@ export const useSamplesStore = defineStore('samples', {
     perPage: 10,
     firstRow: 0,
     ordering: '-collection_date',
-    lineageTuple: [[], true] as [string[], boolean],
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
     propertyOptions: [] as string[],
@@ -55,6 +54,7 @@ export const useSamplesStore = defineStore('samples', {
         offset: this.firstRow,
         ordering: this.ordering
       }
+
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
 
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
@@ -223,19 +223,6 @@ export const useSamplesStore = defineStore('samples', {
       // else {
       //   this.setDefaultTimeRange()
       // }
-
-      if (this.filterGroupFiltersHasLineageFilter) {
-        this.lineageTuple[0] = null
-      }
-
-      if (this.lineageTuple[0] && this.lineageTuple[0].length > 0 && !this.filterGroupFiltersHasLineageFilter) {
-        filters.filters.andFilter.push({
-          label: 'Lineages',
-          lineages: this.lineageTuple[0], //list of lineages, handeled as OR
-          exclude: false,
-          include_sublineages: this.lineageTuple[1]
-        })
-      }
 
       return filters as FilterGroupRoot
     }
