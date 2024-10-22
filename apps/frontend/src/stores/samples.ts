@@ -23,7 +23,7 @@ export const useSamplesStore = defineStore('samples', {
     perPage: 10,
     firstRow: 0,
     ordering: '-collection_date',
-    lineage: [] as string[],
+    lineageTuple: [[], true] as [string[], boolean],
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
     propertyOptions: [] as string[],
@@ -156,11 +156,12 @@ export const useSamplesStore = defineStore('samples', {
         }
       }
       for (const filter of filterGroup.filters.lineageFilters) {
-        if (filter.lineage && filter.lineage.length > 0) {
+        if (filter.lineageList && filter.lineageList.length > 0) {
           summary.andFilter.push({
             label: filter.label,
-            lineage: filter.lineage,
-            exclude: filter.exclude
+            lineages: filter.lineageList,
+            exclude: filter.exclude,
+            include_sublineages: filter.includeSublineages
           })
         }
       }
@@ -196,7 +197,7 @@ export const useSamplesStore = defineStore('samples', {
       return { filters: this.getFilterGroupFilters(this.filterGroup) }
     },
     filterGroupFiltersHasLineageFilter(state): boolean {
-      return this.filterGroupsFilters.filters.andFilter.some(item => item.label === "Sublineages") || this.filterGroupsFilters.filters.orFilter.some(item => item.label === "Sublineages");
+      return this.filterGroupsFilters.filters.andFilter.some(item => item.label === "Lineages") || this.filterGroupsFilters.filters.orFilter.some(item => item.label === "Lineages");
     },
     filterGroupFiltersHasDateFilter(state): boolean {
       return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") || this.filterGroupsFilters.filters.orFilter.some(item => item.property_name === "collection_date");
@@ -224,14 +225,15 @@ export const useSamplesStore = defineStore('samples', {
       // }
 
       if (this.filterGroupFiltersHasLineageFilter) {
-        this.lineage = null
+        this.lineageTuple[0] = null
       }
 
-      if (this.lineage && this.lineage.length > 0 && !this.filterGroupFiltersHasLineageFilter) {
+      if (this.lineageTuple[0] && this.lineageTuple[0].length > 0 && !this.filterGroupFiltersHasLineageFilter) {
         filters.filters.andFilter.push({
-          label: 'Sublineages',
-          lineage: this.lineage,
-          exclude: false
+          label: 'Lineages',
+          lineages: this.lineageTuple[0], //list of lineages, handeled as OR
+          exclude: false,
+          include_sublineages: this.lineageTuple[1]
         })
       }
 

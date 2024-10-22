@@ -34,21 +34,25 @@
         <div class="filter-container">
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect 
-            v-model="samplesStore.lineage" 
+            v-model="samplesStore.lineageTuple[0]" 
             display="chip" 
             :options="samplesStore.lineageOptions" 
             filter
             placeholder="Select Lineages" 
             class="w-full md:w-80"
-            :virtualScrollerOptions="{ itemSize: 50 }"
+            :virtualScrollerOptions="{ itemSize: 30 }"
             :disabled="samplesStore.filterGroupFiltersHasLineageFilter" 
             />
             <Button 
             icon="pi pi-trash" 
             class="ml-2 p-button-sm" 
-            v-if="samplesStore.lineage.length"
+            v-if="samplesStore.lineageTuple[0].length"
             @click="clearLineageInput" 
             />
+            <div class="include-switch">
+              <InputSwitch v-model="samplesStore.lineageTuple[1]" />
+              Include Sublineages?
+            </div>
         </div>
 
         <div class="filter-container">
@@ -248,7 +252,7 @@ export default {
       }
     },
     clearLineageInput() {
-      this.samplesStore.lineage = [];
+      this.samplesStore.lineageTuple[0]  = [];
     },
     closeAdvancedFilterDialog() {
       this.displayDialogFilter = false;
@@ -322,6 +326,16 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: 0.7em;
+  margin: 2.5px;
+}
+.include-switch {
+  /* font-variant: small-caps; */
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
 }
