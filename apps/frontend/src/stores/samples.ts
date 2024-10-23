@@ -13,6 +13,8 @@ import {
   StringDjangoFilterType,
   DateDjangoFilterType
 } from '@/util/types'
+import { reactive } from 'vue';
+import { watch, ref } from 'vue';
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
@@ -22,6 +24,7 @@ export const useSamplesStore = defineStore('samples', {
     loading: false,
     perPage: 10,
     firstRow: 0,
+    filtersChanged: false,
     ordering: '-collection_date',
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
@@ -35,7 +38,23 @@ export const useSamplesStore = defineStore('samples', {
     repliconAccessionOptions: [] as string[],
     lineageOptions: [] as string[],
     symbolOptions: [] as string[],
-    filterGroup: {
+    filterGroup: reactive({
+      filterGroups: [],
+      filters: {
+        propertyFilters: [],
+        profileFilters: [{"label":"Label","value":"","exclude":false}],
+        repliconFilters: [],
+        lineageFilter: {
+          label: "Lineages",
+          lineageList: [],
+          exclude: false,
+          includeSublineages: true,
+          isVisible: true,} // first lineage filer always shown
+      } 
+  }) as FilterGroup,
+  
+    DjangoFilterType,
+    lastSentFilterGroup: JSON.stringify({
       filterGroups: [],
       filters: {
         propertyFilters: [],
@@ -46,11 +65,10 @@ export const useSamplesStore = defineStore('samples', {
           lineageList: [],
           exclude: false,
           includeSublineages: true,
-          isVisible: true, // first lineage filer always shown
+          isVisible: true
         }
       }
-    } as FilterGroup,
-    DjangoFilterType
+    })
   }),
   actions: {
     async updateSamples() {
@@ -60,10 +78,12 @@ export const useSamplesStore = defineStore('samples', {
         offset: this.firstRow,
         ordering: this.ordering
       }
+      this.lastSentFilterGroup = JSON.stringify(this.filterGroup);
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
       this.filteredCount = this.filteredStatistics.filtered_total_count
       this.loading = false
+      this.filtersChanged = false
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
@@ -189,7 +209,20 @@ export const useSamplesStore = defineStore('samples', {
         return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)]
       }
     },
+    initializeWatchers() {
+    watch(
+      () => this.filterGroup,
+      (newFilters, oldFilters) => {
+        if (JSON.stringify(newFilters) !== this.lastSentFilterGroup) {
+          this.filtersChanged = true;  
+        } else {
+          this.filtersChanged = false; 
+        }
+      },
+      { deep: true }
+    );
   },
+},
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
       return { filters: this.getFilterGroupFilters(this.filterGroup) }
@@ -223,3 +256,15 @@ export const useSamplesStore = defineStore('samples', {
     }
   }
 });
+
+let storeInitialized = false;
+
+export function initializeStore() {
+  const store = useSamplesStore();
+
+  if (!storeInitialized) {
+    storeInitialized = true;
+
+
+  }
+}

@@ -47,11 +47,8 @@
               <InputSwitch v-model="lineageFilter.includeSublineages" />
               Include Sublineages?
             </div>
-            <div class="exclude-switch">
-            Exclude?
-            <InputSwitch v-model="lineageFilter.exclude" />
-          </div>
             <Button 
+            v-if="lineageFilter.lineageList.length>0"
             icon="pi pi-trash" 
             class="ml-2 p-button-sm" 
             @click="removeLineageFilter" 
@@ -66,14 +63,11 @@
             :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
             class="mr-1" 
             />
-          <div class="exclude-switch">
-              Exclude?
-            <InputSwitch v-model="profileFilter.exclude" />
-          </div>
           <Button 
             @click="removeProfileFilter" 
             icon="pi pi-trash"  
             class="ml-2 p-button-sm" 
+            v-if="profileFilter.value"
           />
         </div>
 
@@ -82,11 +76,13 @@
             icon="pi pi-filter" 
             label="&nbsp;Set Advanced Filters" 
             raised
-            :style="{ border: isFiltersSet ? '4px solid var(--secondary-color)' : '' }" 
+            style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+            :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
             @click="displayDialogFilter = true" 
         />
             <Button 
               style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+              :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
               label="Update sample selection" 
               @click="filterSamples">
             </Button>
@@ -217,6 +213,7 @@ export default {
   name: "Filters",
   data() {
     const samplesStore = useSamplesStore();
+    samplesStore.initializeWatchers();
     if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
       samplesStore.filterGroup.filters.profileFilters.push({
         label: 'Label',
@@ -274,8 +271,14 @@ export default {
     }
   },
   computed: {
-    isFiltersSet(): boolean {
-      return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
+    isAdvancedFiltersSet(): boolean {
+      return this.samplesStore.filterGroup.filterGroups.length > 0 // OR-group set
+      || this.samplesStore.filterGroup.filters.propertyFilters.length > 0 // property for first group set
+      || this.samplesStore.filterGroup.filters.repliconFilters.length > 0 // replicon for first group set
+      || this.samplesStore.filterGroup.filters.profileFilters.length > 1 // more than one profile filter
+      || this.samplesStore.filterGroup.filters.lineageFilter.exclude  // exclude set for first group lineage filter
+      || this.samplesStore.filterGroup.filters.profileFilters.some(
+        filter => filter.exclude === true) // exclude set for profile filter
     },
     isTimeRangeInvalid(): boolean {
       return this.samplesStore.timeRange.includes(null)
