@@ -117,6 +117,7 @@ export type LineageFilter = {
     lineageList: string[];
     exclude: boolean;
     includeSublineages:boolean;
+    isVisible:boolean,
 }
 
 export type GenomeFilter =
@@ -138,7 +139,7 @@ export type AndFilters = {
     propertyFilters: PropertyFilter[];
     profileFilters: ProfileFilter[];
     repliconFilters: RepliconFilter[];
-    lineageFilters: LineageFilter[]; 
+    lineageFilter: LineageFilter; // no AND filter possible for lineage, one sample has only one lineage
 }
 
 export type FilterGroup = {

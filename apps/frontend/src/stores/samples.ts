@@ -41,7 +41,13 @@ export const useSamplesStore = defineStore('samples', {
         propertyFilters: [],
         profileFilters: [],
         repliconFilters: [],
-        lineageFilters: []
+        lineageFilter: {
+          label: "Lineages",
+          lineageList: [],
+          exclude: false,
+          includeSublineages: true,
+          isVisible: true, // first lineage filer always shown
+        }
       }
     } as FilterGroup,
     DjangoFilterType
@@ -54,9 +60,7 @@ export const useSamplesStore = defineStore('samples', {
         offset: this.firstRow,
         ordering: this.ordering
       }
-
       this.samples = (await API.getInstance().getSampleGenomes(this.filters, params)).results
-
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
       this.filteredCount = this.filteredStatistics.filtered_total_count
       this.loading = false
@@ -155,15 +159,9 @@ export const useSamplesStore = defineStore('samples', {
           })
         }
       }
-      for (const filter of filterGroup.filters.lineageFilters) {
-        if (filter.lineageList && filter.lineageList.length > 0) {
-          summary.andFilter.push({
-            label: filter.label,
-            lineages: filter.lineageList,
-            exclude: filter.exclude,
-            include_sublineages: filter.includeSublineages
-          })
-        }
+      if (filterGroup.filters.lineageFilter.lineageList 
+            && filterGroup.filters.lineageFilter.lineageList.length > 0) {
+          summary.andFilter.push(filterGroup.filters.lineageFilter)
       }
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup))
@@ -195,9 +193,6 @@ export const useSamplesStore = defineStore('samples', {
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
       return { filters: this.getFilterGroupFilters(this.filterGroup) }
-    },
-    filterGroupFiltersHasLineageFilter(state): boolean {
-      return this.filterGroupsFilters.filters.andFilter.some(item => item.label === "Lineages") || this.filterGroupsFilters.filters.orFilter.some(item => item.label === "Lineages");
     },
     filterGroupFiltersHasDateFilter(state): boolean {
       return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") || this.filterGroupsFilters.filters.orFilter.some(item => item.property_name === "collection_date");

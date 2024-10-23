@@ -25,7 +25,7 @@
           <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
           </Button>
           <Button 
-            
+            class="ml-2 p-button-sm" 
             @click="removeTimeRange">
           <i class="pi pi-trash" style="font-size: medium"/>
           </Button>
@@ -42,16 +42,20 @@
             class="w-full md:w-80"
             :virtualScrollerOptions="{ itemSize: 30 }"
             />
-            <Button 
-            icon="pi pi-trash" 
-            class="ml-2 p-button-sm" 
-            v-if="lineageFilter.lineageList.length"
-            @click="removeLineageFilter" 
-            />
+
             <div class="include-switch">
               <InputSwitch v-model="lineageFilter.includeSublineages" />
               Include Sublineages?
             </div>
+            <div class="exclude-switch">
+            Exclude?
+            <InputSwitch v-model="lineageFilter.exclude" />
+          </div>
+            <Button 
+            icon="pi pi-trash" 
+            class="ml-2 p-button-sm" 
+            @click="removeLineageFilter" 
+            />
         </div>
 
         <div class="filter-container">
@@ -69,6 +73,7 @@
           <Button 
             @click="removeProfileFilter" 
             icon="pi pi-trash"  
+            class="ml-2 p-button-sm" 
           />
         </div>
 
@@ -219,14 +224,6 @@ export default {
         exclude: false,
       });
     }
-    if (samplesStore.filterGroup.filters.lineageFilters.length === 0) {
-      samplesStore.filterGroup.filters.lineageFilters.push({
-        label: 'Lineages',
-        lineageList: [],
-        exclude: false,
-        includeSublineages: true,
-      });
-    }
     return {
       samplesStore,
       displayDialogFilter: false,
@@ -259,17 +256,13 @@ export default {
       }
     },
     removeLineageFilter() {
-      if (this.samplesStore.filterGroup.filters.lineageFilters.length <= 1) {
-      this.samplesStore.filterGroup.filters.lineageFilters[0] = {
-        label: 'Lineages',
-        lineageList: [],
-        exclude: false,
-        includeSublineages: true,
-      };
-    }
-      else {
-        this.samplesStore.filterGroup.filters.lineageFilters.splice(0, 1);
-      }
+      this.samplesStore.filterGroup.filters.lineageFilter = {
+                                                              label: 'Lineages',
+                                                              lineageList: [],
+                                                              exclude: false,
+                                                              includeSublineages: true,
+                                                              isVisible: true,
+                                                            };
     },
     closeAdvancedFilterDialog() {
       this.displayDialogFilter = false;
@@ -291,7 +284,7 @@ export default {
       return this.samplesStore.filterGroup.filters.profileFilters[0];
     },
     lineageFilter(){
-      return this.samplesStore.filterGroup.filters.lineageFilters[0];
+      return this.samplesStore.filterGroup.filters.lineageFilter;
     }
   },
   mounted() {
