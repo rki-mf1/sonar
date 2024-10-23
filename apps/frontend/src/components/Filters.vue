@@ -50,6 +50,9 @@
               v-on:update-property-value-options="samplesStore.updatePropertyValueOptions" />
           </div>
         </div>
+        <div v-if="samplesStore.errorMessage" style="margin-top: 20px;">
+          <Message severity="error">{{ samplesStore.errorMessage }}</Message>
+        </div>
         <div style="display: flex; justify-content: end; gap: 10px">
           <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialog()"></Button>
         </div>
