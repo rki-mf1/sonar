@@ -138,6 +138,24 @@
     </Dialog>
   </div>
   <Toast ref="toast" />
+  <Toast ref="exportToast" position="bottom-right" group="br">
+    <template #container="{ message, closeCallback }">
+      <section class="flex p-3 gap-3 " style="border-radius: 10px">
+        <i class="pi pi-cloud-download text-primary-500 text-2xl"></i>
+        <div class="flex flex-column gap-3 w-full">
+          <p class="m-0 font-semibold text-base text-blue">{{ message.summary }}</p>
+          <p class="m-0 text-base text-700">{{ message.detail }}</p>
+          <div class="flex flex-column gap-2">
+            <ProgressBar mode="indeterminate" style="height: 6px"></ProgressBar>
+          </div>
+        </div>
+        <!-- Close Icon (X button) -->
+        <button class="p-toast-close p-link" style="position: absolute; top: 5px; right: 5px" @click="closeCallback">
+          <i class="pi pi-times"></i>
+        </button>
+      </section>
+    </template>
+  </Toast>
 </template>
 
 <script lang="ts">
@@ -164,10 +182,33 @@ export default {
       return property ? property.value : undefined;
     },
     exportFile(type: string) {
+      // Show the progress bar in the toast
+      this.$refs.exportToast.add({
+        severity: 'info',
+        summary: 'Exporting...',
+        detail: 'Your file is being prepared.',
+        id: 1,
+        group: 'br',
+        closable: true,
+      });
+
       this.displayDialogExport = false;
-      this.samplesStore.loading = true;
-      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.selectedColumns, this.samplesStore.ordering, type == "xlsx");
-      this.samplesStore.loading = false;
+      // this.samplesStore.loading = true;
+      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.selectedColumns, this.samplesStore.ordering, type == "xlsx")
+        .then(() => {
+          // Export completed, close the toast
+          console.log("complete");
+          this.$toast.removeGroup('br')
+        })
+        .catch((error) => {
+          // Handle the error, also close the toast in case of error
+          this.showToastError('Export failed. Please try again.');
+          this.$toast.removeGroup('br')
+        })
+        .finally(() => {
+          // this.samplesStore.loading = false;
+        });
+      //this.samplesStore.loading = false;
     },
     columnSelection(value) {
       this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
@@ -228,7 +269,7 @@ export default {
       if (newValue) {
         this.showToastError(newValue);
         // Reset the state to prevent multiple calls
-        this.samplesStore.errorMessage = "";
+        // this.samplesStore.errorMessage = "";
       }
     }
   }
