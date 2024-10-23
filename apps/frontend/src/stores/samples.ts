@@ -238,7 +238,7 @@ export const useSamplesStore = defineStore('samples', {
       // }
 
       if (this.filterGroupFiltersHasLineageFilter) {
-        this.lineage = null
+        this.lineage = [];
       }
 
       if (this.lineage && this.lineage.length > 0 && !this.filterGroupFiltersHasLineageFilter) {
