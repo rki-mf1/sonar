@@ -59,10 +59,6 @@
             :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
             class="mr-1" 
             />
-          <div class="exclude-switch">
-              Exclude?
-            <InputSwitch v-model="profileFilter.exclude" />
-          </div>
           <Button 
             @click="removeProfileFilter" 
             icon="pi pi-trash"  
