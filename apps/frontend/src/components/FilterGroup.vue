@@ -446,7 +446,6 @@ export default {
       }
     },
     initializeOperators(filter: { fetchOptions?: boolean; label?: string; value?: string; propertyName: any; filterType?: DjangoFilterType | null; }) {
-      console.log("initializeOperators: " + filter.propertyName)
       const propertyType = this.propertiesDict[filter.propertyName];
       let newOperators = [];
 
