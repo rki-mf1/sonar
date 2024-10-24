@@ -50,6 +50,7 @@ export const useSamplesStore = defineStore('samples', {
   }),
   actions: {
     async updateSamples() {
+      this.errorMessage = ''
       this.loading = true
       const params = {
         limit: this.perPage,
