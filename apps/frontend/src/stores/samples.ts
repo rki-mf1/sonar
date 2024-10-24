@@ -49,7 +49,7 @@ export const useSamplesStore = defineStore('samples', {
           lineageList: [],
           exclude: false,
           includeSublineages: true,
-          isVisible: true,} // first lineage filer always shown
+          isVisible: true,} // first lineage filter always shown
       } 
   }) as FilterGroup,
   
