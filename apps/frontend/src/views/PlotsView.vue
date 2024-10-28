@@ -19,14 +19,14 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <Panel v-else header="Lineage Plot" class="w-full">
           <h4>Area Plot - COVID-19 Lineages Over Time</h4>
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-16rem">
+          <div style="width: 100%; display: flex; justify-content: center" class="h-30rem">
             <Chart type="line" ref="lineageAreaPlot" :data="lineage_areaData()" :options="lineage_areaChartOptions()"
-              style="width: 100%" />
+              style="width: 100%; height: 100%" />
           </div>
           <h4>Stacked Bar Plot - Lineage Distribution by Calendar Week</h4>
-          <div style="width: 95%; display: flex; justify-content: center" class="h-16rem">
+          <div style="width: 100%; display: flex; justify-content: center" class="h-26rem">
             <Chart type="bar" ref="lineageBarPlot" :data="lineage_barData()" :options="lineage_barChartOptions()"
-              style="width: 100%;" />
+              style="width: 100%; height: 100%" />
           </div>
         </Panel>
       </div>
@@ -112,8 +112,9 @@
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Length" class="w-full">
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-20rem">
-            <Chart type="scatter" :data="lengthChartData()" :options="lengthChartOptions()" />
+          <div style="width: 100%; display: flex; justify-content: center" class="h-20rem">
+            <Chart type="bar" :data="lengthChartData()" :options="lengthChartOptions()"
+              style="width: 100%; height: 100%" /> <!-- scatter -->
           </div>
         </Panel>
       </div>
@@ -217,7 +218,9 @@ export default {
               color: textColor
             }
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     lineage_barData() {
@@ -247,12 +250,43 @@ export default {
     lineage_barChartOptions() {
       return {
         plugins: {
-          legend: { display: true },
+          legend: { display: true, position: "bottom", },
+          // tooltip: {
+          //   mode: 'index',
+          //   intersect: false,
+          // },
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+            pan: {
+              enabled: true,
+              mode: 'x'
+            },
+          }
         },
         scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true, max: 100 },
-        }
+          x: {
+            stacked: true,
+            beginAtZero: true,
+            min: 0,
+            max: 30,
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function (value) {
+                return value + '%'; // Add percentage symbol
+              },
+            },
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       }
     },
     lineage_areaData() {
@@ -289,11 +323,38 @@ export default {
           legend: {
             display: true,
           },
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+            pan: {
+              enabled: true,
+              mode: 'x'
+            },
+          }
         },
         scales: {
-          x: { type: 'time', time: { unit: 'month' } },
-          y: { beginAtZero: true, stacked: true },
-        }
+          x: {
+            stacked: true,
+            beginAtZero: true,
+            min: 0,
+            max: 10,
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function (value) {
+                return value + '%'; // Add percentage symbol
+              },
+            },
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       }
     },
     chartData() {
@@ -404,7 +465,9 @@ export default {
               mode: 'xy',
             },
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     sequencingReasonChartData() {
@@ -427,17 +490,19 @@ export default {
             display: true,
             position: 'right'
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     lengthChartData() {
+      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['length'] : {};
       return {
-        labels: ['Sample 1', 'Sample 2', 'Sample 3', 'Sample 4'],
+        labels: Object.keys(_data),
         datasets: [
           {
-            label: 'Length',
-            data: [{ x: 23632, y: 23632 }, { x: 23632, y: 23632 }, { x: 29232, y: 29232 }, { x: 26232, y: 26232 }],
-            backgroundColor: '#42A5F5'
+            data: Object.values(_data),
+            backgroundColor: '#FFD1DC'
           }
         ]
       };
@@ -453,7 +518,9 @@ export default {
           y: {
             beginAtZero: true
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     hostChartData() {
@@ -482,7 +549,9 @@ export default {
           x: {
             beginAtZero: true
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     labChartData() {
@@ -518,12 +587,15 @@ export default {
             limits: {
               x: { min: 0, minRange: 10 },
             },
-          }
+          },
+
         },
         scales: {
           x: { stacked: true },
           y: { stacked: true, beginAtZero: true }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     zipCodeChartData() {
@@ -568,7 +640,9 @@ export default {
             beginAtZero: true,
             min: 0,
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     sampleTypeChartData() {
@@ -591,7 +665,9 @@ export default {
             display: true,
             position: 'right'
           }
-        }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       };
     },
     getHoverColor(str: string) {
@@ -609,7 +685,7 @@ export default {
       for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
       }
-      return Math.abs(hash) * (Math.random() * (10 - 5) + 5);
+      return Math.abs(hash); //* (Math.random() * (10 - 5) + 5);
     },
   }
 }

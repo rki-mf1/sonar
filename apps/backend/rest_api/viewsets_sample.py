@@ -37,7 +37,7 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.core.paginator import Paginator
-
+from django.db.models.functions import TruncWeek, TruncMonth
 from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
@@ -474,6 +474,76 @@ class SampleViewSet(
                     result_dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
         return result_dict
 
+    def get_monthly_lineage_percentage_area_chart(self, queryset):
+        # Annotate each sample with the month based on collection_date
+        monthly_data = (
+            queryset
+            .annotate(month=TruncMonth('collection_date'))  # Group by month
+            .values('month', 'lineage')                     
+            .annotate(lineage_count=Count('id'))            # Count occurrences of each lineage per month
+            .order_by('month', 'lineage')
+        )
+        
+        # Calculate total samples per month to determine percentages
+        total_per_month = (
+            queryset
+            .annotate(month=TruncMonth('collection_date'))
+            .values('month')
+            .annotate(total_count=Count('id'))
+            .order_by('month')
+        )
+        
+        # Create a dictionary for quick lookup of total counts per month
+        month_totals = {item['month']: item['total_count'] for item in total_per_month}
+        
+        # Construct the final result with percentages
+        result = []
+        for item in monthly_data:
+            month_str = item['month'].strftime('%Y-%m')  # Format as "YYYY-MM"
+            percentage = (item['lineage_count'] / month_totals[item['month']]) * 100
+            result.append({
+                'date': month_str,
+                'lineage': item['lineage'],
+                'percentage': round(percentage, 2)  
+            })
+        
+        return result
+
+    def get_weekly_lineage_percentage_bar_chart(self, queryset):
+        # Annotate each sample with the start of the week based on collection_date
+        weekly_data = (
+            queryset
+            .annotate(week=TruncWeek('collection_date'))  # Group by week
+            .values('week', 'lineage')                    
+            .annotate(lineage_count=Count('id'))          # Count occurrences of each lineage per week
+            .order_by('week', 'lineage')
+        )
+        
+        # Calculate total samples per week to determine percentages
+        total_per_week = (
+            queryset
+            .annotate(week=TruncWeek('collection_date'))
+            .values('week')
+            .annotate(total_count=Count('id'))
+            .order_by('week')
+        )
+        
+        # Create a dictionary for quick lookup of total counts per week
+        week_totals = {item['week']: item['total_count'] for item in total_per_week}
+        
+        # Construct the final result with percentages
+        result = []
+        for item in weekly_data:
+            week_str = item['week'].strftime('%Y-W%U')  # Format as "YYYY-WXX"
+            percentage = (item['lineage_count'] / week_totals[item['week']]) * 100
+            result.append({
+                'week': week_str,
+                'lineage': item['lineage'],
+                'percentage': round(percentage, 2)
+            })
+        
+        return result
+
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
@@ -483,24 +553,26 @@ class SampleViewSet(
         dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
         dict["samples_per_week"] = self._get_samples_per_week(queryset)
         dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
-        dict["lineage_area_chart"] = [
-            {"date": "2023-08", "lineage": "23B", "percentage": 25},
-            {"date": "2023-08", "lineage": "23D", "percentage": 35},
-            {"date": "2023-09", "lineage": "23B", "percentage": 45},
-            {"date": "2023-09", "lineage": "23D", "percentage": 35},
-            {"date": "2023-10", "lineage": "23B", "percentage": 15},
-            {"date": "2023-10", "lineage": "23D", "percentage": 95},
+        dict["lineage_area_chart"] = self.get_monthly_lineage_percentage_area_chart(queryset)
+        # [
+            # {"date": "2023-08", "lineage": "23B", "percentage": 25},
+            # {"date": "2023-08", "lineage": "23D", "percentage": 35},
+            # {"date": "2023-09", "lineage": "23B", "percentage": 45},
+            # {"date": "2023-09", "lineage": "23D", "percentage": 35},
+            # {"date": "2023-10", "lineage": "23B", "percentage": 15},
+            # {"date": "2023-10", "lineage": "23D", "percentage": 95},
             # Add more data points for other lineages and dates
-        ]
-        dict["lineage_bar_chart"] =  [
-            {"week": "2023-W40", "lineage": "BA.2.86", "percentage": 40},
-            {"week": "2023-W40", "lineage": "EG.5.1", "percentage": 20},
-            {"week": "2023-W41", "lineage": "BA.2.86", "percentage": 40},
-            {"week": "2023-W41", "lineage": "EG.5.1", "percentage": 20},
-            {"week": "2023-W42", "lineage": "BA.2.86", "percentage": 40},
-            {"week": "2023-W42", "lineage": "EG.5.1", "percentage": 20},
-            # Add more weekly data points for each lineage
-        ]
+        # ]
+        dict["lineage_bar_chart"] =  self.get_weekly_lineage_percentage_bar_chart(queryset) 
+        # [
+        #     {"week": "2023-W40", "lineage": "BA.2.86", "percentage": 40},
+        #     {"week": "2023-W40", "lineage": "EG.5.1", "percentage": 20},
+        #     {"week": "2023-W41", "lineage": "BA.2.86", "percentage": 40},
+        #     {"week": "2023-W41", "lineage": "EG.5.1", "percentage": 20},
+        #     {"week": "2023-W42", "lineage": "BA.2.86", "percentage": 40},
+        #     {"week": "2023-W42", "lineage": "EG.5.1", "percentage": 20},
+        #     ....
+        # ]
         dict["sequencing_tech"] =  self._get_sequencingTech_chart(queryset)
         dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
         dict["sample_type"] = self._get_sampleType_chart(queryset)
