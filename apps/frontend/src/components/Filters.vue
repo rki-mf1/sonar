@@ -3,21 +3,19 @@
     <div class="filter-left">
       <div >
         <div class="filter-container">
-          <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
+          <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
             v-model="samplesStore.timeRange[0]" 
             style="flex: auto; min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
             ></Calendar>
           <Calendar 
             v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
           ></Calendar>
           <Button 
             style="font-size: 10px; min-width: min-content;" 
@@ -76,7 +74,7 @@
             <Button 
               style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
               label="Update sample selection" 
-              @click="filterSamples">
+              @click="samplesStore.updateSamples">
             </Button>
         </div>
       </div>
@@ -234,15 +232,6 @@ export default {
         this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
       }
     },
-    filterSamples() {
-      if (!this.isTimeRangeInvalid) {
-        this.samplesStore.updateSamples();
-      }
-      else {
-        this.samplesStore.timeRange = [null, null]
-        this.samplesStore.updateSamples();
-      }
-    },
     clearLineageInput() {
       this.samplesStore.lineage = [];
     },
@@ -259,9 +248,9 @@ export default {
     isFiltersSet(): boolean {
       return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
     },
-    isTimeRangeInvalid(): boolean {
-      return this.samplesStore.timeRange.includes(null)
-    },
+    // isTimeRangeInvalid(): boolean {
+    //   return this.samplesStore.timeRange.includes(null)
+    // },
     profileFilter() {
       return this.samplesStore.filterGroup.filters.profileFilters[0];
     },

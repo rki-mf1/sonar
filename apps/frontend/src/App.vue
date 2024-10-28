@@ -80,9 +80,9 @@ export default {
   },
   mounted() {
     this.samplesStore.updateSamples()
-    this.samplesStore.setDefaultTimeRange()
-    this.samplesStore.updateLineageOptions()
+    this.samplesStore.updateFilteredStatistics()
     this.samplesStore.updatePropertyOptions()
+    this.samplesStore.updateLineageOptions()
     this.samplesStore.updateSymbolOptions()
     this.samplesStore.updateRepliconAccessionOptions()
   },

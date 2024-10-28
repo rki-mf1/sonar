@@ -68,13 +68,14 @@ export const useSamplesStore = defineStore('samples', {
         } else {
           this.errorMessage = 'An unknown error occurred.';
         }
-      }else{
+      } else{
         this.samples = response.results;
-        this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-        this.filteredCount = this.filteredStatistics.filtered_total_count
-
       }
       this.loading = false
+    },
+    async updateFilteredStatistics() {
+      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+      this.filteredCount = this.filteredStatistics.filtered_total_count
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
@@ -82,7 +83,6 @@ export const useSamplesStore = defineStore('samples', {
         new Date(statistics.first_sample_date),
         new Date(statistics.latest_sample_date ?? Date.now())
       ]
-      this.updateSamples()
     },
     updatePropertyValueOptions(propertyName: string) {
       if (this.propertyValueOptions[propertyName]) return
@@ -106,7 +106,11 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      this.propertyOptions = Object.keys(this.propertiesDict)
+      const filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+      this.propertyOptions = Object.keys(this.propertiesDict).filter( // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
+        (key) => filteredStatistics.meta_data_coverage[key] > 0 // if this.filteredStatistics is used here the options are not shown upon initial loading (???)
+      );
+      console.log(this.propertyOptions)
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
