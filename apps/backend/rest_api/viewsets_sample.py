@@ -382,8 +382,72 @@ class SampleViewSet(
             except ValueError as e:
                 LOGGER.error(f"Error with property_name: {property_name}, datatype: {datatype}")
                 LOGGER.error(f"Error message: {e}")
-        
+
         return dict
+
+    def _get_genomecomplete_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('genome_completeness').annotate(total=Count('genome_completeness')).order_by()
+        result_dict = {item['genome_completeness']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_lenght_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('length').annotate(total=Count('length')).order_by()
+        result_dict = {item['length']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_lab_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('lab').annotate(total=Count('lab')).order_by()
+        result_dict = {item['lab']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_host_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('host').annotate(total=Count('host')).order_by()
+        result_dict = {item['host']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_zip_code_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('zip_code').annotate(total=Count('zip_code')).order_by()
+        result_dict = {item['zip_code']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_sequencingReason_chart(self, queryset):
+        result_dict ={}
+        queryset = queryset.filter(
+            properties__property__name="sequencing_reason"
+        )
+
+        # the value_char" holds the sequencing reason values
+        grouped_queryset = queryset.values("properties__value_varchar").annotate(
+            total=Count("properties__value_varchar")
+        ).order_by()
+        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
+        result_dict = {item['properties__value_varchar']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_sampleType_chart(self, queryset):
+        result_dict ={}
+        queryset = queryset.filter(
+            properties__property__name="sample_type"
+        )
+
+        # the value_char" holds the sample type values
+        grouped_queryset = queryset.values("properties__value_varchar").annotate(
+            total=Count("properties__value_varchar")
+        ).order_by()
+        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
+        result_dict = {item['properties__value_varchar']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_sequencingTech_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('sequencing_tech').annotate(total=Count('sequencing_tech')).order_by()
+        result_dict = {item['sequencing_tech']: item['total'] for item in grouped_queryset}
+        return result_dict
 
     def _get_samples_per_week(self, queryset):
         result_dict = {}
@@ -418,7 +482,32 @@ class SampleViewSet(
         dict["filtered_total_count"] = queryset.count()
         dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
         dict["samples_per_week"] = self._get_samples_per_week(queryset)
-
+        dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
+        dict["lineage_area_chart"] = [
+            {"date": "2023-08", "lineage": "23B", "percentage": 25},
+            {"date": "2023-08", "lineage": "23D", "percentage": 35},
+            {"date": "2023-09", "lineage": "23B", "percentage": 45},
+            {"date": "2023-09", "lineage": "23D", "percentage": 35},
+            {"date": "2023-10", "lineage": "23B", "percentage": 15},
+            {"date": "2023-10", "lineage": "23D", "percentage": 95},
+            # Add more data points for other lineages and dates
+        ]
+        dict["lineage_bar_chart"] =  [
+            {"week": "2023-W40", "lineage": "BA.2.86", "percentage": 40},
+            {"week": "2023-W40", "lineage": "EG.5.1", "percentage": 20},
+            {"week": "2023-W41", "lineage": "BA.2.86", "percentage": 40},
+            {"week": "2023-W41", "lineage": "EG.5.1", "percentage": 20},
+            {"week": "2023-W42", "lineage": "BA.2.86", "percentage": 40},
+            {"week": "2023-W42", "lineage": "EG.5.1", "percentage": 20},
+            # Add more weekly data points for each lineage
+        ]
+        dict["sequencing_tech"] =  self._get_sequencingTech_chart(queryset)
+        dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
+        dict["sample_type"] = self._get_sampleType_chart(queryset)
+        dict["host"] =  self._get_host_chart(queryset)
+        dict["length"] = self._get_lenght_chart(queryset)
+        dict["lab"] = self._get_lab_chart(queryset)
+        dict["zip_code"] = self._get_zip_code_chart(queryset)
         return Response(data=dict)
 
     def resolve_genome_filter(self, filters) -> Q:
@@ -455,11 +544,11 @@ class SampleViewSet(
         *args,
         **kwargs,):
         final_query = Q()
-       
+
         # Split the input value by either commas, whitespace, or both
         # mutations  = [x.strip() for x in value.split(',')]
         mutations = re.split(r'[\s,]+', value.strip())
-        for mutation in mutations:                  
+        for mutation in mutations:
             parsed_mutation = define_profile(mutation)
 
             # Check the parsed mutation type and call the appropriate filter function
@@ -469,7 +558,7 @@ class SampleViewSet(
                     ref_pos=int(parsed_mutation["ref_pos"]),
                     alt_nuc=parsed_mutation["alt_nuc"],
                 )
-            
+
             elif parsed_mutation.get("label") == "SNP AA":
                 q_obj = self.filter_snp_profile_aa(
                     protein_symbol=parsed_mutation["protein_symbol"],
@@ -506,19 +595,19 @@ class SampleViewSet(
                     ref_pos=int(parsed_mutation["ref_pos"]),
                     alt_aa=parsed_mutation["alt_aa"],
                 )
-            
+
             else:
-                
+
                 raise ValueError(f"Unsupported mutation type: {parsed_mutation.get('label')}")
-            
+
             # Combine queries with AND operator (&) for each mutation
             final_query &= q_obj
-        
+
         if exclude:
             final_query = ~final_query
 
         return final_query
-    
+
     def filter_annotation(
         self,
         property_name,
@@ -799,7 +888,7 @@ class SampleViewSet(
 
         if not lineages.exists():
             raise Exception(f"Lineage {lineage} not found.")
-        
+
         sublineages = []
         for l in lineages:
             sublineages.extend(l.get_sublineages())
@@ -859,8 +948,8 @@ class SampleViewSet(
     #     return Response(
     #         {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
     #     )
-    
-    
+
+
     def _import_tsv(self, file_path):
         header = None
         with open(file_path, "r") as f:

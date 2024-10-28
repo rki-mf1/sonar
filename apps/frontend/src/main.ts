@@ -36,7 +36,19 @@ import { FaDna } from 'oh-vue-icons/icons'
 import { FaCalendarAlt } from "oh-vue-icons/icons";
 import Toast from 'primevue/toast';
 import ToastService from 'primevue/toastservice';
+import Fieldset from 'primevue/fieldset';
+import AnimateOnScroll from 'primevue/animateonscroll';
+import Panel from 'primevue/panel';
+import Skeleton from 'primevue/skeleton';
 addIcons(FaDna, FaCalendarAlt)
+
+// Import the chartjs plugin
+import { Chart as ChartJS } from 'chart.js/auto'; // Ensure you're importing Chart.js
+import zoomPlugin from 'chartjs-plugin-zoom';
+
+ChartJS.register(zoomPlugin);
+
+import 'chartjs-adapter-moment';
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -92,8 +104,14 @@ app.component('Accordion', Accordion)
 app.component("v-icon", OhVueIcon);
 app.component('OverlayPanel', OverlayPanel)
 app.component('Chip', Chip)
-app.directive('tooltip', Tooltip);
+
 app.component('Message', Message)
 app.component('Toast', Toast)
+app.component('Fieldset', Fieldset )
+app.component('Panel', Panel )
+app.component('Skeleton', Skeleton )
+
+app.directive('tooltip', Tooltip);
+app.directive('animateonscroll', AnimateOnScroll);
 
 app.mount('#app')
