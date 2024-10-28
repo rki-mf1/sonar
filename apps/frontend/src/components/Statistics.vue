@@ -33,7 +33,6 @@
         </template>
         </Card>
     </div>
-
 </template>
 
 <script lang="ts">
