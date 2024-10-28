@@ -1,5 +1,4 @@
 <template>
-
   <div class="table-content">
     
     <DataTable 
@@ -138,6 +137,7 @@
     </Dialog>
   </div>
   <Toast ref="toast" />
+
   <Toast ref="exportToast" position="bottom-right" group="br">
     <template #container="{ message, closeCallback }">
       <section class="flex p-3 gap-3 " style="border-radius: 10px">

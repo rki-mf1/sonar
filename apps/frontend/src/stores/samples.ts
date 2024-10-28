@@ -69,6 +69,7 @@ export const useSamplesStore = defineStore('samples', {
       }
     }
   })
+
   }),
   actions: {
     async updateSamples() {
@@ -266,7 +267,6 @@ export const useSamplesStore = defineStore('samples', {
       // else {
       //   this.setDefaultTimeRange()
       // }
-
       return filters as FilterGroupRoot
     }
   }
