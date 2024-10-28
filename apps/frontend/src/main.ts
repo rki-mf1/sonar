@@ -46,7 +46,6 @@ import Filters from "./components/Filters.vue";
 import GenomicProfileLabel from "./components/GenomicProfileLabel.vue";
 import SampleDetails from "./components/SampleDetails.vue";
 import Statistics from "./components/Statistics.vue";
-import ExampleUsage from "./components/ExampleUsage.vue";
 
 import App from './App.vue'
 import router from './router'
@@ -64,8 +63,6 @@ app.component('Filters', FilterGroup)
 app.component('GenomicProfileLabel', GenomicProfileLabel)
 app.component('SampleDetails', SampleDetails)
 app.component('Statistics', Statistics)
-app.component('ExampleUsage', ExampleUsage)
-
 app.component('IconField', IconField)
 app.component('Menubar', Menubar)
 app.component('InputIcon', InputIcon)
