@@ -52,6 +52,8 @@ export const useSamplesStore = defineStore('samples', {
           isVisible: true,} // first lineage filter always shown
       } 
   }) as FilterGroup,
+  DjangoFilterType,
+  errorMessage: '',
   
     DjangoFilterType,
     errorMessage: '',
