@@ -789,7 +789,7 @@ class SampleViewSet(
         self,
         lineageList,
         exclude: bool = False,
-        include_sublineages: bool = True,
+        includeSublineages: bool = True,
         *args,
         **kwargs,
     ):
@@ -801,7 +801,7 @@ class SampleViewSet(
         if not lineages.exists():
             raise Exception(f"Lineage {lineages} not found.")
         
-        if (include_sublineages):
+        if (includeSublineages):
             sublineages = []
             for l in lineages:
                 sublineages.extend(l.get_sublineages())

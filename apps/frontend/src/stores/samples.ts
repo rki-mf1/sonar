@@ -54,24 +54,21 @@ export const useSamplesStore = defineStore('samples', {
   }) as FilterGroup,
   DjangoFilterType,
   errorMessage: '',
-  
-    DjangoFilterType,
-    errorMessage: '',
-    lastSentFilterGroup: JSON.stringify({
-      filterGroups: [],
-      filters: {
-        propertyFilters: [],
-        profileFilters: [],
-        repliconFilters: [],
-        lineageFilter: {
-          label: "Lineages",
-          lineageList: [],
-          exclude: false,
-          includeSublineages: true,
-          isVisible: true
-        }
+  lastSentFilterGroup: JSON.stringify({
+    filterGroups: [],
+    filters: {
+      propertyFilters: [],
+      profileFilters: [],
+      repliconFilters: [],
+      lineageFilter: {
+        label: "Lineages",
+        lineageList: [],
+        exclude: false,
+        includeSublineages: true,
+        isVisible: true
       }
-    })
+    }
+  })
   }),
   actions: {
     async updateSamples() {
