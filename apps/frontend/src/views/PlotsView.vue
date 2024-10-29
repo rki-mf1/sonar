@@ -20,6 +20,7 @@
         <Panel v-else header="Lineage Plot" class="w-full shadow-2">
           <h4>Area Plot - COVID-19 Lineages Over Time</h4>
           <div style="width: 100%; display: flex; justify-content: center" class="h-30rem">
+
             <Chart type="line" ref="lineageAreaPlot" :data="lineage_areaData()" :options="lineage_areaChartOptions()"
               style="width: 100%; height: 100%" />
           </div>
@@ -146,13 +147,15 @@ export default {
   methods: {
     genomeCompleteChart() {
       const documentStyle = getComputedStyle(document.body);
-      const genomecomplete_chart = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {}
-
+      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {}
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
-        labels: Object.keys(genomecomplete_chart),
+        labels: Object.keys(_data),
         datasets: [
           {
-            data: Object.values(genomecomplete_chart),
+            data: Object.values(_data),
             backgroundColor: [documentStyle.getPropertyValue('--cyan-500'), documentStyle.getPropertyValue('--orange-500'), documentStyle.getPropertyValue('--gray-500')],
             hoverBackgroundColor: [documentStyle.getPropertyValue('--cyan-400'), documentStyle.getPropertyValue('--orange-400'), documentStyle.getPropertyValue('--gray-400')]
           }
@@ -164,6 +167,7 @@ export default {
       const textColor = '#333';
 
       return {
+        animation: false,
         plugins: {
           legend: {
             labels: {
@@ -179,29 +183,30 @@ export default {
     lineage_barData() {
       // Access lineage_bar_chart data from filteredStatistics
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lineage_bar_chart'] : {};
-
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       let datasets = [];
       let weeks = [];
 
-      if (_data.length > 0) {
+      const lineages = [...new Set(_data.map(item => item.lineage))];
+      weeks = [...new Set(_data.map(item => item.week))];
 
-        const lineages = [...new Set(_data.map(item => item.lineage))];
-        weeks = [...new Set(_data.map(item => item.week))];
+      datasets = lineages.map(lineage => ({
+        label: lineage,
+        data: weeks.map(
+          week =>
+            _data.find(item => item.week === week && item.lineage === lineage)?.percentage || 0
+        ),
+        backgroundColor: this.getColor(lineage),
+      }));
 
-        datasets = lineages.map(lineage => ({
-          label: lineage,
-          data: weeks.map(
-            week =>
-              _data.find(item => item.week === week && item.lineage === lineage)?.percentage || 0
-          ),
-          backgroundColor: this.getColor(lineage),
-        }));
-      }
 
       return { labels: weeks, datasets };
     },
     lineage_barChartOptions() {
       return {
+        animation: false,
         plugins: {
           legend: { display: true, position: "bottom", },
           // tooltip: {
@@ -246,35 +251,36 @@ export default {
       // Extract the data, ensuring it's an array
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lineage_area_chart'] : {};
 
-
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       let datasets = [];
       let dates = [];
-      if (_data.length > 0) {
-        // Extract unique lineages and dates
-        const lineages = [...new Set(_data.map(item => item.lineage))];
-        dates = [...new Set(_data.map(item => item.date))];
+      // Extract unique lineages and dates
+      const lineages = [...new Set(_data.map(item => item.lineage))];
+      dates = [...new Set(_data.map(item => item.date))];
 
-        dates.sort();
+      dates.sort();
+      datasets = lineages.map(lineage => ({
+        label: lineage,
+        data: dates.map(date =>
+          _data.find(item => item.date === date && item.lineage === lineage)
+            ?.percentage || 0
+        ),
+        fill: true,
+        backgroundColor: this.getColor(lineage),
+      }));
 
-        datasets = lineages.map(lineage => ({
-          label: lineage,
-          data: dates.map(date =>
-            _data.find(item => item.date === date && item.lineage === lineage)
-              ?.percentage || 0
-          ),
-          fill: true,
-          backgroundColor: this.getColor(lineage),
-        }));
-      }
 
       // Return the data structure expected by the area chart component
       return { labels: dates, datasets };
     },
     lineage_areaChartOptions() {
       return {
+        animation: false,
         plugins: {
           legend: {
-            display: true, position: "bottom",
+            display: false, position: "bottom",
           },
           zoom: {
             zoom: {
@@ -286,6 +292,12 @@ export default {
               enabled: true,
               mode: 'x'
             },
+          },
+          decimation: {
+            enabled: true,
+            algorithm: 'lttb',
+            samples: 1000,
+            threshold: 5
           }
         },
         scales: {
@@ -355,6 +367,7 @@ export default {
       const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
       const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
       return {
+        animation: false,
         plugins: {
           legend: {
             display: false
@@ -385,6 +398,9 @@ export default {
     },
     sequencingTechChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_tech'] : {};
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
         labels: Object.keys(_data),
         datasets: [
@@ -398,6 +414,7 @@ export default {
     },
     sequencingTechChartOptions() {
       return {
+        animation: false,
         plugins: {
           legend: {
             display: true,
@@ -425,6 +442,9 @@ export default {
     },
     sequencingReasonChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_reason'] : {};
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
         labels: Object.keys(_data),
         datasets: [
@@ -438,6 +458,7 @@ export default {
     },
     sequencingReasonChartOptions() {
       return {
+        animation: false,
         plugins: {
           legend: {
             display: true,
@@ -450,6 +471,9 @@ export default {
     },
     lengthChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['length'] : {};
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
         labels: Object.keys(_data),
         datasets: [
@@ -478,7 +502,9 @@ export default {
     },
     hostChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['host'] : {};
-
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
         labels: Object.keys(_data),
         datasets: [
@@ -492,6 +518,7 @@ export default {
     },
     hostChartOptions() {
       return {
+        animation: false,
         indexAxis: 'y',
         plugins: {
           legend: {
@@ -509,7 +536,9 @@ export default {
     },
     labChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lab'] : {};
-
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
         labels: Object.keys(_data),
         datasets: [
@@ -554,6 +583,9 @@ export default {
     },
     zipCodeChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['zip_code'] : {};
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
         labels: Object.keys(_data),
         datasets: [
@@ -567,6 +599,7 @@ export default {
     },
     zipCodeChartOptions() {
       return {
+        animation: false,
         indexAxis: 'y', // Makes the bar chart horizontal
         plugins: {
           legend: {
@@ -601,6 +634,9 @@ export default {
     },
     sampleTypeChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sample_type'] : {};
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
       return {
         labels: Object.keys(_data),
         datasets: [
@@ -614,6 +650,7 @@ export default {
     },
     sampleTypeChartOptions() {
       return {
+        animation: false,
         plugins: {
           legend: {
             display: true,
@@ -640,6 +677,18 @@ export default {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
       }
       return Math.abs(hash); //* (Math.random() * (10 - 5) + 5);
+    },
+
+    emptyChartData(label = 'No data available') {
+      return {
+        labels: [label], // A label to indicate no data
+        datasets: [
+          {
+            label: 'No data available',
+            data: [], // No data points
+          }
+        ]
+      };
     },
   }
 }
