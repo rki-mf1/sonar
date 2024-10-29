@@ -5,7 +5,7 @@
       <div class="col-12">
         <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <Panel v-else header="Week Calendar" class="w-full">
+        <Panel v-else header="Week Calendar" class="w-full shadow-2">
           <div style="height: 95%; width: 95%; display: flex; justify-content: center">
             <Chart ref="weekCalendarPlot" type="bar" :data="chartData()" :options="chartOptions()"
               style="width: 100%" />
@@ -17,7 +17,7 @@
     <div class="grid m-1">
       <div class="col-12">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <Panel v-else header="Lineage Plot" class="w-full">
+        <Panel v-else header="Lineage Plot" class="w-full shadow-2">
           <h4>Area Plot - COVID-19 Lineages Over Time</h4>
           <div style="width: 100%; display: flex; justify-content: center" class="h-30rem">
             <Chart type="line" ref="lineageAreaPlot" :data="lineage_areaData()" :options="lineage_areaChartOptions()"
@@ -37,8 +37,8 @@
       <!-- First Chart (Row 1, Column 1) -->
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Tech." class="w-full">
-          <div style="display: flex; justify-content: center" class="h-20rem">
+        <Panel v-else header="Sequencing Tech." class="w-full shadow-2">
+          <div style="justify-content: center" class="h-20rem">
             <Chart type="polarArea" :data="sequencingTechChartData()" :options="sequencingTechChartOptions()" style=""
               class="h-full" />
           </div>
@@ -48,8 +48,8 @@
       <!-- Second Chart (Row 1, Column 2) -->
       <div class=" col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Genome completeness" class="w-full">
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-20rem">
+        <Panel v-else header="Genome completeness" class="w-full shadow-2">
+          <div style=" display: flex; justify-content: center" class="h-20rem">
             <Chart type="pie" :data="genomeCompleteChart()" :options="genome_pieChartOptions()" style="" />
           </div>
         </Panel>
@@ -58,8 +58,8 @@
       <!-- Third Chart (Row 2, Column 1) -->
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Reason" class="w-full">
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-20rem">
+        <Panel v-else header="Sequencing Reason" class="w-full shadow-2">
+          <div style=" display: flex; justify-content: center" class="h-20rem">
             <Chart type="doughnut" :data="sequencingReasonChartData()" :options="sequencingReasonChartOptions()" />
           </div>
         </Panel>
@@ -68,7 +68,7 @@
       <!-- Fourth Chart (Row 2, Column 2) -->
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Zip Code" class="w-full">
+        <Panel v-else header="Zip Code" class="w-full shadow-2">
           <div style=" display: flex; justify-content: center" class="h-20rem">
             <Chart type="bar" :data="zipCodeChartData()" :options="zipCodeChartOptions()" class="w-full h-full" />
           </div>
@@ -81,7 +81,7 @@
       <!-- First Chart (Row 1, Column 1) -->
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sample Type" class="w-full">
+        <Panel v-else header="Sample Type" class="w-full shadow-2">
           <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-20rem">
             <Chart type="pie" :data="sampleTypeChartData()" :options="sampleTypeChartOptions()" />
           </div>
@@ -91,7 +91,7 @@
       <!-- Second Chart (Row 1, Column 2) -->
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Lab" class="w-full">
+        <Panel v-else header="Lab" class="w-full shadow-2">
           <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-20rem">
             <Chart type="bar" :data="labChartData()" :options="labChartOptions()" class="w-full h-full" />
           </div>
@@ -101,7 +101,7 @@
       <!-- Third Chart (Row 2, Column 1) -->
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Host" class="w-full">
+        <Panel v-else header="Host" class="w-full shadow-2">
           <div style="display: flex; justify-content: center" class="h-20rem">
             <Chart type="bar" :data="hostChartData()" :options="hostChartOptions()" class="w-full h-full" />
           </div>
@@ -111,7 +111,7 @@
       <!-- Fourth Chart (Row 2, Column 2) -->
       <div class="col-12 md:col-6">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Length" class="w-full">
+        <Panel v-else header="Length" class="w-full shadow-2">
           <div style="width: 100%; display: flex; justify-content: center" class="h-20rem">
             <Chart type="bar" :data="lengthChartData()" :options="lengthChartOptions()"
               style="width: 100%; height: 100%" /> <!-- scatter -->
@@ -140,57 +140,10 @@ export default {
     // }
   },
   mounted() {
-    //this.initializeCharts();
   },
   beforeUnmount() {
-    //this.destroyAllCharts();
   },
   methods: {
-    initializeCharts() {
-      // Initialize all charts by accessing their refs
-      this.$refs.weekCalendarPlot && this.createOrUpdateChart('weekCalendarPlot', this.chartData(), this.chartOptions());
-      this.$refs.lineageAreaPlot && this.createOrUpdateChart('lineageAreaPlot', this.lineage_areaData(), this.lineage_areaChartOptions());
-      this.$refs.lineageBarPlot && this.createOrUpdateChart('lineageBarPlot', this.lineage_barData(), this.lineage_barChartOptions());
-      // Add any additional charts here
-    },
-    updateCharts() {
-      // Update data of each chart when the data changes
-      if (this.chartInstances.weekCalendarPlot) {
-        this.chartInstances.weekCalendarPlot.data = this.chartData();
-        this.chartInstances.weekCalendarPlot.update();
-      }
-      if (this.chartInstances.lineageAreaPlot) {
-        this.chartInstances.lineageAreaPlot.data = this.lineage_areaData();
-        this.chartInstances.lineageAreaPlot.update();
-      }
-      if (this.chartInstances.lineageBarPlot) {
-        this.chartInstances.lineageBarPlot.data = this.lineage_barData();
-        this.chartInstances.lineageBarPlot.update();
-      }
-    },
-    destroyAllCharts() {
-      // Destroy all chart instances on component unmount
-      if (this.chartInstances) {
-        Object.keys(this.chartInstances).forEach((chartKey) => {
-          this.chartInstances[chartKey].destroy();
-          delete this.chartInstances[chartKey];
-        });
-      }
-
-    },
-    createOrUpdateChart(refName, data, options) {
-      const chartRef = this.$refs[refName];
-      if (this.chartInstances[refName]) {
-        // If chart instance already exists, destroy it before recreating
-        this.chartInstances[refName].destroy();
-      }
-      // Create and store new chart instance
-      this.chartInstances[refName] = new Chart(chartRef, {
-        type: chartRef.type, // Get chart type from ref (e.g., 'bar', 'line')
-        data: data,
-        options: options
-      });
-    },
     genomeCompleteChart() {
       const documentStyle = getComputedStyle(document.body);
       const genomecomplete_chart = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {}
@@ -321,7 +274,7 @@ export default {
       return {
         plugins: {
           legend: {
-            display: true,
+            display: true, position: "bottom",
           },
           zoom: {
             zoom: {
@@ -572,7 +525,8 @@ export default {
       return {
         plugins: {
           legend: {
-            display: true
+            display: false
+
           },
           zoom: {
             zoom: {
