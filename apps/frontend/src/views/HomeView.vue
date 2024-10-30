@@ -1,20 +1,39 @@
 <template>
-
-  <div class="content">
-
-    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows
-      :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
-      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect"
-      @rowUnselect="onRowUnselect">
+  <div class="table-content">
+    
+    <DataTable 
+      :value="samplesStore.samples" 
+      style="max-width: 95vw" 
+      size="large" 
+      dataKey="name" 
+      stripedRows 
+      :reorderableColumns="true" 
+      @columnReorder="onColReorder" 
+      scrollable 
+      scrollHeight="flex" 
+      sortable
+      @sort="sortingChanged($event)" 
+      selectionMode="single" 
+      v-model:selection="selectedRow" 
+      @rowSelect="onRowSelect" 
+      @rowUnselect="onRowUnselect"
+      >
       <template #empty> No Results </template>
       <template #header>
-        <div style="display: flex; justify-content: space-between">
+        <div style="display: flex; justify-content: space-between; ">
           <div>
             <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
           </div>
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter
-              placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+            <MultiSelect 
+              v-model="selectedColumns" 
+              display="chip" 
+              :options="samplesStore.propertyOptions" 
+              filter 
+              placeholder="Select Columns" 
+              class="w-full md:w-20rem" 
+              @update:modelValue="columnSelection"
+              >
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
                   {{ selectedColumns.length }} columns selected
@@ -26,11 +45,10 @@
       </template>
       <Column field="name" sortable :reorderableColumn="false">
         <template #header>
-          <span v-tooltip="metaDataCoverage('name')">ID</span>
+          <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
-        <template #body="slotProps">
-          <div
-            style="height: 1.5em; width: 9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction: rtl;"
+        <template #body="slotProps" >
+          <div class="cell-content" 
             :title="slotProps.data.name">
             {{ slotProps.data.name }}
           </div>
@@ -40,29 +58,33 @@
         <template #header>
           <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
         </template>
-        <template #body="slotProps">
-          <div v-if="column === 'genomic_profiles'">
-            <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-              <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
-                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
+        <template #body="slotProps" >
+          <div v-if="column === 'genomic_profiles'" class="cell-content" >
+            <div>
+              <GenomicProfileLabel
+                v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                :variantString="variant"
+                :annotations="slotProps.data.genomic_profiles[variant]"
+                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
+              />
             </div>
           </div>
-          <div v-else-if="column === 'proteomic_profiles'">
-            <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
-              <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
+          <div v-else-if="column === 'proteomic_profiles'" class="cell-content"  >
+            <div >
+              <GenomicProfileLabel
+                v-for="(variant, index) in slotProps.data.proteomic_profiles"
                 :variantString="variant"
                 :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
             </div>
           </div>
-          <div v-else-if="column === 'init_upload_date'">
+          <div v-else-if="column === 'init_upload_date'" class="cell-content" >
             {{ formatDate(slotProps.data.init_upload_date) }}
           </div>
 
-          <div v-else-if="column === 'last_update_date'">
+          <div v-else-if="column === 'last_update_date'" class="cell-content" >
             {{ formatDate(slotProps.data.last_update_date) }}
           </div>
-          <span v-else>
+          <span v-else class="cell-content">
             {{ findProperty(slotProps.data.properties, column) }}
           </span>
         </template>
@@ -115,6 +137,7 @@
     </Dialog>
   </div>
   <Toast ref="toast" />
+
   <Toast ref="exportToast" position="bottom-right" group="br">
     <template #container="{ message, closeCallback }">
       <section class="flex p-3 gap-3 " style="border-radius: 10px">
@@ -255,7 +278,8 @@ export default {
 </script>
 
 <style scoped>
-.content {
+
+.table-content {
   height: 80%;
   width: 98%;
   display: flex;
@@ -268,6 +292,23 @@ export default {
   box-shadow: var(--shadow);
 }
 
+.cell-content {
+  height: 2em; 
+  flex: 1;
+  min-width: 5rem;
+  max-width: 20rem;
+  overflow-x: auto; 
+  white-space: nowrap;
+  padding: 0;
+  margin: 0;
+}
+
+:deep(.p-datatable.p-datatable-lg .p-datatable-tbody  > tr > td ) {
+  padding-top: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: 0.5rem!important;
+}
 
 :deep(.p-button) {
   background: var(--primary-color);

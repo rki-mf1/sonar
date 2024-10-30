@@ -44,20 +44,29 @@
               Exclude?
               <InputSwitch v-model="filter[key]" />
             </div>
-            <Dropdown v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" :placeholder="key"
-              :options="symbolOptions" v-model="filter[key]" style="flex: auto" class="mr-1" />
-            <InputText v-else-if="key != 'label'" v-model="filter[key]" style="flex: auto" :placeholder="key"
+            <Dropdown 
+              v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" 
+              :placeholder="key"
+              :options="symbolOptions" 
+              v-model="filter[key]" 
+              style="flex: auto" class="mr-1" />
+            <InputText 
+              v-else-if="key != 'label'" 
+              v-model="filter[key]" 
+              style="flex: auto" 
+              :placeholder="key"
               class="mr-1" />
-
           </div>
 
           <!-- the button has to stay outside-->
-          <Button type="button" severity="danger" size="small" @click="
-            filterGroup.filters?.profileFilters?.splice(
-              filterGroup.filters?.profileFilters?.indexOf(filter),
-              1
-            )
-            " icon="pi pi-trash" />
+          <Button 
+            type="button" 
+            severity="danger" 
+            size="small" 
+            @click="filterGroup.filters?.profileFilters?.splice(
+              filterGroup.filters?.profileFilters?.indexOf(filter), 1)" 
+            icon="pi pi-trash" 
+          />
         </div>
 
       </div>
@@ -117,12 +126,23 @@
 
     <!-- Button Bar -->
     <div class="button-bar">
-      <SplitButton size="small" label="" :model="filterTypeMethods" @click="addClassicFilter()">
-        <i class="pi pi-filter"></i>
-        <span style="font-weight: 500;">&nbsp; Add AND Filter</span>
+      <SplitButton 
+        size="small" 
+        label="" 
+        :model="filterTypeMethods">
+        <div class="filter-circle">
+          <i class="pi pi-filter"></i>
+        </div>
+        <span style="font-weight: 500;">
+          &nbsp; Add AND Filter
+        </span>
       </SplitButton>
       <!-- OR part -->
-      <Button size="small" icon="pi pi-filter" label="Add OR Group" @click="addOrFilterGroup"
+      <Button 
+        size="small" 
+        icon="pi pi-filter-fill" 
+        label="Add OR Group" 
+        @click="addOrFilterGroup"
         :disabled="cantAddOrGroup" />
     </div>
 
@@ -214,7 +234,7 @@ export default {
       ClassicFilter: {
         label: 'Label',
         value: '',
-        exclude: false
+        exclude: false,
       } as ClassicFilter,
       PropertyFilter: {
         label: 'Property',
@@ -233,6 +253,11 @@ export default {
         exclude: false
       } as LineageFilter,
       profileFilterTypes: {
+        ProfileFilter: {
+          label: 'Label',
+          value: '',
+          exclude: false,
+        } as ClassicFilter,
         SNPProfileNt: {
           label: 'SNP Nt',
           refNuc: '',
@@ -388,7 +413,6 @@ export default {
       }
     },
     initializeOperators(filter: { fetchOptions?: boolean; label?: string; value?: string; propertyName: any; filterType?: DjangoFilterType | null; }) {
-      console.log("initializeOperators: " + filter.propertyName)
       const propertyType = this.propertiesDict[filter.propertyName];
       let newOperators = [];
 
