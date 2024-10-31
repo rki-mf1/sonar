@@ -13,6 +13,8 @@ import {
   StringDjangoFilterType,
   DateDjangoFilterType
 } from '@/util/types'
+import { reactive } from 'vue';
+import { watch, ref } from 'vue';
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
@@ -22,8 +24,8 @@ export const useSamplesStore = defineStore('samples', {
     loading: false,
     perPage: 10,
     firstRow: 0,
+    filtersChanged: false,
     ordering: '-collection_date',
-    lineage: [] as string[],
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
     propertyOptions: [] as string[],
@@ -36,17 +38,38 @@ export const useSamplesStore = defineStore('samples', {
     repliconAccessionOptions: [] as string[],
     lineageOptions: [] as string[],
     symbolOptions: [] as string[],
-    filterGroup: {
+    filterGroup: reactive({
       filterGroups: [],
       filters: {
         propertyFilters: [],
-        profileFilters: [],
+        profileFilters: [{"label":"Label","value":"","exclude":false}],
         repliconFilters: [],
-        lineageFilters: []
+        lineageFilter: {
+          label: "Lineages",
+          lineageList: [],
+          exclude: false,
+          includeSublineages: true,
+          isVisible: true,} // first lineage filter always shown
+      } 
+  }) as FilterGroup,
+  DjangoFilterType,
+  errorMessage: '',
+  lastSentFilterGroup: JSON.stringify({
+    filterGroups: [],
+    filters: {
+      propertyFilters: [],
+      profileFilters: [],
+      repliconFilters: [],
+      lineageFilter: {
+        label: "Lineages",
+        lineageList: [],
+        exclude: false,
+        includeSublineages: true,
+        isVisible: true
       }
-    } as FilterGroup,
-    DjangoFilterType,
-    errorMessage: '',
+    }
+  })
+
   }),
   actions: {
     async updateSamples() {
@@ -57,6 +80,7 @@ export const useSamplesStore = defineStore('samples', {
         offset: this.firstRow,
         ordering: this.ordering
       }
+      this.lastSentFilterGroup = JSON.stringify(this.filterGroup);
       var response = (await API.getInstance().getSampleGenomes(this.filters, params))
       // Handle errors
       if (response.response && response.response.status) {
@@ -72,6 +96,7 @@ export const useSamplesStore = defineStore('samples', {
         this.samples = response.results;
       }
       this.loading = false
+      this.filtersChanged = false
     },
     async updateFilteredStatistics() {
       this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
@@ -172,14 +197,9 @@ export const useSamplesStore = defineStore('samples', {
           })
         }
       }
-      for (const filter of filterGroup.filters.lineageFilters) {
-        if (filter.lineage && filter.lineage.length > 0) {
-          summary.andFilter.push({
-            label: filter.label,
-            lineage: filter.lineage,
-            exclude: filter.exclude
-          })
-        }
+      if (filterGroup.filters.lineageFilter.lineageList 
+            && filterGroup.filters.lineageFilter.lineageList.length > 0) {
+          summary.andFilter.push(filterGroup.filters.lineageFilter)
       }
       for (const subFilterGroup of filterGroup.filterGroups) {
         summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup))
@@ -207,13 +227,23 @@ export const useSamplesStore = defineStore('samples', {
         return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)]
       }
     },
+    initializeWatchers() {
+    watch(
+      () => this.filterGroup,
+      (newFilters, oldFilters) => {
+        if (JSON.stringify(newFilters) !== this.lastSentFilterGroup) {
+          this.filtersChanged = true;  
+        } else {
+          this.filtersChanged = false; 
+        }
+      },
+      { deep: true }
+    );
   },
+},
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
       return { filters: this.getFilterGroupFilters(this.filterGroup) }
-    },
-    filterGroupFiltersHasLineageFilter(state): boolean {
-      return this.filterGroupsFilters.filters.andFilter.some(item => item.label === "Sublineages") || this.filterGroupsFilters.filters.orFilter.some(item => item.label === "Sublineages");
     },
     filterGroupFiltersHasDateFilter(state): boolean {
       return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") || this.filterGroupsFilters.filters.orFilter.some(item => item.property_name === "collection_date");
@@ -239,20 +269,19 @@ export const useSamplesStore = defineStore('samples', {
       // else {
       //   this.setDefaultTimeRange()
       // }
-
-      if (this.filterGroupFiltersHasLineageFilter) {
-        this.lineage = [];
-      }
-
-      if (this.lineage && this.lineage.length > 0 && !this.filterGroupFiltersHasLineageFilter) {
-        filters.filters.andFilter.push({
-          label: 'Sublineages',
-          lineage: this.lineage,
-          exclude: false
-        })
-      }
-
       return filters as FilterGroupRoot
     }
   }
 });
+
+let storeInitialized = false;
+
+export function initializeStore() {
+  const store = useSamplesStore();
+
+  if (!storeInitialized) {
+    storeInitialized = true;
+
+
+  }
+}

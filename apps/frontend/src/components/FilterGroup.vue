@@ -100,26 +100,35 @@
     </div>
 
     <!-- Lineage Filters -->
-    <div v-for="filter in filterGroup.filters?.lineageFilters" class="single-filter">
+    <div v-if= "filterGroup.filters.lineageFilter.isVisible 
+    || filterGroup.filters.lineageFilter.lineageList.length>0" class="single-filter">
       <div class="flex flex-column">
         <div class="flex align-items-center">
           <span class="filter-label">Lineage</span>
-          <MultiSelect v-model="filter.lineage" display="chip" :options="lineageOptions" filter
-            placeholder="Select Lineages" class="w-full md:w-80" />
-
+          <MultiSelect 
+            v-model="filterGroup.filters.lineageFilter.lineageList" 
+            display="chip" 
+            :options="lineageOptions" 
+            filter
+            placeholder="Select Lineages" 
+            :virtualScrollerOptions="{ itemSize: 30 }"
+            class="w-full md:w-80" 
+          />
+          <div class="include-switch">
+            <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
+            Include Sublineages?
+          </div>
           <div class="exclude-switch">
             Exclude?
-            <InputSwitch v-model="filter.exclude" />
+            <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
           </div>
-          <Button type="button" severity="danger" raised size="small" @click="
-            filterGroup.filters?.lineageFilters?.splice(
-              filterGroup.filters?.lineageFilters?.indexOf(filter),
-              1
-            )
-            " icon="pi pi-trash" />
-        </div>
-        <div class="flex align-items-center">
-          <small>*This search will return all sublineages of the selected lineage.</small>
+          <Button 
+            type="button" 
+            severity="danger" 
+            raised size="small" 
+            @click="filterGroup.filters.lineageFilter.lineageList = [];
+                    filterGroup.filters.lineageFilter.isVisible = false;" 
+            icon="pi pi-trash" />
         </div>
       </div>
     </div>
@@ -143,19 +152,26 @@
         icon="pi pi-filter-fill" 
         label="Add OR Group" 
         @click="addOrFilterGroup"
-        :disabled="cantAddOrGroup" />
+        :disabled="cantAddOrGroup"  />
     </div>
 
     <!-- Sub-Filter Groups -->
     <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
       <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px;">OR</span>
-      <FilterGroup :filterGroup="subFilterGroup" :propertyOptions="propertyOptions" :symbolOptions="symbolOptions"
-        :operators="operators" :propertyValueOptions="propertyValueOptions"
-        :repliconAccessionOptions="repliconAccessionOptions" :propertiesDict="propertiesDict"
-        :lineageOptions="lineageOptions" v-on:update-property-value-options="updatePropertyValueOptions" />
-      <Button type="button" severity="danger" size="small" style="float: right;" @click="
-        filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)
-        " @mouseenter="markGroup(subFilterGroup, true)" @mouseleave="markGroup(subFilterGroup, false)">
+      <FilterGroup 
+        :filterGroup="subFilterGroup" 
+        :propertyOptions="propertyOptions" 
+        :symbolOptions="symbolOptions"
+        :operators="operators" 
+        :propertyValueOptions="propertyValueOptions"
+        :repliconAccessionOptions="repliconAccessionOptions" 
+        :propertiesDict="propertiesDict"
+        :lineageOptions="lineageOptions" 
+        v-on:update-property-value-options="updatePropertyValueOptions" />
+      <Button type="button" severity="danger" size="small" style="float: right;" 
+        @click="filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)" 
+        @mouseenter="markGroup(subFilterGroup, true)" 
+        @mouseleave="markGroup(subFilterGroup, false)">
         <i class="pi pi-trash"></i>
       </Button>
     </div>
@@ -248,9 +264,11 @@ export default {
         exclude: false
       } as RepliconFilter,
       LineageFilter: {
-        label: 'Sublineages',
-        lineage: '',
-        exclude: false
+        label: 'Lineages',
+        lineageList: [],
+        exclude: false,
+        includeSublineages: true,
+        isVisible: false
       } as LineageFilter,
       profileFilterTypes: {
         ProfileFilter: {
@@ -343,13 +361,17 @@ export default {
           this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
         }
       })
-      menuItems.push({
-        label: 'LineageFilter',
-        icon: 'pi pi-plus',
-        command: () => {
-          this.filterGroup.filters.lineageFilters.push({ ...this.LineageFilter })
+      // only one lineage filter per group
+      if (!this.filterGroup.filters.lineageFilter.isVisible){
+        this.LineageFilter.isVisible = true
+        menuItems.push({
+          label: 'LineageFilter',
+          icon: 'pi pi-plus',
+          command: () => {
+            this.filterGroup.filters.lineageFilter = { ...this.LineageFilter }
         }
       })
+    }
       return menuItems
     },
     cantAddOrGroup(): boolean {
@@ -357,7 +379,7 @@ export default {
         this.filterGroup.filters.propertyFilters.length +
         this.filterGroup.filters.profileFilters.length +
         this.filterGroup.filters.repliconFilters.length +
-        this.filterGroup.filters.lineageFilters.length ==
+        this.filterGroup.filters.lineageFilter.lineageList.length ==
         0
       )
     }
@@ -386,7 +408,18 @@ export default {
     addOrFilterGroup() {
       this.filterGroup.filterGroups.push({
         filterGroups: [],
-        filters: { propertyFilters: [], profileFilters: [], repliconFilters: [], lineageFilters: [] }
+        filters: { 
+          propertyFilters: [], 
+          profileFilters: [], 
+          repliconFilters: [], 
+          lineageFilter: {
+          label: "Lineages",
+          lineageList: [],
+          exclude: false,
+          includeSublineages: true,
+          isVisible: false,
+        }
+      }
       })
     },
     markGroup(group: FilterGroup, mark: boolean) {
@@ -501,6 +534,16 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: 0.7em;
+  margin: 2.5px;
+}
+.include-switch {
+  /* font-variant: small-caps; */
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
 }

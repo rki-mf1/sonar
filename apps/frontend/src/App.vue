@@ -130,7 +130,7 @@ header {
 }
 
 :deep(.p-menuitem-content){
-  font-size: 24px;
+  font-size: 20px;
 }
 :deep(.p-menubar){
   padding: 0px

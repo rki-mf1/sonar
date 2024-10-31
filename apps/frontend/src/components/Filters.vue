@@ -23,7 +23,7 @@
           <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
           </Button>
           <Button 
-            
+            class="ml-2 p-button-sm" 
             @click="removeTimeRange">
           <i class="pi pi-trash" style="font-size: medium"/>
           </Button>
@@ -32,20 +32,24 @@
         <div class="filter-container">
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect 
-            v-model="samplesStore.lineage" 
+            v-model="lineageFilter.lineageList" 
             display="chip" 
             :options="samplesStore.lineageOptions" 
             filter
             placeholder="Select Lineages" 
             class="w-full md:w-80"
-            :virtualScrollerOptions="{ itemSize: 50 }"
-            :disabled="samplesStore.filterGroupFiltersHasLineageFilter" 
+            :virtualScrollerOptions="{ itemSize: 30 }"
             />
+
+            <div class="include-switch">
+              <InputSwitch v-model="lineageFilter.includeSublineages" />
+              Include Sublineages?
+            </div>
             <Button 
+            v-if="lineageFilter.lineageList.length>0"
             icon="pi pi-trash" 
             class="ml-2 p-button-sm" 
-            v-if="samplesStore.lineage.length"
-            @click="clearLineageInput" 
+            @click="removeLineageFilter" 
             />
         </div>
 
@@ -60,6 +64,8 @@
           <Button 
             @click="removeProfileFilter" 
             icon="pi pi-trash"  
+            class="ml-2 p-button-sm" 
+            v-if="profileFilter.value"
           />
         </div>
 
@@ -68,11 +74,13 @@
             icon="pi pi-filter" 
             label="&nbsp;Set Advanced Filters" 
             raised
-            :style="{ border: isFiltersSet ? '4px solid var(--secondary-color)' : '' }" 
+            style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+            :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
             @click="displayDialogFilter = true" 
         />
             <Button 
               style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+              :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
               label="Update sample selection" 
               @click="samplesStore.updateSamples">
             </Button>
@@ -203,6 +211,7 @@ export default {
   name: "Filters",
   data() {
     const samplesStore = useSamplesStore();
+    samplesStore.initializeWatchers();
     if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
       samplesStore.filterGroup.filters.profileFilters.push({
         label: 'Label',
@@ -232,8 +241,24 @@ export default {
         this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
       }
     },
-    clearLineageInput() {
-      this.samplesStore.lineage = [];
+
+    filterSamples() {
+      if (!this.isTimeRangeInvalid) {
+        this.samplesStore.updateSamples();
+      }
+      else {
+        this.samplesStore.timeRange = [null, null]
+        this.samplesStore.updateSamples();
+      }
+    },
+    removeLineageFilter() {
+      this.samplesStore.filterGroup.filters.lineageFilter = {
+                                                              label: 'Lineages',
+                                                              lineageList: [],
+                                                              exclude: false,
+                                                              includeSublineages: true,
+                                                              isVisible: true,
+                                                            };
     },
     closeAdvancedFilterDialog() {
       this.displayDialogFilter = false;
@@ -245,8 +270,14 @@ export default {
     }
   },
   computed: {
-    isFiltersSet(): boolean {
-      return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
+    isAdvancedFiltersSet(): boolean {
+      return this.samplesStore.filterGroup.filterGroups.length > 0 // OR-group set
+      || this.samplesStore.filterGroup.filters.propertyFilters.length > 0 // property for first group set
+      || this.samplesStore.filterGroup.filters.repliconFilters.length > 0 // replicon for first group set
+      || this.samplesStore.filterGroup.filters.profileFilters.length > 1 // more than one profile filter
+      || this.samplesStore.filterGroup.filters.lineageFilter.exclude  // exclude set for first group lineage filter
+      || this.samplesStore.filterGroup.filters.profileFilters.some(
+        filter => filter.exclude === true) // exclude set for profile filter
     },
     // isTimeRangeInvalid(): boolean {
     //   return this.samplesStore.timeRange.includes(null)
@@ -254,6 +285,9 @@ export default {
     profileFilter() {
       return this.samplesStore.filterGroup.filters.profileFilters[0];
     },
+    lineageFilter(){
+      return this.samplesStore.filterGroup.filters.lineageFilter;
+    }
   },
   mounted() {
   },
@@ -307,6 +341,16 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-size: 0.7em;
+  margin: 2.5px;
+}
+.include-switch {
+  /* font-variant: small-caps; */
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
 }
