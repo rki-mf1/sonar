@@ -1,45 +1,46 @@
 import collections
 import csv
-from io import BytesIO
 import json
 import os
 import pickle
 import sys
 import time
-from typing import Any
-from typing import Dict
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Union
 import zipfile
+from io import BytesIO
+from typing import Any, Dict, Iterator, List, Optional, Union
 
-from mpire import WorkerPool
 import pandas as pd
+from mpire import WorkerPool
 from sonar_cli.align import sonarAligner
 from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
-from sonar_cli.basic import _check_property
-from sonar_cli.basic import _check_reference
-from sonar_cli.basic import _is_import_required
-from sonar_cli.basic import _log_import_mode
-from sonar_cli.basic import construct_query
+from sonar_cli.basic import (
+    _check_property,
+    _check_reference,
+    _is_import_required,
+    _log_import_mode,
+    construct_query,
+)
 from sonar_cli.cache import sonarCache
-from sonar_cli.common_utils import _files_exist
-from sonar_cli.common_utils import _get_csv_colnames
-from sonar_cli.common_utils import calculate_time_difference
-from sonar_cli.common_utils import clear_unnecessary_cache
-from sonar_cli.common_utils import flatten_json_output
-from sonar_cli.common_utils import get_current_time
-from sonar_cli.common_utils import get_fname
-from sonar_cli.common_utils import out_autodetect
-from sonar_cli.common_utils import read_var_file
-from sonar_cli.config import ANNO_CHUNK_SIZE
-from sonar_cli.config import ANNO_CONFIG_FILE
-from sonar_cli.config import ANNO_TOOL_PATH
-from sonar_cli.config import BASE_URL
-from sonar_cli.config import CHUNK_SIZE
-from sonar_cli.config import PROP_CHUNK_SIZE
+from sonar_cli.common_utils import (
+    _files_exist,
+    _get_csv_colnames,
+    calculate_time_difference,
+    clear_unnecessary_cache,
+    flatten_json_output,
+    get_current_time,
+    get_fname,
+    out_autodetect,
+    read_var_file,
+)
+from sonar_cli.config import (
+    ANNO_CHUNK_SIZE,
+    ANNO_CONFIG_FILE,
+    ANNO_TOOL_PATH,
+    BASE_URL,
+    CHUNK_SIZE,
+    PROP_CHUNK_SIZE,
+)
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
 

@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
-from unittest.mock import mock_open
-from unittest.mock import patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 

@@ -6,11 +6,8 @@ from typing import List, Optional
 
 import pandas as pd
 import requests
-
-
 from django.core.management.base import BaseCommand
 from django.db import transaction
-
 from rest_api.models import Lineage
 
 

@@ -1,4 +1,5 @@
 from os import getenv
+
 from psycopg2 import connect, sql
 
 

@@ -1,16 +1,14 @@
 # runapscheduler.py
 import logging
 
-from django.conf import settings
-
 from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.base import BaseTrigger
 from apscheduler.triggers.cron import CronTrigger
+from django.conf import settings
 from django.core.management.base import BaseCommand
+from django_apscheduler import util
 from django_apscheduler.jobstores import DjangoJobStore
 from django_apscheduler.models import DjangoJobExecution
-from django_apscheduler import util
-from apscheduler.triggers.base import BaseTrigger
-
 from rest_api.data_entry.sample_entry_job import check_for_new_data
 
 logger = logging.getLogger(__name__)

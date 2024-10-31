@@ -1,7 +1,7 @@
-from rest_framework import routers
-from rest_api import viewsets, viewsets_sample
-from django.urls import path, include
 from covsonar_backend import settings
+from django.urls import include, path
+from rest_api import viewsets, viewsets_sample
+from rest_framework import routers
 
 router = routers.SimpleRouter()
 router.register(r"mutations", viewsets.MutationViewSet, basename="mutation")

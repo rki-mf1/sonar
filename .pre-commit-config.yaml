@@ -11,9 +11,11 @@ repos:
   rev: 24.10.0
   hooks:
   - id: black
+    exclude: ^apps/backend/rest_api/migrations/
 - repo: https://github.com/pycqa/isort
   rev: 5.13.2
   hooks:
   - id: isort
     name: isort (python)
     args: ["--profile", "black"]
+    exclude: ^apps/backend/rest_api/migrations/

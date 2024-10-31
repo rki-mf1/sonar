@@ -4,12 +4,15 @@ import re
 import typing
 from dataclasses import dataclass
 from typing import Any
+
 from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 
 if typing.TYPE_CHECKING:
     from django.db.models.query import ValuesQuerySet
+
+from typing import Optional
 
 from covsonar_backend.settings import LOGGER
 from rest_api.models import (
@@ -24,7 +27,6 @@ from rest_api.models import (
     Sequence,
 )
 from rest_api.serializers import SampleSerializer
-from typing import Optional
 
 
 @dataclass
@@ -137,7 +139,9 @@ class SampleImport:
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
     def create_alignment(self):
-        self.alignment = Alignment.objects.get_or_create(sequence=self.sequence, replicon=self.replicon)[0]
+        self.alignment = Alignment.objects.get_or_create(
+            sequence=self.sequence, replicon=self.replicon
+        )[0]
         return self.alignment
 
     def get_mutation_objs(

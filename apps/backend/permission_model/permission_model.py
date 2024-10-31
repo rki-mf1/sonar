@@ -1,11 +1,11 @@
 from operator import attrgetter
 
 from django.urls import get_resolver
-from rest_api import urls
 from permission_model.permission_model_access import (
     get_json_permission_model,
     save_json_permission_model,
 )
+from rest_api import urls
 
 
 def get_url_patterns():

@@ -39,15 +39,12 @@ exact
 import datetime
 import re
 import sys
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional
 
 from sonar_cli.api_interface import APIClient
 from sonar_cli.config import BASE_URL
 
 from .logging import LoggingConfigurator
-
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()

@@ -9,9 +9,7 @@ from sonar_cli.utils import sonarUtils
 from sonar_cli.utils1 import sonarUtils1
 from tabulate import tabulate
 
-from . import DESCRIPTION
-from . import NAME
-from . import VERSION
+from . import DESCRIPTION, NAME, VERSION
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()

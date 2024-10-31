@@ -1,5 +1,5 @@
-import os
 import json
+import os
 from os.path import join
 
 from django.conf import settings

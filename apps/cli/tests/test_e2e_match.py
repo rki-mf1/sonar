@@ -1,5 +1,4 @@
-from .conftest import run_cli
-from .conftest import run_cli_cmd
+from .conftest import run_cli, run_cli_cmd
 
 
 def test_match(api_url):

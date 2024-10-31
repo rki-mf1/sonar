@@ -1,22 +1,21 @@
 import base64
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
 import datetime
 import gzip
 import hashlib
-from hashlib import sha256
-from itertools import islice
 import lzma
 import os
 import shutil
 import sys
 import traceback
-from typing import List
-from typing import Union
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+from hashlib import sha256
+from itertools import islice
+from typing import List, Union
 
-from Bio.Seq import Seq
 import magic
+from Bio.Seq import Seq
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger

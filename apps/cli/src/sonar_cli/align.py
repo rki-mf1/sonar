@@ -1,18 +1,14 @@
 import os
 import re
 import sys
-from typing import Generator
-from typing import List
-from typing import Tuple
 import warnings
+from typing import Generator, List, Tuple
 
-from Bio import BiopythonWarning
-from Bio.Seq import Seq
 import numpy as np
 import pandas as pd
-from sonar_cli.common_aligns import align_MAFFT
-from sonar_cli.common_aligns import align_Parasail
-from sonar_cli.common_aligns import align_WFA
+from Bio import BiopythonWarning
+from Bio.Seq import Seq
+from sonar_cli.common_aligns import align_MAFFT, align_Parasail, align_WFA
 from sonar_cli.common_utils import read_seqcache
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
@@ -351,10 +347,14 @@ class sonarAligner:
             # )
             df["altAa"] = df["alt1"] + df["alt2"] + df["alt3"]
             df["altAa"] = df["altAa"].apply(
-                lambda seq: "-"
-                if seq == "---"
-                else str(
-                    Seq(seq.replace("-", "")).translate(table="Standard", to_stop=True)
+                lambda seq: (
+                    "-"
+                    if seq == "---"
+                    else str(
+                        Seq(seq.replace("-", "")).translate(
+                            table="Standard", to_stop=True
+                        )
+                    )
                 )
             )
             # get only rows where there is a change in amino acid.

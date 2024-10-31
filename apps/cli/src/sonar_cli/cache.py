@@ -1,31 +1,26 @@
 import hashlib
-from itertools import zip_longest
 import os
 import re
 import shutil
 import sys
 import traceback
-from typing import Any
-from typing import Dict
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Union
+from itertools import zip_longest
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 import pandas as pd
 from sonar_cli.api_interface import APIClient
-from sonar_cli.common_utils import file_collision
-from sonar_cli.common_utils import get_fname
-from sonar_cli.common_utils import harmonize_seq
-from sonar_cli.common_utils import hash_seq
-from sonar_cli.common_utils import open_file_autodetect
-from sonar_cli.common_utils import remove_charfromsequence_data
-from sonar_cli.common_utils import slugify
-from sonar_cli.config import BASE_URL
-from sonar_cli.config import TMP_CACHE
+from sonar_cli.common_utils import (
+    file_collision,
+    get_fname,
+    harmonize_seq,
+    hash_seq,
+    open_file_autodetect,
+    remove_charfromsequence_data,
+    slugify,
+)
+from sonar_cli.config import BASE_URL, TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
-
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()

@@ -1,9 +1,6 @@
 import json
 import sys
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from sonar_cli.logging import LoggingConfigurator
