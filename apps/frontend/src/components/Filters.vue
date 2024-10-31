@@ -1,39 +1,91 @@
 <template>
-  <div class="grid input my-2">
-    <div class="col">
-      <div class="grid">
-        <div class="col">
-          <div class="flex align-items-center" style="gap: 10px; margin-bottom: 10px">
-            <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
-            <Calendar v-model="samplesStore.timeRange[0]" style="flex: auto; min-width: 10rem;" showIcon
-              dateFormat="yy-mm-dd" :disabled="samplesStore.filterGroupFiltersHasDateFilter"
-              :invalid="isTimeRangeInvalid" @date-select="handleDateSelect">
-            </Calendar>
-            <Calendar v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" showIcon
-              dateFormat="yy-mm-dd" :disabled="samplesStore.filterGroupFiltersHasDateFilter"
-              :invalid="isTimeRangeInvalid" @date-select="handleDateSelect">
-            </Calendar>
-            <Button style="font-size: 10px; padding:3px; min-width: min-content;"
-              @click="samplesStore.setDefaultTimeRange">
-              <i class="pi pi-arrow-circle-left" style="font-size: medium" /> &nbsp;reset
-            </Button>
-            <Button style="font-size: 10px; padding:3px; min-width: min-content;" @click="removeTimeRange">
-              <i class="pi pi-trash" style="font-size: medium" />
-            </Button>
-          </div>
-
-          <div class="flex align-items-center" style="gap: 10px;">
-            <span style="font-weight: 500">Lineage</span>
-            <MultiSelect v-model="samplesStore.lineage" display="chip" :options="samplesStore.lineageOptions" filter
-              placeholder="Select Lineages" class="w-full md:w-80"
-              :disabled="samplesStore.filterGroupFiltersHasLineageFilter" @change="samplesStore.updateSamples" />
-            <Button icon="pi pi-times" class="ml-2 p-button-sm" v-if="samplesStore.lineage.length"
-              @click="clearLineageInput" />
-          </div>
+  <div class="filter-and-statistic-panel my-2">
+    <div class="filter-left">
+      <div >
+        <div class="filter-container">
+          <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
+          <Calendar 
+            v-model="samplesStore.timeRange[0]" 
+            style="flex: auto; min-width: 10rem;" 
+            showIcon
+            dateFormat="yy-mm-dd" 
+            :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
+            :invalid="isTimeRangeInvalid"
+            ></Calendar>
+          <Calendar 
+            v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" 
+            showIcon
+            dateFormat="yy-mm-dd" 
+            :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
+            :invalid="isTimeRangeInvalid"
+          ></Calendar>
+          <Button 
+            style="font-size: 10px; min-width: min-content;" 
+            @click="samplesStore.setDefaultTimeRange">
+          <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
+          </Button>
+          <Button 
+            class="ml-2 p-button-sm" 
+            @click="removeTimeRange">
+          <i class="pi pi-trash" style="font-size: medium"/>
+          </Button>
         </div>
-        <div class="col">
-          <Button type="button" icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised
-            :style="{ border: isFiltersSet ? '4px solid #cf3004' : '' }" @click="displayDialogFilter = true" />
+
+        <div class="filter-container">
+          <span style="font-weight: 500">Lineage</span>
+          <MultiSelect 
+            v-model="lineageFilter.lineageList" 
+            display="chip" 
+            :options="samplesStore.lineageOptions" 
+            filter
+            placeholder="Select Lineages" 
+            class="w-full md:w-80"
+            :virtualScrollerOptions="{ itemSize: 30 }"
+            />
+
+            <div class="include-switch">
+              <InputSwitch v-model="lineageFilter.includeSublineages" />
+              Include Sublineages?
+            </div>
+            <Button 
+            v-if="lineageFilter.lineageList.length>0"
+            icon="pi pi-trash" 
+            class="ml-2 p-button-sm" 
+            @click="removeLineageFilter" 
+            />
+        </div>
+
+        <div class="filter-container">
+          <span style="font-weight: 500">DNA/AA Profile</span>
+          <InputText
+            v-model="profileFilter.value" 
+            style="flex: auto" 
+            :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
+            class="mr-1" 
+            />
+          <Button 
+            @click="removeProfileFilter" 
+            icon="pi pi-trash"  
+            class="ml-2 p-button-sm" 
+            v-if="profileFilter.value"
+          />
+        </div>
+
+        <div class="button-1">
+          <Button 
+            icon="pi pi-filter" 
+            label="&nbsp;Set Advanced Filters" 
+            raised
+            style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+            :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
+            @click="displayDialogFilter = true" 
+        />
+            <Button 
+              style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+              :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+              label="Update sample selection" 
+              @click="filterSamples">
+            </Button>
         </div>
       </div>
 
@@ -145,7 +197,7 @@
       </OverlayPanel>
     </div>
 
-    <div class="col">
+    <div class="statistics-right">
       <Statistics :filteredCount="samplesStore.filteredCount"></Statistics>
     </div>
   </div>
@@ -160,29 +212,57 @@ import { DjangoFilterType } from '@/util/types'
 export default {
   name: "Filters",
   data() {
-    return {
-      samplesStore: useSamplesStore(),
-      displayDialogFilter: false,
-      DjangoFilterType
+    const samplesStore = useSamplesStore();
+    samplesStore.initializeWatchers();
+    if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
+      samplesStore.filterGroup.filters.profileFilters.push({
+        label: 'Label',
+        value: '',
+        exclude: false,
+      });
     }
+    return {
+      samplesStore,
+      displayDialogFilter: false,
+      DjangoFilterType,
+    };
   },
   methods: {
     removeTimeRange() {
       this.samplesStore.timeRange = [null, null];
-      this.samplesStore.updateSamples();
     },
-    handleDateSelect() {
+    removeProfileFilter() {
+      if (this.samplesStore.filterGroup.filters.profileFilters.length <= 1) {
+      this.samplesStore.filterGroup.filters.profileFilters[0] = {
+        label: 'Label',
+        value: '',
+        exclude: false,
+      };
+    }
+      else {
+        this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
+      }
+    },
+    filterSamples() {
       if (!this.isTimeRangeInvalid) {
         this.samplesStore.updateSamples();
       }
+      else {
+        this.samplesStore.timeRange = [null, null]
+        this.samplesStore.updateSamples();
+      }
     },
-    clearLineageInput() {
-      this.samplesStore.lineage = [];
-      this.samplesStore.updateSamples();
+    removeLineageFilter() {
+      this.samplesStore.filterGroup.filters.lineageFilter = {
+                                                              label: 'Lineages',
+                                                              lineageList: [],
+                                                              exclude: false,
+                                                              includeSublineages: true,
+                                                              isVisible: true,
+                                                            };
     },
     closeAdvancedFilterDialog() {
       this.displayDialogFilter = false;
-      this.samplesStore.updateSamples()
     },
     toggle(event) {
       if (this.$refs.op) {
@@ -191,50 +271,89 @@ export default {
     }
   },
   computed: {
-    isFiltersSet(): boolean {
-      return this.samplesStore.filterGroup.filterGroups.length > 0 || Object.values(this.samplesStore.filterGroup.filters).some((filter: any) => Array.isArray(filter) && filter.length > 0)
+    isAdvancedFiltersSet(): boolean {
+      return this.samplesStore.filterGroup.filterGroups.length > 0 // OR-group set
+      || this.samplesStore.filterGroup.filters.propertyFilters.length > 0 // property for first group set
+      || this.samplesStore.filterGroup.filters.repliconFilters.length > 0 // replicon for first group set
+      || this.samplesStore.filterGroup.filters.profileFilters.length > 1 // more than one profile filter
+      || this.samplesStore.filterGroup.filters.lineageFilter.exclude  // exclude set for first group lineage filter
+      || this.samplesStore.filterGroup.filters.profileFilters.some(
+        filter => filter.exclude === true) // exclude set for profile filter
     },
     isTimeRangeInvalid(): boolean {
       return this.samplesStore.timeRange.includes(null)
     },
+    profileFilter() {
+      return this.samplesStore.filterGroup.filters.profileFilters[0];
+    },
+    lineageFilter(){
+      return this.samplesStore.filterGroup.filters.lineageFilter;
+    }
   },
   mounted() {
-  }
+  },
 }
 </script>
 
 <style scoped>
-.input {
-  height: 10rem;
+.filter-and-statistic-panel {
   width: 98%;
   display: flex;
-  flex-direction: row;
-  justify-content: space-evenly;
-  align-items: center;
+  justify-content: space-between;
   background-color: var(--text-color);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow);
 }
 
-.input-left {
-  height: 100%;
-  width: 50%;
+.filter-left {
   display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: 20%;
-  margin-left: 20px;
-  align-items: center;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start; 
+  width: 50%;
+  margin: 10px;
 }
 
-.input-right {
-  height: 100%;
-  width: 50%;
+.statistics-right {
   display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
+  height: auto; 
+  gap: 10px;
+  margin-left: auto; 
+  align-items: center;  
+}
+
+.filter-container {
+  display: flex;
+  align-items: center; 
+  gap: 10px;        
+  margin-bottom: 5px;
+}
+
+.button-1{
+  display: flex;
+  justify-content: space-between; 
+  align-items: flex-end;      
+  margin-bottom: 0px;
+}
+
+.exclude-switch {
+  /* font-variant: small-caps; */
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  font-size: 0.7em;
+  margin: 2.5px;
+}
+.include-switch {
+  /* font-variant: small-caps; */
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
+  font-size: 0.7em;
+  margin: 2.5px;
 }
 
 :deep(.p-button) {

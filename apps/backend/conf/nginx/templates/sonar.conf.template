@@ -14,6 +14,12 @@ server {
     proxy_read_timeout 600;
   }
 
+  # Serve Django static files from Nginx
+  location /static/ {
+    alias /staticfiles/;
+  }
+
+
   # Frontend
   location / {
     root /frontend;
