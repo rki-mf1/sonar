@@ -106,11 +106,9 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      const filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
       this.propertyOptions = Object.keys(this.propertiesDict).filter( // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
-        (key) => filteredStatistics.meta_data_coverage[key] > 0 // if this.filteredStatistics is used here the options are not shown upon initial loading (???)
+        (key) => this.filteredStatistics.meta_data_coverage[key] > 0
       );
-      console.log(this.propertyOptions)
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
