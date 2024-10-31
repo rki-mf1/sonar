@@ -14,6 +14,7 @@
 *.js text
 *.vue text
 *.css text
+Dockerfile text
 
 # Data files
 *.tsv text
