@@ -68,8 +68,8 @@ class sonarAligner:
         # self.log("data:" + str(data))
         # alignment = self.align(data["seq_file"], data["ref_file"])
         alignment = align_MAFFT(data["mafft_seqfile"])
-        # print(alignment[0][0:20]) qry
-        # print(alignment[1][0:20]) ref
+        # LOGGER.debug(alignment[0][0:20]) qry
+        # priLOGGER.debugnt(alignment[1][0:20]) ref
 
         # NOTE: this line was already performant
         nuc_vars = [x for x in self.extract_vars(*alignment, elem_acc=source_acc)]
@@ -228,7 +228,7 @@ class sonarAligner:
             seq = seq[: len(seq) - 1]
         for codon in [seq[i : i + 3] for i in range(0, len(seq), 3)]:
             aa.append(tt[codon])
-        print("Our TT:","".join(aa))
+        return ("Our TT:","".join(aa))
 
         """
         _aa = ""
@@ -240,11 +240,11 @@ class sonarAligner:
                     Seq(seq.replace("-", "")).translate(table="Standard", to_stop=True)
                 )
         except Exception as e:
-            print("\n------- Fatal Error ---------")
-            print("\nDebugging Information:")
-            print(e)
-            print("\n During translate:")
-            print(seq)
+            LOGGER.error("\n------- Fatal Error ---------")
+            LOGGER.error("\nDebugging Information:")
+            LOGGER.error(e)
+            LOGGER.error("\n During translate:")
+            LOGGER.error(seq)
             sys.exit(1)
 
         return _aa
@@ -321,7 +321,7 @@ class sonarAligner:
                 mask1 = (nucPos1 >= start) & (nucPos1 < end)
                 mask2 = (nucPos2 >= start) & (nucPos2 < end)
                 mask3 = (nucPos3 >= start) & (nucPos3 < end)
-                # print(mask1,mask2, mask3)
+
                 alt1[mask1] = alt
                 alt2[mask2] = alt
                 alt3[mask3] = alt
@@ -433,10 +433,7 @@ class sonarAligner:
                 for x in range(varlen):
                     ref = refseq[refpos]
                     alt = qryseq[qrypos]
-                    # if refpos == 11287:
-                    #    print("snp")
-                    #    print(ref)
-                    #    print(alt)
+
                     vars.append(
                         (
                             ref,

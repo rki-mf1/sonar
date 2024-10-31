@@ -780,7 +780,7 @@ def handle_add_ref(args: argparse.Namespace):
 def handle_delete_ref(args: argparse.Namespace):
     # del ref
     if args.reference is None:
-        print("No reference is given, please add '--reference' ")
+        LOGGER.error("No reference is given, please add '--reference' ")
         exit(1)
 
     LOGGER.warning(
