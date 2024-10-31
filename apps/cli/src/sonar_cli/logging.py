@@ -148,7 +148,7 @@ class LoggingConfigurator:
         else_handler.setLevel(logging.DEBUG)
         else_handler.addFilter(self.ElseFilter())
 
-        info_handler = logging.StreamHandler(sys.stdout)
+        info_handler = logging.StreamHandler(sys.stderr)
         info_handler.setLevel(logging.INFO)
         info_handler.addFilter(self.InfoFilter())
 

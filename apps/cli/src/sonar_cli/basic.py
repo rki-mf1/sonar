@@ -139,20 +139,20 @@ regexes = {
     "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$"),
 }
 # snv
-# print(match.group(0))  match pattern T5386G S:E484K ^S:N501Y
-# print(match.group(1)) not ^
-# print(match.group(2))
-# print(match.group(3)) gene name
-# print(match.group(4)) REF
-# print(match.group(5)) POS
-# print(match.group(6)) ALT
+# LOGGER.debug(match.group(0))  match pattern T5386G S:E484K ^S:N501Y
+# LOGGER.debug(match.group(1)) not ^
+# LOGGER.debug(match.group(2))
+# LOGGER.debug(match.group(3)) gene name
+# LOGGER.debug(match.group(4)) REF
+# LOGGER.debug(match.group(5)) POS
+# LOGGER.debug(match.group(6)) ALT
 # del
-# print(match.group(0))  match pattern 	^del:99-102 ^S:del:99-102
-# print(match.group(1)) not ^
-# print(match.group(2))
-# print(match.group(3)) gene name
-# print(match.group(4)) START
-# print(match.group(5)) END
+# LOGGER.debug(match.group(0))  match pattern 	^del:99-102 ^S:del:99-102
+# LOGGER.debug(match.group(1)) not ^
+# LOGGER.debug(match.group(2))
+# LOGGER.debug(match.group(3)) gene name
+# LOGGER.debug(match.group(4)) START
+# LOGGER.debug(match.group(5)) END
 
 
 def define_profile(mutation):  # noqa: C901

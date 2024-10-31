@@ -338,11 +338,11 @@ def clear_sample_cache(sample):
         # if sample["anno_tsv_file"]:
         #    os.remove(sample["anno_tsv_file"])
     except (TypeError, OSError) as e:
-        print(traceback.format_exc())
-        print("\nDebugging Information:")
-        print(e)
-        print("-----------")
-        print(sample)
+        LOGGER.error(traceback.format_exc())
+        LOGGER.error("\nDebugging Information:")
+        LOGGER.error(e)
+        LOGGER.error("-----------")
+        LOGGER.error(sample)
 
 
 def clear_unnecessary_cache(samples, max_workers=4):
