@@ -1,7 +1,7 @@
 <template>
   <div class="filter-and-statistic-panel my-2">
     <div class="filter-left">
-      <div style="max-width: 90%;">
+      <div style="max-width: 91%;">
         <div class="filter-container">
           <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
@@ -31,7 +31,7 @@
           </Button>
         </div>
 
-        <div class="filter-container">
+        <div class="filter-container" >
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect 
             v-model="lineageFilter.lineageList" 
