@@ -9,7 +9,7 @@ from datetime import datetime
 import re
 import traceback
 from typing import Generator
-
+from collections import defaultdict
 import pandas as pd
 from dateutil.rrule import WEEKLY, rrule
 
@@ -37,7 +37,7 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.core.paginator import Paginator
-
+from django.db.models.functions import TruncWeek, TruncMonth
 from covsonar_backend.settings import DEBUG
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
@@ -382,8 +382,72 @@ class SampleViewSet(
             except ValueError as e:
                 LOGGER.error(f"Error with property_name: {property_name}, datatype: {datatype}")
                 LOGGER.error(f"Error message: {e}")
-        
+
         return dict
+
+    def _get_genomecomplete_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('genome_completeness').annotate(total=Count('genome_completeness')).order_by()
+        result_dict = {item['genome_completeness']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_lenght_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('length').annotate(total=Count('length')).order_by()
+        result_dict = {item['length']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_lab_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('lab').annotate(total=Count('lab')).order_by()
+        result_dict = {item['lab']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_host_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('host').annotate(total=Count('host')).order_by()
+        result_dict = {item['host']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_zip_code_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('zip_code').annotate(total=Count('zip_code')).order_by()
+        result_dict = {item['zip_code']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_sequencingReason_chart(self, queryset):
+        result_dict ={}
+        queryset = queryset.filter(
+            properties__property__name="sequencing_reason"
+        )
+
+        # the value_char" holds the sequencing reason values
+        grouped_queryset = queryset.values("properties__value_varchar").annotate(
+            total=Count("properties__value_varchar")
+        ).order_by()
+        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
+        result_dict = {item['properties__value_varchar']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_sampleType_chart(self, queryset):
+        result_dict ={}
+        queryset = queryset.filter(
+            properties__property__name="sample_type"
+        )
+
+        # the value_char" holds the sample type values
+        grouped_queryset = queryset.values("properties__value_varchar").annotate(
+            total=Count("properties__value_varchar")
+        ).order_by()
+        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
+        result_dict = {item['properties__value_varchar']: item['total'] for item in grouped_queryset}
+        return result_dict
+
+    def _get_sequencingTech_chart(self, queryset):
+        result_dict ={}
+        grouped_queryset = queryset.values('sequencing_tech').annotate(total=Count('sequencing_tech')).order_by()
+        result_dict = {item['sequencing_tech']: item['total'] for item in grouped_queryset}
+        return result_dict
 
     def _get_samples_per_week(self, queryset):
         result_dict = {}
@@ -410,6 +474,154 @@ class SampleViewSet(
                     result_dict[f"{item['year']}-W{int(item['week']):02}"] = item["count"]
         return result_dict
 
+
+    def normalize_get_monthly_lineage_percentage_area_chart(self,queryset):
+
+        # Annotate each sample with the month and lineage count per month
+        monthly_data = (
+            queryset
+            .annotate(month=TruncMonth('collection_date'))
+            .values('month', 'lineage')
+            .annotate(lineage_count=Count('id'))
+            .order_by('month', 'lineage')
+        )
+
+        # Organize monthly lineage data into a dictionary for processing
+        lineage_data = defaultdict(lambda: defaultdict(int))
+        for item in monthly_data:
+            month_str = item['month'].strftime('%Y-%m')
+            lineage_data[month_str][item['lineage']] += item['lineage_count']
+
+        result = []
+
+        # Process each month to apply the 10% threshold-based grouping
+        for month, lineages in lineage_data.items():
+            total_count = sum(lineages.values())
+            threshold_count = total_count * 0.10
+
+            # Use the helper function for aggregation
+            aggregated_lineages = aggregate_below_threshold_lineages(lineages, threshold_count)
+
+            # Calculate percentages
+            for lineage, count in aggregated_lineages.items():
+                percentage = (count / total_count) * 100
+                result.append({
+                    'date': month,
+                    'lineage': lineage,
+                    'percentage': round(percentage, 2)
+                })
+
+        return result
+
+    def get_monthly_lineage_percentage_area_chart(self, queryset):
+        # Annotate each sample with the month based on collection_date
+        monthly_data = (
+            queryset
+            .annotate(month=TruncMonth('collection_date'))  # Group by month
+            .values('month', 'lineage')
+            .annotate(lineage_count=Count('id'))            # Count occurrences of each lineage per month
+            .order_by('month', 'lineage')
+        )
+
+        # Calculate total samples per month to determine percentages
+        total_per_month = (
+            queryset
+            .annotate(month=TruncMonth('collection_date'))
+            .values('month')
+            .annotate(total_count=Count('id'))
+            .order_by('month')
+        )
+
+        # Create a dictionary for quick lookup of total counts per month
+        month_totals = {item['month']: item['total_count'] for item in total_per_month}
+
+        # Construct the final result with percentages
+        result = []
+        for item in monthly_data:
+            month_str = item['month'].strftime('%Y-%m')  # Format as "YYYY-MM"
+            percentage = (item['lineage_count'] / month_totals[item['month']]) * 100
+            result.append({
+                'date': month_str,
+                'lineage': item['lineage'],
+                'percentage': round(percentage, 2)
+            })
+
+        return result
+
+    def normalize_get_weekly_lineage_percentage_bar_chart(self, queryset):
+        # Annotate each sample with the start of the week and count occurrences per lineage
+        weekly_data = (
+            queryset
+            .annotate(week=TruncWeek('collection_date'))
+            .values('week', 'lineage')
+            .annotate(lineage_count=Count('id'))
+            .order_by('week', 'lineage')
+        )
+
+        # Organize lineage counts by week into a dictionary
+        lineage_data = defaultdict(lambda: defaultdict(int))
+        for item in weekly_data:
+            week_str = item['week'].strftime('%Y-W%U')
+            lineage_data[week_str][item['lineage']] += item['lineage_count']
+
+        # Initialize final result list
+        result = []
+
+        # Process each week, applying the 10% threshold rule
+
+        for week, lineages in lineage_data.items():
+            total_count = sum(lineages.values())
+            threshold_count = total_count * 0.10
+
+            # Aggregate below-threshold lineages using the helper function
+            aggregated_lineages = aggregate_below_threshold_lineages(lineages, threshold_count)
+
+            # Calculate percentages
+            for lineage, count in aggregated_lineages.items():
+                percentage = (count / total_count) * 100
+                result.append({
+                    'week': week,
+                    'lineage': lineage,
+                    'percentage': round(percentage, 2)
+                })
+
+        return result
+
+    def get_weekly_lineage_percentage_bar_chart(self, queryset):
+        # Annotate each sample with the start of the week based on collection_date
+        weekly_data = (
+            queryset
+            .annotate(week=TruncWeek('collection_date'))  # Group by week
+            .values('week', 'lineage')
+            .annotate(lineage_count=Count('id'))          # Count occurrences of each lineage per week
+            .order_by('week', 'lineage')
+        )
+
+        # Calculate total samples per week to determine percentages
+        total_per_week = (
+            queryset
+            .annotate(week=TruncWeek('collection_date'))
+            .values('week')
+            .annotate(total_count=Count('id'))
+            .order_by('week')
+        )
+
+        # Create a dictionary for quick lookup of total counts per week
+        week_totals = {item['week']: item['total_count'] for item in total_per_week}
+
+        # Construct the final result with percentages
+        result = []
+        for item in weekly_data:
+            week_str = item['week'].strftime('%Y-W%U')  # Format as "YYYY-WXX"
+            percentage = (item['lineage_count'] / week_totals[item['week']]) * 100
+            result.append({
+                'week': week_str,
+                'lineage': item['lineage'],
+                'percentage': round(percentage, 2)
+            })
+
+        return result
+
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
@@ -418,7 +630,36 @@ class SampleViewSet(
         dict["filtered_total_count"] = queryset.count()
         dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
         dict["samples_per_week"] = self._get_samples_per_week(queryset)
-
+        dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
+        # dict["lineage_area_chart"] = self.get_monthly_lineage_percentage_area_chart(queryset)
+        dict["lineage_area_chart"] = self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
+        # [
+            # {"date": "2023-08", "lineage": "23B", "percentage": 25},
+            # {"date": "2023-08", "lineage": "23D", "percentage": 35},
+            # {"date": "2023-09", "lineage": "23B", "percentage": 45},
+            # {"date": "2023-09", "lineage": "23D", "percentage": 35},
+            # {"date": "2023-10", "lineage": "23B", "percentage": 15},
+            # {"date": "2023-10", "lineage": "23D", "percentage": 95},
+            # Add more data points for other lineages and dates
+        # ]
+        dict["lineage_bar_chart"] =  self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
+        # dict["lineage_bar_chart"] =  self.get_weekly_lineage_percentage_bar_chart(queryset)
+        # [
+        #     {"week": "2023-W40", "lineage": "BA.2.86", "percentage": 40},
+        #     {"week": "2023-W40", "lineage": "EG.5.1", "percentage": 20},
+        #     {"week": "2023-W41", "lineage": "BA.2.86", "percentage": 40},
+        #     {"week": "2023-W41", "lineage": "EG.5.1", "percentage": 20},
+        #     {"week": "2023-W42", "lineage": "BA.2.86", "percentage": 40},
+        #     {"week": "2023-W42", "lineage": "EG.5.1", "percentage": 20},
+        #     ....
+        # ]
+        dict["sequencing_tech"] =  self._get_sequencingTech_chart(queryset)
+        dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
+        dict["sample_type"] = self._get_sampleType_chart(queryset)
+        dict["host"] =  self._get_host_chart(queryset)
+        dict["length"] = self._get_lenght_chart(queryset)
+        dict["lab"] = self._get_lab_chart(queryset)
+        dict["zip_code"] = self._get_zip_code_chart(queryset)
         return Response(data=dict)
 
     def resolve_genome_filter(self, filters) -> Q:
@@ -455,11 +696,11 @@ class SampleViewSet(
         *args,
         **kwargs,):
         final_query = Q()
-       
+
         # Split the input value by either commas, whitespace, or both
         # mutations  = [x.strip() for x in value.split(',')]
         mutations = re.split(r'[\s,]+', value.strip())
-        for mutation in mutations:                  
+        for mutation in mutations:
             parsed_mutation = define_profile(mutation)
 
             # Check the parsed mutation type and call the appropriate filter function
@@ -469,7 +710,7 @@ class SampleViewSet(
                     ref_pos=int(parsed_mutation["ref_pos"]),
                     alt_nuc=parsed_mutation["alt_nuc"],
                 )
-            
+
             elif parsed_mutation.get("label") == "SNP AA":
                 q_obj = self.filter_snp_profile_aa(
                     protein_symbol=parsed_mutation["protein_symbol"],
@@ -506,19 +747,19 @@ class SampleViewSet(
                     ref_pos=int(parsed_mutation["ref_pos"]),
                     alt_aa=parsed_mutation["alt_aa"],
                 )
-            
+
             else:
-                
+
                 raise ValueError(f"Unsupported mutation type: {parsed_mutation.get('label')}")
-            
+
             # Combine queries with AND operator (&) for each mutation
             final_query &= q_obj
-        
+
         if exclude:
             final_query = ~final_query
 
         return final_query
-    
+
     def filter_annotation(
         self,
         property_name,
@@ -863,8 +1104,8 @@ class SampleViewSet(
     #     return Response(
     #         {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
     #     )
-    
-    
+
+
     def _import_tsv(self, file_path):
         header = None
         with open(file_path, "r") as f:
@@ -965,3 +1206,27 @@ class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixi
     @action(detail=False, methods=["get"])
     def test_profile_filters():
         pass
+
+def aggregate_below_threshold_lineages(lineages, threshold_count):
+    """
+    Aggregates below-threshold lineages by recursively moving counts up the lineage hierarchy
+    until they meet or exceed the specified threshold.
+
+    :param lineages: A dictionary with lineage names as keys and counts as values.
+    :param threshold_count: The threshold count (10% of total samples).
+    :return: A dictionary with lineages aggregated above the threshold.
+    """
+    above_threshold = {lineage: count for lineage, count in lineages.items() if count >= threshold_count}
+    below_threshold = {lineage: count for lineage, count in lineages.items() if count < threshold_count}
+
+    for lineage, count in below_threshold.items():
+        # Aggregate each below-threshold lineage recursively
+        lineage_obj = models.Lineage.objects.filter(name=lineage).first()
+        if lineage_obj and lineage_obj.parent:
+            parent_name = lineage_obj.parent.name
+            above_threshold[parent_name] = above_threshold.get(parent_name, 0) + count
+        else:
+            # If lineage has no parent, keep it as is
+            above_threshold[lineage] = above_threshold.get(lineage, 0) + count
+
+    return above_threshold
