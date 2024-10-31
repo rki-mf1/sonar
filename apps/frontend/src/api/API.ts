@@ -87,12 +87,13 @@ export default class API {
     getFilteredStatistics(params: FilterGroupRoot) {
         const queryString = this.parseQueryString(params)
         const url = `samples/filtered_statistics/${queryString}`
+        console.log(url)
         return this.getRequest(url, {}, false)
     }
     async getSampleGenomesExport(params: FilterGroupRoot, columns: string[], ordering: string, xls = true) {
         const exportColumns = ['name', ...columns]
         const queryString = this.parseQueryString(params)
-        
+
         let url = `${this.BACKEND_ADDRESS}samples/genomes/${queryString}`
         url += `&columns=${exportColumns.join(',')}`
         url += `&ordering=${ordering}`
@@ -171,7 +172,7 @@ export default class API {
     }
 
     getSampleGenomePropertyValueOptions(propertyName: string) {
-        // get unique value2 of each property_name 
+        // get unique value2 of each property_name
         return this.getRequest(`properties/distinct_properties/?property_name=${propertyName}`, {}, false)
     }
     getRepliconAccessionOptions() {

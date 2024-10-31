@@ -251,6 +251,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     # most of the time this AttributeError outputs
                     # 'NoneType' object has no attribute 'gene_symbol', so I comment it for now
                     # to reduce logs print out to a console
+                    # capture the error 'NoneType' object has no attribute 'gene_symbol'
                     # print(e)
                     # print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue

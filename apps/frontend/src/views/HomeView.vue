@@ -1,17 +1,39 @@
 <template>
-
-  <div class="content">
+  <div class="table-content">
     
-    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
-      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect" @rowUnselect="onRowUnselect">
+    <DataTable 
+      :value="samplesStore.samples" 
+      style="max-width: 95vw" 
+      size="large" 
+      dataKey="name" 
+      stripedRows 
+      :reorderableColumns="true" 
+      @columnReorder="onColReorder" 
+      scrollable 
+      scrollHeight="flex" 
+      sortable
+      @sort="sortingChanged($event)" 
+      selectionMode="single" 
+      v-model:selection="selectedRow" 
+      @rowSelect="onRowSelect" 
+      @rowUnselect="onRowUnselect"
+      >
       <template #empty> No Results </template>
       <template #header>
-        <div style="display: flex; justify-content: space-between">
+        <div style="display: flex; justify-content: space-between; ">
           <div>
-            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true"/>
+            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
           </div>
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+            <MultiSelect 
+              v-model="selectedColumns" 
+              display="chip" 
+              :options="samplesStore.propertyOptions" 
+              filter 
+              placeholder="Select Columns" 
+              class="w-full md:w-20rem" 
+              @update:modelValue="columnSelection"
+              >
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
                   {{ selectedColumns.length }} columns selected
@@ -23,10 +45,11 @@
       </template>
       <Column field="name" sortable :reorderableColumn="false">
         <template #header>
-          <span v-tooltip="metaDataCoverage('name')">ID</span>
+          <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
-        <template #body="slotProps">
-          <div style="height: 1.5em; width: 9rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; direction: rtl;" :title="slotProps.data.name">
+        <template #body="slotProps" >
+          <div class="cell-content-sample-id"
+            :title="slotProps.data.name">
             {{ slotProps.data.name }}
           </div>
         </template>
@@ -35,9 +58,9 @@
         <template #header>
           <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
         </template>
-        <template #body="slotProps">
-          <div v-if="column === 'genomic_profiles'">
-            <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
+        <template #body="slotProps" >
+          <div v-if="column === 'genomic_profiles'" class="cell-content" >
+            <div>
               <GenomicProfileLabel
                 v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
                 :variantString="variant"
@@ -46,23 +69,22 @@
               />
             </div>
           </div>
-          <div v-else-if="column === 'proteomic_profiles'">
-            <div style="height: 2.5em; width: 20rem; overflow-x: auto; white-space: nowrap">
+          <div v-else-if="column === 'proteomic_profiles'" class="cell-content"  >
+            <div >
               <GenomicProfileLabel
                 v-for="(variant, index) in slotProps.data.proteomic_profiles"
                 :variantString="variant"
-                :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
-              />
+                :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
             </div>
           </div>
-          <div v-else-if="column === 'init_upload_date'">
+          <div v-else-if="column === 'init_upload_date'" class="cell-content" >
             {{ formatDate(slotProps.data.init_upload_date) }}
           </div>
 
-          <div v-else-if="column === 'last_update_date'">
+          <div v-else-if="column === 'last_update_date'" class="cell-content" >
             {{ formatDate(slotProps.data.last_update_date) }}
           </div>
-          <span v-else>
+          <span v-else class="cell-content">
             {{ findProperty(slotProps.data.properties, column) }}
           </span>
         </template>
@@ -71,18 +93,14 @@
         <div style="display: flex; justify-content: space-between">
           Total: {{ samplesStore.filteredCount }} Samples
         </div>
-        <Paginator
-          :totalRecords="samplesStore.filteredCount"
-          v-model:rows="samplesStore.perPage"
-          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]"
-          v-model:first="samplesStore.firstRow"
-          @update:rows="samplesStore.updateSamples()"
-        />
+        <Paginator :totalRecords="samplesStore.filteredCount" v-model:rows="samplesStore.perPage"
+          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="samplesStore.firstRow"
+          @update:rows="samplesStore.updateSamples()" />
       </template>
     </DataTable>
 
     <Dialog class="flex" v-model:visible="samplesStore.loading" modal :closable="false" header="Loading...">
-          <ProgressSpinner class="flex-1 p-3" size="small" v-if="samplesStore.loading" style="color: whitesmoke" />
+      <ProgressSpinner class="flex-1 p-3" size="small" v-if="samplesStore.loading" style="color: whitesmoke" />
     </Dialog>
 
     <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
@@ -113,11 +131,31 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading" @click="exportFile(exportFormat)" />
+        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading"
+          @click="exportFile(exportFormat)" />
       </div>
     </Dialog>
   </div>
-  
+  <Toast ref="toast" />
+
+  <Toast ref="exportToast" position="bottom-right" group="br">
+    <template #container="{ message, closeCallback }">
+      <section class="flex p-3 gap-3 " style="border-radius: 10px">
+        <i class="pi pi-cloud-download text-primary-500 text-2xl"></i>
+        <div class="flex flex-column gap-3 w-full">
+          <p class="m-0 font-semibold text-base text-blue">{{ message.summary }}</p>
+          <p class="m-0 text-base text-700">{{ message.detail }}</p>
+          <div class="flex flex-column gap-2">
+            <ProgressBar mode="indeterminate" style="height: 6px"></ProgressBar>
+          </div>
+        </div>
+        <!-- Close Icon (X button) -->
+        <button class="p-toast-close p-link" style="position: absolute; top: 5px; right: 5px" @click="closeCallback">
+          <i class="pi pi-times"></i>
+        </button>
+      </section>
+    </template>
+  </Toast>
 </template>
 
 <script lang="ts">
@@ -144,16 +182,39 @@ export default {
       return property ? property.value : undefined;
     },
     exportFile(type: string) {
+      // Show the progress bar in the toast
+      this.$refs.exportToast.add({
+        severity: 'info',
+        summary: 'Exporting...',
+        detail: 'Your file is being prepared.',
+        id: 1,
+        group: 'br',
+        closable: true,
+      });
+
       this.displayDialogExport = false;
-      this.samplesStore.loading = true;
-      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.selectedColumns, this.samplesStore.ordering, type == "xlsx");
-      this.samplesStore.loading = false;
+      // this.samplesStore.loading = true;
+      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.selectedColumns, this.samplesStore.ordering, type == "xlsx")
+        .then(() => {
+          // Export completed, close the toast
+          console.log("complete");
+          this.$toast.removeGroup('br')
+        })
+        .catch((error) => {
+          // Handle the error, also close the toast in case of error
+          this.showToastError('Export failed. Please try again.');
+          this.$toast.removeGroup('br')
+        })
+        .finally(() => {
+          // this.samplesStore.loading = false;
+        });
+      //this.samplesStore.loading = false;
     },
     columnSelection(value) {
       this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
     },
     onColReorder(event) {
-     const { dragIndex, dropIndex } = event; 
+      const { dragIndex, dropIndex } = event;
       // Rearrange columns based on dragIndex and dropIndex
       const reorderedColumns = ['name', ...this.selectedColumns]; // note: 'name' is fixed and cant be reordered
       const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
@@ -189,18 +250,36 @@ export default {
         return '';
       }
     },
+    showToastError(message: string) {
+      this.$refs.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: message,
+        life: 10000
+      });
+    }
   },
   computed: {
   },
   mounted() {
 
   },
+  watch: {
+    "samplesStore.errorMessage"(newValue) {
+      if (newValue) {
+        this.showToastError(newValue);
+        // Reset the state to prevent multiple calls
+        // this.samplesStore.errorMessage = "";
+      }
+    }
+  }
 }
+
 </script>
 
 <style scoped>
 
-.content {
+.table-content {
   height: 80%;
   width: 98%;
   display: flex;
@@ -213,6 +292,36 @@ export default {
   box-shadow: var(--shadow);
 }
 
+.cell-content-sample-id {
+  height: 2em; 
+  flex: 1;
+  min-width: 5rem;
+  max-width: 20rem;
+  overflow-x: auto; 
+  white-space: nowrap;
+  padding: 0;
+  margin: 0;
+  text-align: right;
+  text-overflow: ellipsis; 
+  direction: rtl; 
+}
+
+.cell-content {
+  height: 2em; 
+  flex: 1;
+  min-width: 5rem;
+  max-width: 20rem;
+  overflow-x: auto; 
+  white-space: nowrap;
+  padding: 0;
+  margin: 0;
+}
+:deep(.p-datatable.p-datatable-lg .p-datatable-tbody  > tr > td ) {
+  padding-top: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: 0.5rem!important;
+}
 
 :deep(.p-button) {
   background: var(--primary-color);
@@ -248,5 +357,4 @@ export default {
 :deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
   background: var(--primary-color);
 }
-
 </style>

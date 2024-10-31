@@ -11,6 +11,7 @@ import Dropdown from 'primevue/dropdown'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import ProgressSpinner from 'primevue/progressspinner'
+import ProgressBar from 'primevue/progressbar';
 import DataTable from 'primevue/datatable'
 import Paginator from 'primevue/paginator'
 import Column from 'primevue/column'
@@ -34,7 +35,25 @@ import { OhVueIcon, addIcons } from 'oh-vue-icons'
 import { FaDna } from 'oh-vue-icons/icons'
 import { FaCalendarAlt } from "oh-vue-icons/icons";
 import Toast from 'primevue/toast';
+import ToastService from 'primevue/toastservice';
+import Fieldset from 'primevue/fieldset';
+import AnimateOnScroll from 'primevue/animateonscroll';
+import Panel from 'primevue/panel';
+import Skeleton from 'primevue/skeleton';
+import Splitter from 'primevue/splitter';
+import SplitterPanel from 'primevue/splitterpanel';
+import TabView from 'primevue/tabview';
+import TabPanel from 'primevue/tabpanel';
+
 addIcons(FaDna, FaCalendarAlt)
+
+// Import the chartjs plugin
+import { Chart as ChartJS } from 'chart.js/auto'; // Ensure you're importing Chart.js
+import zoomPlugin from 'chartjs-plugin-zoom';
+
+ChartJS.register(zoomPlugin);
+
+import 'chartjs-adapter-moment';
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -44,7 +63,6 @@ import Filters from "./components/Filters.vue";
 import GenomicProfileLabel from "./components/GenomicProfileLabel.vue";
 import SampleDetails from "./components/SampleDetails.vue";
 import Statistics from "./components/Statistics.vue";
-import ExampleUsage from "./components/ExampleUsage.vue";
 
 import App from './App.vue'
 import router from './router'
@@ -55,15 +73,13 @@ app.use(createPinia())
 app.use(router)
 
 app.use(PrimeVue)
-
+app.use(ToastService);
 
 app.component('FilterGroup', FilterGroup)
 app.component('Filters', FilterGroup)
 app.component('GenomicProfileLabel', GenomicProfileLabel)
 app.component('SampleDetails', SampleDetails)
 app.component('Statistics', Statistics)
-app.component('ExampleUsage', ExampleUsage)
-
 app.component('IconField', IconField)
 app.component('Menubar', Menubar)
 app.component('InputIcon', InputIcon)
@@ -79,6 +95,7 @@ app.component('Paginator', Paginator)
 app.component('Column', Column)
 app.component('Card', Card)
 app.component('ProgressSpinner', ProgressSpinner)
+app.component('ProgressBar', ProgressBar )
 app.component('InputSwitch', InputSwitch)
 app.component('SplitButton', SplitButton)
 app.component('Calendar', Calendar)
@@ -89,8 +106,18 @@ app.component('Accordion', Accordion)
 app.component("v-icon", OhVueIcon);
 app.component('OverlayPanel', OverlayPanel)
 app.component('Chip', Chip)
-app.directive('tooltip', Tooltip);
+
 app.component('Message', Message)
 app.component('Toast', Toast)
+app.component('Fieldset', Fieldset )
+app.component('Panel', Panel )
+app.component('Skeleton', Skeleton )
+app.component('Splitter', Splitter  )
+app.component('SplitterPanel', SplitterPanel  )
+app.component('TabView', TabView  )
+app.component('TabPanel', TabPanel )
+
+app.directive('tooltip', Tooltip);
+app.directive('animateonscroll', AnimateOnScroll);
 
 app.mount('#app')

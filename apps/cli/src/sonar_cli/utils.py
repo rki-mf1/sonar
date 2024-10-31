@@ -940,7 +940,7 @@ class sonarUtils:
         try:
             first_row = next(data_iter)
         except StopIteration:
-            print(na)
+            LOGGER.info(na)
             first_row = None
 
         columns = output_column if output_column else default_columns
@@ -1000,7 +1000,7 @@ class sonarUtils:
         na: The string to print if there are no records.
         """
         if not cursor:
-            print(na)
+            LOGGER.info(na)
         else:
             # TODO: if we want to connect this function with match function
             # we have to put the condition to check the cursor type first.
