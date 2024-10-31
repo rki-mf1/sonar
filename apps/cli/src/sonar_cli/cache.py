@@ -26,9 +26,6 @@ from tqdm import tqdm
 LOGGER = LoggingConfigurator.get_logger()
 
 
-# not sure we need a class for sample or not
-
-
 class sonarCache:
     def __init__(
         self,
@@ -305,14 +302,17 @@ class sonarCache:
 
         """
         for fname in fnames:
-            with open_file_autodetect(fname) as handle, tqdm(
-                desc="processing " + fname + "...",
-                total=os.path.getsize(fname),
-                unit="bytes",
-                unit_scale=True,
-                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-                disable=self.disable_progress,
-            ) as pbar:
+            with (
+                open_file_autodetect(fname) as handle,
+                tqdm(
+                    desc="processing " + fname + "...",
+                    total=os.path.getsize(fname),
+                    unit="bytes",
+                    unit_scale=True,
+                    bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+                    disable=self.disable_progress,
+                ) as pbar,
+            ):
                 seq = []
                 header = None
                 for line in handle:
@@ -542,56 +542,6 @@ class sonarCache:
             LOGGER.error(f"An error occurred: {e}")
             sys.exit(1)
         return fname
-
-    # def cache_translation_table(self, translation_id):
-    #     """
-    #     If the translation table
-    #     is not in the cache, it is retrieved from the database and written to a file
-
-    #     :param translation_id: The id of the translation table
-    #     :param dbm: the database manager
-    #     :return: A file name.
-    #     """
-    #     fname = self.get_tt_fname(translation_id)  # write under /cache/ref/
-    #     if translation_id not in self._tt:
-    #         self.write_pickle(
-    #             fname,
-    #             APIClient(base_url=self.base_url).get_translation_dict(translation_id),
-    #         )
-    #         # self.write_pickle(fname, dbm.get_translation_dict(translation_id))
-    #         self._tt.add(translation_id)
-    #     return fname
-
-    # def cache_cds(self, refid, refmol_acc):
-    #     """
-    #     The function takes in a reference id, a reference molecule accession number,
-    #     and a reference sequence. It then checks to see if the reference molecule accession number is in the set of molecules that
-    #     have been cached. If it is not, it iterates through all of the coding sequences for that molecule and creates a
-    #     dataframe for each one.
-
-    #     It then saves the dataframe to a pickle file and adds the reference molecule accession number to
-    #     the set of molecules that have been cached.
-    #     It then returns the name of the pickle file
-    #     """
-    #     fname = self.get_cds_fname(refid)
-    #     if refmol_acc not in self._cds:
-    #         rows = []
-    #         cols = ["elemid", "pos", "end"]
-    #         for cds in self.iter_cds_v2(refmol_acc):
-    #             elemid = cds["id"]
-    #             coords = []
-    #             for rng in cds["ranges"]:
-    #                 coords.extend(list(rng))
-    #             for coord in coords:
-    #                 rows.append([elemid, coord, 0])
-    #             # rows[-1][2] = 1
-    #             # print(rows)
-    #             df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
-    #             df.to_pickle(fname)
-    #             if self.debug:
-    #                 df.to_csv(fname + ".csv")
-    #         self._cds.add(refmol_acc)
-    #     return fname
 
     def cache_lift(self, refid, refmol_acc, sequence):
         """
