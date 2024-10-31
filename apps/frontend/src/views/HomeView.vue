@@ -48,7 +48,7 @@
           <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
         <template #body="slotProps" >
-          <div class="cell-content" 
+          <div class="cell-content-sample-id"
             :title="slotProps.data.name">
             {{ slotProps.data.name }}
           </div>
@@ -292,6 +292,20 @@ export default {
   box-shadow: var(--shadow);
 }
 
+.cell-content-sample-id {
+  height: 2em; 
+  flex: 1;
+  min-width: 5rem;
+  max-width: 20rem;
+  overflow-x: auto; 
+  white-space: nowrap;
+  padding: 0;
+  margin: 0;
+  text-align: right;
+  text-overflow: ellipsis; 
+  direction: rtl; 
+}
+
 .cell-content {
   height: 2em; 
   flex: 1;
@@ -302,7 +316,6 @@ export default {
   padding: 0;
   margin: 0;
 }
-
 :deep(.p-datatable.p-datatable-lg .p-datatable-tbody  > tr > td ) {
   padding-top: 0.5rem !important;
   padding-right: 0.5rem !important;

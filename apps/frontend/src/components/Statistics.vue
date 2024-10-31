@@ -15,7 +15,7 @@
                     >Date of newest sequence in database</div>
             </template>
         </Card>
-        <Card class="card" style="background-color: var(--secondary-color);">
+        <Card class="card">
         <template #content>
             <v-icon 
                 name="fa-dna" 

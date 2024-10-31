@@ -82,7 +82,7 @@ class SampleViewSet(
             "Ins AA": self.filter_ins_profile_aa,
             "Replicon": self.filter_replicon,
             "Sample": self.filter_sample,
-            "Sublineages": self.filter_sublineages,
+            "Lineages": self.filter_sublineages,
             "Annotation": self.filter_annotation,
             "Label": self.filter_label,
         }
@@ -787,22 +787,26 @@ class SampleViewSet(
 
     def filter_sublineages(
         self,
-        lineage,
+        lineageList,
         exclude: bool = False,
+        includeSublineages: bool = True,
         *args,
         **kwargs,
     ):
-        if isinstance(lineage, str):
-            lineage = [lineage]  # convert to list if a single string is passed
+        if isinstance(lineageList, str):
+            lineageList = [lineageList]  # convert to list if a single string is passed
 
-        lineages = models.Lineage.objects.filter(name__in=lineage)
+        lineages = models.Lineage.objects.filter(name__in=lineageList)
 
         if not lineages.exists():
-            raise Exception(f"Lineage {lineage} not found.")
+            raise Exception(f"Lineage {lineages} not found.")
         
-        sublineages = []
-        for l in lineages:
-            sublineages.extend(l.get_sublineages())
+        if (includeSublineages):
+            sublineages = []
+            for l in lineages:
+                sublineages.extend(l.get_sublineages())
+        else:
+            sublineages = list(lineages)
 
         # match for all sublineages of all given lineages
         return self.filter_property(
