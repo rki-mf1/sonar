@@ -10,6 +10,8 @@ services:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
 
   sonar-django-backend:
+    environment:
+    - LINE_PROFILE=$IMPORT_PROFILING
     volumes:
       - .:/code
     ports:

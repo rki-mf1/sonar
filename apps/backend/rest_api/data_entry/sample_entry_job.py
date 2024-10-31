@@ -38,6 +38,7 @@ from django.core.cache import cache
 from django.db import transaction
 import environ
 import pandas as pd
+from line_profiler import profile
 
 from rest_api.serializers import Sample2PropertyBulkCreateOrUpdateSerializer
 from rest_api.utils import PropertyColumnMapping
@@ -191,7 +192,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                         # batchtimer = datetime.now()
                         batch = sample_files[i : i + batch_size]
                         process_batch_single_thread(
-                            batch, replicon_cache, gene_cache_by_accession, str(temp_dir)
+                            batch, replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, str(temp_dir)
                         )
                     # annotation 
                     for file in anno_files:
@@ -271,6 +272,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                 LOGGER.info(f"### Job ID: {job_ID} \nRun status: Completed")
 
 @shared_task
+@profile
 def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, temp_dir):
     try:
         sample_import_objs = [
@@ -332,6 +334,7 @@ def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gen
         LOGGER.error("Error happens on this batch")
         return (False, str(e), traceback.format_exc())
 
+@profile
 def get_mutation2alignment_objs(alignment, mutation_query_data) -> list:
         # self.alignment = Alignment.objects.get(
         #     sequence=self.sequence, replicon=self.replicon
@@ -382,6 +385,7 @@ def get_mutation2alignment_objs(alignment, mutation_query_data) -> list:
 
 
 @shared_task
+@profile
 def process_annotation(file_name):
     try:
         annotation_import = AnnotationImport(file_name)
@@ -409,7 +413,8 @@ def process_annotation(file_name):
     return (True, None, None)
 
 
-def process_batch_single_thread(batch, replicon_cache, gene_cache_by_accession, temp_dir):
+@profile
+def process_batch_single_thread(batch: list[str], replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, temp_dir):
     try:
         sample_import_objs = [
             SampleImport(file, import_folder=temp_dir) for file in batch
@@ -439,7 +444,7 @@ def process_batch_single_thread(batch, replicon_cache, gene_cache_by_accession, 
             Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
             mutations = []
             for sample_import_obj in sample_import_objs:
-                mutations.extend(sample_import_obj.get_mutation_objs(gene_cache_by_accession))
+                mutations.extend(sample_import_obj.get_mutation_objs(gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos))
             Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
             mutations2alignments = []
             for sample_import_obj in sample_import_objs:
@@ -542,6 +547,7 @@ def import_property(property_file, sep, use_celery=False, column_mapping=None, b
 
 
 @shared_task
+@profile
 def process_property_batch(batch_as_dict, sample_id_column, serialized_column_mapping):
     # Reconstruct column_mapping from the serialized format
     if serialized_column_mapping is not None:
@@ -560,6 +566,7 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
     return True, "Batch processed successfully"
 
 
+@profile
 def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
     """
     Logic for processing a batch of the property file
@@ -649,6 +656,7 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
             unique_fields=["sample", "property"]
         )
 
+@profile
 def _create_property_updates(sample, properties: dict, use_property_cache=False,property_cache=None
     ) -> list[dict]:
         property_objects = []
@@ -669,3 +677,7 @@ def _create_property_updates(sample, properties: dict, use_property_cache=False,
                 property["property__name"] = name
             property_objects.append(property)
         return property_objects
+
+if __name__ == "__main__":
+    check_for_new_data()
+

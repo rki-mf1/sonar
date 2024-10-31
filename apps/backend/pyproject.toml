@@ -28,6 +28,7 @@ black = "^24.3.0"
 flower = "^2.0.1"
 json-log-formatter = "^1.0"
 gunicorn = "^22.0.0"
+line-profiler = "^4.1.3"
 
 
 [build-system]

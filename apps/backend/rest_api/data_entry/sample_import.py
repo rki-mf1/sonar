@@ -7,6 +7,7 @@ from typing import Any
 from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
+from line_profiler import profile
 
 if typing.TYPE_CHECKING:
     from django.db.models.query import ValuesQuerySet
@@ -81,6 +82,7 @@ class VCFInfoNMDRaw:
 
 
 class SampleImport:
+    @profile
     def __init__(
         self,
         path: pathlib.Path,
@@ -117,6 +119,7 @@ class SampleImport:
         self.sequence = Sequence(seqhash=self.sample_raw.seqhash)
         return self.sequence
 
+    @profile
     def get_sample_obj(self):
         if not self.sequence:
             raise Exception("Sequence object not created yet")
@@ -136,6 +139,7 @@ class SampleImport:
             )
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
+    @profile
     def create_alignment(self):
         self.alignment = Alignment.objects.get_or_create(sequence=self.sequence, replicon=self.replicon)[0]
         return self.alignment
@@ -338,6 +342,7 @@ class SampleImport:
         with open(path, "rb") as f:
             return pickle.load(f)
 
+    @profile
     def _import_vars(self, path):
         file_name = pathlib.Path(path).name
         self.var_file_path = (
