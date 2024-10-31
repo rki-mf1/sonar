@@ -20,9 +20,9 @@
             :invalid="isTimeRangeInvalid"
           ></Calendar>
           <Button 
-            style="font-size: 10px; min-width: min-content;" 
+            style="font-size: 12px; min-width: min-content;" 
             @click="samplesStore.setDefaultTimeRange">
-          <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
+          <i class="pi pi-arrow-circle-left" style="font-size: medium"/>&nbsp; Reset
           </Button>
           <Button 
             class="ml-2 p-button-sm" 
@@ -75,15 +75,17 @@
           <Button 
             icon="pi pi-filter" 
             label="&nbsp;Set Advanced Filters" 
+            severity="warning"
             raised
-            style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
             :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
             @click="displayDialogFilter = true" 
         />
             <Button 
-              style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+              icon="pi pi-database"   
+              label="&nbsp;Update Samples" 
+              severity="warning"
+              raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
-              label="Update sample selection" 
               @click="filterSamples">
             </Button>
         </div>
@@ -106,7 +108,14 @@
           <Message severity="error">{{ samplesStore.errorMessage }}</Message>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialog()"></Button>
+          <Button 
+              icon="pi pi-database"   
+              label="&nbsp;Update Samples" 
+              severity="warning"
+              raised
+              :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+              @click="closeAdvancedFilterDialog">
+          </Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
       </Dialog>
@@ -263,6 +272,7 @@ export default {
     },
     closeAdvancedFilterDialog() {
       this.displayDialogFilter = false;
+      this.samplesStore.updateSamples();
     },
     toggle(event) {
       if (this.$refs.op) {
