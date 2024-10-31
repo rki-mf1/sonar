@@ -15,6 +15,7 @@
 *.vue text
 *.css text
 Dockerfile text
+.gitignore text
 
 # Data files
 *.tsv text
