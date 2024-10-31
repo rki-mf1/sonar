@@ -1,7 +1,7 @@
 <template>
   <div class="filter-and-statistic-panel my-2">
     <div class="filter-left">
-      <div >
+      <div style="max-width: 90%;">
         <div class="filter-container">
           <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
@@ -39,13 +39,13 @@
             :options="samplesStore.lineageOptions" 
             filter
             placeholder="Select Lineages" 
-            class="w-full md:w-80"
+            style="width: 69%;"
             :virtualScrollerOptions="{ itemSize: 30 }"
             />
 
-            <div class="include-switch">
-              <InputSwitch v-model="lineageFilter.includeSublineages" />
+            <div class="switch">
               Include Sublineages?
+              <InputSwitch v-model="lineageFilter.includeSublineages" />
             </div>
             <Button 
             v-if="lineageFilter.lineageList.length>0"
@@ -347,19 +347,10 @@ export default {
   margin-bottom: 0px;
 }
 
-.exclude-switch {
+.switch {
   /* font-variant: small-caps; */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-size: 0.7em;
-  margin: 2.5px;
-}
-.include-switch {
-  /* font-variant: small-caps; */
-  display: flex;
-  justify-content: center;
-  flex-direction: row;
   align-items: center;
   text-align: center;
   font-size: 0.7em;

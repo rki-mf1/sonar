@@ -40,7 +40,7 @@
           <span class="filter-label">{{ filter.label }}</span>
           <div v-for="key in Object.keys(filter) as Array<keyof ProfileFilter>">
 
-            <div v-if="key == 'exclude'" class="exclude-switch">
+            <div v-if="key == 'exclude'" class="switch">
               Exclude?
               <InputSwitch v-model="filter[key]" />
             </div>
@@ -85,7 +85,7 @@
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
           <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
-          <div class="exclude-switch">
+          <div class="switch">
             Exclude?
             <InputSwitch v-model="filter.exclude" />
           </div>
@@ -112,13 +112,13 @@
             filter
             placeholder="Select Lineages" 
             :virtualScrollerOptions="{ itemSize: 30 }"
-            class="w-full md:w-80" 
+            style="max-width: 500px;"
           />
-          <div class="include-switch">
-            <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
+          <div class="switch">
             Include Sublineages?
+            <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
           </div>
-          <div class="exclude-switch">
+          <div class="switch">
             Exclude?
             <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
           </div>
@@ -529,22 +529,14 @@ export default {
   border: 2px solid var(--secondary-color-lighter);
 }
 
-.exclude-switch {
+.switch {
   /* font-variant: small-caps; */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-size: 0.7em;
-  margin: 2.5px;
-}
-.include-switch {
-  /* font-variant: small-caps; */
-  display: flex;
-  justify-content: center;
-  flex-direction: row;
   align-items: center;
   text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
 }
+
 </style>
