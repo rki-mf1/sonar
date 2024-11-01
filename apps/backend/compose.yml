@@ -9,7 +9,6 @@ services:
       # All config files are in this volume because we use includes, so we
       # can't just link in a single config file
       - ./conf/postgresql:/etc/postgresql/conf
-      #- ./conf/postgresql:/etc/postgresql/postgresql.conf
       - ${POSTGRES_INIT_DB}:/docker-entrypoint-initdb.d/
       # This exact path inside the container needs to be mapped to a volume,
       # otherwise it will automatically be mapped to a volume inside of the
