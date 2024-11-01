@@ -1,30 +1,21 @@
+from dataclasses import dataclass
 import pathlib
 import pickle
-import re
 import typing
-from dataclasses import dataclass
 from typing import Any
-from django.core.cache import cache
+from typing import Optional
+
 from django.db.models import Q
 from django.utils import timezone
+from rest_api.models import Alignment
+from rest_api.models import Gene
+from rest_api.models import Mutation
+from rest_api.models import Replicon
+from rest_api.models import Sample
+from rest_api.models import Sequence
 
 if typing.TYPE_CHECKING:
     from django.db.models.query import ValuesQuerySet
-
-from covsonar_backend.settings import LOGGER
-from rest_api.models import (
-    Alignment,
-    AnnotationType,
-    Gene,
-    ImportLog,
-    Mutation,
-    Mutation2Annotation,
-    Replicon,
-    Sample,
-    Sequence,
-)
-from rest_api.serializers import SampleSerializer
-from typing import Optional
 
 
 @dataclass
@@ -137,7 +128,9 @@ class SampleImport:
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
     def create_alignment(self):
-        self.alignment = Alignment.objects.get_or_create(sequence=self.sequence, replicon=self.replicon)[0]
+        self.alignment = Alignment.objects.get_or_create(
+            sequence=self.sequence, replicon=self.replicon
+        )[0]
         return self.alignment
 
     def get_mutation_objs(
