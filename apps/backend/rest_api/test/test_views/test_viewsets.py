@@ -1,12 +1,12 @@
 import json
-from django.test import TransactionTestCase
+
 from parameterized import parameterized
+from rest_api import models
+from rest_api import viewsets
+from rest_api.test import mixins
+from rest_api.viewsets_sample import SampleViewSet
 from rest_framework import status
 from rest_framework.test import force_authenticate
-
-from rest_api.test import mixins
-from rest_api import models, viewsets
-from rest_api.viewsets_sample import SampleViewSet
 
 
 class AlignmentViewSetTest(

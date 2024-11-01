@@ -244,7 +244,7 @@ class Annotator:
 
 #         # Reset the index
 #         df = df.reset_index(drop=True)
-#         
+#
 #         return df
 #     except KeyError as e:
 #         LOGGER.error(e)

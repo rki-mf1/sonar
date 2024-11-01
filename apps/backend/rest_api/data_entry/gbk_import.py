@@ -1,25 +1,21 @@
 from datetime import datetime
 import pathlib
 
-from Bio import SeqFeature, SeqIO, SeqRecord
+from Bio import SeqFeature
+from Bio import SeqIO
+from Bio import SeqRecord
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
-from rest_api.models import (
-    GeneSegment,
-    Replicon,
-    Gene,
-    Reference,
-)
-from rest_api.serializers import (
-    GeneSerializer,
-    RepliconSerializer,
-    GeneSegmentSerializer,
-    ReferenceSerializer,
-    find_or_create,
-)
-
 from django.db import transaction
-from django.db.utils  import IntegrityError
+from django.db.utils import IntegrityError
+from rest_api.models import Gene
+from rest_api.models import GeneSegment
+from rest_api.models import Reference
+from rest_api.models import Replicon
+from rest_api.serializers import find_or_create
+from rest_api.serializers import GeneSegmentSerializer
+from rest_api.serializers import GeneSerializer
+from rest_api.serializers import ReferenceSerializer
+from rest_api.serializers import RepliconSerializer
 
 
 def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
@@ -57,11 +53,11 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 ]:
                     continue
                 # NOTE: some pathogens have duplicated gene names
-                #  this can cause IntegrityError: duplicate key value violates ??       
+                #  this can cause IntegrityError: duplicate key value violates ??
                 try:
                     element = _put_gene_from_feature(feature, record.seq, replicon.id)
                     _create_elemparts(feature, element)
-                except (IntegrityError ) as e:
+                except IntegrityError as e:
                     print(f"Error: {e}")
                     print(f"Error at: {feature}")
                     continue
@@ -194,15 +190,21 @@ def _put_reference_from_record(
     ]:
         if attr_name in source.qualifiers:
             if attr_name == "collection_date":
-                # handle both date formats    
+                # handle both date formats
                 date_string = source.qualifiers[attr_name][0]
                 try:
-                    reference[attr_name] = datetime.strptime(date_string, "%Y-%m").date()
+                    reference[attr_name] = datetime.strptime(
+                        date_string, "%Y-%m"
+                    ).date()
                 except ValueError:
                     try:
-                        reference[attr_name] = datetime.strptime(date_string, "%d-%b-%Y").date()
+                        reference[attr_name] = datetime.strptime(
+                            date_string, "%d-%b-%Y"
+                        ).date()
                     except ValueError:
-                        reference[attr_name] = datetime.strptime(date_string, "%b-%Y").date()
+                        reference[attr_name] = datetime.strptime(
+                            date_string, "%b-%Y"
+                        ).date()
             else:
                 reference[attr_name] = source.qualifiers[attr_name][0]
     try:

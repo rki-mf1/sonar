@@ -5,14 +5,11 @@ from urllib.parse import urlencode
 from django.contrib.auth import models as django_models
 from django.test import TestCase
 from django.urls import reverse
-from rest_api import models
 from rest_framework import status
-from rest_framework.test import (
-    APIRequestFactory,
-    force_authenticate,
-    APITransactionTestCase,
-    APITestCase,
-)
+from rest_framework.test import APIRequestFactory
+from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
+from rest_framework.test import force_authenticate
 
 
 class FixtureModelTestCase(TestCase):
@@ -32,7 +29,7 @@ class FixtureModelTestCase(TestCase):
 class FixtureApiMixin(object):
     def get_request_user(self, *args):
         if self.request_user_name is None:
-            self.request_user_name = "root" # see test_data.json
+            self.request_user_name = "root"  # see test_data.json
         return django_models.User.objects.get(username=self.request_user_name)
 
     def get_user(self, username, password=None, *args):

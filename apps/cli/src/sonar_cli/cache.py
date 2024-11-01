@@ -589,7 +589,7 @@ class sonarCache:
     #             for coord in coords:
     #                 rows.append([elemid, coord, 0])
     #             # rows[-1][2] = 1
-    #             
+    #
     #             df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
     #             df.to_pickle(fname)
     #             if self.debug:

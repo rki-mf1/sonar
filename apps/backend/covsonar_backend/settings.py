@@ -9,12 +9,14 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-import environ
-from pathlib import Path
-import os
-import logging
-from covsonar_backend.utils import CustomisedJSONFormatter
+
 from datetime import datetime
+import logging
+import os
+from pathlib import Path
+
+from covsonar_backend.utils import CustomisedJSONFormatter
+import environ
 
 # Initialise environment variables
 
@@ -51,7 +53,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = env("DEBUG")
 # DEBUG = True
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS", "").split(",")
@@ -185,10 +187,10 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
 # SONAR APP
-REDIS_URL=env("REDIS_URL")
+REDIS_URL = env("REDIS_URL")
 
-SAMPLE_BATCH_SIZE=env("SAMPLE_BATCH_SIZE")
-PROPERTY_BATCH_SIZE=env("PROPERTY_BATCH_SIZE")
+SAMPLE_BATCH_SIZE = env("SAMPLE_BATCH_SIZE")
+PROPERTY_BATCH_SIZE = env("PROPERTY_BATCH_SIZE")
 
 SONAR_DATA_ENTRY_FOLDER = (
     env("SONAR_DATA_ENTRY_FOLDER")
@@ -208,44 +210,45 @@ SONAR_DATA_ARCHIVE = (
 
 # Check if the directory already exists
 if not os.path.exists(SONAR_DATA_ENTRY_FOLDER):
-    os.makedirs(SONAR_DATA_ENTRY_FOLDER, exist_ok = True)
+    os.makedirs(SONAR_DATA_ENTRY_FOLDER, exist_ok=True)
 if not os.path.exists(SONAR_DATA_PROCESSING_FOLDER):
-    os.makedirs(SONAR_DATA_PROCESSING_FOLDER, exist_ok = True)
+    os.makedirs(SONAR_DATA_PROCESSING_FOLDER, exist_ok=True)
 if not os.path.exists(SONAR_DATA_ARCHIVE):
-    os.makedirs(SONAR_DATA_ARCHIVE, exist_ok = True)
+    os.makedirs(SONAR_DATA_ARCHIVE, exist_ok=True)
 
 # ------------------------------------------
 
 LOGGER = logging.getLogger(__name__)
 
-LOG_PATH=env('LOG_PATH')
-LOG_LEVEL=env('LOG_LEVEL')
+LOG_PATH = env("LOG_PATH")
+LOG_LEVEL = env("LOG_LEVEL")
 if not os.path.exists(LOG_PATH):
-    os.makedirs(LOG_PATH, exist_ok = True)
+    os.makedirs(LOG_PATH, exist_ok=True)
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
         "json": {
-            '()': CustomisedJSONFormatter,
+            "()": CustomisedJSONFormatter,
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
         },
-        'app_log_file': {
-            'level': LOG_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOG_PATH, f'{datetime.today().strftime("%Y_%m_%d")}.log.json'),
-        
-            'formatter': 'json',
+        "app_log_file": {
+            "level": LOG_LEVEL,
+            "class": "logging.FileHandler",
+            "filename": os.path.join(
+                LOG_PATH, f'{datetime.today().strftime("%Y_%m_%d")}.log.json'
+            ),
+            "formatter": "json",
         },
     },
-    'loggers': {
+    "loggers": {
         "": {
             "level": LOG_LEVEL,
-            "handlers": ["console", "app_log_file" ],
+            "handlers": ["console", "app_log_file"],
         },
     },
 }
