@@ -4,6 +4,8 @@ import re
 import uuid
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from rest_framework import status
+from rest_framework.response import Response
 
 IUPAC_CODES = {
     "nt": {

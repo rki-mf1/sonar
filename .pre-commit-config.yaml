@@ -11,6 +11,7 @@ repos:
   rev: v0.6.1
   hooks:
   - id: zimports
+    args: [--keep-unused]
     exclude: ^apps/backend/rest_api/migrations/
 - repo: https://github.com/psf/black
   rev: 24.10.0
