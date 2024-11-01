@@ -17,8 +17,13 @@
 Dockerfile text
 .gitignore text
 
+# Powershell scripts are always only useful on Windows. Force them to use
+# Windows line endings.
+*.ps1 text eol=crlf
+
 # Data files
 *.tsv text
+*.csv text
 *.txt text
 *.fasta text
 *.fa text
