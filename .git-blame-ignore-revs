@@ -1,0 +1,16 @@
+# A set of commits to ignore when running "git blame"
+# To use this file by default for this repo, run the command (in the project
+# dir):
+#
+# $ git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# To disable this feature, run the command:
+#
+# $ git config blame.ignoreRevsFile ""
+
+# Fix line endings
+468ce49ea3321ffd88d062d957ef497b7eed77d5
+55886339ab1d01dbb2b2470e3a11ec22a7ad7d92
+
+# Black, isort, and other pre-commit hook changes (whitespace at end of lines)
+b669b83342e97f664b08f4b31d7416074fa3635f
