@@ -14,6 +14,8 @@ services:
       # host's /var/lib/docker/volumes directory
       - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
     environment:
+    - TZ=$TIME_ZONE
+    - PGTZ=$TIME_ZONE
     - POSTGRES_DB=$POSTGRES_DB
     - POSTGRES_SCHEMA=$POSTGRES_SCHEMA
     - POSTGRES_USER=$POSTGRES_USER
@@ -32,6 +34,7 @@ services:
     container_name: sonar-django-backend
     environment:
       - DEBUG=$DEBUG
+      - TZ=$TIME_ZONE
       - REDIS_URL=$REDIS_URL
       - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
       - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
@@ -70,6 +73,7 @@ services:
     container_name: sonar-django-apscheduler
     environment:
       - DEBUG=$DEBUG
+      - TZ=$TIME_ZONE
       - REDIS_URL=$REDIS_URL
       - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
       - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
@@ -110,6 +114,7 @@ services:
       # These are for the frontend
       - ./work/frontend/dist:/frontend
     environment:
+      - TZ=$TIME_ZONE
       - NGINX_PORT=8000
     ports:
       - "127.0.0.1:8000:8000"
@@ -135,6 +140,7 @@ services:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     environment:
       - DEBUG=$DEBUG
+      - TZ=$TIME_ZONE
       - REDIS_URL=$REDIS_URL
       - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
       - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
@@ -165,6 +171,7 @@ services:
     command: celery -A covsonar_backend flower --port=5555 --basic_auth="$CELERY_FLOWER_AUTH" --enable_events=False
     environment:
       - DEBUG=$DEBUG
+      - TZ=$TIME_ZONE
       - REDIS_URL=$REDIS_URL
       - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
       - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE

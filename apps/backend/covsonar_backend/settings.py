@@ -35,6 +35,7 @@ env = environ.Env(
     ALLOWED_HOSTS=(str, None),
     SAMPLE_BATCH_SIZE=(int, 10),
     PROPERTY_BATCH_SIZE=(int, 1000),
+    TIME_ZONE=(str, "UTC"),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -164,7 +165,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = env("TIME_ZONE")
 
 USE_I18N = True
 
@@ -268,6 +269,7 @@ CACHES = {
 # Celery settings
 CELERY_BROKER_URL = f"{env('REDIS_URL')}0"
 CELERY_RESULT_BACKEND = f"{env('REDIS_URL')}0"
+CELERY_ENABLE_UTC = False
 
 if DEBUG:
     INTERNAL_IPS = ("127.0.0.1",)
