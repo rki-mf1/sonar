@@ -125,6 +125,8 @@ services:
   sonar-cache:
     image: $DOCKER_REDIS_IMAGE
     container_name: sonar-cache
+    environment:
+      - TZ=$TIME_ZONE
     restart: unless-stopped
 
   celery-workers:
