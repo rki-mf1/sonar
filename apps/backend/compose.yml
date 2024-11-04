@@ -4,10 +4,11 @@ services:
     image: $DOCKER_POSTGRES_IMAGE
     container_name: sonar-db
     restart: unless-stopped
-    command: -c config_file=/etc/postgresql/postgresql.conf -c port=$POSTGRES_PORT
+    command: -c config_file=/etc/postgresql/conf/${POSTGRES_CONFIG_FILE} -c port=$POSTGRES_PORT
     volumes:
-      # Have to check that the configuration is actually loaded. Right now, I'm following the same approach as the official PostgreSQL Docker
-      - ${POSTGRES_CONFIG_FILE}:/etc/postgresql/postgresql.conf
+      # All config files are in this volume because we use includes, so we
+      # can't just link in a single config file
+      - ./conf/postgresql:/etc/postgresql/conf
       - ${POSTGRES_INIT_DB}:/docker-entrypoint-initdb.d/
       # This exact path inside the container needs to be mapped to a volume,
       # otherwise it will automatically be mapped to a volume inside of the
