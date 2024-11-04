@@ -4,12 +4,12 @@ set -e
 
 echo "Building the frontend"
 cd apps/frontend
-conda update -n sonar-frontend nodejs
+conda update -n sonar-frontend --yes nodejs
 conda run -n sonar-frontend npm install
 conda run -n sonar-frontend npm run build-only
 cd -
 
-FRONTEND_DIR=apps/backend/work/frotnend/dist
+FRONTEND_DIR=apps/backend/work/frontend/dist
 echo "Installing the frontend (to $FRONTEND_DIR)"
 mkdir -p "$FRONTEND_DIR"
 rm -r "$FRONTEND_DIR/*"
