@@ -12,7 +12,7 @@ cd -
 FRONTEND_DIR=apps/backend/work/frontend/dist
 echo "Installing the frontend (to $FRONTEND_DIR)"
 mkdir -p "$FRONTEND_DIR"
-rm -r "$FRONTEND_DIR"/*
+rm -fr "$FRONTEND_DIR"/*
 cp -r apps/frontend/dist/* "$FRONTEND_DIR"
 
 echo "Rebuilding and restarting the frontend"
