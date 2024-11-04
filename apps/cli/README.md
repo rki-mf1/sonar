@@ -98,6 +98,36 @@ Current version sonar-cli:1.0.0
 ╘══════╧═════════════╧═══════════════╧═════════════════════════════════════════════════╛
 ```
 
+## 3. Sonar-cli Setup (Docker)
+
+It is also possible to build and run the sonar-cli using docker, but we still
+have to figure out how to run commands like `import` which require access to
+the filesystem outside of the container.
+
+For now, you can build the cli container:
+
+```
+$ ./scripts/linux/build-docker.sh
+```
+
+Then you can run it, passing in whatever parameters you want:
+
+```
+$ ./scripts/linux/sonar-cli-docker.sh --help
+usage: sonar-cli [-h] [-v]
+                 {list-ref,add-prop,delete-prop,add-ref,delete-ref,import,delete-sample,list-prop,import-lineage,match,tasks}
+                 ...
+
+sonar-cli 1.0.0: Sonar command line tool to interface with the sonar-backend
+and PostgreSQL version.
+
+positional arguments:
+  {list-ref,add-prop,delete-prop,add-ref,delete-ref,import,delete-sample,list-prop,import-lineage,match,tasks}
+    list-ref            Lists all available references in the database
+    add-prop            add a property to the database
+[...]
+```
+
 ### Test Datasets
 
 We provide the test datasets under the `test-data` directory. These datasets can be used in `sonar-backend` commands and Insomnia API for testing.
