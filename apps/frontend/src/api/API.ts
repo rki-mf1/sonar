@@ -77,6 +77,7 @@ export default class API {
         if (Object.keys(filters).length > 0) {
             url += this.parseQueryString(filters).replace('?', '&')
         }
+        console.log(url)
         return this.getRequest(url, {}, false)
     }
 

@@ -67,6 +67,8 @@ import Statistics from "./components/Statistics.vue";
 import App from './App.vue'
 import router from './router'
 
+import ToastMixin from './mixins/toastMixin';
+
 const app = createApp(App)
 
 app.use(createPinia())
@@ -119,5 +121,7 @@ app.component('TabPanel', TabPanel )
 
 app.directive('tooltip', Tooltip);
 app.directive('animateonscroll', AnimateOnScroll);
+
+app.mixin(ToastMixin);
 
 app.mount('#app')

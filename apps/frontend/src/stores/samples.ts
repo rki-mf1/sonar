@@ -50,7 +50,7 @@ export const useSamplesStore = defineStore('samples', {
           exclude: false,
           includeSublineages: true,
           isVisible: true,} // first lineage filter always shown
-      } 
+      }
   }) as FilterGroup,
   DjangoFilterType,
   errorMessage: '',
@@ -94,6 +94,7 @@ export const useSamplesStore = defineStore('samples', {
         }
       }else{
         this.samples = response.results;
+        console.log( this.samples)
         this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
         this.filteredCount = this.filteredStatistics.filtered_total_count
 
@@ -195,7 +196,7 @@ export const useSamplesStore = defineStore('samples', {
           })
         }
       }
-      if (filterGroup.filters.lineageFilter.lineageList 
+      if (filterGroup.filters.lineageFilter.lineageList
             && filterGroup.filters.lineageFilter.lineageList.length > 0) {
           summary.andFilter.push(filterGroup.filters.lineageFilter)
       }
@@ -230,9 +231,9 @@ export const useSamplesStore = defineStore('samples', {
       () => this.filterGroup,
       (newFilters, oldFilters) => {
         if (JSON.stringify(newFilters) !== this.lastSentFilterGroup) {
-          this.filtersChanged = true;  
+          this.filtersChanged = true;
         } else {
-          this.filtersChanged = false; 
+          this.filtersChanged = false;
         }
       },
       { deep: true }

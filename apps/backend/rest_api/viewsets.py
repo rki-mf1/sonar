@@ -189,13 +189,22 @@ class GeneViewSet(viewsets.ModelViewSet):
     queryset = models.Gene.objects.all()
     serializer_class = GeneSerializer
 
+    def get_distinct_gene_symbols(self, reference=None):
+        """
+        Helper method to get distinct gene symbols.
+        This method can be called from anywhere.
+        """
+        queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
+        if reference:
+            queryset = queryset.filter(replicon__reference__accession=reference)
+        return [item["gene_symbol"] for item in queryset]
+
     @action(detail=False, methods=["get"])
     def distinct_gene_symbols(self, request: Request, *args, **kwargs):
-        queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(molecule__reference__accession=ref)
+        reference = request.query_params.get("reference")
+        gene_symbols = self.get_distinct_gene_symbols(reference=reference)
         return Response(
-            {"gene_symbols": [item["gene_symbol"] for item in queryset]},
+            {"gene_symbols": gene_symbols},
             status=status.HTTP_200_OK,
         )
 
