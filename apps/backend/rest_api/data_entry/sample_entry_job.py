@@ -34,6 +34,7 @@ from rest_api.models import ProcessingJob
 from rest_api.models import Sample
 from rest_api.models import Sequence
 from rest_api.serializers import Sample2PropertyBulkCreateOrUpdateSerializer
+from rest_api.utils import parse_date
 from rest_api.utils import PropertyColumnMapping
 
 
@@ -542,6 +543,17 @@ def import_property(
         else:
             serializable_column_mapping = None
             sample_id_column = "ID"
+
+        # Format the data format here
+        # Format columns with 'value_date' type
+        for column_name, col_info in serializable_column_mapping.items():
+            if (
+                col_info["data_type"] == "value_date"
+                and column_name in properties_df.columns
+            ):
+                properties_df[column_name] = properties_df[column_name].apply(
+                    parse_date
+                )
 
         if use_celery:
             print("Setting up property import celery jobs...")
