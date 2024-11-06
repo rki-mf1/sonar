@@ -1,23 +1,10 @@
 <template>
   <div class="table-content">
-    
-    <DataTable 
-      :value="samplesStore.samples" 
-      style="max-width: 95vw" 
-      size="large" 
-      dataKey="name" 
-      stripedRows 
-      :reorderableColumns="true" 
-      @columnReorder="onColReorder" 
-      scrollable 
-      scrollHeight="flex" 
-      sortable
-      @sort="sortingChanged($event)" 
-      selectionMode="single" 
-      v-model:selection="selectedRow" 
-      @rowSelect="onRowSelect" 
-      @rowUnselect="onRowUnselect"
-      >
+
+    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows
+      :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
+      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect"
+      @rowUnselect="onRowUnselect">
       <template #empty> No Results </template>
       <template #header>
         <div style="display: flex; justify-content: space-between; ">
@@ -25,15 +12,8 @@
             <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
           </div>
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect 
-              v-model="selectedColumns" 
-              display="chip" 
-              :options="samplesStore.propertyOptions" 
-              filter 
-              placeholder="Select Columns" 
-              class="w-full md:w-20rem" 
-              @update:modelValue="columnSelection"
-              >
+            <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter
+              placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
                   {{ selectedColumns.length }} columns selected
@@ -47,9 +27,8 @@
         <template #header>
           <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
-        <template #body="slotProps" >
-          <div class="cell-content-sample-id"
-            :title="slotProps.data.name">
+        <template #body="slotProps">
+          <div class="cell-content-sample-id" :title="slotProps.data.name">
             {{ slotProps.data.name }}
           </div>
         </template>
@@ -58,30 +37,26 @@
         <template #header>
           <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
         </template>
-        <template #body="slotProps" >
-          <div v-if="column === 'genomic_profiles'" class="cell-content" >
+        <template #body="slotProps">
+          <div v-if="column === 'genomic_profiles'" class="cell-content">
             <div>
-              <GenomicProfileLabel
-                v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                :variantString="variant"
-                :annotations="slotProps.data.genomic_profiles[variant]"
-                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
-              />
+              <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
             </div>
           </div>
-          <div v-else-if="column === 'proteomic_profiles'" class="cell-content"  >
-            <div >
-              <GenomicProfileLabel
-                v-for="(variant, index) in slotProps.data.proteomic_profiles"
+          <div v-else-if="column === 'proteomic_profiles'" class="cell-content">
+            <div>
+              <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
                 :variantString="variant"
                 :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
             </div>
           </div>
-          <div v-else-if="column === 'init_upload_date'" class="cell-content" >
+          <div v-else-if="column === 'init_upload_date'" class="cell-content">
             {{ formatDate(slotProps.data.init_upload_date) }}
           </div>
 
-          <div v-else-if="column === 'last_update_date'" class="cell-content" >
+          <div v-else-if="column === 'last_update_date'" class="cell-content">
             {{ formatDate(slotProps.data.last_update_date) }}
           </div>
           <span v-else class="cell-content">
@@ -136,7 +111,6 @@
       </div>
     </Dialog>
   </div>
-  <Toast ref="toast" />
 
   <Toast ref="exportToast" position="bottom-right" group="br">
     <template #container="{ message, closeCallback }">
@@ -250,35 +224,18 @@ export default {
         return '';
       }
     },
-    showToastError(message: string) {
-      this.$refs.toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: message,
-        life: 10000
-      });
-    }
+
   },
   computed: {
   },
   mounted() {
 
   },
-  watch: {
-    "samplesStore.errorMessage"(newValue) {
-      if (newValue) {
-        this.showToastError(newValue);
-        // Reset the state to prevent multiple calls
-        // this.samplesStore.errorMessage = "";
-      }
-    }
-  }
 }
 
 </script>
 
 <style scoped>
-
 .table-content {
   height: 80%;
   width: 98%;
@@ -293,34 +250,35 @@ export default {
 }
 
 .cell-content-sample-id {
-  height: 2em; 
+  height: 2em;
   flex: 1;
   min-width: 5rem;
   max-width: 20rem;
-  overflow-x: auto; 
+  overflow-x: auto;
   white-space: nowrap;
   padding: 0;
   margin: 0;
   text-align: right;
-  text-overflow: ellipsis; 
-  direction: rtl; 
+  text-overflow: ellipsis;
+  direction: rtl;
 }
 
 .cell-content {
-  height: 2em; 
+  height: 2em;
   flex: 1;
   min-width: 5rem;
   max-width: 20rem;
-  overflow-x: auto; 
+  overflow-x: auto;
   white-space: nowrap;
   padding: 0;
   margin: 0;
 }
-:deep(.p-datatable.p-datatable-lg .p-datatable-tbody  > tr > td ) {
+
+:deep(.p-datatable.p-datatable-lg .p-datatable-tbody > tr > td) {
   padding-top: 0.5rem !important;
   padding-right: 0.5rem !important;
   padding-bottom: 0.5rem !important;
-  padding-left: 0.5rem!important;
+  padding-left: 0.5rem !important;
 }
 
 :deep(.p-button) {

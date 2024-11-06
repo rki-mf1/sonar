@@ -2,6 +2,7 @@ import 'primeflex/primeflex.css';
 import 'primevue/resources/themes/aura-light-blue/theme.css';
 import './util/custom_theme.css';
 import 'primeicons/primeicons.css'; //icons
+import ToastMixin from './util/toastMixin';
 
 import PrimeVue from 'primevue/config'
 import Menubar from "primevue/menubar";
@@ -95,7 +96,7 @@ app.component('Paginator', Paginator)
 app.component('Column', Column)
 app.component('Card', Card)
 app.component('ProgressSpinner', ProgressSpinner)
-app.component('ProgressBar', ProgressBar )
+app.component('ProgressBar', ProgressBar)
 app.component('InputSwitch', InputSwitch)
 app.component('SplitButton', SplitButton)
 app.component('Calendar', Calendar)
@@ -109,15 +110,17 @@ app.component('Chip', Chip)
 
 app.component('Message', Message)
 app.component('Toast', Toast)
-app.component('Fieldset', Fieldset )
-app.component('Panel', Panel )
-app.component('Skeleton', Skeleton )
-app.component('Splitter', Splitter  )
-app.component('SplitterPanel', SplitterPanel  )
-app.component('TabView', TabView  )
-app.component('TabPanel', TabPanel )
+app.component('Fieldset', Fieldset)
+app.component('Panel', Panel)
+app.component('Skeleton', Skeleton)
+app.component('Splitter', Splitter)
+app.component('SplitterPanel', SplitterPanel)
+app.component('TabView', TabView)
+app.component('TabPanel', TabPanel)
 
 app.directive('tooltip', Tooltip);
 app.directive('animateonscroll', AnimateOnScroll);
+
+app.mixin(ToastMixin);
 
 app.mount('#app')

@@ -37,6 +37,7 @@ from rest_api.utils import define_profile
 from rest_api.utils import resolve_ambiguous_NT_AA
 from rest_api.utils import Response
 from rest_api.utils import strtobool
+from rest_api.viewsets import GeneViewSet
 from rest_api.viewsets import PropertyViewSet
 from rest_framework import generics
 from rest_framework import status
@@ -67,6 +68,7 @@ class SampleViewSet(
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
     filter_fields = ["name"]
+    distinct_gene_symbols = GeneViewSet().get_distinct_gene_symbols()
 
     @property
     def filter_label_to_methods(self):
@@ -748,7 +750,14 @@ class SampleViewSet(
         mutations = re.split(r"[\s,]+", value.strip())
         for mutation in mutations:
             parsed_mutation = define_profile(mutation)
-
+            # check valid protien name
+            if (
+                "protein_symbol" in parsed_mutation
+                and parsed_mutation["protein_symbol"] not in self.distinct_gene_symbols
+            ):
+                raise ValueError(
+                    f"Invalid protein name: {parsed_mutation['protein_symbol']}."
+                )
             # Check the parsed mutation type and call the appropriate filter function
             if parsed_mutation.get("label") == "SNP Nt":
                 q_obj = self.filter_snp_profile_nt(
@@ -774,12 +783,8 @@ class SampleViewSet(
             elif parsed_mutation.get("label") == "Del AA":
                 q_obj = self.filter_del_profile_aa(
                     protein_symbol=parsed_mutation["protein_symbol"],
-                    first_deleted=int(parsed_mutation["first_deleted"]),
-                    last_deleted=int(
-                        parsed_mutation.get(
-                            "last_deleted", parsed_mutation["first_deleted"]
-                        )
-                    ),
+                    first_deleted=parsed_mutation["first_deleted"],
+                    last_deleted=parsed_mutation.get("last_deleted", ""),
                 )
 
             elif parsed_mutation.get("label") == "Ins Nt":
@@ -922,7 +927,8 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aa (e.g. OPG098:E162K)
-
+        if protein_symbol not in self.distinct_gene_symbols:
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
@@ -976,14 +982,15 @@ class SampleViewSet(
     def filter_del_profile_aa(
         self,
         protein_symbol: str,
-        first_deleted: int,
-        last_deleted: int,
+        first_deleted: str,
+        last_deleted: str,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:del:first_AA_deleted-last_AA_deleted (e.g. OPG197:del:34-35)
-
+        if protein_symbol not in self.distinct_gene_symbols:
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         # in case only single deltion bp
         if last_deleted == "":
             last_deleted = first_deleted
@@ -1035,6 +1042,8 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aas (e.g. OPG197:A34AK)
+        if protein_symbol not in self.distinct_gene_symbols:
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         alignment_qs = models.Alignment.objects.filter(
             mutations__end=ref_pos,
             mutations__ref=ref_aa,
