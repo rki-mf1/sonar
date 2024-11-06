@@ -78,7 +78,8 @@ export default {
     margin: 10px;
     box-shadow: var(--shadow);
     box-sizing: border-box; 
-};
+}
+
 .card-container {
     display: flex;
     flex-direction: column;
