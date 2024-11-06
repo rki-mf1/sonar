@@ -95,20 +95,23 @@ class SampleViewSet(
         )
         response_dict["samples_total"] = models.Sample.objects.all().count()
 
-        response_dict["first_sample_date"] = (
+        first_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
             .order_by("collection_date")
             .first()
-            .collection_date
+        )
+        response_dict["first_sample_date"] = (
+            first_sample.collection_date if first_sample else None
         )
         # '-' before column name mean "descending order", while without '-' mean "ascending".
-        response_dict["latest_sample_date"] = (
+        latest_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
             .order_by("-collection_date")
             .first()
-            .collection_date
         )
-
+        response_dict["latest_sample_date"] = (
+            latest_sample.collection_date if latest_sample else None
+        )
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
@@ -192,7 +195,7 @@ class SampleViewSet(
             )
 
             if DEBUG:
-                print(queryset.query)
+                LOGGER.info(queryset.query)
 
             # filter out ambiguous nucleotides or unspecified amino acids
             if not showNX:
@@ -519,7 +522,7 @@ class SampleViewSet(
         # Organize monthly lineage data into a dictionary for processing
         lineage_data = defaultdict(lambda: defaultdict(int))
         for item in monthly_data:
-            month_str = item["month"].strftime("%Y-%m")
+            month_str = item["month"].strftime("%Y-%m") if item["month"] else "Unknown"
             lineage_data[month_str][item["lineage"]] += item["lineage_count"]
 
         result = []
@@ -596,7 +599,7 @@ class SampleViewSet(
         # Organize lineage counts by week into a dictionary
         lineage_data = defaultdict(lambda: defaultdict(int))
         for item in weekly_data:
-            week_str = item["week"].strftime("%Y-W%U")
+            week_str = item["week"].strftime("%Y-W%U") if item["week"] else "Unknown"
             lineage_data[week_str][item["lineage"]] += item["lineage_count"]
 
         # Initialize final result list
