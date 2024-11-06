@@ -28,7 +28,9 @@
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.2",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^20.11.28",
+    "@types/qs": "^6.9.16",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/tsconfig": "^0.5.1",
     "npm-run-all2": "^6.1.2",
