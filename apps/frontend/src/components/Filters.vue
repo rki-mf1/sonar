@@ -106,12 +106,12 @@
           <Message severity="error">{{ samplesStore.errorMessage }}</Message>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialog()"></Button>
+          <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialogAndUpdate()"></Button>
         </div>
-        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
+        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
       </Dialog>
 
-      <OverlayPanel ref="op">
+      <OverlayPanel ref="advancedFiltersHelp">
         <div class="flex flex-column gap-3 w-25rem">
           <div>
             <span class="font-medium text-900 block mb-2">Example of Input</span>
@@ -213,10 +213,11 @@ export default {
   name: "Filters",
   data() {
     const samplesStore = useSamplesStore();
+    
     samplesStore.initializeWatchers();
     if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
       samplesStore.filterGroup.filters.profileFilters.push({
-        label: 'Label',
+        label: 'DNA/AA Profile',
         value: '',
         exclude: false,
       });
@@ -234,7 +235,7 @@ export default {
     removeProfileFilter() {
       if (this.samplesStore.filterGroup.filters.profileFilters.length <= 1) {
       this.samplesStore.filterGroup.filters.profileFilters[0] = {
-        label: 'Label',
+        label: 'DNA/AA Profile',
         value: '',
         exclude: false,
       };
@@ -261,14 +262,22 @@ export default {
                                                               isVisible: true,
                                                             };
     },
-    closeAdvancedFilterDialog() {
+    closeAdvancedFilterDialogAndUpdate() {
+      if (this.samplesStore.filtersChanged) { 
+        this.samplesStore.updateSamples();
+      }
       this.displayDialogFilter = false;
     },
-    toggle(event) {
-      if (this.$refs.op) {
-        this.$refs.op.toggle(event);
+    toggleHelp(event: Event) {
+      const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as { toggle?: (event: Event) => void };
+
+      if (advancedFiltersHelpRef && typeof advancedFiltersHelpRef.toggle === 'function') {
+        advancedFiltersHelpRef.toggle(event);
+      } else {
+        console.warn('Help component does not exist');
       }
     }
+
   },
   computed: {
     isAdvancedFiltersSet(): boolean {

@@ -82,7 +82,7 @@ class SampleViewSet(
             "Sample": self.filter_sample,
             "Lineages": self.filter_sublineages,
             "Annotation": self.filter_annotation,
-            "Label": self.filter_label,
+            "DNA/AA Profile": self.filter_label,
         }
 
     @action(detail=False, methods=["get"])

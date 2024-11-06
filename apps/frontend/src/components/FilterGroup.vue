@@ -7,24 +7,35 @@
         <Dropdown class="flex mr-2" :options="propertyOptions" v-model="filter.propertyName"
           style="flex: 1; min-width: 150px;" @change="updatePropertyValueOptions(filter)" />
 
-        <div v-if="['host', 'name', 'length'].includes(filter.propertyName)" class="mr-2">
+        <div v-if="['name', 'length', 'lab'].includes(filter.propertyName) 
+                  && (typeof filter.value === 'string' || filter.value === null)"  
+            class="mr-2">
           <span class="filter-label">Operator</span>
           <Dropdown :options="localOperators" v-model="filter.filterType" style="flex: 1; min-width: 150px;" />
           <span class="filter-label">Value</span>
+          <InputText 
+            v-model="filter.value" 
+            style="flex: auto" 
+          />
         </div>
 
-        <div v-if="filter.propertyName?.includes('date')">
-          <Calendar v-model="filter.value" showIcon dateFormat="yy-mm-dd" selectionMode="range" />
+        <div v-if="isDateArray(filter.value)">
+          <Calendar 
+            v-model="filter.value" 
+            showIcon dateFormat="yy-mm-dd" 
+            selectionMode="range" 
+          />
         </div>
         <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
-          <Dropdown :options="propertyValueOptions[filter.propertyName]?.options"
-            :loading="propertyValueOptions[filter.propertyName]?.loading" v-model="filter.value" style="flex: auto"
-            filter />
+          <Dropdown 
+            :options="propertyValueOptions[filter.propertyName]?.options"
+            :loading="propertyValueOptions[filter.propertyName]?.loading" 
+            :virtualScrollerOptions="{ itemSize: 30 }"
+            v-model="filter.value" 
+            style="flex: auto"
+            filter 
+          />
         </div>
-        <div v-else>
-          <InputText v-model="filter.value" style="flex: auto" />
-        </div>
-
         <Button type="button" raised size="small" @click="
           filterGroup.filters?.propertyFilters?.splice(
             filterGroup.filters?.propertyFilters?.indexOf(filter),
@@ -34,49 +45,29 @@
       </div>
     </div>
     <!-- Profile Filters -->
-    <div v-for="filter in filterGroup.filters?.profileFilters" class="single-filter">
-      <div class="flex flex-column">
-        <div class="flex align-items-center ">
-          <span class="filter-label">{{ filter.label }}</span>
-          <div v-for="key in Object.keys(filter) as Array<keyof ProfileFilter>">
-
-            <div v-if="key == 'exclude'" class="exclude-switch">
+    <div v-for="profileFilter in filterGroup.filters?.profileFilters" class="single-filter">
+      <div class="filter-container">
+        <span style="font-weight: 500">DNA/AA Profile</span>
+          <InputText
+            v-model="profileFilter.value" 
+            style="flex: auto" 
+            :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
+            class="mr-1" 
+            />
+            <div class="exclude-switch">
               Exclude?
-              <InputSwitch v-model="filter[key]" />
+              <InputSwitch v-model="profileFilter.exclude" />
             </div>
-            <Dropdown 
-              v-else-if="['proteinSymbol', 'geneSymbol'].includes(key)" 
-              :placeholder="key"
-              :options="symbolOptions" 
-              v-model="filter[key]" 
-              style="flex: auto" class="mr-1" />
-            <InputText 
-              v-else-if="key != 'label'" 
-              v-model="filter[key]" 
-              style="flex: auto" 
-              :placeholder="key"
-              class="mr-1" />
-          </div>
-
-          <!-- the button has to stay outside-->
+        <!-- the button has to stay outside-->
           <Button 
             type="button" 
             severity="danger" 
             size="small" 
-            @click="filterGroup.filters?.profileFilters?.splice(
-              filterGroup.filters?.profileFilters?.indexOf(filter), 1)" 
+            @click="removeProfileFilter(filterGroup, filterGroup.filters?.profileFilters?.indexOf(profileFilter))"
             icon="pi pi-trash" 
+            class="ml-2 p-button-sm" 
           />
         </div>
-
-      </div>
-      <div v-if='filter.label == "Label"' class="flex align-items-center">
-        Example input:
-        <Chip label="S:L452R" />
-        <Chip label="S:del:143-144" />
-        <Chip label="del:21114-21929" />
-        <Chip label="T23018G" />
-      </div>
     </div>
 
     <!-- Replicon Filters -->
@@ -85,10 +76,10 @@
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
           <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
-          <div class="exclude-switch">
-            Exclude?
-            <InputSwitch v-model="filter.exclude" />
-          </div>
+            <div class="exclude-switch">
+              Exclude?
+              <InputSwitch v-model="filter.exclude" />
+            </div>
           <Button type="button" size="small" @click="
             filterGroup.filters?.repliconFilters?.splice(
               filterGroup.filters?.repliconFilters?.indexOf(filter),
@@ -183,14 +174,7 @@
 import API from '@/api/API';
 import {
   type FilterGroup,
-  type ClassicFilter,
   type PropertyFilter,
-  type SNPProfileNtFilter,
-  type SNPProfileAAFilter,
-  type DelProfileNtFilter,
-  type DelProfileAAFilter,
-  type InsProfileNtFilter,
-  type InsProfileAAFilter,
   type ProfileFilter,
   type RepliconFilter,
   type LineageFilter,
@@ -234,7 +218,7 @@ export default {
       required: true
     },
     propertiesDict: {
-      type: Object as () => { [key: string]: string[] },
+      type: Object as () => { [key: string]: string },
       required: true
     },
   },
@@ -246,12 +230,13 @@ export default {
         'sequencing_reason',
         'zip_code',
         'country',
-        'host'],
-      ClassicFilter: {
-        label: 'Label',
+        'host',
+        'isolation_source'],
+      ProfileFilter: {
+        label: 'DNA/AA Profile',
         value: '',
         exclude: false,
-      } as ClassicFilter,
+      } as ProfileFilter,
       PropertyFilter: {
         label: 'Property',
         value: '',
@@ -270,83 +255,20 @@ export default {
         includeSublineages: true,
         isVisible: false
       } as LineageFilter,
-      profileFilterTypes: {
-        ProfileFilter: {
-          label: 'Label',
-          value: '',
-          exclude: false,
-        } as ClassicFilter,
-        SNPProfileNt: {
-          label: 'SNP Nt',
-          refNuc: '',
-          refPos: '',
-          altNuc: '',
-          exclude: false
-        } as SNPProfileNtFilter,
-        SNPProfileAA: {
-          label: 'SNP AA',
-          proteinSymbol: '',
-          refAA: '',
-          refPos: '',
-          altAA: '',
-          exclude: false
-        } as SNPProfileAAFilter,
-        DelProfileNt: {
-          label: 'Del Nt',
-          firstDeleted: '',
-          lastDeleted: '',
-          exclude: false
-        } as DelProfileNtFilter,
-        DelProfileAA: {
-          label: 'Del AA',
-          proteinSymbol: '',
-          firstDeleted: '',
-          lastDeleted: '',
-          exclude: false
-        } as DelProfileAAFilter,
-        InsProfileNt: {
-          label: 'Ins Nt',
-          refNuc: '',
-          refPos: '',
-          altNuc: '',
-          exclude: false
-        } as InsProfileNtFilter,
-        InsProfileAA: {
-          label: 'Ins AA',
-          proteinSymbol: '',
-          refAA: '',
-          refPos: '',
-          altAA: '',
-          exclude: false
-        } as InsProfileAAFilter
-      } as { [key: string]: ProfileFilter },
       // to store the earliest and latest dates for each property.
       dateRanges: {} as { [key: string]: { earliest: string; latest: string } },
     }
   },
   computed: {
-    sliderValue: {
-      get() {
-        // Convert filter.value to a number for the Slider
-        const numericValue = parseFloat(this.filter?.value);
-        return isNaN(numericValue) ? 0 : numericValue;
-      },
-      set(newValue) {
-        // Convert the Slider value back to a string for filter.value
-        return newValue.toString();
-      },
-    },
     filterTypeMethods(): MenuItem[] {
       const menuItems = []
-      for (const [key, value] of Object.entries(this.profileFilterTypes)) {
-        menuItems.push({
-          label: key,
-          icon: 'pi pi-plus',
-          command: () => {
-            this.filterGroup.filters.profileFilters.push({ ...value })
-          }
-        })
-      }
+      menuItems.push({
+        label: 'DNA/AA Profile',
+        icon: 'pi pi-plus',
+        command: () => {
+          this.filterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
+        }
+      })
       menuItems.push({
         label: 'PropertyFilter',
         icon: 'pi pi-plus',
@@ -382,7 +304,9 @@ export default {
         this.filterGroup.filters.lineageFilter.lineageList.length ==
         0
       )
-    }
+    },
+
+    
   },
   methods: {
     async get_defaults_earliest_latest_collect_date(propertyName: string) {
@@ -425,8 +349,8 @@ export default {
     markGroup(group: FilterGroup, mark: boolean) {
       group.marked = mark
     },
-    addClassicFilter() {
-      this.filterGroup.filters.profileFilters.push({ ...this.ClassicFilter })
+    addProfileFilter() {
+      this.filterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
     },
     async updatePropertyValueOptions(filter: PropertyFilter) {
 
@@ -445,7 +369,28 @@ export default {
         filter.value = ""
       }
     },
-    initializeOperators(filter: { fetchOptions?: boolean; label?: string; value?: string; propertyName: any; filterType?: DjangoFilterType | null; }) {
+
+    removeProfileFilter(filterGroup: FilterGroup, index: number) {
+      if (filterGroup.filters?.profileFilters?.length <= 1) {
+        filterGroup.filters.profileFilters[0] = {
+          label: 'DNA/AA Profile',
+          value: '',
+          exclude: false,
+        };
+    }
+      else {
+        filterGroup.filters.profileFilters.splice(index, 1);
+      }
+    },
+    
+    initializeOperators(filter: { 
+      fetchOptions?: boolean; 
+      label?: string; 
+      value?: string | number | string[] | Date[] | null ; 
+      propertyName: string; 
+      filterType?: DateDjangoFilterType | IntegerDjangoFilterType | StringDjangoFilterType | 
+                  DjangoFilterType | null; 
+      }) {
       const propertyType = this.propertiesDict[filter.propertyName];
       let newOperators = [];
 
@@ -462,6 +407,12 @@ export default {
       }
       this.localOperators = newOperators;
       filter.filterType = newOperators[0]
+    },
+    isDateArray(value: any): value is Date[] {
+      return Array.isArray(value) && value.every(item => item instanceof Date);
+    },
+    isStringOrNull(value: any): boolean {
+      return typeof value === 'string' || typeof value === null ;
     },
   },
   watch: {
@@ -513,6 +464,29 @@ export default {
   text-align: center;
 }
 
+.filter-container {
+  display: flex;
+  align-items: center; 
+  gap: 10px;        
+  margin-bottom: 5px;
+}
+
+.button-1{
+  display: flex;
+  justify-content: space-between; 
+  align-items: flex-end;      
+  margin-bottom: 0px;
+}
+
+.exclude-switch {
+  /* font-variant: small-caps; */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.7em;
+  margin: 2.5px;
+}
+
 .button-bar {
   display: flex;
   flex-direction: row;
@@ -529,14 +503,6 @@ export default {
   border: 2px solid var(--secondary-color-lighter);
 }
 
-.exclude-switch {
-  /* font-variant: small-caps; */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 0.7em;
-  margin: 2.5px;
-}
 .include-switch {
   /* font-variant: small-caps; */
   display: flex;

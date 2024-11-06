@@ -125,6 +125,7 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples';
+import type { LineageBarChartData } from '@/util/types';
 import { RiAndroidFill } from 'oh-vue-icons/icons';
 
 export default {
@@ -182,7 +183,9 @@ export default {
     },
     lineage_barData() {
       // Access lineage_bar_chart data from filteredStatistics
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lineage_bar_chart'] : {};
+      const _data: LineageBarChartData[]= this.samplesStore.filteredStatistics 
+        ? this.samplesStore.filteredStatistics['lineage_bar_chart'] 
+        : [];
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
       }
@@ -237,8 +240,8 @@ export default {
             beginAtZero: true,
             max: 100,
             ticks: {
-              callback: function (value) {
-                return value + '%'; // Add percentage symbol
+              callback: function (value: number) {
+                return value + '%';
               },
             },
           },
@@ -249,8 +252,8 @@ export default {
     },
     lineage_areaData() {
       // Extract the data, ensuring it's an array
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lineage_area_chart'] : {};
-
+      const _data = this.samplesStore.filteredStatistics 
+        ? this.samplesStore.filteredStatistics['lineage_area_chart'] : [];
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
       }
@@ -312,7 +315,7 @@ export default {
             beginAtZero: true,
             max: 100,
             ticks: {
-              callback: function (value) {
+              callback: function (value: number) {
                 return value + '%'; // Add percentage symbol
               },
             },
@@ -324,8 +327,8 @@ export default {
     },
     chartData() {
       const samples_per_week = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['samples_per_week'] : {}
-      const labels = []
-      const data = []
+      const labels: string[] = []
+      const data: number[] = []
 
       if (samples_per_week && Object.keys(samples_per_week).length > 0) {
         Object.keys(samples_per_week).forEach((key) => {
