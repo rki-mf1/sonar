@@ -1,24 +1,20 @@
 name: backend coverage report
-
 on:
   pull_request:
     paths:
       - './apps/backend/**'
   workflow_dispatch:
-
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
   pull-requests: write
-
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
-
 jobs:
   coverage:
     environment:
@@ -33,43 +29,32 @@ jobs:
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
-
       - name: Build the backend container
         run: |
           docker build -t backend:local -f Dockerfile .
-
       - name: Bring up containers
         run: docker compose $COMPOSE_ARGS up --detach --quiet-pull
-
       - name: Install testing dependencies
         run: docker compose $COMPOSE_ARGS exec -t sonar-django-backend pip install --no-cache-dir --disable-pip-version-check -r requirements-testing.txt
-          
       - name: Run tests
         run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage run ./manage.py test --no-input
-
       - name: Generate reports
         run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage html
-        
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
           path: 'work/sonar/coverage'
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        
       - uses: jwalton/gh-find-current-pr@v1
         id: finder
-
       - name: Publish coverage summary
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: Coverage Report
           message: '[Report]( ${{ steps.deployment.outputs.page_url }})'
           number: ${{ steps.finder.outputs.pr }}
-
