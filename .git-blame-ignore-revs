@@ -14,3 +14,6 @@
 
 # Black, isort, and other pre-commit hook changes (whitespace at end of lines)
 b669b83342e97f664b08f4b31d7416074fa3635f
+
+# yamlfmt
+14b592b8088d7bbb9d159643e18357fd8710317e
