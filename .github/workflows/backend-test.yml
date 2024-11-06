@@ -2,7 +2,7 @@ name: backend test
 on:
   pull_request:
     paths:
-      - './apps/backend/**'
+      - 'apps/backend/**'
   workflow_dispatch:
 permissions: write-all
 concurrency:

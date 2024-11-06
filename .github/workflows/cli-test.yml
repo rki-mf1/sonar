@@ -2,7 +2,7 @@ name: cli lint
 on:
   pull_request:
     paths:
-      - './apps/cli/**'
+      - 'apps/cli/**'
   workflow_dispatch:
 jobs:
   lint:
