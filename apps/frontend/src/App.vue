@@ -6,7 +6,7 @@
         <div class="flex  flex-wrap justify-content-between">
           <div class="flex align-items-center justify-content-center">
             <div style="font-size: 2rem; color: var(--text-color);">
-              <i class="pi pi-spinner" style="font-size: 3rem; color: var(--text-color);"></i>ovSonar
+              Sonar
             </div>
           </div>
           <div class="flex align-items-center justify-content-center">

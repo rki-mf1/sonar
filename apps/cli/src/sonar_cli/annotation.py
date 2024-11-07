@@ -204,7 +204,7 @@ class Annotator:
     #             )
     #         if result.returncode != 0:
     #             LOGGER.error("Output failed with exit code: %s", result.returncode)
-    #             print("Error output:", result.stderr.decode("utf-8"))
+    #             LOGGER.error("Error output:", result.stderr.decode("utf-8"))
     #     except subprocess.CalledProcessError as e:
     #         LOGGER.error("Output transformation failed: %s", e)
 
@@ -244,7 +244,7 @@ class Annotator:
 
 #         # Reset the index
 #         df = df.reset_index(drop=True)
-#         # print(df)
+#
 #         return df
 #     except KeyError as e:
 #         LOGGER.error(e)
@@ -279,9 +279,9 @@ class Annotator:
 #     ]
 #     try:
 #         subprocess.run(sonar_cmd, check=True)
-#         # print("Sonar command executed successfully.")
+#         # LOGGER.info("Sonar command executed successfully.")
 #     except subprocess.CalledProcessError as e:
-#         print("Sonar match command failed:", e)
+#         LOGGER.error("Sonar match command failed:", e)
 
 
 # def import_annvcf_SonarCMD(db_path, sonar_hash, ann_input):
@@ -298,6 +298,6 @@ class Annotator:
 #     try:
 #         subprocess.run(sonar_cmd, check=True)
 
-#         # print("Sonar command executed successfully.")
+#         # LOGGER.info("Sonar command executed successfully.")
 #     except subprocess.CalledProcessError as e:
-#         print("Sonar import-ann command failed:", e)
+#         LOGGER.error("Sonar import-ann command failed:", e)

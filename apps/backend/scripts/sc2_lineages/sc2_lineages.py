@@ -2,6 +2,7 @@
 ## run command: python sc2_lineages.py -o sc2_lineages.tsv
 
 import argparse
+
 import pandas as pd
 from pango_aliasor.aliasor import Aliasor
 
@@ -26,9 +27,7 @@ def main():
     ]
 
     # If no alias_key.json is passed, downloads the latest version from github # Aliasor('alias_key.json')
-    aliasor = (
-        Aliasor()
-    )  
+    aliasor = Aliasor()
     df = pd.DataFrame(
         {
             "lineage": all_lineages,
@@ -41,9 +40,7 @@ def main():
 
     # Perform a self-join to get all DIRECT sublineages for each lineage (one per row)
     # Join each 'lineage' with matching 'parent' to get each direct sublineage
-    df = pd.merge(
-        df, df, left_on="lineage", right_on="parent", how="left"
-    )  
+    df = pd.merge(df, df, left_on="lineage", right_on="parent", how="left")
     df = (
         df[["lineage_x", "lineage_y"]]
         .rename(columns={"lineage_x": "lineage", "lineage_y": "sublineage"})

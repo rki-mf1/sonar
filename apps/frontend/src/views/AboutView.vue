@@ -5,12 +5,12 @@
       class="shadow-4 align-center animation-duration-1000 animation-ease-in-out mb-4">
       <Card>
         <template #title>
-          <h3 class="text-primary mt-4">About covSonar Explorer</h3>
+          <h3 class="text-primary mt-4">About Sonar</h3>
         </template>
         <template #content>
           <p class="m-1">
-            At <strong>covSonar Explorer</strong>, we provide an application to explore and compare metadata from
-            COVID-19 sequences available from our data source.
+            <strong>Sonar</strong> is an application to explore and compare metadata from
+            SARS-CoV-2 sequences available from our data source.
             Furthermore, we offer an advanced filtering tool that enables more detailed queries. This tool benefits all
             users by facilitating better analysis and research.
           </p>

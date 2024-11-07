@@ -1,32 +1,31 @@
 services:
-
   sonar-db:
     image: $DOCKER_POSTGRES_IMAGE
     container_name: sonar-db
     restart: unless-stopped
-    command: -c config_file=/etc/postgresql/postgresql.conf -c port=$POSTGRES_PORT
+    command: -c config_file=/etc/postgresql/conf/${POSTGRES_CONFIG_FILE} -c port=$POSTGRES_PORT
     volumes:
-      # Have to check that the configuration is actually loaded. Right now, I'm following the same approach as the official PostgreSQL Docker
-      - ${POSTGRES_CONFIG_FILE}:/etc/postgresql/postgresql.conf
+      # All config files are in this volume because we use includes, so we
+      # can't just link in a single config file
+      - ./conf/postgresql:/etc/postgresql/conf
       - ${POSTGRES_INIT_DB}:/docker-entrypoint-initdb.d/
       # This exact path inside the container needs to be mapped to a volume,
       # otherwise it will automatically be mapped to a volume inside of the
       # host's /var/lib/docker/volumes directory
       - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
     environment:
-    - POSTGRES_DB=$POSTGRES_DB
-    - POSTGRES_SCHEMA=$POSTGRES_SCHEMA
-    - POSTGRES_USER=$POSTGRES_USER
-    - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-    - POSTGRES_HOST=$POSTGRES_HOST
-    - POSTGRES_PORT=$POSTGRES_PORT
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_SCHEMA=$POSTGRES_SCHEMA
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_HOST=$POSTGRES_HOST
+      - POSTGRES_PORT=$POSTGRES_PORT
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -p $POSTGRES_PORT -U postgres"]
       interval: 10s
       retries: 5
       start_period: 30s
       timeout: 10s
-
   sonar-django-backend:
     image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
     container_name: sonar-django-backend
@@ -51,20 +50,19 @@ services:
       - SECRET_KEY=$SECRET_KEY
     restart: unless-stopped
     entrypoint: /bin/sh -c
-    command: [ "${START_DJANGO_SERVER}" ]
+    command: ["${START_DJANGO_SERVER}"]
     volumes:
       - ./covsonar2_server/test/media:/covsonarmedia
       - ./covsonar2_server/test/static:/staticfiles
       - ${SONAR_EXTERNAL}/logs:${LOG_PATH}
       - ${SONAR_EXTERNAL}/input-logs:/input-logs
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
-      - ${SONAR_EXTERNAL}/coverage:/code/coverage 
+      - ${SONAR_EXTERNAL}/coverage:/code/coverage
     depends_on:
       sonar-cache:
         condition: service_started
       sonar-db:
         condition: service_healthy
-
   sonar-django-apscheduler:
     image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
     container_name: sonar-django-apscheduler
@@ -89,7 +87,7 @@ services:
       - SECRET_KEY=$SECRET_KEY
     restart: on-failure
     entrypoint: /bin/sh -c
-    command: [ "python manage.py runapscheduler" ]
+    command: ["python manage.py runapscheduler"]
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
@@ -97,7 +95,6 @@ services:
         condition: service_healthy
       sonar-django-backend:
         condition: service_started
-
   # This nginx reverse proxy instance is for both the backend and frontend.
   sonar-proxy:
     image: $DOCKER_NGINX_IMAGE
@@ -115,12 +112,10 @@ services:
       - "127.0.0.1:8000:8000"
     depends_on:
       - sonar-django-backend
-
   sonar-cache:
     image: $DOCKER_REDIS_IMAGE
     container_name: sonar-cache
     restart: unless-stopped
-
   celery-workers:
     image: backend:local
     container_name: celery-workers
@@ -158,7 +153,6 @@ services:
     depends_on:
       - sonar-cache
       - sonar-django-backend
-      
   celery-monitor:
     image: backend:local
     container_name: celery-monitor
