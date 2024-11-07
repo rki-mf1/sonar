@@ -20,9 +20,10 @@
             :invalid="isTimeRangeInvalid"
           ></Calendar>
           <Button 
-            style="font-size: 12px; min-width: min-content;" 
-            @click="samplesStore.setDefaultTimeRange">
-          <i class="pi pi-arrow-circle-left" style="font-size: medium"/>&nbsp; Reset
+              icon="pi pi-arrow-circle-left"   
+              label="&nbsp;Reset"
+              style="font-size: 12px; min-width: min-content;"
+              @click="samplesStore.setDefaultTimeRange">
           </Button>
           <Button 
             class="ml-2 p-button-sm" 
@@ -39,7 +40,7 @@
             :options="samplesStore.lineageOptions" 
             filter
             placeholder="Select Lineages" 
-            style="width: 69%;"
+            style="width: 68%;"
             :virtualScrollerOptions="{ itemSize: 30 }"
             />
 
