@@ -1,70 +1,50 @@
 import ast
-import csv, _csv
-from dataclasses import dataclass
-import json
-import pathlib
-import ast
 import csv
-from datetime import datetime
 import json
 import os
+import pathlib
 import re
 import traceback
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Generator
 
 import _csv
-from covsonar_backend.settings import DEBUG
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from dateutil.rrule import rrule
-from dateutil.rrule import WEEKLY
+from covsonar_backend.settings import DEBUG, LOGGER, SONAR_DATA_ENTRY_FOLDER
+from dateutil.rrule import WEEKLY, rrule
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db import connection, transaction
+from django.core.paginator import Paginator
 from django.db.models import (
-    QuerySet,
-    CharField,
-    Count,
     Case,
-    When,
+    Count,
     IntegerField,
     Min,
     OuterRef,
     Prefetch,
     Q,
+    QuerySet,
     Subquery,
-    Sum,
-    TextField,
+    When,
 )
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
-import pandas as pd
 from rest_api.data_entry.sample_job import delete_sample
-from rest_api.serializers import SampleGenomesExportStreamSerializer
-from rest_api.serializers import SampleSerializer
-from rest_api.utils import define_profile
-from rest_api.utils import resolve_ambiguous_NT_AA
-from rest_api.utils import Response
-from rest_api.utils import strtobool
+from rest_api.serializers import SampleGenomesExportStreamSerializer, SampleSerializer
+from rest_api.utils import Response, define_profile, resolve_ambiguous_NT_AA, strtobool
 from rest_api.viewsets import PropertyViewSet
-from rest_framework import generics
-from rest_framework import status
-from rest_framework import viewsets
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
-from django.core.paginator import Paginator
-from covsonar_backend.settings import DEBUG
-from rest_api.data_entry.sample_job import delete_sample
-from rest_api.serializers import SampleSerializer, SampleGenomesExportStreamSerializer
-from rest_api.utils import Response, define_profile, resolve_ambiguous_NT_AA, strtobool
-from rest_api.viewsets import PropertyViewSet, LineageViewSet
 
 from . import models
-from .serializers import SampleGenomesSerializer
-from .serializers import SampleGenomesSerializerVCF
-from .serializers import SampleSerializer
-
+from .serializers import (
+    SampleGenomesSerializer,
+    SampleGenomesSerializerVCF,
+    SampleSerializer,
+)
+from collections import defaultdict
 
 @dataclass
 class LineageInfo:
