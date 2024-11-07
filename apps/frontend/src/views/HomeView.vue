@@ -35,7 +35,7 @@
               >
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
-                  {{ selectedColumns.length }} columns selected
+                  {{ selectedColumns.length + 1 }} columns selected
                 </div>
               </template>
             </MultiSelect>

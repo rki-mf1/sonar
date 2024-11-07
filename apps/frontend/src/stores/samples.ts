@@ -131,9 +131,9 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
+      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty & drop the 'name' column because the ID column is fixed
       this.propertyOptions = Object.keys(this.propertiesDict).filter( 
-        (key) => this.filteredStatistics.meta_data_coverage[key] > 0
+        (key) => key !== 'name' && this.filteredStatistics.meta_data_coverage[key] > 0
       );
     },
     async updateRepliconAccessionOptions() {
