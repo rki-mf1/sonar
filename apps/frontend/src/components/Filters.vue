@@ -241,16 +241,6 @@ export default {
         this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
       }
     },
-
-    filterSamples() {
-      if (!this.isTimeRangeInvalid) {
-        this.samplesStore.updateSamples();
-      }
-      else {
-        this.samplesStore.timeRange = [null, null]
-        this.samplesStore.updateSamples();
-      }
-    },
     removeLineageFilter() {
       this.samplesStore.filterGroup.filters.lineageFilter = {
                                                               label: 'Lineages',
@@ -279,9 +269,6 @@ export default {
       || this.samplesStore.filterGroup.filters.profileFilters.some(
         filter => filter.exclude === true) // exclude set for profile filter
     },
-    // isTimeRangeInvalid(): boolean {
-    //   return this.samplesStore.timeRange.includes(null)
-    // },
     profileFilter() {
       return this.samplesStore.filterGroup.filters.profileFilters[0];
     },

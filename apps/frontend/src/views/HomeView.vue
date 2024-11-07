@@ -171,7 +171,7 @@ export default {
       exportFormat: 'csv',
       selectedRow: null,
       displayDialogRow: false,
-      selectedColumns: ["genomic_profiles", "proteomic_profiles"], //['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles', 'proteomic_profiles'],
+      selectedColumns: ["genomic_profiles", "proteomic_profiles"],
       notSortable: ["genomic_profiles", "proteomic_profiles"],
     }
   },

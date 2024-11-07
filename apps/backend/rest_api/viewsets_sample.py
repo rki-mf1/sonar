@@ -90,11 +90,6 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
         response_dict = {}
-        # response_dict["distinct_mutations_count"] = (
-        #     models.Mutation.objects.values("ref", "alt", "start", "end")
-        #     .distinct()
-        #     .count()
-        # )
         response_dict["samples_total"] = models.Sample.objects.all().count()
 
         first_sample = (

@@ -131,7 +131,8 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      this.propertyOptions = Object.keys(this.propertiesDict).filter( // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
+      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
+      this.propertyOptions = Object.keys(this.propertiesDict).filter( 
         (key) => this.filteredStatistics.meta_data_coverage[key] > 0
       );
     },
