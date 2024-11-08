@@ -81,6 +81,7 @@ export default {
   mounted() {
     this.samplesStore.updateSamples()
     this.samplesStore.setDefaultTimeRange()
+    this.samplesStore.updateFilteredStatistics().then( () =>  this.samplesStore.updatePropertyOptions())
     this.samplesStore.updateLineageOptions()
     this.samplesStore.updatePropertyOptions()
     this.samplesStore.updateSymbolOptions()

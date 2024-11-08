@@ -184,6 +184,10 @@ export const useSamplesStore = defineStore('samples', {
       this.loading = false
       this.filtersChanged = false
     },
+    async updateFilteredStatistics() {
+      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+      this.filteredCount = this.filteredStatistics.filtered_total_count
+    },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
       this.timeRange = [
@@ -204,6 +208,7 @@ export const useSamplesStore = defineStore('samples', {
     },
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+      const metaData = this.filteredStatistics.meta_data_coverage
       this.propertiesDict = {}
       res.values.forEach((property: { name: string, query_type: string, description: string }) => {
         if (property.query_type === 'value_varchar') {
@@ -214,7 +219,9 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      this.propertyOptions = Object.keys(this.propertiesDict)
+      this.propertyOptions = Object.keys(this.propertiesDict).filter(
+                (key) => metaData[key] > 0
+      );
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
