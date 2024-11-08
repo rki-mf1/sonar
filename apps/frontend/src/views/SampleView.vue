@@ -27,6 +27,7 @@
 
 import API from '@/api/API'
 
+
 export default {
   name: 'SampleView',
   data() {
@@ -39,7 +40,9 @@ export default {
   methods: {
     async updateSample() {
       this.loading = true
-      const sampleID: string = this.$route.params.id
+      const sampleID = Array.isArray(this.$route.params.id)
+        ? this.$route.params.id[0] 
+        : this.$route.params.id;
       this.selectedData = (await API.getInstance().getSingleSampleGenome(sampleID)).results[0]
       this.loading = false
     },
