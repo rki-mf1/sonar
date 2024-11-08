@@ -181,11 +181,13 @@ class SampleViewSet(
                 models.Mutation.objects.filter(type="nt")
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
+                .order_by("start")
             )
             proteomic_profiles_qs = (
                 models.Mutation.objects.filter(type="cds")
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
+                .order_by("gene", "start")
             )
             annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
                 "mutation", "annotation"
