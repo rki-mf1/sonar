@@ -117,8 +117,7 @@
             type="button" 
             severity="danger" 
             raised size="small" 
-            @click="filterGroup.filters.lineageFilter.lineageList = [];
-                    filterGroup.filters.lineageFilter.isVisible = false;" 
+            @click="removeLineageFilter(filterGroup)" 
             icon="pi pi-trash" />
         </div>
       </div>
@@ -381,6 +380,16 @@ export default {
       else {
         filterGroup.filters.profileFilters.splice(index, 1);
       }
+    },
+
+    removeLineageFilter(filterGroup: FilterGroup) {
+      filterGroup.filters.lineageFilter = {
+                                              label: 'Lineages',
+                                              lineageList: [],
+                                              exclude: false,
+                                              includeSublineages: true,
+                                              isVisible: true,
+                                            };
     },
     
     initializeOperators(filter: { 
