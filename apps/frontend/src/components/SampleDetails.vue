@@ -6,16 +6,18 @@
                 <strong>ID:</strong> {{ value }}
             </template>
 
-            <template v-else-if="key === 'properties'">
+            <template v-else-if="key === 'properties' && Array.isArray(value)">
                 <strong>{{ key }}:</strong>
-                <div v-for="item in value" :key="item.name">
-                    <div v-if="item.name === 'lineage'">
-                        <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }} (<a
-                            :href="'https://outbreak.info/situation-reports?pango=' + item.value"
-                            target="_blank">outbreak.info</a>)
+              <div v-for="(item, index) in value" :key="index"> <!-- Verwenden Sie index als Schlüssel -->
+                    <div v-if="isProperty(item) && item.name === 'lineage' ">
+                        <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> 
+                        {{(item.value) }} 
+                        (<a
+                        :href="'https://outbreak.info/situation-reports?pango=' + item.value"
+                        target="_blank">outbreak.info</a>)
                     </div>
-                    <div v-else>
-                        <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{ item.value }}
+                    <div v-else-if="isProperty(item)">
+                        <strong>&nbsp;&nbsp;&nbsp;{{ item.name }}:</strong> {{(item.value) }}
                     </div>
                 </div>
             </template>
@@ -23,15 +25,19 @@
             <template v-if="key === 'genomic_profiles'">
                 <strong>{{ key }}: </strong>
                 <div style="white-space: normal; word-wrap: break-word;">
-                    <GenomicProfileLabel v-for="(variant, index) in Object.keys(value)" :variantString="variant"
-                        :annotations="value[variant]" :isLast="index === Object.keys(value).length - 1" />
+                    <GenomicProfileLabel v-for="(variant, index) in Object.keys(value)" 
+                        :variantString="variant"
+                        :annotations="(value as GenomicProfile)[variant]" 
+                        :isLast="index === Object.keys(value).length - 1" 
+                        />
                 </div>
             </template>
 
             <template v-else-if="key === 'proteomic_profiles'">
                 <strong>{{ key }}: </strong>
                 <div style="white-space: normal; word-wrap: break-word;">
-                    <GenomicProfileLabel v-for="(variant, index) in value" :variantString="variant"
+                    <GenomicProfileLabel v-for="(variant, index) in value" 
+                        :variantString="variant"
                         :isLast="index === Object.keys(value).length - 1" />
                 </div>
             </template>
@@ -43,19 +49,25 @@
 
 <script lang="ts">
 
+import type { Property, SampleDetails, GenomicProfile } from '@/util/types';
 import type { PropType } from 'vue';
 
 export default {
     name: "SampleDetails",
     props: {
         selectedRow: {
-            // type: Object as PropType<number>, 
+            type: Object as () => SampleDetails,  
             required: true,
         },
         allColumns: {
             // type: Object as PropType<number>, 
             required: true,
         }
+    },
+    methods: {
+        isProperty(item: any): item is Property {
+            return typeof item === 'object' && 'name' in item && 'value' in item;
+}
     }
 }
 </script>

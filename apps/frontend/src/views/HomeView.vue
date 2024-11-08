@@ -107,11 +107,13 @@
       <template #header>
         <div style="display: flex; align-items: center">
           <strong>Sample Details</strong>
+          <div  v-if="selectedRow"> 
           <router-link v-slot="{ href, navigate }" :to="`sample/${selectedRow.name}`" custom>
             <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px">
               <i class="pi pi-external-link"></i>
             </a>
           </router-link>
+          </div>
         </div>
       </template>
       <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyOptions"></SampleDetails>
@@ -136,7 +138,7 @@
       </div>
     </Dialog>
   </div>
-  <Toast ref="toast" />
+  <Toast ref="errorToast" />
 
   <Toast ref="exportToast" position="bottom-right" group="br">
     <template #container="{ message, closeCallback }">
@@ -161,16 +163,23 @@
 <script lang="ts">
 import API from '@/api/API'
 import { useSamplesStore } from '@/stores/samples';
-import { type Property } from '@/util/types'
+import { type Property} from '@/util/types';
+import type { DataTableSortEvent } from 'primevue/datatable';
 
 export default {
   name: 'HomeView',
+
   data() {
     return {
       samplesStore: useSamplesStore(),
       displayDialogExport: false,
       exportFormat: 'csv',
-      selectedRow: null,
+      selectedRow: {
+          name: "",
+          properties: [],
+          genomic_profiles: {},
+          proteomic_profiles: [],
+      },
       displayDialogRow: false,
       selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles', 'proteomic_profiles'],
       notSortable: ["genomic_profiles", "proteomic_profiles"],
@@ -183,7 +192,16 @@ export default {
     },
     exportFile(type: string) {
       // Show the progress bar in the toast
-      this.$refs.exportToast.add({
+      const exportToastRef = this.$refs.exportToast as { add: 
+        (options: { 
+          severity: string; 
+          summary: string; 
+          detail: string; 
+          id: number; 
+          group: string; 
+          closable: boolean; 
+        }) => void };
+      exportToastRef.add({
         severity: 'info',
         summary: 'Exporting...',
         detail: 'Your file is being prepared.',
@@ -210,11 +228,12 @@ export default {
         });
       //this.samplesStore.loading = false;
     },
-    columnSelection(value) {
+    columnSelection(value: string[]) {
       this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
     },
-    onColReorder(event) {
-      const { dragIndex, dropIndex } = event;
+    onColReorder(event: any) {
+
+      const { dragIndex, dropIndex } = event as { dragIndex: number; dropIndex: number; };
       // Rearrange columns based on dragIndex and dropIndex
       const reorderedColumns = ['name', ...this.selectedColumns]; // note: 'name' is fixed and cant be reordered
       const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
@@ -222,21 +241,28 @@ export default {
 
       this.selectedColumns = reorderedColumns.slice(1); // drop 'name' from column list since it is fixed and cant be reordered
     },
-    onRowSelect(event) {
+    onRowSelect(event: any) {
       this.selectedRow = event.data;
       this.displayDialogRow = true;
     },
-    onRowUnselect(event) {
-      this.selectedRow = null;
+    onRowUnselect() {
+      this.selectedRow = {
+          name: "",
+          properties: [],
+          genomic_profiles: {},
+          proteomic_profiles: [],
+      };
       this.displayDialogRow = false;
     },
-    sortingChanged(sortBy) {
-      if (sortBy.sortOrder > 0) {
-        this.samplesStore.ordering = sortBy.sortField;
-      } else {
-        this.samplesStore.ordering = `-${sortBy.sortField}`;
+    sortingChanged(sortBy: DataTableSortEvent) {
+      if (sortBy.sortOrder){
+        if (sortBy.sortOrder > 0 && typeof(sortBy.sortField)==="string") {
+          this.samplesStore.ordering = sortBy.sortField;
+        } else {
+          this.samplesStore.ordering = `-${sortBy.sortField}`;
+        }
+        this.samplesStore.updateSamples();
       }
-      this.samplesStore.updateSamples();
     },
     formatDate(dateStr: string): string {
       if (!dateStr) return ''; // Handle case where dateStr is undefined or null
@@ -251,7 +277,14 @@ export default {
       }
     },
     showToastError(message: string) {
-      this.$refs.toast.add({
+      const ErrorToastRef = this.$refs.errorToast as { add: 
+        (options: { 
+          severity: string; 
+          summary: string; 
+          detail: string; 
+          life: number; 
+        }) => void };
+      ErrorToastRef.add({
         severity: 'error',
         summary: 'Error',
         detail: message,

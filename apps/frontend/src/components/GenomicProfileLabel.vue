@@ -35,7 +35,10 @@ export default {
             return '';
         },
         tooltip(): string {
-            return this.annotations?.length > 0 ? this.annotations.join(', ') : '';
+            if (this.annotations && this.annotations.length > 0) {
+                return this.annotations.join(', ');
+    }
+    return '';
         }
     }
 };
