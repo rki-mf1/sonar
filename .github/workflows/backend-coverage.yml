@@ -52,7 +52,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
-          path: 'work/sonar/coverage/'
+          path: '/home/runner/work/sonar/sonar/apps/backend/work/sonar/coverage/'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
