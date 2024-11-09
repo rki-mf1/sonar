@@ -39,7 +39,7 @@ jobs:
       - name: Run tests
         run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage run ./manage.py test --no-input
       - name: Generate reports
-        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage html
+        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage html -d 'work/sonar/coverage'
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
