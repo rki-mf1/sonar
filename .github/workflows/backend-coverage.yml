@@ -44,6 +44,7 @@ jobs:
       - name: Check if coverage directory exists
         run: |
           echo "Checking coverage directory"
+          pwd
           ls -R work/sonar || echo "Directory work/sonar does not exist"
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -51,7 +52,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
-          path: 'work/sonar/coverage'
+          path: 'work/sonar/coverage/'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
