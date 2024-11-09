@@ -40,12 +40,6 @@ jobs:
         run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage run ./manage.py test --no-input
       - name: Generate reports
         run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage html -d 'work/sonar/coverage'
-        # Debug step to confirm the existence of the coverage directory
-      - name: Check if coverage directory exists
-        run: |
-          echo "Checking coverage directory"
-          pwd
-          ls -R work/sonar || echo "Directory work/sonar does not exist"
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
