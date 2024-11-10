@@ -36,7 +36,7 @@ jobs:
         id: docker_compose_build
         run: |
           ./scripts/linux/build-docker-dev.sh
-          ./scripts/linux/dc-dev.sh up -d --build
+          ./scripts/linux/dc-gh-action.sh up -d --build
       - name: Run Pytest 🐶
         working-directory: ./apps/cli
         env:

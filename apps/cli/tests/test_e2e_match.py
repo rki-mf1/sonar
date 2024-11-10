@@ -1,3 +1,5 @@
+import pytest
+
 from .conftest import run_cli
 from .conftest import run_cli_cmd
 
@@ -23,11 +25,13 @@ def test_match_pipe(capfd, api_url):
     assert "BrokenPipeError" not in captured.out
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(6)
 def test_match_profile_count(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "12" == lines[-1]
+    assert "17" == lines[-1]
     assert code == 0
 
 
@@ -67,13 +71,15 @@ def test_match_profile_AA(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(7)
 def test_match_profile_OR_AA(capfd, api_url):
     code = run_cli(
         f"match --db {api_url} -r MN908947.3 --profile S:E484K --profile  S:N501Y  --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "9" == lines[-1]
+    assert "13" == lines[-1]
     assert code == 0
 
 
@@ -151,11 +157,13 @@ def test_match_prop_int(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(8)
 def test_match_prop_int_not(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --age ^16 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "11" == lines[-1]
+    assert "16" == lines[-1]
     assert code == 0
 
 
@@ -195,7 +203,7 @@ def test_match_prop_float_not(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --euro '^66.11' --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "11" == lines[-1]
+    assert "16" == lines[-1]
     assert code == 0
 
 
@@ -251,11 +259,13 @@ def test_match_prop_zip(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(9)
 def test_match_prop_zip_not(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --zip_code ^16816  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "11" == lines[-1]
+    assert "16" == lines[-1]
     assert code == 0
 
 
@@ -328,6 +338,8 @@ def test_match_profile_AA_INS(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(10)
 def test_match_profile_AA_DEL(capfd, api_url):
     code = run_cli(
         f"match --db {api_url} -r MN908947.3 --profile ORF1ab:del:3675-3676 --count"
@@ -338,11 +350,13 @@ def test_match_profile_AA_DEL(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(11)
 def test_match_profile_NT_DEL_single(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --profile del:28271 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "1" == lines[-1]
+    assert "4" == lines[-1]
     assert code == 0
 
 
@@ -372,11 +386,13 @@ def test_match_prop_varchar_sublineage(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(12)
 def test_match_prop_varchar_not(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --sequencing_reason ^X --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "6" == lines[-1]
+    assert "11" == lines[-1]
     assert code == 0
 
 
@@ -398,14 +414,18 @@ def test_match_anno_type(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(13)
 def test_match_anno_impact(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "2" == lines[-1]
+    assert "6" == lines[-1]
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(14)
 def test_match_anno_impact_and_profile(capfd, api_url):
     code = run_cli(
         f"match --db {api_url} -r MN908947.3 --anno-impact HIGH  --profile C24503T --count"
@@ -426,11 +446,13 @@ def test_match_anno_impact_and_prop(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(15)
 def test_match_anno_impact_and_type(capfd, api_url):
     code = run_cli(
         f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --anno-type stop_gained --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "1" == lines[-1]
+    assert "5" == lines[-1]
     assert code == 0
