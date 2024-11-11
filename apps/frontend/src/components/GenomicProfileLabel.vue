@@ -1,7 +1,7 @@
 <template>
     <span v-tooltip.bottom="tooltip">
         <span :style="{ color: variantColor }">{{ variantString }}</span>
-        <span v-if="!isLast">,&nbsp;</span>
+        <span v-if="!isLast">, </span>
     </span>
 </template>
 
@@ -35,7 +35,10 @@ export default {
             return '';
         },
         tooltip(): string {
-            return this.annotations?.length > 0 ? this.annotations.join(', ') : '';
+            if (this.annotations && this.annotations.length > 0) {
+                return this.annotations.join(', ');
+    }
+    return '';
         }
     }
 };
