@@ -39,6 +39,8 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(3)
 def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -55,7 +57,7 @@ def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(3)
+@pytest.mark.order(4)
 def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
@@ -71,7 +73,7 @@ def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(4)
+@pytest.mark.order(5)
 def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
@@ -87,7 +89,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(5)
+@pytest.mark.order(6)
 def test_wfa_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using wfa method"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -103,6 +105,8 @@ def test_wfa_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(7)
 def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
     """Test import command using autolink"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -118,6 +122,8 @@ def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(8)
 def test_add_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
