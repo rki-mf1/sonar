@@ -1,3 +1,4 @@
+// make it as a global function
 export default {
     methods: {
         showToastError(message) {

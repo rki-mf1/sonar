@@ -81,11 +81,11 @@ export default {
   },
   mounted() {
     this.samplesStore.updateSamples()
-    this.samplesStore.updateFilteredStatistics().then( () =>  this.samplesStore.updatePropertyOptions())
+    this.samplesStore.updateFilteredStatistics().then(() => this.samplesStore.updatePropertyOptions())
     this.samplesStore.updateLineageOptions()
     this.samplesStore.updateSymbolOptions()
     this.samplesStore.updateRepliconAccessionOptions()
-    this.$root.$toastRef = this.$refs.toast
+    this.$root.$toastRef = this.$refs.toast ?? null;
   },
   watch: {
     "samplesStore.errorMessage"(newValue) {
