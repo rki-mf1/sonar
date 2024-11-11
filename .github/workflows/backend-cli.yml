@@ -36,7 +36,7 @@ jobs:
         id: docker_compose_build
         run: |
           ./scripts/linux/build-docker-dev.sh
-          ./scripts/linux/dc-dev.sh up -d --build
+          ./scripts/linux/dc-gh-action.sh up -d --build --wait
       - name: Run Pytest 🐶
         working-directory: ./apps/cli
         env:
@@ -45,7 +45,7 @@ jobs:
           CHUNK_SIZE: 100
           ANNO_TOOL_PATH: "snpEff"
           ANNO_CHUNK_SIZE: 50
-        run: poetry run pytest --cov -n 2 --cache-clear --dist loadgroup -rfeP -x tests/
+        run: poetry run pytest --cov --cache-clear --dist loadgroup -rfeP -x tests/
     # - name: Stop containers 🙈
     #   working-directory: sonar-backend
     #   if: always()
