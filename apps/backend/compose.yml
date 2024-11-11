@@ -87,7 +87,7 @@ services:
       - SECRET_KEY=$SECRET_KEY
     restart: on-failure
     entrypoint: /bin/sh -c
-    command: ["python manage.py runapscheduler"]
+    command: ["python manage.py migrate && python manage.py runapscheduler"]
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
