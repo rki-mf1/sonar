@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: Run CI and build
         run: |
           npm ci
