@@ -36,22 +36,7 @@ jobs:
         id: docker_compose_build
         run: |
           ./scripts/linux/build-docker-dev.sh
-          ./scripts/linux/dc-gh-action.sh up -d --build
-      - name: Wait for Backend to be Ready 🕒
-        run: |
-          echo "Waiting for backend to be ready..."
-          for i in {1..5}; do
-            if curl --silent --fail http://127.0.0.1:8000/api/references/get_all_references; then
-              echo "Backend is ready!"
-              break
-            fi
-            echo "Backend not ready. Retrying in 30 seconds..."
-            sleep 30
-          done
-          if [ "$i" -eq 5 ]; then
-            echo "Backend failed to start in time."
-            exit 1
-          fi
+          ./scripts/linux/dc-gh-action.sh up -d --build --wait
       - name: Run Pytest 🐶
         working-directory: ./apps/cli
         env:
