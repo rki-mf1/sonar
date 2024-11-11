@@ -3,21 +3,19 @@
     <div class="filter-left">
       <div >
         <div class="filter-container">
-          <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
+          <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
             v-model="samplesStore.timeRange[0]" 
             style="flex: auto; min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
             ></Calendar>
           <Calendar 
             v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
           ></Calendar>
           <Button 
             style="font-size: 10px; min-width: min-content;" 
@@ -84,7 +82,7 @@
               style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
               label="Update sample selection" 
-              @click="filterSamples">
+              @click="samplesStore.updateSamples">
             </Button>
         </div>
       </div>
@@ -244,15 +242,6 @@ export default {
         this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
       }
     },
-    filterSamples() {
-      if (!this.isTimeRangeInvalid) {
-        this.samplesStore.updateSamples();
-      }
-      else {
-        this.samplesStore.timeRange = [null, null]
-        this.samplesStore.updateSamples();
-      }
-    },
     removeLineageFilter() {
       this.samplesStore.filterGroup.filters.lineageFilter = {
                                                               label: 'Lineages',
@@ -288,9 +277,6 @@ export default {
       || this.samplesStore.filterGroup.filters.lineageFilter.exclude  // exclude set for first group lineage filter
       || this.samplesStore.filterGroup.filters.profileFilters.some(
         filter => filter.exclude === true) // exclude set for profile filter
-    },
-    isTimeRangeInvalid(): boolean {
-      return this.samplesStore.timeRange.includes(null)
     },
     profileFilter() {
       return this.samplesStore.filterGroup.filters.profileFilters[0];

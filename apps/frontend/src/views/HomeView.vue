@@ -1,6 +1,5 @@
 <template>
   <div class="table-content">
-    
     <DataTable 
       :value="samplesStore.samples" 
       style="max-width: 95vw" 
@@ -36,7 +35,7 @@
               >
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
-                  {{ selectedColumns.length }} columns selected
+                  {{ selectedColumns.length + 1 }} columns selected
                 </div>
               </template>
             </MultiSelect>
@@ -181,7 +180,7 @@ export default {
           proteomic_profiles: [],
       },
       displayDialogRow: false,
-      selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles', 'proteomic_profiles'],
+      selectedColumns: ["genomic_profiles", "proteomic_profiles"],
       notSortable: ["genomic_profiles", "proteomic_profiles"],
     }
   },
