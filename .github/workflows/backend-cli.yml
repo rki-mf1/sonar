@@ -45,7 +45,7 @@ jobs:
           CHUNK_SIZE: 100
           ANNO_TOOL_PATH: "snpEff"
           ANNO_CHUNK_SIZE: 50
-        run: poetry run pytest --cov -n 1 --cache-clear --dist loadgroup -rfeP -x tests/
+        run: poetry run pytest --cov --cache-clear --dist loadgroup -rfeP -x tests/
     # - name: Stop containers 🙈
     #   working-directory: sonar-backend
     #   if: always()
