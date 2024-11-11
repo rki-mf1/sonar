@@ -125,6 +125,7 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples';
+import type { LineageBarChartData } from '@/util/types';
 import { RiAndroidFill } from 'oh-vue-icons/icons';
 
 export default {
@@ -148,7 +149,7 @@ export default {
     genomeCompleteChart() {
       const documentStyle = getComputedStyle(document.body);
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {}
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -182,8 +183,10 @@ export default {
     },
     lineage_barData() {
       // Access lineage_bar_chart data from filteredStatistics
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lineage_bar_chart'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      const _data: LineageBarChartData[]= this.samplesStore.filteredStatistics 
+        ? this.samplesStore.filteredStatistics['lineage_bar_chart'] 
+        : [];
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       let datasets = [];
@@ -237,8 +240,8 @@ export default {
             beginAtZero: true,
             max: 100,
             ticks: {
-              callback: function (value) {
-                return value + '%'; // Add percentage symbol
+              callback: function (value: number) {
+                return value + '%';
               },
             },
           },
@@ -249,8 +252,8 @@ export default {
     },
     lineage_areaData() {
       // Extract the data, ensuring it's an array
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lineage_area_chart'] : {};
-
+      const _data = this.samplesStore.filteredStatistics 
+        ? this.samplesStore.filteredStatistics['lineage_area_chart'] : [];
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
       }
@@ -312,7 +315,7 @@ export default {
             beginAtZero: true,
             max: 100,
             ticks: {
-              callback: function (value) {
+              callback: function (value: number) {
                 return value + '%'; // Add percentage symbol
               },
             },
@@ -324,8 +327,8 @@ export default {
     },
     chartData() {
       const samples_per_week = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['samples_per_week'] : {}
-      const labels = []
-      const data = []
+      const labels: string[] = []
+      const data: number[] = []
 
       if (samples_per_week && Object.keys(samples_per_week).length > 0) {
         Object.keys(samples_per_week).forEach((key) => {
@@ -398,7 +401,7 @@ export default {
     },
     sequencingTechChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_tech'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -442,7 +445,7 @@ export default {
     },
     sequencingReasonChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_reason'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -471,7 +474,7 @@ export default {
     },
     lengthChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['length'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -502,7 +505,7 @@ export default {
     },
     hostChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['host'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -536,7 +539,7 @@ export default {
     },
     labChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lab'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -583,7 +586,7 @@ export default {
     },
     zipCodeChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['zip_code'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data))  {
         return this.emptyChartData();
       }
       return {
@@ -634,7 +637,7 @@ export default {
     },
     sampleTypeChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sample_type'] : {};
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -689,6 +692,11 @@ export default {
           }
         ]
       };
+    },
+
+    isDataEmpty(data: {[key: string]: any }): boolean{
+      return (!data || Object.keys(data).length === 0 
+          || Object.keys(data).length === 1 &&  Object.keys(data)[0]=='null')
     },
   }
 }

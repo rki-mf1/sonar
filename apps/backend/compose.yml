@@ -58,6 +58,12 @@ services:
       - ${SONAR_EXTERNAL}/input-logs:/input-logs
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
       - ${SONAR_EXTERNAL}/coverage:/code/coverage
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9080/api/references/get_all_references/"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
     depends_on:
       sonar-cache:
         condition: service_started
@@ -87,7 +93,7 @@ services:
       - SECRET_KEY=$SECRET_KEY
     restart: on-failure
     entrypoint: /bin/sh -c
-    command: ["python manage.py runapscheduler"]
+    command: ["python manage.py migrate && python manage.py runapscheduler"]
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
