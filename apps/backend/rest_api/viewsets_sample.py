@@ -95,14 +95,20 @@ class SampleViewSet(
             .order_by("collection_date")
             .first()
         )
-        response_dict["first_sample_date"] = first_sample.collection_date if first_sample else None
+        response_dict["first_sample_date"] = (
+            first_sample.collection_date if first_sample else None
+        )
 
         latest_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
-            .order_by("-collection_date")  # '-' before column name mean "descending order", while without '-' mean "ascending".
+            .order_by(
+                "-collection_date"
+            )  # '-' before column name mean "descending order", while without '-' mean "ascending".
             .first()
         )
-        response_dict["latest_sample_date"] = latest_sample.collection_date if latest_sample else None
+        response_dict["latest_sample_date"] = (
+            latest_sample.collection_date if latest_sample else None
+        )
 
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
