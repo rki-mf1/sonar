@@ -185,24 +185,25 @@ class RepliconViewSet(viewsets.ModelViewSet):
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
+def get_distinct_gene_symbols(reference=None):
+    """
+    Helper method to get distinct gene symbols.
+    This method can be called from anywhere.
+    """
+    queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
+    if reference:
+        queryset = queryset.filter(replicon__reference__accession=reference)
+    return [item["gene_symbol"] for item in queryset]
+
+
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = models.Gene.objects.all()
     serializer_class = GeneSerializer
 
-    def get_distinct_gene_symbols(self, reference=None):
-        """
-        Helper method to get distinct gene symbols.
-        This method can be called from anywhere.
-        """
-        queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
-        if reference:
-            queryset = queryset.filter(replicon__reference__accession=reference)
-        return [item["gene_symbol"] for item in queryset]
-
     @action(detail=False, methods=["get"])
     def distinct_gene_symbols(self, request: Request, *args, **kwargs):
         reference = request.query_params.get("reference")
-        gene_symbols = self.get_distinct_gene_symbols(reference=reference)
+        gene_symbols = get_distinct_gene_symbols(reference=reference)
         return Response(
             {"gene_symbols": gene_symbols},
             status=status.HTTP_200_OK,
