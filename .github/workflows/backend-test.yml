@@ -27,9 +27,9 @@ jobs:
       - name: Build the backend container
         run: |
           docker build -t backend:local -f Dockerfile .
-#      - name: Bring up containers
-#        run: docker compose $COMPOSE_ARGS up --detach --quiet-pull
-#      - name: Install testing dependencies
-#        run: docker compose $COMPOSE_ARGS exec -t sonar-django-backend pip install --no-cache-dir --disable-pip-version-check -r requirements-testing.txt
-#      - name: Run tests
-#        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage run ./manage.py test --no-input
+      - name: Bring up containers
+        run: docker compose $COMPOSE_ARGS up --detach --quiet-pull
+      - name: Install testing dependencies
+        run: docker compose $COMPOSE_ARGS exec -t sonar-django-backend pip install --no-cache-dir --disable-pip-version-check -r requirements-testing.txt
+      - name: Run tests
+        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage run ./manage.py test --no-input
