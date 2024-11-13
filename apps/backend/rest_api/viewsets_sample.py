@@ -37,7 +37,7 @@ from rest_api.utils import define_profile
 from rest_api.utils import resolve_ambiguous_NT_AA
 from rest_api.utils import Response
 from rest_api.utils import strtobool
-from rest_api.viewsets import GeneViewSet
+from rest_api.viewsets import get_distinct_gene_symbols
 from rest_api.viewsets import PropertyViewSet
 from rest_framework import generics
 from rest_framework import status
