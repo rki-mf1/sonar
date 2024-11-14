@@ -351,7 +351,6 @@ class SampleViewSet(
                 ]  # Return only one to indicate existence
             )
         )
-        property_names = PropertyViewSet.get_distinct_property_names()
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
                 field_name = field.name
@@ -365,6 +364,7 @@ class SampleViewSet(
             property.name: property.datatype
             for property in models.Property.objects.all()
         }
+        property_names = PropertyViewSet.get_custom_property_names()
         for property_name in property_names:
             try:
                 if property_name not in property_to_datatype:
