@@ -26,6 +26,44 @@ services:
       retries: 5
       start_period: 30s
       timeout: 10s
+  # A one shot service that runs migrations before the actual backend starts
+  sonar-django-backend-migrate:
+    image: backend:local
+    container_name: sonar-django-backend-migrate
+    environment:
+      - DEBUG=$DEBUG
+      - REDIS_URL=$REDIS_URL
+      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
+      - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
+      - LOG_PATH=$LOG_PATH
+      - LOG_LEVEL=$LOG_LEVEL
+      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
+      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
+      - POSTGRES_HOST=$POSTGRES_HOST
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_PORT=$POSTGRES_PORT
+      - ALLOWED_HOSTS=$ALLOWED_HOSTS
+      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+      - SECRET_KEY=$SECRET_KEY
+    restart: no
+    entrypoint: /bin/sh -c
+    command: ["python manage.py migrate"]
+    volumes:
+      - ./covsonar2_server/test/media:/covsonarmedia
+      - ./covsonar2_server/test/static:/staticfiles
+      - ${SONAR_EXTERNAL}/logs:${LOG_PATH}
+      - ${SONAR_EXTERNAL}/input-logs:/input-logs
+      - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
+      - ${SONAR_EXTERNAL}/coverage:/code/coverage
+    depends_on:
+      sonar-cache:
+        condition: service_started
+      sonar-db:
+        condition: service_healthy
   sonar-django-backend:
     image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
     container_name: sonar-django-backend
@@ -65,6 +103,8 @@ services:
       start_period: 30s
       timeout: 10s
     depends_on:
+      sonar-django-backend-migrate:
+        condition: service_completed_successfully
       sonar-cache:
         condition: service_started
       sonar-db:
@@ -93,14 +133,14 @@ services:
       - SECRET_KEY=$SECRET_KEY
     restart: on-failure
     entrypoint: /bin/sh -c
-    command: ["python manage.py migrate && python manage.py runapscheduler"]
+    command: ["python manage.py runapscheduler"]
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
       sonar-db:
         condition: service_healthy
       sonar-django-backend:
-        condition: service_started
+        condition: service_healthy
   # This nginx reverse proxy instance is for both the backend and frontend.
   sonar-proxy:
     image: $DOCKER_NGINX_IMAGE
@@ -117,7 +157,8 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
-      - sonar-django-backend
+      sonar-django-backend:
+        condition: service_healthy
   sonar-cache:
     image: $DOCKER_REDIS_IMAGE
     container_name: sonar-cache
@@ -136,6 +177,7 @@ services:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     environment:
       - DEBUG=$DEBUG
+      - PROFILE_IMPORT=$PROFILE_IMPORT
       - REDIS_URL=$REDIS_URL
       - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
       - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
@@ -157,8 +199,10 @@ services:
       - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
       - SECRET_KEY=$SECRET_KEY
     depends_on:
-      - sonar-cache
-      - sonar-django-backend
+      sonar-cache:
+        condition: service_started
+      sonar-django-backend:
+        condition: service_healthy
   celery-monitor:
     image: backend:local
     container_name: celery-monitor
@@ -186,6 +230,5 @@ services:
       - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
       - SECRET_KEY=$SECRET_KEY
     depends_on:
-      - sonar-cache
-      - sonar-django-backend
-      - celery-workers
+      celery-workers:
+        condition: service_started
