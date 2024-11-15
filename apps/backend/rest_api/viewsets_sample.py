@@ -85,32 +85,32 @@ class SampleViewSet(
             "Sample": self.filter_sample,
             "Lineages": self.filter_sublineages,
             "Annotation": self.filter_annotation,
-            "Label": self.filter_label,
+            "DNA/AA Profile": self.filter_label,
         }
 
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
         response_dict = {}
-        response_dict["distinct_mutations_count"] = (
-            models.Mutation.objects.values("ref", "alt", "start", "end")
-            .distinct()
-            .count()
-        )
         response_dict["samples_total"] = models.Sample.objects.all().count()
 
-        first_collected_sample = (
+        first_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
             .order_by("collection_date")
             .first()
         )
-        if first_collected_sample:
-            response_dict["first_sample_date"] = first_collected_sample.collection_date
-        else:
-            response_dict["first_sample_date"] = None
-        latest_collected_sample = (
+        response_dict["first_sample_date"] = (
+            first_sample.collection_date if first_sample else None
+        )
+
+        latest_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
-            .order_by("-collection_date")
+            .order_by(
+                "-collection_date"
+            )  # '-' before column name mean "descending order", while without '-' mean "ascending".
             .first()
+        )
+        response_dict["latest_sample_date"] = (
+            latest_sample.collection_date if latest_sample else None
         )
         if latest_collected_sample:
             response_dict["latest_sample_date"] = (
@@ -190,11 +190,13 @@ class SampleViewSet(
                 models.Mutation.objects.filter(type="nt")
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
+                .order_by("start")
             )
             proteomic_profiles_qs = (
                 models.Mutation.objects.filter(type="cds")
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
+                .order_by("gene", "start")
             )
             annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
                 "mutation", "annotation"
