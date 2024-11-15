@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
 from rest_api.data_entry.sample_entry_job import check_for_new_data
 
 

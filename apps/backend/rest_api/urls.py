@@ -1,6 +1,7 @@
+from rest_framework import routers
+
 from rest_api import viewsets
 from rest_api import viewsets_sample
-from rest_framework import routers
 
 router = routers.SimpleRouter()
 router.register(r"mutations", viewsets.MutationViewSet, basename="mutation")

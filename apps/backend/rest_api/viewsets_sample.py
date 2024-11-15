@@ -9,9 +9,6 @@ import traceback
 from typing import Generator
 
 import _csv
-from covsonar_backend.settings import DEBUG
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from dateutil.rrule import rrule
 from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -30,14 +27,6 @@ from django.db.models.functions import TruncWeek
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 import pandas as pd
-from rest_api.data_entry.sample_job import delete_sample
-from rest_api.serializers import SampleGenomesExportStreamSerializer
-from rest_api.serializers import SampleSerializer
-from rest_api.utils import define_profile
-from rest_api.utils import resolve_ambiguous_NT_AA
-from rest_api.utils import Response
-from rest_api.utils import strtobool
-from rest_api.viewsets import PropertyViewSet
 from rest_framework import generics
 from rest_framework import status
 from rest_framework import viewsets
@@ -46,6 +35,17 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from covsonar_backend.settings import DEBUG
+from covsonar_backend.settings import LOGGER
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from rest_api.data_entry.sample_job import delete_sample
+from rest_api.serializers import SampleGenomesExportStreamSerializer
+from rest_api.serializers import SampleSerializer
+from rest_api.utils import define_profile
+from rest_api.utils import resolve_ambiguous_NT_AA
+from rest_api.utils import Response
+from rest_api.utils import strtobool
+from rest_api.viewsets import PropertyViewSet
 from . import models
 from .serializers import SampleGenomesSerializer
 from .serializers import SampleGenomesSerializerVCF

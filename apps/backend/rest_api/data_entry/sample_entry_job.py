@@ -7,14 +7,6 @@ import zipfile
 
 from celery import group
 from celery import shared_task
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import PROFILE_IMPORT
-from covsonar_backend.settings import PROPERTY_BATCH_SIZE
-from covsonar_backend.settings import REDIS_URL
-from covsonar_backend.settings import SAMPLE_BATCH_SIZE
-from covsonar_backend.settings import SONAR_DATA_ARCHIVE
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.db import DataError
@@ -23,6 +15,15 @@ from django.db.models import Q
 from django.utils import timezone
 from line_profiler import LineProfiler
 import pandas as pd
+
+from covsonar_backend.settings import LOGGER
+from covsonar_backend.settings import PROFILE_IMPORT
+from covsonar_backend.settings import PROPERTY_BATCH_SIZE
+from covsonar_backend.settings import REDIS_URL
+from covsonar_backend.settings import SAMPLE_BATCH_SIZE
+from covsonar_backend.settings import SONAR_DATA_ARCHIVE
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 from rest_api import models
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.data_entry.sample_import import SampleImport
