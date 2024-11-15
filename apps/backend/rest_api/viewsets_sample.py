@@ -118,12 +118,7 @@ class SampleViewSet(
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
-        if latest_collected_sample:
-            response_dict["latest_sample_date"] = (
-                latest_collected_sample.collection_date
-            )
-        else:
-            response_dict["latest_sample_date"] = None
+
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
