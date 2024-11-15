@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 import re
 
-from covsonar_backend.settings import LOGGER
 from django.db.models import Q
+
+from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
 from rest_api.models import AnnotationType
 from rest_api.models import Mutation

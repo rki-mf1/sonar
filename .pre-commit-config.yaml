@@ -11,7 +11,7 @@ repos:
     rev: v0.6.1
     hooks:
       - id: zimports
-        args: [--keep-unused]
+        args: ["--keep-unused", "-m", "rest_api,covsonar_backend,permission_model"]
         exclude: ^apps/backend/rest_api/migrations/
   - repo: https://github.com/psf/black
     rev: 24.10.0
