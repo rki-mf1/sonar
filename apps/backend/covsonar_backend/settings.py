@@ -15,8 +15,9 @@ import logging
 import os
 from pathlib import Path
 
-from covsonar_backend.utils import CustomisedJSONFormatter
 import environ
+
+from covsonar_backend.utils import CustomisedJSONFormatter
 
 # Initialise environment variables
 

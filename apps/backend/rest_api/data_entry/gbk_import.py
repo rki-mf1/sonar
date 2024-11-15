@@ -7,6 +7,7 @@ from Bio import SeqRecord
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 from django.db.utils import IntegrityError
+
 from rest_api.models import Gene
 from rest_api.models import GeneSegment
 from rest_api.models import Reference
