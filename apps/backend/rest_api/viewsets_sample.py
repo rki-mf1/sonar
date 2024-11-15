@@ -1,50 +1,56 @@
 import ast
+from collections import defaultdict
 import csv
+from dataclasses import dataclass
+from datetime import datetime
 import json
 import os
 import pathlib
 import re
 import traceback
-from dataclasses import dataclass
-from datetime import datetime
 from typing import Generator
 
 import _csv
-from covsonar_backend.settings import DEBUG, LOGGER, SONAR_DATA_ENTRY_FOLDER
-from dateutil.rrule import WEEKLY, rrule
+from covsonar_backend.settings import DEBUG
+from covsonar_backend.settings import LOGGER
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from dateutil.rrule import rrule
+from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
-from django.db.models import (
-    Case,
-    Count,
-    IntegerField,
-    Min,
-    OuterRef,
-    Prefetch,
-    Q,
-    QuerySet,
-    Subquery,
-    When,
-)
+from django.db.models import Case
+from django.db.models import Count
+from django.db.models import IntegerField
+from django.db.models import Min
+from django.db.models import OuterRef
+from django.db.models import Prefetch
+from django.db.models import Q
+from django.db.models import QuerySet
+from django.db.models import Subquery
+from django.db.models import When
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_api.data_entry.sample_job import delete_sample
-from rest_api.serializers import SampleGenomesExportStreamSerializer, SampleSerializer
-from rest_api.utils import Response, define_profile, resolve_ambiguous_NT_AA, strtobool
+from rest_api.serializers import SampleGenomesExportStreamSerializer
+from rest_api.serializers import SampleSerializer
+from rest_api.utils import define_profile
+from rest_api.utils import resolve_ambiguous_NT_AA
+from rest_api.utils import Response
+from rest_api.utils import strtobool
 from rest_api.viewsets import PropertyViewSet
-from rest_framework import generics, status, viewsets
+from rest_framework import generics
+from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from . import models
-from .serializers import (
-    SampleGenomesSerializer,
-    SampleGenomesSerializerVCF,
-    SampleSerializer,
-)
-from collections import defaultdict
+from .serializers import SampleGenomesSerializer
+from .serializers import SampleGenomesSerializerVCF
+from .serializers import SampleSerializer
+
 
 @dataclass
 class LineageInfo:
