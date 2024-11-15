@@ -26,7 +26,16 @@ class sonarUtils1:
     def __init__(self):
         pass
 
-    # DATA IMPORT
+    @staticmethod
+    def get_info(db: str = None):
+        API_URL = BASE_URL if db is None else db
+
+        json_response = APIClient(base_url=API_URL).get_database_info()
+        if not json_response or len(json_response["detail"]) == 0:
+            return {"job_name": "", "status": "", "entry_time": ""}
+
+        return modified_data
+
     @staticmethod
     def get_all_jobs(db: str = None):
         API_URL = BASE_URL if db is None else db

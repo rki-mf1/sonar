@@ -1,4 +1,5 @@
 from rest_api import viewsets
+from rest_api import viewsets_database
 from rest_api import viewsets_sample
 from rest_framework import routers
 
@@ -24,4 +25,6 @@ router.register(r"resources", viewsets.ResourceViewSet, basename="resources")
 router.register(r"file_uploads", viewsets.FileUploadViewSet, basename="import_upload")
 router.register(r"lineages", viewsets.LineageViewSet, basename="lineage")
 router.register(r"tasks", viewsets.TasksView, basename="tasks")
+router.register(r"database", viewsets_database.DatabaseInfoView, basename="database")
+
 urlpatterns = [*router.urls]

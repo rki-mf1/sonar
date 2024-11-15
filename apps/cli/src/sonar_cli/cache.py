@@ -657,7 +657,7 @@ class sonarCache:
                     LOGGER.error("\n------- Fatal Error ---------")
                     LOGGER.error(traceback.format_exc())
                     LOGGER.error("\nDebugging Information:")
-                    LOGGER.errort(e)
+                    LOGGER.error(e)
                     LOGGER.error("\n During insert:")
                     LOGGER.error(cds)
                     sys.exit(1)
