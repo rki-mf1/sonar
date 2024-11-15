@@ -35,6 +35,7 @@ env = environ.Env(
     ALLOWED_HOSTS=(str, None),
     SAMPLE_BATCH_SIZE=(int, 10),
     PROPERTY_BATCH_SIZE=(int, 1000),
+    PROFILE_IMPORT=(bool, False),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -187,6 +188,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = None
 APSCHEDULER_RUN_NOW_TIMEOUT = 60 * 60 * 5
 
 # SONAR APP
+PROFILE_IMPORT = env("PROFILE_IMPORT")
 REDIS_URL = env("REDIS_URL")
 
 SAMPLE_BATCH_SIZE = env("SAMPLE_BATCH_SIZE")
