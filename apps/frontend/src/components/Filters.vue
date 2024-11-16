@@ -81,7 +81,7 @@
         />
             <Button 
               icon="pi pi-database"   
-              label="&nbsp;Update sample selection"  
+              label="&nbsp;Update sample selection"
               severity="warning"
               raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
@@ -109,11 +109,11 @@
         <div style="display: flex; justify-content: end; gap: 10px">
           <Button 
               icon="pi pi-database"   
-              label="&nbsp;Update Samples" 
+              label="&nbsp;Update sample selection"  
               severity="warning"
               raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
-              @click="closeAdvancedFilterDialog">
+              @click="closeAdvancedFilterDialogAndUpdate">
           </Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
