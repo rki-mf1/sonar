@@ -1,5 +1,6 @@
 from os import getenv
-from psycopg2 import connect, sql
+
+from psycopg2 import connect
 
 
 def create_django_schema():

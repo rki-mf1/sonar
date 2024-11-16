@@ -1,49 +1,47 @@
-import os
-import pathlib
 from datetime import datetime
-from django.utils import timezone
-import shutil
-import zipfile
-import traceback
+import pathlib
 import pickle
-from django.db.models import Q
-from covsonar_backend.settings import (
-    LOGGER,
-    PROPERTY_BATCH_SIZE,
-    REDIS_URL,
-    SAMPLE_BATCH_SIZE,
-    SONAR_DATA_ARCHIVE,
-    SONAR_DATA_ENTRY_FOLDER,
-    SONAR_DATA_PROCESSING_FOLDER,
-)
-from django.core.exceptions import FieldDoesNotExist
-from rest_api import models
-from rest_api.data_entry.sample_import import SampleImport
-from rest_api.data_entry.annotation_import import AnnotationImport
-from rest_api.models import (
-    Alignment,
-    AnnotationType,
-    Mutation,
-    Sample,
-    Sequence,
-    Mutation2Annotation,
-    ImportLog,
-    FileProcessing,
-    ProcessingJob,
-)
-from django.db import DataError
-from celery import shared_task, group
-from celery.utils.log import get_task_logger
+import shutil
+import traceback
+import zipfile
+
+from celery import group
+from celery import shared_task
 from django.core.cache import cache
+from django.core.exceptions import FieldDoesNotExist
+from django.db import DataError
 from django.db import transaction
-import environ
+from django.db.models import Q
+from django.utils import timezone
+from line_profiler import LineProfiler
 import pandas as pd
 
+from covsonar_backend.settings import LOGGER
+from covsonar_backend.settings import PROFILE_IMPORT
+from covsonar_backend.settings import PROPERTY_BATCH_SIZE
+from covsonar_backend.settings import REDIS_URL
+from covsonar_backend.settings import SAMPLE_BATCH_SIZE
+from covsonar_backend.settings import SONAR_DATA_ARCHIVE
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
+from rest_api import models
+from rest_api.data_entry.annotation_import import AnnotationImport
+from rest_api.data_entry.sample_import import SampleImport
+from rest_api.models import Alignment
+from rest_api.models import AnnotationType
+from rest_api.models import FileProcessing
+from rest_api.models import ImportLog
+from rest_api.models import Mutation
+from rest_api.models import Mutation2Annotation
+from rest_api.models import ProcessingJob
+from rest_api.models import Sample
+from rest_api.models import Sequence
 from rest_api.serializers import Sample2PropertyBulkCreateOrUpdateSerializer
+from rest_api.utils import parse_date
 from rest_api.utils import PropertyColumnMapping
 
-
 property_cache = {}
+
 
 # Beginning of import process
 def check_for_new_data():
@@ -62,24 +60,27 @@ def check_for_new_data():
         print("# New data found")
         for zip_file in zip_files:
             LOGGER.info(f"## Processing: {zip_file} ---")
-            if '_prop' in str(zip_file):
+            if "_prop" in str(zip_file):
                 # Handle corresponding .pkl file for property imports
                 # Check a .pkl file (column_mapping) with the same name
-                pkl_file = zip_file.with_suffix('.pkl')  
+                pkl_file = zip_file.with_suffix(".pkl")
                 new_zip_path = zip_file.rename(processing_dir.joinpath(zip_file.name))
                 new_pkl_path = pkl_file.rename(processing_dir.joinpath(pkl_file.name))
-                import_archive(new_zip_path, pkl_path=new_pkl_path)  # Pass the .pkl path to import_archive
+                import_archive(
+                    new_zip_path, pkl_path=new_pkl_path
+                )  # Pass the .pkl path to import_archive
 
             else:
                 # process as normal sample or annotation import
                 new_zip_path = zip_file.rename(processing_dir.joinpath(zip_file.name))
-                import_archive(new_zip_path)    
+                import_archive(new_zip_path)
         # Recursively check for new data after processing current batch
-        check_for_new_data()  
+        check_for_new_data()
+
 
 def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = None):
     """
-        TODO: if it just start update the ProcessingJob (IP) optional
+    TODO: if it just start update the ProcessingJob (IP) optional
     """
     temp_dir = (
         pathlib.Path(SONAR_DATA_ARCHIVE)
@@ -91,8 +92,10 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
         filename_ID = process_file_path.name
         # get JOB ID
         proJob_obj = ProcessingJob.objects.filter(files__file_name=filename_ID).first()
-        if not  proJob_obj:
-            LOGGER.warning("The given import files is not related to any jobID (skip this batch)")
+        if not proJob_obj:
+            LOGGER.warning(
+                "The given import files is not related to any jobID (skip this batch)"
+            )
             return
         job_ID = proJob_obj.job_name
         LOGGER.info(f"jobID : {job_ID}")
@@ -113,17 +116,27 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
             print("Batch size:", batch_size)
             property_files_tsv = list(temp_dir.glob("**/*.tsv"))
             property_files_csv = list(temp_dir.glob("**/*.csv"))
-            property_files = property_files_tsv + property_files_csv  # Combine both types
+            property_files = (
+                property_files_tsv + property_files_csv
+            )  # Combine both types
 
             if property_files:
                 # Load the column mapping from the .pkl file
-                with open(pkl_path, 'rb') as pkl_file:
-                    column_mapping = pickle.load(pkl_file)  # Load the .pkl file into column_mapping
+                with open(pkl_path, "rb") as pkl_file:
+                    column_mapping = pickle.load(
+                        pkl_file
+                    )  # Load the .pkl file into column_mapping
 
                 use_celery = bool(REDIS_URL)  # Use Celery if Redis is configured
                 for property_file in property_files:
-                    sep = ',' if property_file.suffix == '.csv' else '\t'
-                    import_property(str(property_file), sep, use_celery, column_mapping, batch_size=batch_size)  # Pass column_mapping
+                    sep = "," if property_file.suffix == ".csv" else "\t"
+                    import_property(
+                        str(property_file),
+                        sep,
+                        use_celery,
+                        column_mapping,
+                        batch_size=batch_size,
+                    )  # Pass column_mapping
 
         else:
             batch_size = SAMPLE_BATCH_SIZE
@@ -161,7 +174,11 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                         batch = sample_files[i : i + batch_size]
                         sample_jobs.append(
                             process_batch.s(
-                                batch, replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, str(temp_dir)
+                                batch,
+                                replicon_cache,
+                                gene_cache_by_accession,
+                                gene_cache_by_var_pos,
+                                str(temp_dir),
                             )
                         )
                     results = group(sample_jobs).apply_async().get()
@@ -185,18 +202,21 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                     gene_cache_by_accession = {}
                     # Samples
                     for i in range(0, len(sample_files), batch_size):
-                    # print(
-                    #     f"processing batch {(i//batch_size) + 1} of {number_of_batches}"
-                    # )                   
+                        # print(
+                        #     f"processing batch {(i//batch_size) + 1} of {number_of_batches}"
+                        # )
                         # batchtimer = datetime.now()
                         batch = sample_files[i : i + batch_size]
                         process_batch_single_thread(
-                            batch, replicon_cache, gene_cache_by_accession, str(temp_dir)
+                            batch,
+                            replicon_cache,
+                            gene_cache_by_accession,
+                            str(temp_dir),
                         )
-                    # annotation 
+                    # annotation
                     for file in anno_files:
-                        process_annotation(str(file)) 
-    
+                        process_annotation(str(file))
+
                     # print(
                     #     f"batch {(i//batch_size) + 1} done in {datetime.now() - batchtimer}"
                     # )
@@ -219,7 +239,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
         LOGGER.error(f"--- Exception: move to {error_dir} ---")
 
     # TODO: if fail update the ProcessingJob optional
-    else: # no exception occurs
+    else:  # no exception occurs
         completed_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("completed")
         completed_dir.mkdir(parents=True, exist_ok=True)
         process_file_path.rename(completed_dir.joinpath(process_file_path.name))
@@ -270,8 +290,37 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                 )
                 LOGGER.info(f"### Job ID: {job_ID} \nRun status: Completed")
 
+
 @shared_task
-def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, temp_dir):
+def process_batch(
+    batch: list[str],
+    replicon_cache,
+    gene_cache_by_accession,
+    gene_cache_by_var_pos,
+    temp_dir,
+):
+    parameters = locals().copy()
+    if PROFILE_IMPORT:
+        lp = LineProfiler()
+        # Add a few of the slowest functions based on profiling the
+        # process_batch_run() function
+        lp.add_function(SampleImport.get_mutation_objs)
+        lp.add_function(get_mutation2alignment_objs)
+        process_batch_profiled = lp(process_batch_run)
+        retval = process_batch_profiled(**parameters)
+        lp.print_stats()
+        return retval
+    else:
+        return process_batch_run(**parameters)
+
+
+def process_batch_run(
+    batch: list[str],
+    replicon_cache,
+    gene_cache_by_accession,
+    gene_cache_by_var_pos,
+    temp_dir,
+):
     try:
         sample_import_objs = [
             SampleImport(pathlib.Path(file), import_folder=temp_dir) for file in batch
@@ -291,7 +340,7 @@ def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gen
                 samples,
                 update_conflicts=True,
                 unique_fields=["name"],
-                update_fields=["sequence","last_update_date"],
+                update_fields=["sequence", "last_update_date"],
             )
         [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
         alignments = [
@@ -302,7 +351,11 @@ def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gen
         #     Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
         mutations = []
         for sample_import_obj in sample_import_objs:
-            mutations.extend(sample_import_obj.get_mutation_objs(gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos))
+            mutations.extend(
+                sample_import_obj.get_mutation_objs(
+                    gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos
+                )
+            )
         with cache.lock("mutation"):
             Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
         mutations2alignments = []
@@ -311,7 +364,8 @@ def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gen
             if sample_import_obj.alignment not in alignments2relations:
                 alignments2relations[sample_import_obj.alignment] = []
             alignments2relations[sample_import_obj.alignment].extend(
-                sample_import_obj.mutation_query_data)
+                sample_import_obj.mutation_query_data
+            )
         for alignment, mutation_query_data in alignments2relations.items():
             mutations2alignments.extend(
                 get_mutation2alignment_objs(alignment, mutation_query_data)
@@ -332,53 +386,54 @@ def process_batch(batch: list[str], replicon_cache, gene_cache_by_accession, gen
         LOGGER.error("Error happens on this batch")
         return (False, str(e), traceback.format_exc())
 
+
 def get_mutation2alignment_objs(alignment, mutation_query_data) -> list:
-        # self.alignment = Alignment.objects.get(
-        #     sequence=self.sequence, replicon=self.replicon
-        # )
-        # Determine batch size dynamically based on the length of mutation_query_data
-        data_length = len(mutation_query_data)
+    # self.alignment = Alignment.objects.get(
+    #     sequence=self.sequence, replicon=self.replicon
+    # )
+    # Determine batch size dynamically based on the length of mutation_query_data
+    data_length = len(mutation_query_data)
 
-        # a minimum and maximum batch size
-        MIN_BATCH_SIZE = 100
-        MAX_BATCH_SIZE = 5000
+    # a minimum and maximum batch size
+    MIN_BATCH_SIZE = 100
+    MAX_BATCH_SIZE = 5000
 
-        # Dynamic batch size based on data length
-        if data_length <= MAX_BATCH_SIZE:
-            # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
-            # of the data length as the batch size.
-            # we can adjust 0.40 to other percentages like 0.50
-            batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50))
-        else:
-            # Set batch size to 1% of the total dataset size
-            batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
+    # Dynamic batch size based on data length
+    if data_length <= MAX_BATCH_SIZE:
+        # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
+        # of the data length as the batch size.
+        # we can adjust 0.40 to other percentages like 0.50
+        batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50))
+    else:
+        # Set batch size to 1% of the total dataset size
+        batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
 
-        mutation_alignment_objs = []
-        for i in range(0, len(mutation_query_data), batch_size):
-            batch_mutation_query_data = mutation_query_data[i : i + batch_size]
-            db_mutations_query = Q()
-            for mutation in batch_mutation_query_data:
-                db_mutations_query |= Q(**mutation)
+    mutation_alignment_objs = []
+    for i in range(0, len(mutation_query_data), batch_size):
+        batch_mutation_query_data = mutation_query_data[i : i + batch_size]
+        db_mutations_query = Q()
+        for mutation in batch_mutation_query_data:
+            db_mutations_query |= Q(**mutation)
 
-            db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
-                "id",
-                "start",
-                "ref",
-                "alt",
-                "replicon__accession",
-            )
-            for j in range(0, len(db_sample_mutations), batch_size):
-                batch_mutations = db_sample_mutations[j : j + batch_size]
-                batch_alignment_objs = []
-                for mutation in batch_mutations:
-                    batch_alignment_objs.append(
-                        Mutation.alignments.through(
-                            alignment=alignment, mutation_id=mutation["id"]
-                        )
+        db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
+            "id",
+            "start",
+            "ref",
+            "alt",
+            "replicon__accession",
+        )
+        for j in range(0, len(db_sample_mutations), batch_size):
+            batch_mutations = db_sample_mutations[j : j + batch_size]
+            batch_alignment_objs = []
+            for mutation in batch_mutations:
+                batch_alignment_objs.append(
+                    Mutation.alignments.through(
+                        alignment=alignment, mutation_id=mutation["id"]
                     )
-                mutation_alignment_objs.extend(batch_alignment_objs)
+                )
+            mutation_alignment_objs.extend(batch_alignment_objs)
 
-        return mutation_alignment_objs
+    return mutation_alignment_objs
 
 
 @shared_task
@@ -393,7 +448,8 @@ def process_annotation(file_name):
                 )
             with cache.lock("annotation2mutation"):
                 Mutation2Annotation.objects.bulk_create(
-                    annotation_import.get_annotation2mutation_objs(), ignore_conflicts=True
+                    annotation_import.get_annotation2mutation_objs(),
+                    ignore_conflicts=True,
                 )
         else:
             AnnotationType.objects.bulk_create(
@@ -409,7 +465,9 @@ def process_annotation(file_name):
     return (True, None, None)
 
 
-def process_batch_single_thread(batch, replicon_cache, gene_cache_by_accession, temp_dir):
+def process_batch_single_thread(
+    batch, replicon_cache, gene_cache_by_accession, temp_dir
+):
     try:
         sample_import_objs = [
             SampleImport(file, import_folder=temp_dir) for file in batch
@@ -439,7 +497,9 @@ def process_batch_single_thread(batch, replicon_cache, gene_cache_by_accession, 
             Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
             mutations = []
             for sample_import_obj in sample_import_objs:
-                mutations.extend(sample_import_obj.get_mutation_objs(gene_cache_by_accession))
+                mutations.extend(
+                    sample_import_obj.get_mutation_objs(gene_cache_by_accession)
+                )
             Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
             mutations2alignments = []
             for sample_import_obj in sample_import_objs:
@@ -481,7 +541,10 @@ def process_batch_single_thread(batch, replicon_cache, gene_cache_by_accession, 
         LOGGER.critical(f"An unexpected error occurred: {e}")
         raise
 
-def import_property(property_file, sep, use_celery=False, column_mapping=None, batch_size=1000):
+
+def import_property(
+    property_file, sep, use_celery=False, column_mapping=None, batch_size=1000
+):
     try:
         # Load the CSV file in batches
         properties_df = pd.read_csv(
@@ -497,24 +560,35 @@ def import_property(property_file, sep, use_celery=False, column_mapping=None, b
         # Convert column_mapping to a JSON-serializable format
         if column_mapping is not None:
             serializable_column_mapping = {
-                k: {'db_property_name': v.db_property_name, 'data_type': v.data_type}
-                for k, v in column_mapping['column_mapping'].items()
+                k: {"db_property_name": v.db_property_name, "data_type": v.data_type}
+                for k, v in column_mapping["column_mapping"].items()
             }
-            sample_id_column = column_mapping['sample_id_column']
+            sample_id_column = column_mapping["sample_id_column"]
         else:
             serializable_column_mapping = None
-            sample_id_column = 'ID'
+            sample_id_column = "ID"
 
- 
+        # Format columns with 'value_date' type
+        for column_name, col_info in serializable_column_mapping.items():
+            if (
+                col_info["data_type"] == "value_date"
+                and column_name in properties_df.columns
+            ):
+                properties_df[column_name] = properties_df[column_name].apply(
+                    parse_date
+                )
+
         if use_celery:
             print("Setting up property import celery jobs...")
 
             property_jobs = []
             for i in range(0, len(properties_df), batch_size):
-                batch = properties_df.iloc[i: i + batch_size]
-                batch_as_dict = batch.to_dict(orient='records')
+                batch = properties_df.iloc[i : i + batch_size]
+                batch_as_dict = batch.to_dict(orient="records")
                 property_jobs.append(
-                    process_property_batch.s(batch_as_dict, sample_id_column, serializable_column_mapping)  # Pass column_mapping
+                    process_property_batch.s(
+                        batch_as_dict, sample_id_column, serializable_column_mapping
+                    )  # Pass column_mapping
                 )
 
             # Run the Celery group of tasks and collect results
@@ -524,21 +598,22 @@ def import_property(property_file, sep, use_celery=False, column_mapping=None, b
                 if not result[0]:
                     raise Exception(f"Property Import Error: {result[1]}")
 
-
         else:
             print("Processing properties in single-threaded mode...")
 
-            # Process the CSV file in a single-threaded manner         
-            batch_as_dict= properties_df.to_dict(orient='records')
+            # Process the CSV file in a single-threaded manner
+            batch_as_dict = properties_df.to_dict(orient="records")
             # column_mapping does not need to be JSON-serializable format, because we use only single thread
-            _process_property_file(batch_as_dict, sample_id_column, column_mapping['column_mapping'])
+            _process_property_file(
+                batch_as_dict, sample_id_column, column_mapping["column_mapping"]
+            )
 
         print(f"Property import usage time: {datetime.now() - timer}")
 
     except Exception as e:
         print(f"Error in import_property: {e}")
         print(f"error in process_property_batch line#: {e.__traceback__.tb_lineno}")
-        raise # Re-raise the exception to propagate it up the stack?
+        raise  # Re-raise the exception to propagate it up the stack?
 
 
 @shared_task
@@ -546,7 +621,9 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
     # Reconstruct column_mapping from the serialized format
     if serialized_column_mapping is not None:
         column_mapping = {
-            k: PropertyColumnMapping(db_property_name=v['db_property_name'], data_type=v['data_type'])
+            k: PropertyColumnMapping(
+                db_property_name=v["db_property_name"], data_type=v["data_type"]
+            )
             for k, v in serialized_column_mapping.items()
         }
     else:
@@ -563,7 +640,7 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
 def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
     """
     Logic for processing a batch of the property file
-    """ 
+    """
 
     properties_df = pd.DataFrame.from_dict(batch_as_dict, dtype=object)
     sample_property_names = []
@@ -590,7 +667,7 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
         for sample in samples:
 
             row = properties_df[properties_df.index == sample.name]
-            
+
             sample.last_update_date = timezone.now()
             for name, value in row.items():
                 if name in column_mapping.keys():
@@ -604,7 +681,6 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
             property_updates += _create_property_updates(
                 sample,
                 {
-                   
                     column_mapping[name].db_property_name: {
                         "value": value.values[0],
                         "datatype": column_mapping[name].data_type,
@@ -613,14 +689,14 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
                     if name in custom_property_names
                 },
                 True,
-                property_cache  # global variable
+                property_cache,  # global variable
             )
     except Exception as e:
         print(f"Error :{e}")
         print(f"Error processing sample data: {row.to_dict(orient='records')}")
         print(f"error in _process_property_file line#: {e.__traceback__.tb_lineno}")
         raise  # Or raise the exception
-    
+
     with transaction.atomic():
         # Bulk update samples
         # when there is no update/add to based prop.
@@ -646,26 +722,28 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
                 "value_date",
                 "value_zip",
             ],
-            unique_fields=["sample", "property"]
+            unique_fields=["sample", "property"],
         )
 
-def _create_property_updates(sample, properties: dict, use_property_cache=False,property_cache=None
-    ) -> list[dict]:
-        property_objects = []
-        if use_property_cache and property_cache is None:
-            property_cache = {}
-        for name, value in properties.items():
-            property = {"sample": sample.id, value["datatype"]: value["value"]}
-            if use_property_cache:
-                if name in property_cache.keys():
-                    property["property"] = property_cache[name]
-                else:
-                    property["property"] = property_cache[name] = (
-                        models.Property.objects.get_or_create(
-                            name=name, datatype=value["datatype"]
-                        )[0].id
-                    )
+
+def _create_property_updates(
+    sample, properties: dict, use_property_cache=False, property_cache=None
+) -> list[dict]:
+    property_objects = []
+    if use_property_cache and property_cache is None:
+        property_cache = {}
+    for name, value in properties.items():
+        property = {"sample": sample.id, value["datatype"]: value["value"]}
+        if use_property_cache:
+            if name in property_cache.keys():
+                property["property"] = property_cache[name]
             else:
-                property["property__name"] = name
-            property_objects.append(property)
-        return property_objects
+                property["property"] = property_cache[name] = (
+                    models.Property.objects.get_or_create(
+                        name=name, datatype=value["datatype"]
+                    )[0].id
+                )
+        else:
+            property["property__name"] = name
+        property_objects.append(property)
+    return property_objects

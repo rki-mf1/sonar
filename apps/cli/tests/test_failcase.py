@@ -28,21 +28,21 @@ def test_add_dupref(monkeypatch, capfd, api_url):
     # Add the reference for the first time
     code = run_cli(f"add-ref --db {api_url} --gb {new_ref_file}")
     out, err = capfd.readouterr()
-    assert "successfully." in out
+    assert "successfully." in err
     assert code == 0
 
     # Try to add the same reference again
     code = run_cli(f"add-ref --db {api_url} --gb {new_ref_file}")
     out, err = capfd.readouterr()
     assert (
-        "successfully." in out
+        "successfully." in err
     )  # Assuming your CLI prints this message upon successful addition
     assert code == 0
 
     # Cleanup: delete the reference
     code = run_cli(f"delete-ref --db {api_url} -r NC_026429.1 --force")
     out, err = capfd.readouterr()
-    assert "Reference deleted." in out
+    assert "Reference deleted." in err
     assert code == 0
 
 
@@ -52,18 +52,18 @@ def test_add_prop_int(capfd, api_url):
         f" add-prop --db {api_url} --name dup_integer --dtype value_integer --descr 'test-integer' "
     )
     out, err = capfd.readouterr()
-    assert "Property added successfully" in out
+    assert "Property added successfully" in err
     assert code == 0
     code = run_cli(
         f" add-prop --db {api_url} --name dup_integer --dtype value_integer --descr 'test-integer' "
     )
     out, err = capfd.readouterr()
-    assert "Property already exists" in out
+    assert "Property already exists" in err
     assert code == 0
 
     code = run_cli(f"delete-prop --db {api_url} --name dup_integer --force ")
     out, err = capfd.readouterr()
-    assert "successfully" in out
+    assert "successfully" in err
     assert code == 0
 
 
@@ -71,7 +71,7 @@ def test_add_prop_int(capfd, api_url):
 def test_delete_fakeprop(capfd, api_url):
     code = run_cli(f" delete-prop --db {api_url} --name fakePROP --force ")
     out, err = capfd.readouterr()
-    assert "No matching property found for deletion" in out
+    assert "No matching property found for deletion" in err
     assert code == 0
 
 
@@ -79,7 +79,7 @@ def test_delete_fakeprop(capfd, api_url):
 def test_delete_sample(monkeypatch, capfd, api_url):
     code = run_cli(f"delete-sample --db {api_url} --sample fake-id --force")
     out, err = capfd.readouterr()
-    assert "0 of 1 samples found and deleted." in out
+    assert "0 of 1 samples found and deleted." in err
     assert code == 0
 
 
@@ -87,7 +87,7 @@ def test_delete_sample(monkeypatch, capfd, api_url):
 def test_delete_noref(capfd, api_url):
     code = run_cli(f"delete-ref --db {api_url} -r fakeREFID --force")
     out, err = capfd.readouterr()
-    assert "Reference deleted." in out
+    assert "Reference deleted." in err
     assert code == 0
 
 

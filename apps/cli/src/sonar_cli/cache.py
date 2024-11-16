@@ -391,7 +391,7 @@ class sonarCache:
         mol = self._molregex.search(fasta_header)
         if not mol:
             try:
-                print(f"Using refmol_acc: {self.refmols[mol]['accession']}")
+                LOGGER.info(f"Using refmol_acc: {self.refmols[mol]['accession']}")
                 return self.refmols[mol]["accession"]
             except Exception:
                 None
@@ -493,7 +493,6 @@ class sonarCache:
             ),
         )
 
-        # print(data)
         return data
 
     def iter_samples(self, _samplefiles):
@@ -590,7 +589,7 @@ class sonarCache:
     #             for coord in coords:
     #                 rows.append([elemid, coord, 0])
     #             # rows[-1][2] = 1
-    #             # print(rows)
+    #
     #             df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
     #             df.to_pickle(fname)
     #             if self.debug:
@@ -656,11 +655,11 @@ class sonarCache:
 
                 except Exception as e:
                     LOGGER.error("\n------- Fatal Error ---------")
-                    print(traceback.format_exc())
-                    print("\nDebugging Information:")
-                    print(e)
-                    print("\n During insert:")
-                    print(cds)
+                    LOGGER.error(traceback.format_exc())
+                    LOGGER.error("\nDebugging Information:")
+                    LOGGER.errort(e)
+                    LOGGER.error("\n During insert:")
+                    LOGGER.error(cds)
                     sys.exit(1)
 
             df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
@@ -911,12 +910,12 @@ class sonarCache:
 
             except Exception as e:
                 LOGGER.error("\n------- Fatal Error ---------")
-                print(traceback.format_exc())
-                print("\nDebugging Information:")
-                print(e)
+                LOGGER.error(traceback.format_exc())
+                LOGGER.error("\nDebugging Information:")
+                LOGGER.error(e)
                 traceback.print_exc()
-                print("\n During insert:")
-                print(sample_data)
+                LOGGER.error("\n During insert:")
+                LOGGER.error(sample_data)
                 sys.exit("Unknown import error")
 
         if list_fail_samples:

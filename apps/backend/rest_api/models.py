@@ -1,7 +1,8 @@
 from django.db import models
-from django.db.models import UniqueConstraint, Q
-from django.utils.translation import gettext_lazy as _
+from django.db.models import Q
+from django.db.models import UniqueConstraint
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class Sequence(models.Model):
@@ -204,6 +205,19 @@ class Sample(models.Model):
 
     class Meta:
         db_table = "sample"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["sequencing_tech"]),
+            models.Index(fields=["country"]),
+            models.Index(fields=["host"]),
+            models.Index(fields=["zip_code"]),
+            models.Index(fields=["lab"]),
+            models.Index(fields=["lineage"]),
+            models.Index(fields=["genome_completeness"]),
+            models.Index(fields=["collection_date"]),
+            models.Index(fields=["init_upload_date"]),
+            models.Index(fields=["last_update_date"]),
+        ]
 
     def save(self, *args, **kwargs):
         if self.pk:  # Check if this is an update to an existing record

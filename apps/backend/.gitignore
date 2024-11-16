@@ -17,12 +17,14 @@ env.bak/
 venv.bak/
 .coverage
 log_improve
-*prod.conf
 logs/
-conf/docker/prod-secrets.env
 
 private/
 
 tmp/
 work/
 cruft/
+
+# Local settings that shouldn't be committed to git
+conf/postgresql/*.conf.local
+conf/docker/*-secrets.env

@@ -3,21 +3,19 @@
     <div class="filter-left">
       <div style="max-width: 91%;">
         <div class="filter-container">
-          <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
+          <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
             v-model="samplesStore.timeRange[0]" 
             style="flex: auto; min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
             ></Calendar>
           <Calendar 
             v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
           ></Calendar>
           <Button 
               icon="pi pi-arrow-circle-left"   
@@ -83,11 +81,11 @@
         />
             <Button 
               icon="pi pi-database"   
-              label="&nbsp;Update Samples" 
+              label="&nbsp;Update sample selection"  
               severity="warning"
               raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
-              @click="filterSamples">
+              @click="samplesStore.updateSamples">
             </Button>
         </div>
       </div>
@@ -118,10 +116,10 @@
               @click="closeAdvancedFilterDialog">
           </Button>
         </div>
-        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
+        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
       </Dialog>
 
-      <OverlayPanel ref="op">
+      <OverlayPanel ref="advancedFiltersHelp">
         <div class="flex flex-column gap-3 w-25rem">
           <div>
             <span class="font-medium text-900 block mb-2">Example of Input</span>
@@ -223,10 +221,11 @@ export default {
   name: "Filters",
   data() {
     const samplesStore = useSamplesStore();
+    
     samplesStore.initializeWatchers();
     if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
       samplesStore.filterGroup.filters.profileFilters.push({
-        label: 'Label',
+        label: 'DNA/AA Profile',
         value: '',
         exclude: false,
       });
@@ -244,22 +243,13 @@ export default {
     removeProfileFilter() {
       if (this.samplesStore.filterGroup.filters.profileFilters.length <= 1) {
       this.samplesStore.filterGroup.filters.profileFilters[0] = {
-        label: 'Label',
+        label: 'DNA/AA Profile',
         value: '',
         exclude: false,
       };
     }
       else {
         this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
-      }
-    },
-    filterSamples() {
-      if (!this.isTimeRangeInvalid) {
-        this.samplesStore.updateSamples();
-      }
-      else {
-        this.samplesStore.timeRange = [null, null]
-        this.samplesStore.updateSamples();
       }
     },
     removeLineageFilter() {
@@ -271,15 +261,23 @@ export default {
                                                               isVisible: true,
                                                             };
     },
-    closeAdvancedFilterDialog() {
+    closeAdvancedFilterDialogAndUpdate() {
+      if (this.samplesStore.filtersChanged) { 
+        this.samplesStore.updateSamples();
+      }
       this.displayDialogFilter = false;
       this.samplesStore.updateSamples();
     },
-    toggle(event) {
-      if (this.$refs.op) {
-        this.$refs.op.toggle(event);
+    toggleHelp(event: Event) {
+      const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as { toggle?: (event: Event) => void };
+
+      if (advancedFiltersHelpRef && typeof advancedFiltersHelpRef.toggle === 'function') {
+        advancedFiltersHelpRef.toggle(event);
+      } else {
+        console.warn('Help component does not exist');
       }
     }
+
   },
   computed: {
     isAdvancedFiltersSet(): boolean {
@@ -290,9 +288,6 @@ export default {
       || this.samplesStore.filterGroup.filters.lineageFilter.exclude  // exclude set for first group lineage filter
       || this.samplesStore.filterGroup.filters.profileFilters.some(
         filter => filter.exclude === true) // exclude set for profile filter
-    },
-    isTimeRangeInvalid(): boolean {
-      return this.samplesStore.timeRange.includes(null)
     },
     profileFilter() {
       return this.samplesStore.filterGroup.filters.profileFilters[0];

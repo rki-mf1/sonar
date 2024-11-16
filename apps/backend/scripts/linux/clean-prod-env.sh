@@ -56,7 +56,6 @@ if [ $REBUILD -eq 0 ]; then
 fi
 
 $SCRIPTPATH/dc-prod.sh up -d $DC_ARGS
-$SCRIPTPATH/prod-manage.sh migrate
 
 if [ $TEST_DATA -eq 0 ]; then
   $SCRIPTPATH/prod-manage.sh loaddata initial_auth test_data_sm

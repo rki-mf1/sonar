@@ -4,32 +4,26 @@
 # under /code in the backend container so that you can make live changes to the
 # code without needing to rebuild the container.
 services:
-
   sonar-db:
     ports:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
-
   sonar-django-backend:
     volumes:
       - .:/code
     ports:
       # to access directly, normally can use localhost:8000 via the nginx proxy
       - "9080:9080"
-
   sonar-django-apscheduler:
     volumes:
       - .:/code
-
   celery-workers:
     volumes:
       - .:/code
-      
   celery-monitor:
     volumes:
       - .:/code
     ports:
       - "5555:5555"
-
   sonar-cache:
     ports:
       - "6379:6379"

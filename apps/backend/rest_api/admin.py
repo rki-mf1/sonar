@@ -1,7 +1,8 @@
 from django.contrib import admin
 
-# Register your models here.
 from rest_api import models
+
+# Register your models here.
 
 admin.site.register(models.Sequence)
 admin.site.register(models.Alignment)

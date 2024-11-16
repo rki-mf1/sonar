@@ -1,53 +1,45 @@
+from datetime import datetime
 from functools import reduce
 import json
 import operator
 import os
-import uuid
 import pickle
+import uuid
 
-from rest_framework import generics
-import zipfile
-from datetime import datetime
-
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.db.models import Count
+from django.db.models import F
+from django.db.models import Q
 from django.db.utils import IntegrityError
-from django.db.models import Count, F, Q
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_api.data_entry.property_job import delete_property, find_or_create_property
-from rest_api.data_entry.reference_job import delete_reference
-
-from rest_api.utils import (
-    PropertyColumnMapping,
-    generate_job_ID,
-    strtobool,
-    write_to_file,
-)
-from rest_framework import generics, serializers, viewsets
-from rest_framework.decorators import action, api_view
+from rest_framework import generics
+from rest_framework import serializers
+from rest_framework import status
+from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from rest_framework import status
-
-
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.gbk_import import import_gbk_file
+from rest_api.data_entry.property_job import delete_property
+from rest_api.data_entry.property_job import find_or_create_property
+from rest_api.data_entry.reference_job import delete_reference
 from rest_api.data_entry.sample_entry_job import check_for_new_data
 from rest_api.management.commands.import_lineage import LineageImport
-
+from rest_api.utils import generate_job_ID
+from rest_api.utils import PropertyColumnMapping
+from rest_api.utils import strtobool
 from . import models
-from .serializers import (
-    AlignmentSerializer,
-    FileProcessingSerializer,
-    GeneSerializer,
-    ImportLogSerializer,
-    ProcessingJobSerializer,
-    PropertySerializer,
-    ReferenceSerializer,
-    MutationSerializer,
-    RepliconSerializer,
-    LineagesSerializer,
-)
+from .serializers import AlignmentSerializer
+from .serializers import GeneSerializer
+from .serializers import ImportLogSerializer
+from .serializers import LineagesSerializer
+from .serializers import MutationSerializer
+from .serializers import ProcessingJobSerializer
+from .serializers import PropertySerializer
+from .serializers import ReferenceSerializer
+from .serializers import RepliconSerializer
 
 
 class Echo:
@@ -58,7 +50,6 @@ class Echo:
     def write(self, value):
         """Write the value by returning it, instead of storing in a buffer."""
         return value
-
 
 
 class AlignmentViewSet(
@@ -194,17 +185,27 @@ class RepliconViewSet(viewsets.ModelViewSet):
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
+def get_distinct_gene_symbols(reference=None):
+    """
+    Helper method to get distinct gene symbols.
+    This method can be called from anywhere.
+    """
+    queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
+    if reference:
+        queryset = queryset.filter(replicon__reference__accession=reference)
+    return [item["gene_symbol"] for item in queryset]
+
+
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = models.Gene.objects.all()
     serializer_class = GeneSerializer
 
     @action(detail=False, methods=["get"])
     def distinct_gene_symbols(self, request: Request, *args, **kwargs):
-        queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(molecule__reference__accession=ref)
+        reference = request.query_params.get("reference")
+        gene_symbols = get_distinct_gene_symbols(reference=reference)
         return Response(
-            {"gene_symbols": [item["gene_symbol"] for item in queryset]},
+            {"gene_symbols": gene_symbols},
             status=status.HTTP_200_OK,
         )
 
@@ -760,11 +761,11 @@ class FileUploadViewSet(viewsets.ViewSet):
             db_property_name: PropertyColumnMapping(**db_property_info)
             for db_property_name, db_property_info in column_mapping.items()
         }
-    
+
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
 
-         # Step 1: Check if zip file is present in the request
+        # Step 1: Check if zip file is present in the request
         if "zip_file" not in request.FILES:
             return Response(
                 {"detail": "No zip file uploaded."}, status=status.HTTP_400_BAD_REQUEST
@@ -775,7 +776,6 @@ class FileUploadViewSet(viewsets.ViewSet):
         # Generate jobID if not provided
         if jobID is None or jobID == "":
             jobID = "backend_" + str(uuid.uuid4())  # 32 chars
-
 
         # Step 2: Check if this is a property upload (based on jobID)
         if "_prop" in jobID:
@@ -806,11 +806,9 @@ class FileUploadViewSet(viewsets.ViewSet):
                     {"detail": "No column_mapping could be processed."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             filename = (
-                datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
-                + "."
-                + jobID
+                datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3] + "." + jobID
             )
             pickle_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, f"{filename}.pkl")
             with open(pickle_path, "wb") as pickle_file:
@@ -900,10 +898,10 @@ class LineageViewSet(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
         )
-    
+
     @action(detail=False, methods=["put"])
-    def update_lineages(self, request: Request, *args, **kwargs):        
-        tsv_file = request.FILES.get("lineages_file")        
+    def update_lineages(self, request: Request, *args, **kwargs):
+        tsv_file = request.FILES.get("lineages_file")
         tsv_file = self._temp_save_file(tsv_file)
         lineage_import = LineageImport()
         lineage_import.set_file(tsv_file)
@@ -911,8 +909,8 @@ class LineageViewSet(
         lineage_import.process_lineage_data()
         return Response(
             {"detail": "Lineages updated successfully"}, status=status.HTTP_200_OK
-        )        
-    
+        )
+
     def _temp_save_file(self, uploaded_file: InMemoryUploadedFile):
         file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, uploaded_file.name)
         with open(file_path, "wb") as f:
@@ -929,7 +927,7 @@ class TasksView(
 
     @action(detail=False, methods=["get"])  # detail=False means it's a list action
     def generate_job_id(self, request, *args, **kwargs):
-        is_prop =  strtobool(request.query_params.get("is_prop", "False"))
+        is_prop = strtobool(request.query_params.get("is_prop", "False"))
         job_id = generate_job_ID(is_prop)
 
         return Response(data={"job_id": job_id}, status=status.HTTP_200_OK)

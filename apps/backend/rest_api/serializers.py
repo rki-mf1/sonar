@@ -1,11 +1,12 @@
 from collections import OrderedDict
 import datetime
 from typing import Type
-from rest_framework import serializers
-from . import models
+
 from django.db.models import Model as DjangoModel
-from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import serializers
+
+from . import models
 
 
 def find_or_create(
@@ -189,19 +190,19 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
             "proteomic_profiles",
             # "annotation_profiles",
             "init_upload_date",
-            "last_update_date"
+            "last_update_date",
         ]
 
     def get_properties(self, obj: models.Sample):
         custom_properties = Sample2PropertySerializer(
             obj.properties, many=True, read_only=True
         ).data
-        filter_list = ['properties', 'name', 'sequence', "id", "datahash"]
+        filter_list = ["properties", "name", "sequence", "id", "datahash"]
         sample_properties = [
-                    field.name
-                    for field in models.Sample._meta.get_fields()
-                    if field.name not in filter_list
-                ]
+            field.name
+            for field in models.Sample._meta.get_fields()
+            if field.name not in filter_list
+        ]
         for prop in sample_properties:
             if value := getattr(obj, prop):
                 if type(value) == datetime.datetime:
@@ -248,8 +249,10 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                             )
                     list.append(label)
                 except AttributeError as e:
-                    # disable it for now
-                    # to capture the error 'NoneType' object has no attribute 'gene_symbol'
+                    # most of the time this AttributeError outputs
+                    # 'NoneType' object has no attribute 'gene_symbol', so I comment it for now
+                    # to reduce logs print out to a console
+                    # capture the error 'NoneType' object has no attribute 'gene_symbol'
                     # print(e)
                     # print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue
@@ -308,7 +311,7 @@ class SampleGenomesExportStreamSerializer(SampleGenomesSerializer):
                 row.append(", ".join(list(self.get_genomic_profiles(obj).keys())))
             elif value := next(
                 (item["value"] for item in custom_properties if item["name"] == column),
-                None
+                None,
             ):
                 row.append(value)
             else:

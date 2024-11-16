@@ -16,7 +16,7 @@ The sonar-backend is web service that represents the API version of the Sonar to
 
 ## General organization
 
-### Configuration
+### Docker Configuration
 
 We use docker compose to manage the software stack (the django backend itself, celery workers, the PostgreSQL database, ...). This is setup mainly in the `compose.yml` file in the project root. This compose file exposes the minimum ports, so for development there is an additional compose file `compose-dev.yml` that is loaded **in addition to** the main compose file, which just opens up a few more ports to a few of the services, and also mounts the source directory as a volume for all django containers to that you can do live editing of the code without having to rebuild your docker container:
 
@@ -37,6 +37,18 @@ $ docker compose -f compose.yml -f compose-dev.yml --env-file conf/docker/common
 That is a huge command, so we have convenience scripts here: `scripts/{linux,windows}/dc-{dev,prod}.{sh,ps1}` These helpers are used by all other convenience scripts so changes to this command line are easier to make, if we need to do that in the future.
 
 Note: for now, we specifically don't use the `env_file:` directive in our compose files. This is because it further fragments where the configuration is stored and also seemed to lead to some duplication in the config files. The downside to this is that the `environment:` sections of the current compose file have lots of duplication and are very long, and this can eventually lead to bugs when someone forgets to add a new environment variable to all necessary containers. With that in mind we might revisit using env_files in the future if the benefits are deemed to outweight the costs.
+
+### PostgreSQL Configuration
+
+Postgres configuration files are in the `./conf/postgresql/` directory. The main config files you'll want to use are either `prod.conf` or `dev.conf`. You can choose which config file you use by setting the variable `POSTGRES_CONFIG_FILE` in the docker config file (see above):
+
+```
+POSTGRES_CONFIG_FILE=dev.conf
+```
+
+Both `dev.conf` and `prod.conf` are set up to include `common.conf`, then contain a few settings that are recommended for development or production use, and then additionally include a `dev.conf.local` or `prod.conf.local` file if it exists. This file is excluded from git and you can use it to include some local-only custom Postgres settings such as aggressive logging options or disabled fsync.
+
+For reference, the config directory also includes `default-config-notused.conf` which lists most configuration settings and their defaults.
 
 ## Production
 

@@ -19,7 +19,6 @@ server {
     alias /staticfiles/;
   }
 
-
   # Frontend
   location / {
     root /frontend;

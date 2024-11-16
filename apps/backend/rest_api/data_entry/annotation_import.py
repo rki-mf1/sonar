@@ -1,15 +1,14 @@
 from dataclasses import dataclass
-from covsonar_backend.settings import LOGGER
-from rest_api.models import (
-    Mutation,
-    AnnotationType,
-    Alignment,
-    Mutation2Annotation,
-    Sample,
-    Sequence,
-)
-from django.db.models import Q
 import re
+
+from django.db.models import Q
+
+from covsonar_backend.settings import LOGGER
+from rest_api.models import Alignment
+from rest_api.models import AnnotationType
+from rest_api.models import Mutation
+from rest_api.models import Mutation2Annotation
+from rest_api.models import Sample
 
 
 @dataclass
@@ -172,7 +171,7 @@ class AnnotationImport:
                     # add None here if we dont want to keep the deletion in ref
                     # column, however the program frozen once I change to
                     # mutation_lookup_to_annotations.ref = None
-                    mutation_lookup_to_annotations.ref = "" 
+                    mutation_lookup_to_annotations.ref = ""
                     mutation_lookup_to_annotations.alt = None
 
                 mutation_lookups_to_annotations.append(mutation_lookup_to_annotations)
