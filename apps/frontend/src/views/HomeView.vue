@@ -8,9 +8,7 @@
       <template #empty> No Results </template>
       <template #header>
         <div style="display: flex; justify-content: space-between; ">
-          <div>
-            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
-          </div>
+          <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised @click="displayDialogExport = true" />
           <div style="display: flex; justify-content: flex-end">
             <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter
               placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
@@ -108,7 +106,7 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading"
+        <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised :loading="samplesStore.loading"
           @click="exportFile(exportFormat)" />
       </div>
     </Dialog>

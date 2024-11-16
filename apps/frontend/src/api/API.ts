@@ -87,7 +87,6 @@ export default class API {
     getFilteredStatistics(params: FilterGroupRoot) {
         const queryString = this.parseQueryString(params)
         const url = `samples/filtered_statistics/${queryString}`
-        console.log(url)
         return this.getRequest(url, {} as JSON, false)
     }
     async getSampleGenomesExport(params: FilterGroupRoot, columns: string[], ordering: string, xls = true) {
