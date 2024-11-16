@@ -3,6 +3,7 @@ import pathlib
 import re
 import uuid
 
+from dateutil import parser
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework import status
 from rest_framework.response import Response
@@ -182,3 +183,20 @@ def generate_job_ID(is_prop: bool):
     else:
         job_id = "cli_" + job
     return job_id
+
+
+def parse_date(value):
+    # Generalized function to parse any date format
+    # exp. 2021-11-30T00:00:00, 2021-02-16 19:00:03 +0100
+    # 2/2/2021
+    if not value or str(value).strip() == "":
+        return None
+    try:
+        parsed_date = parser.parse(value)
+        return parsed_date.strftime("%Y-%m-%d")
+    except ValueError:
+        raise ValueError(f"ValueError: Unable to parse date from '{value}'")
+    except TypeError:
+        raise TypeError(f"TypeError: Invalid type for date parsing - '{value}'")
+    # or return None?
+    # raise ValueError(f"Failed to parse date '{value}': {str(e)}") from e

@@ -110,15 +110,12 @@ class SampleViewSet(
 
         latest_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
-            .order_by(
-                "-collection_date"
-            )  # '-' before column name mean "descending order", while without '-' mean "ascending".
-            .first()
+            # '-' before column name mean "descending order", while without '-' mean "ascending".
+            .order_by("-collection_date").first()
         )
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
-
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
@@ -204,7 +201,7 @@ class SampleViewSet(
             )
 
             if DEBUG:
-                print(queryset.query)
+                LOGGER.info(queryset.query)
 
             # filter out ambiguous nucleotides or unspecified amino acids
             if not showNX:
