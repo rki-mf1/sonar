@@ -30,7 +30,7 @@ class APIClient:
     get_jobID_endpont = "tasks/generate_job_id"
     get_job_byID_endpont = "tasks/get_files_by_job_id"
 
-    get_database_info_endpont = "tasks/get_files_by_job_id"
+    get_database_info_endpont = "database/get_database_info"
 
     post_add_reference_endpoint = "references/import_gbk/"
     post_delete_reference_endpoint = "references/delete_reference/"

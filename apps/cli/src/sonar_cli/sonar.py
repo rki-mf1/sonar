@@ -963,7 +963,7 @@ def handle_lineage(args: argparse.Namespace):
 
 
 def handle_info(args: argparse.Namespace):
-    sonarUtils1.upload_lineage()
+    sonarUtils1.get_info()
 
 
 def execute_commands(args):  # noqa: C901
