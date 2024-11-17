@@ -7,20 +7,23 @@ import zipfile
 
 from celery import group
 from celery import shared_task
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import PROPERTY_BATCH_SIZE
-from covsonar_backend.settings import REDIS_URL
-from covsonar_backend.settings import SAMPLE_BATCH_SIZE
-from covsonar_backend.settings import SONAR_DATA_ARCHIVE
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.db import DataError
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from line_profiler import LineProfiler
 import pandas as pd
+
+from covsonar_backend.settings import LOGGER
+from covsonar_backend.settings import PROFILE_IMPORT
+from covsonar_backend.settings import PROPERTY_BATCH_SIZE
+from covsonar_backend.settings import REDIS_URL
+from covsonar_backend.settings import SAMPLE_BATCH_SIZE
+from covsonar_backend.settings import SONAR_DATA_ARCHIVE
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 from rest_api import models
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.data_entry.sample_import import SampleImport
@@ -34,8 +37,8 @@ from rest_api.models import ProcessingJob
 from rest_api.models import Sample
 from rest_api.models import Sequence
 from rest_api.serializers import Sample2PropertyBulkCreateOrUpdateSerializer
+from rest_api.utils import parse_date
 from rest_api.utils import PropertyColumnMapping
-
 
 property_cache = {}
 
@@ -296,6 +299,28 @@ def process_batch(
     gene_cache_by_var_pos,
     temp_dir,
 ):
+    parameters = locals().copy()
+    if PROFILE_IMPORT:
+        lp = LineProfiler()
+        # Add a few of the slowest functions based on profiling the
+        # process_batch_run() function
+        lp.add_function(SampleImport.get_mutation_objs)
+        lp.add_function(get_mutation2alignment_objs)
+        process_batch_profiled = lp(process_batch_run)
+        retval = process_batch_profiled(**parameters)
+        lp.print_stats()
+        return retval
+    else:
+        return process_batch_run(**parameters)
+
+
+def process_batch_run(
+    batch: list[str],
+    replicon_cache,
+    gene_cache_by_accession,
+    gene_cache_by_var_pos,
+    temp_dir,
+):
     try:
         sample_import_objs = [
             SampleImport(pathlib.Path(file), import_folder=temp_dir) for file in batch
@@ -542,6 +567,16 @@ def import_property(
         else:
             serializable_column_mapping = None
             sample_id_column = "ID"
+
+        # Format columns with 'value_date' type
+        for column_name, col_info in serializable_column_mapping.items():
+            if (
+                col_info["data_type"] == "value_date"
+                and column_name in properties_df.columns
+            ):
+                properties_df[column_name] = properties_df[column_name].apply(
+                    parse_date
+                )
 
         if use_celery:
             print("Setting up property import celery jobs...")

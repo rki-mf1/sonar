@@ -1,7 +1,7 @@
 <template>
   <div class="filter-and-statistic-panel my-2">
     <div class="filter-left">
-      <div >
+      <div style="max-width: 91%;">
         <div class="filter-container">
           <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
@@ -18,9 +18,10 @@
             :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
           ></Calendar>
           <Button 
-            style="font-size: 10px; min-width: min-content;" 
-            @click="samplesStore.setDefaultTimeRange">
-          <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
+              icon="pi pi-arrow-circle-left"   
+              label="&nbsp;Reset"
+              style="font-size: 12px; min-width: min-content;"
+              @click="samplesStore.setDefaultTimeRange">
           </Button>
           <Button 
             class="ml-2 p-button-sm" 
@@ -29,7 +30,7 @@
           </Button>
         </div>
 
-        <div class="filter-container">
+        <div class="filter-container" >
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect 
             v-model="lineageFilter.lineageList" 
@@ -37,13 +38,13 @@
             :options="samplesStore.lineageOptions" 
             filter
             placeholder="Select Lineages" 
-            class="w-full md:w-80"
+            style="width: 68%;"
             :virtualScrollerOptions="{ itemSize: 30 }"
             />
 
-            <div class="include-switch">
-              <InputSwitch v-model="lineageFilter.includeSublineages" />
+            <div class="switch">
               Include Sublineages?
+              <InputSwitch v-model="lineageFilter.includeSublineages" />
             </div>
             <Button 
             v-if="lineageFilter.lineageList.length>0"
@@ -73,15 +74,17 @@
           <Button 
             icon="pi pi-filter" 
             label="&nbsp;Set Advanced Filters" 
+            severity="warning"
             raised
-            style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
             :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
             @click="displayDialogFilter = true" 
         />
             <Button 
-              style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+              icon="pi pi-database"   
+              label="&nbsp;Update sample selection"
+              severity="warning"
+              raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
-              label="Update sample selection" 
               @click="samplesStore.updateSamples">
             </Button>
         </div>
@@ -104,7 +107,14 @@
           <Message severity="error">{{ samplesStore.errorMessage }}</Message>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialogAndUpdate()"></Button>
+          <Button 
+              icon="pi pi-database"   
+              label="&nbsp;Update sample selection"  
+              severity="warning"
+              raised
+              :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+              @click="closeAdvancedFilterDialogAndUpdate">
+          </Button>
         </div>
         <Button type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
       </Dialog>
@@ -256,6 +266,7 @@ export default {
         this.samplesStore.updateSamples();
       }
       this.displayDialogFilter = false;
+      this.samplesStore.updateSamples();
     },
     toggleHelp(event: Event) {
       const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as { toggle?: (event: Event) => void };
@@ -332,19 +343,10 @@ export default {
   margin-bottom: 0px;
 }
 
-.exclude-switch {
+.switch {
   /* font-variant: small-caps; */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  font-size: 0.7em;
-  margin: 2.5px;
-}
-.include-switch {
-  /* font-variant: small-caps; */
-  display: flex;
-  justify-content: center;
-  flex-direction: row;
   align-items: center;
   text-align: center;
   font-size: 0.7em;

@@ -1,43 +1,32 @@
 import ast
 from collections import defaultdict
 import csv
+from dataclasses import dataclass
 from datetime import datetime
 import json
 import os
+import pathlib
 import re
 import traceback
 from typing import Generator
 
 import _csv
-from covsonar_backend.settings import DEBUG
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from dateutil.rrule import rrule
 from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
-from django.db.models import CharField
+from django.db.models import Case
 from django.db.models import Count
+from django.db.models import IntegerField
 from django.db.models import Min
 from django.db.models import OuterRef
 from django.db.models import Prefetch
 from django.db.models import Q
 from django.db.models import QuerySet
 from django.db.models import Subquery
-from django.db.models import TextField
-from django.db.models.functions import TruncMonth
-from django.db.models.functions import TruncWeek
+from django.db.models import When
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
-import pandas as pd
-from rest_api.data_entry.sample_job import delete_sample
-from rest_api.serializers import SampleGenomesExportStreamSerializer
-from rest_api.serializers import SampleSerializer
-from rest_api.utils import define_profile
-from rest_api.utils import resolve_ambiguous_NT_AA
-from rest_api.utils import Response
-from rest_api.utils import strtobool
-from rest_api.viewsets import PropertyViewSet
 from rest_framework import generics
 from rest_framework import status
 from rest_framework import viewsets
@@ -46,10 +35,31 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from covsonar_backend.settings import DEBUG
+from covsonar_backend.settings import LOGGER
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from rest_api.data_entry.sample_job import delete_sample
+from rest_api.serializers import SampleGenomesExportStreamSerializer
+from rest_api.serializers import SampleSerializer
+from rest_api.utils import define_profile
+from rest_api.utils import resolve_ambiguous_NT_AA
+from rest_api.utils import Response
+from rest_api.utils import strtobool
+from rest_api.viewsets import get_distinct_gene_symbols
+from rest_api.viewsets import PropertyViewSet
 from . import models
 from .serializers import SampleGenomesSerializer
 from .serializers import SampleGenomesSerializerVCF
 from .serializers import SampleSerializer
+
+
+@dataclass
+class LineageInfo:
+    name: str
+    parent: str
+
+    def __hash__(self):
+        return hash((self.name, self.parent))
 
 
 class Echo:
@@ -101,15 +111,12 @@ class SampleViewSet(
 
         latest_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
-            .order_by(
-                "-collection_date"
-            )  # '-' before column name mean "descending order", while without '-' mean "ascending".
-            .first()
+            # '-' before column name mean "descending order", while without '-' mean "ascending".
+            .order_by("-collection_date").first()
         )
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
-
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
@@ -195,7 +202,7 @@ class SampleViewSet(
             )
 
             if DEBUG:
-                print(queryset.query)
+                LOGGER.info(queryset.query)
 
             # filter out ambiguous nucleotides or unspecified amino acids
             if not showNX:
@@ -326,69 +333,71 @@ class SampleViewSet(
     def _get_meta_data_coverage(self, queryset):
         dict = {}
         queryset = queryset.prefetch_related("properties__property")
-        queryset = queryset.annotate(
-            genomic_profiles_count=Count(
-                "sequence__alignments__mutations",
-                filter=Q(sequence__alignments__mutations__type="nt"),
-            ),
-            proteomic_profiles_count=Count(
-                "sequence__alignments__mutations",
-                filter=Q(sequence__alignments__mutations__type="cds"),
-            ),
+        annotations = {}
+        annotations["not_null_count_genomic_profiles"] = Count(
+            Subquery(
+                models.Sample.objects.filter(
+                    sequence__alignments__mutations__type="nt", id=OuterRef("id")
+                ).values("id")[
+                    :1
+                ]  # Return only one to indicate existence
+            )
         )
-
-        dict["genomic_profiles"] = queryset.filter(genomic_profiles_count__gt=0).count()
-        dict["proteomic_profiles"] = queryset.filter(
-            proteomic_profiles_count__gt=0
-        ).count()
-
-        property_names = PropertyViewSet.get_distinct_property_names()
-
+        annotations["not_null_count_proteomic_profiles"] = Count(
+            Subquery(
+                models.Sample.objects.filter(
+                    sequence__alignments__mutations__type="cds", id=OuterRef("id")
+                ).values("id")[
+                    :1
+                ]  # Return only one to indicate existence
+            )
+        )
         for field in models.Sample._meta.get_fields():
-            field_name = field.name
-
-            if field_name not in property_names:
-                continue
-
-            property_names.pop(property_names.index(field_name))
-
-            if isinstance(field, (CharField, TextField)):
-                non_empty_count = (
-                    queryset.exclude(**{field_name: ""})
-                    .exclude(**{field_name: None})
-                    .count()
+            if field.concrete and not field.is_relation:
+                field_name = field.name
+                annotations[f"not_null_count_{field_name}"] = Count(
+                    Case(
+                        When(**{f"{field_name}__isnull": False}, then=1),
+                        output_field=IntegerField(),
+                    )
                 )
-            else:
-                non_empty_count = queryset.exclude(**{field_name: None}).count()
-            dict[field_name] = non_empty_count
-
+        property_to_datatype = {
+            property.name: property.datatype
+            for property in models.Property.objects.all()
+        }
+        property_names = PropertyViewSet.get_custom_property_names()
         for property_name in property_names:
             try:
-                datatype = models.Property.objects.get(name=property_name).datatype
+                if property_name not in property_to_datatype:
+                    print(f"Property {property_name} not found")
+                    continue
+                datatype = property_to_datatype[property_name]
                 # Determine the exclusion value based on the datatype
-                exclusion_value = (
-                    0 if datatype in ["value_integer", "value_float"] else ""
-                )
-                dict[property_name] = (
-                    queryset.exclude(
-                        **{
-                            "properties__property__name": property_name,
-                            f"properties__{datatype}": exclusion_value,
-                        }
+                annotations[f"not_null_count_{property_name}"] = Count(
+                    Case(
+                        When(
+                            properties__property__name=property_name,
+                            **{f"properties__{datatype}__isnull": False},
+                            then=1,
+                        ),
+                        output_field=IntegerField(),
                     )
-                    .exclude(
-                        **{
-                            "properties__property__name": property_name,
-                            f"properties__{datatype}": None,
-                        }
-                    )
-                    .count()
                 )
             except ValueError as e:
                 LOGGER.error(
                     f"Error with property_name: {property_name}, datatype: {datatype}"
                 )
                 LOGGER.error(f"Error message: {e}")
+
+        # Use the aggregate method with the dynamically created dictionary
+        result = queryset.aggregate(**annotations)
+
+        # Print or use the result
+        dict = {
+            key.replace("not_null_count_", ""): value
+            for key, value in result.items()
+            if key.startswith("not_null_count")
+        }
 
         return dict
 
@@ -404,7 +413,7 @@ class SampleViewSet(
         }
         return result_dict
 
-    def _get_lenght_chart(self, queryset):
+    def _get_length_chart(self, queryset):
         result_dict = {}
         grouped_queryset = (
             queryset.values("length").annotate(total=Count("length")).order_by()
@@ -485,13 +494,7 @@ class SampleViewSet(
     def _get_samples_per_week(self, queryset):
         result_dict = {}
         queryset = (
-            queryset.extra(
-                select={
-                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-                }
-            )
-            .values("year", "week")
+            queryset.values("year", "week")
             .annotate(count=Count("id"), collection_date=Min("collection_date"))
             .order_by("year", "week")
         )
@@ -510,20 +513,21 @@ class SampleViewSet(
         return result_dict
 
     def normalize_get_monthly_lineage_percentage_area_chart(self, queryset):
-
-        # Annotate each sample with the month and lineage count per month
         monthly_data = (
-            queryset.annotate(month=TruncMonth("collection_date"))
-            .values("month", "lineage")
+            queryset.values("month", "year", "lineage", "lineage_parent")
             .annotate(lineage_count=Count("id"))
-            .order_by("month", "lineage")
+            .order_by("year", "month", "lineage")
         )
 
         # Organize monthly lineage data into a dictionary for processing
         lineage_data = defaultdict(lambda: defaultdict(int))
         for item in monthly_data:
-            month_str = item["month"].strftime("%Y-%m")
-            lineage_data[month_str][item["lineage"]] += item["lineage_count"]
+            month_str = (
+                f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
+            )
+            lineage_data[month_str][
+                LineageInfo(item["lineage"], item["lineage_parent"])
+            ] += item["lineage_count"]
 
         result = []
 
@@ -550,11 +554,10 @@ class SampleViewSet(
 
         return result
 
-    def get_monthly_lineage_percentage_area_chart(self, queryset):
+    def get_monthly_lineage_percentage_area_chart(self, queryset: QuerySet):
         # Annotate each sample with the month based on collection_date
         monthly_data = (
-            queryset.annotate(month=TruncMonth("collection_date"))  # Group by month
-            .values("month", "lineage")
+            queryset.values("month", "lineage")
             .annotate(
                 lineage_count=Count("id")
             )  # Count occurrences of each lineage per month
@@ -563,10 +566,7 @@ class SampleViewSet(
 
         # Calculate total samples per month to determine percentages
         total_per_month = (
-            queryset.annotate(month=TruncMonth("collection_date"))
-            .values("month")
-            .annotate(total_count=Count("id"))
-            .order_by("month")
+            queryset.values("month").annotate(total_count=Count("id")).order_by("month")
         )
 
         # Create a dictionary for quick lookup of total counts per month
@@ -575,7 +575,9 @@ class SampleViewSet(
         # Construct the final result with percentages
         result = []
         for item in monthly_data:
-            month_str = item["month"].strftime("%Y-%m")  # Format as "YYYY-MM"
+            month_str = (
+                f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
+            )
             percentage = (item["lineage_count"] / month_totals[item["month"]]) * 100
             result.append(
                 {
@@ -590,17 +592,19 @@ class SampleViewSet(
     def normalize_get_weekly_lineage_percentage_bar_chart(self, queryset):
         # Annotate each sample with the start of the week and count occurrences per lineage
         weekly_data = (
-            queryset.annotate(week=TruncWeek("collection_date"))
-            .values("week", "lineage")
+            queryset.values("year", "week", "lineage", "lineage_parent")
             .annotate(lineage_count=Count("id"))
-            .order_by("week", "lineage")
+            .order_by("year", "week", "lineage")
         )
 
         # Organize lineage counts by week into a dictionary
         lineage_data = defaultdict(lambda: defaultdict(int))
+
         for item in weekly_data:
-            week_str = item["week"].strftime("%Y-W%U")
-            lineage_data[week_str][item["lineage"]] += item["lineage_count"]
+            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
+            lineage_data[week_str][
+                LineageInfo(item["lineage"], item["lineage_parent"])
+            ] += item["lineage_count"]
 
         # Initialize final result list
         result = []
@@ -632,8 +636,7 @@ class SampleViewSet(
     def get_weekly_lineage_percentage_bar_chart(self, queryset):
         # Annotate each sample with the start of the week based on collection_date
         weekly_data = (
-            queryset.annotate(week=TruncWeek("collection_date"))  # Group by week
-            .values("week", "lineage")
+            queryset.values("week", "lineage")
             .annotate(
                 lineage_count=Count("id")
             )  # Count occurrences of each lineage per week
@@ -642,10 +645,7 @@ class SampleViewSet(
 
         # Calculate total samples per week to determine percentages
         total_per_week = (
-            queryset.annotate(week=TruncWeek("collection_date"))
-            .values("week")
-            .annotate(total_count=Count("id"))
-            .order_by("week")
+            queryset.values("week").annotate(total_count=Count("id")).order_by("week")
         )
 
         # Create a dictionary for quick lookup of total counts per week
@@ -654,7 +654,7 @@ class SampleViewSet(
         # Construct the final result with percentages
         result = []
         for item in weekly_data:
-            week_str = item["week"].strftime("%Y-W%U")  # Format as "YYYY-WXX"
+            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
             percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
             result.append(
                 {
@@ -669,43 +669,39 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
+        queryset = queryset.extra(
+            select={"lineage_parent": "lineage1.name"},
+            tables=["lineage", '"lineage" AS "lineage1"'],
+            where=[
+                "lineage.name = sample.lineage and lineage.parent_id is not null",
+                "lineage1.id = lineage.parent_id",
+            ],
+        )
+        queryset = queryset.extra(
+            select={
+                "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
+                "month": 'EXTRACT(\'month\' FROM "sample"."collection_date")',
+                "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
+            }
+        )
         dict = {}
-
         dict["filtered_total_count"] = queryset.count()
         dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
         dict["samples_per_week"] = self._get_samples_per_week(queryset)
         dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
+
         # dict["lineage_area_chart"] = self.get_monthly_lineage_percentage_area_chart(queryset)
         dict["lineage_area_chart"] = (
             self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
         )
-        # [
-        # {"date": "2023-08", "lineage": "23B", "percentage": 25},
-        # {"date": "2023-08", "lineage": "23D", "percentage": 35},
-        # {"date": "2023-09", "lineage": "23B", "percentage": 45},
-        # {"date": "2023-09", "lineage": "23D", "percentage": 35},
-        # {"date": "2023-10", "lineage": "23B", "percentage": 15},
-        # {"date": "2023-10", "lineage": "23D", "percentage": 95},
-        # Add more data points for other lineages and dates
-        # ]
         dict["lineage_bar_chart"] = (
             self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
         )
-        # dict["lineage_bar_chart"] =  self.get_weekly_lineage_percentage_bar_chart(queryset)
-        # [
-        #     {"week": "2023-W40", "lineage": "BA.2.86", "percentage": 40},
-        #     {"week": "2023-W40", "lineage": "EG.5.1", "percentage": 20},
-        #     {"week": "2023-W41", "lineage": "BA.2.86", "percentage": 40},
-        #     {"week": "2023-W41", "lineage": "EG.5.1", "percentage": 20},
-        #     {"week": "2023-W42", "lineage": "BA.2.86", "percentage": 40},
-        #     {"week": "2023-W42", "lineage": "EG.5.1", "percentage": 20},
-        #     ....
-        # ]
         dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
         dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
         dict["sample_type"] = self._get_sampleType_chart(queryset)
         dict["host"] = self._get_host_chart(queryset)
-        dict["length"] = self._get_lenght_chart(queryset)
+        dict["length"] = self._get_length_chart(queryset)
         dict["lab"] = self._get_lab_chart(queryset)
         dict["zip_code"] = self._get_zip_code_chart(queryset)
         return Response(data=dict)
@@ -751,7 +747,14 @@ class SampleViewSet(
         mutations = re.split(r"[\s,]+", value.strip())
         for mutation in mutations:
             parsed_mutation = define_profile(mutation)
-
+            # check valid protien name
+            if (
+                "protein_symbol" in parsed_mutation
+                and parsed_mutation["protein_symbol"] not in get_distinct_gene_symbols()
+            ):
+                raise ValueError(
+                    f"Invalid protein name: {parsed_mutation['protein_symbol']}."
+                )
             # Check the parsed mutation type and call the appropriate filter function
             if parsed_mutation.get("label") == "SNP Nt":
                 q_obj = self.filter_snp_profile_nt(
@@ -777,12 +780,8 @@ class SampleViewSet(
             elif parsed_mutation.get("label") == "Del AA":
                 q_obj = self.filter_del_profile_aa(
                     protein_symbol=parsed_mutation["protein_symbol"],
-                    first_deleted=int(parsed_mutation["first_deleted"]),
-                    last_deleted=int(
-                        parsed_mutation.get(
-                            "last_deleted", parsed_mutation["first_deleted"]
-                        )
-                    ),
+                    first_deleted=parsed_mutation["first_deleted"],
+                    last_deleted=parsed_mutation.get("last_deleted", ""),
                 )
 
             elif parsed_mutation.get("label") == "Ins Nt":
@@ -925,7 +924,8 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aa (e.g. OPG098:E162K)
-
+        if protein_symbol not in get_distinct_gene_symbols():
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
@@ -979,14 +979,15 @@ class SampleViewSet(
     def filter_del_profile_aa(
         self,
         protein_symbol: str,
-        first_deleted: int,
-        last_deleted: int,
+        first_deleted: str,
+        last_deleted: str,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:del:first_AA_deleted-last_AA_deleted (e.g. OPG197:del:34-35)
-
+        if protein_symbol not in get_distinct_gene_symbols():
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         # in case only single deltion bp
         if last_deleted == "":
             last_deleted = first_deleted
@@ -1038,6 +1039,8 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aas (e.g. OPG197:A34AK)
+        if protein_symbol not in get_distinct_gene_symbols():
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         alignment_qs = models.Alignment.objects.filter(
             mutations__end=ref_pos,
             mutations__ref=ref_aa,
@@ -1094,7 +1097,6 @@ class SampleViewSet(
 
         if not lineages.exists():
             raise Exception(f"Lineage {lineages} not found.")
-
         if includeSublineages:
             sublineages = []
             for l in lineages:
@@ -1270,7 +1272,7 @@ def aggregate_below_threshold_lineages(lineages, threshold_count):
     :return: A dictionary with lineages aggregated above the threshold.
     """
     above_threshold = {
-        lineage: count
+        lineage.name: count
         for lineage, count in lineages.items()
         if count >= threshold_count
     }
@@ -1280,12 +1282,13 @@ def aggregate_below_threshold_lineages(lineages, threshold_count):
 
     for lineage, count in below_threshold.items():
         # Aggregate each below-threshold lineage recursively
-        lineage_obj = models.Lineage.objects.filter(name=lineage).first()
-        if lineage_obj and lineage_obj.parent:
-            parent_name = lineage_obj.parent.name
-            above_threshold[parent_name] = above_threshold.get(parent_name, 0) + count
+
+        if lineage.parent:
+            above_threshold[lineage.parent] = (
+                above_threshold.get(lineage.parent, 0) + count
+            )
         else:
             # If lineage has no parent, keep it as is
-            above_threshold[lineage] = above_threshold.get(lineage, 0) + count
+            above_threshold[lineage.name] = above_threshold.get(lineage.name, 0) + count
 
     return above_threshold
