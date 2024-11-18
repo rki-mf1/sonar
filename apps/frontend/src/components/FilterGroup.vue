@@ -1,48 +1,36 @@
 <template>
   <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
-    <!-- Property Filters -->
-    <div v-for="filter in filterGroup.filters?.propertyFilters" class="single-filter">
-      <div class="flex align-items-center gap-0">
-        <span class="filter-label">Property</span>
-        <Dropdown class="flex mr-2" :options="propertyOptions" v-model="filter.propertyName"
-          style="flex: 1; min-width: 150px;" @change="updatePropertyValueOptions(filter)" />
-
-        <div v-if="['name', 'length', 'lab'].includes(filter.propertyName) 
-                  && (typeof filter.value === 'string' || filter.value === null)"  
-            class="mr-2">
-          <span class="filter-label">Operator</span>
-          <Dropdown :options="localOperators" v-model="filter.filterType" style="flex: 1; min-width: 150px;" />
-          <span class="filter-label">Value</span>
-          <InputText 
-            v-model="filter.value" 
-            style="flex: auto" 
-          />
-        </div>
-
-        <div v-if="isDateArray(filter.value)">
-          <Calendar 
-            v-model="filter.value" 
-            showIcon dateFormat="yy-mm-dd" 
-            selectionMode="range" 
-          />
-        </div>
-        <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
-          <Dropdown 
-            :options="propertyValueOptions[filter.propertyName]?.options"
-            :loading="propertyValueOptions[filter.propertyName]?.loading" 
+    <!-- Lineage Filters -->
+    <div v-if= "filterGroup.filters.lineageFilter.isVisible 
+    || filterGroup.filters.lineageFilter.lineageList.length>0" class="single-filter">
+      <div class="filter-container">
+          <span class="filter-label">Lineage</span>
+          <div style="flex-grow: 1; max-width: 500px; margin-right: 10px;">
+          <MultiSelect 
+            v-model="filterGroup.filters.lineageFilter.lineageList" 
+            display="chip" 
+            :options="lineageOptions" 
+            filter
+            placeholder="Select Lineages" 
             :virtualScrollerOptions="{ itemSize: 30 }"
-            v-model="filter.value" 
-            style="flex: auto"
-            filter 
+            style="max-width: 500px;"
           />
-        </div>
-        <Button type="button" raised size="small" @click="
-          filterGroup.filters?.propertyFilters?.splice(
-            filterGroup.filters?.propertyFilters?.indexOf(filter),
-            1
-          )
-          " icon="pi pi-trash" label="" severity="danger" />
       </div>
+          <div class="switch">
+            Include Sublineages?
+            <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
+          </div>
+          <div class="switch">
+            Exclude?
+            <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
+          </div>
+          <Button 
+            type="button" 
+            severity="danger" 
+            raised size="small" 
+            @click="removeLineageFilter(filterGroup, isSubGroup)" 
+            icon="pi pi-trash" />
+        </div>
     </div>
     <!-- Profile Filters -->
     <div v-for="profileFilter in filterGroup.filters?.profileFilters" class="single-filter">
@@ -63,11 +51,62 @@
             type="button" 
             severity="danger" 
             size="small" 
-            @click="removeProfileFilter(filterGroup, filterGroup.filters?.profileFilters?.indexOf(profileFilter))"
+            @click="removeProfileFilter(filterGroup, filterGroup.filters?.profileFilters?.indexOf(profileFilter), isSubGroup)"
             icon="pi pi-trash" 
             class="ml-2 p-button-sm" 
           />
         </div>
+    </div>
+    <!-- Property Filters -->
+    <div v-for="(filter, index) in filterGroup.filters?.propertyFilters" :key="index"class="single-filter">
+      <div class="flex align-items-center gap-0">
+        <span class="filter-label">Property</span>
+        <Dropdown class="flex mr-2" :options="propertyOptions" v-model="filter.propertyName"
+          style="flex: 1; min-width: 150px;" @change="updatePropertyValueOptions(filter)" />
+
+        <div v-if="['name', 'length', 'lab'].includes(filter.propertyName) 
+                  && (typeof filter.value === 'string' || filter.value === null)"  
+            class="mr-2">
+          <span class="filter-label">Operator</span>
+          <Dropdown :options="localOperators" v-model="filter.filterType" style="flex: 1; min-width: 150px;" />
+          <span class="filter-label">Value</span>
+          <InputText 
+            v-model="filter.value" 
+            style="flex: auto" 
+          />
+        </div>
+
+        <div v-if="isDateArray(filter.value)">
+          <Calendar 
+            v-model="filter.value[0]"  
+            style="flex: auto; min-width: 10rem;" 
+            showIcon
+            dateFormat="yy-mm-dd" 
+            ></Calendar>
+          <Calendar 
+            v-model="filter.value[1]" 
+            style="flex: auto;min-width: 10rem;" 
+            showIcon
+            dateFormat="yy-mm-dd" 
+          ></Calendar>
+        </div>
+        <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
+          <Dropdown 
+            :options="propertyValueOptions[filter.propertyName]?.options"
+            :loading="propertyValueOptions[filter.propertyName]?.loading" 
+            :virtualScrollerOptions="{ itemSize: 30 }"
+            v-model="filter.value" 
+            style="flex: auto"
+            filter 
+          />
+        </div>
+        <Button 
+          type="button" raised size="small" 
+          @click="removePropertyFilter(filterGroup.filters.propertyFilters, index, isSubGroup)"
+          icon="pi pi-trash" 
+          label="" 
+          severity="danger" />
+      </div>
     </div>
 
     <!-- Replicon Filters -->
@@ -86,39 +125,6 @@
               1
             )
             " icon="pi pi-trash" />
-        </div>
-      </div>
-    </div>
-
-    <!-- Lineage Filters -->
-    <div v-if= "filterGroup.filters.lineageFilter.isVisible 
-    || filterGroup.filters.lineageFilter.lineageList.length>0" class="single-filter">
-      <div class="flex flex-column">
-        <div class="flex align-items-center">
-          <span class="filter-label">Lineage</span>
-          <MultiSelect 
-            v-model="filterGroup.filters.lineageFilter.lineageList" 
-            display="chip" 
-            :options="lineageOptions" 
-            filter
-            placeholder="Select Lineages" 
-            :virtualScrollerOptions="{ itemSize: 30 }"
-            style="max-width: 500px;"
-          />
-          <div class="switch">
-            Include Sublineages?
-            <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
-          </div>
-          <div class="switch">
-            Exclude?
-            <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
-          </div>
-          <Button 
-            type="button" 
-            severity="danger" 
-            raised size="small" 
-            @click="removeLineageFilter(filterGroup)" 
-            icon="pi pi-trash" />
         </div>
       </div>
     </div>
@@ -149,7 +155,8 @@
     <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
       <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px;">OR</span>
       <FilterGroup 
-        :filterGroup="subFilterGroup" 
+        :filterGroup="subFilterGroup"
+        :isSubGroup="true" 
         :propertyOptions="propertyOptions" 
         :symbolOptions="symbolOptions"
         :operators="operators" 
@@ -195,6 +202,10 @@ export default {
     propertyOptions: {
       type: Array as () => string[],
       required: true
+    },    
+    isSubGroup: {
+      type: Boolean,
+      default: false,
     },
     symbolOptions: {
       type: Array as () => string[],
@@ -297,12 +308,32 @@ export default {
     },
     cantAddOrGroup(): boolean {
       return (
-        this.filterGroup.filters.propertyFilters.length +
+        // no filters
+        (this.filterGroup.filters.propertyFilters.length +
         this.filterGroup.filters.profileFilters.length +
         this.filterGroup.filters.repliconFilters.length +
         this.filterGroup.filters.lineageFilter.lineageList.length ==
-        0
+        0) 
+        ||
+        // empty standard filters
+        (
+          (
+            (this.filterGroup.filters.profileFilters.length ==1 &&
+            this.filterGroup.filters.profileFilters[0].value == "" )
+            ||(this.filterGroup.filters.profileFilters.length ==0)
+          )
+          &&
+          (
+            (this.filterGroup.filters.propertyFilters.length == 1 &&
+            Array.isArray(this.filterGroup.filters.propertyFilters[0].value) &&
+            this.filterGroup.filters.propertyFilters[0].value.length==0)
+            ||(this.filterGroup.filters.propertyFilters.length ==0)
+          ) 
+          &&
+          ((this.filterGroup.filters.lineageFilter.lineageList.length == 0) &&
+          (this.filterGroup.filters.repliconFilters.length==0))
       )
+    )
     },
 
     
@@ -369,37 +400,65 @@ export default {
       }
     },
 
-    removeProfileFilter(filterGroup: FilterGroup, index: number) {
-      if (filterGroup.filters?.profileFilters?.length <= 1) {
-        filterGroup.filters.profileFilters[0] = {
-          label: 'DNA/AA Profile',
-          value: '',
-          exclude: false,
-        };
-    }
-      else {
-        filterGroup.filters.profileFilters.splice(index, 1);
+    removeProfileFilter(filterGroup: FilterGroup, index: number, isSubGroup:boolean) {
+      if (!isSubGroup){
+        if (filterGroup.filters?.profileFilters?.length <= 1) {
+          filterGroup.filters.profileFilters[0] = {
+            label: 'DNA/AA Profile',
+            value: '',
+            exclude: false,
+          };
       }
-    },
+        else {
+          filterGroup.filters.profileFilters.splice(index, 1);
+        }
+      }      else {
+        filterGroup.filters.profileFilters.splice(index, 1);
+                                          }
+      },
 
-    removeLineageFilter(filterGroup: FilterGroup) {
-      filterGroup.filters.lineageFilter = {
+    removeLineageFilter(filterGroup: FilterGroup, isSubGroup:boolean) {
+      if (!isSubGroup){
+        filterGroup.filters.lineageFilter = {
                                               label: 'Lineages',
                                               lineageList: [],
                                               exclude: false,
                                               includeSublineages: true,
                                               isVisible: true,
                                             };
-    },
-    
-    initializeOperators(filter: { 
-      fetchOptions?: boolean; 
-      label?: string; 
-      value?: string | number | string[] | Date[] | null ; 
-      propertyName: string; 
-      filterType?: DateDjangoFilterType | IntegerDjangoFilterType | StringDjangoFilterType | 
-                  DjangoFilterType | null; 
-      }) {
+                      }
+                                          
+      else {
+        filterGroup.filters.lineageFilter = {
+                                              label: 'Lineages',
+                                              lineageList: [],
+                                              exclude: false,
+                                              includeSublineages: true,
+                                              isVisible: false,
+                                            };
+                                          }
+      },
+
+    removePropertyFilter(propertyFilters:PropertyFilter[], index: number, isSubGroup:boolean){
+      if (!isSubGroup){
+      if (index == 0) {
+        propertyFilters[0] = {
+          fetchOptions: false,
+          label: 'Property',
+          propertyName: 'collection_date',
+          filterType: DateDjangoFilterType.RANGE,
+          value: [] as (Date)[]};
+        }
+      else {
+        propertyFilters.splice(index, 1);
+      }
+    }
+    else{
+      propertyFilters.splice(index, 1)
+    }
+  },
+
+    initializeOperators(filter: PropertyFilter) {
       const propertyType = this.propertiesDict[filter.propertyName];
       let newOperators = [];
 

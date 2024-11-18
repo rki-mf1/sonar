@@ -5,25 +5,25 @@
         <div class="filter-container">
           <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
-            v-model="samplesStore.timeRange[0]" 
+            v-model="startDate"  
             style="flex: auto; min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
-            :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
             ></Calendar>
           <Calendar 
-            v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" 
+            v-model="endDate" 
+            style="flex: auto;min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
-            :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
           ></Calendar>
           <Button 
               icon="pi pi-arrow-circle-left"   
-              label="&nbsp;Reset"
-              style="font-size: 12px; min-width: min-content;"
-              @click="samplesStore.setDefaultTimeRange">
+              label="&nbsp;Default"
+              class="default-calendar-button"
+              @click="setDefaultTimeRange">
           </Button>
           <Button 
+            v-if="startDate"
             class="ml-2 p-button-sm" 
             @click="removeTimeRange">
           <i class="pi pi-trash" style="font-size: medium"/>
@@ -85,7 +85,7 @@
               severity="warning"
               raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
-              @click="updateSamplesInTableAndFIlteredStatistics()">
+              @click="updateSamplesInTableAndFilteredStatistics()">
             </Button>
         </div>
       </div>
@@ -222,6 +222,7 @@ export default {
   data() {
     const samplesStore = useSamplesStore();
     samplesStore.initializeWatchers();
+    
     if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
       samplesStore.filterGroup.filters.profileFilters.push({
         label: 'DNA/AA Profile',
@@ -237,7 +238,9 @@ export default {
   },
   methods: {
     removeTimeRange() {
-      this.samplesStore.timeRange = [null, null];
+      if (this.collectionDateFilter) {
+        this.collectionDateFilter.value = []
+      }
     },
     removeProfileFilter() {
       if (this.samplesStore.filterGroup.filters.profileFilters.length <= 1) {
@@ -278,15 +281,20 @@ export default {
         console.warn('Help component does not exist');
       }
     },
-    updateSamplesInTableAndFIlteredStatistics() {
+    updateSamplesInTableAndFilteredStatistics() {
       this.samplesStore.updateFilteredStatistics()
       return this.samplesStore.updateSamples()
+    },
+    async setDefaultTimeRange(){
+      const timeRange = await this.samplesStore.setDefaultTimeRange()
+      this.startDate =  timeRange[0] 
+      this.endDate = timeRange[1] 
     }
   },
   computed: {
     isAdvancedFiltersSet(): boolean {
       return this.samplesStore.filterGroup.filterGroups.length > 0 // OR-group set
-      || this.samplesStore.filterGroup.filters.propertyFilters.length > 0 // property for first group set
+      || this.samplesStore.filterGroup.filters.propertyFilters.length > 1 // other property than collection date for first group set
       || this.samplesStore.filterGroup.filters.repliconFilters.length > 0 // replicon for first group set
       || this.samplesStore.filterGroup.filters.profileFilters.length > 1 // more than one profile filter
       || this.samplesStore.filterGroup.filters.lineageFilter.exclude  // exclude set for first group lineage filter
@@ -298,7 +306,41 @@ export default {
     },
     lineageFilter(){
       return this.samplesStore.filterGroup.filters.lineageFilter;
-    }
+    },
+    collectionDateFilter() {
+      return this.samplesStore.filterGroup.filters.propertyFilters.find(
+        (filter) => filter.propertyName === 'collection_date'
+      );
+    },
+    startDate: {
+      get() {
+      if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value) &&
+          (this.collectionDateFilter.value[0] instanceof Date)) {
+        return this.collectionDateFilter.value[0];
+      }
+      return null;
+      },
+      set(newValue: Date) {
+        if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
+          this.collectionDateFilter.value[0] = newValue;
+        }
+      },
+    },
+    endDate: {
+    get() {
+      if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value) &&
+          (this.collectionDateFilter.value[1] instanceof Date)) {
+        return this.collectionDateFilter.value[1];
+      }
+      return null;
+    },
+
+      set(newValue: Date) {
+        if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
+          this.collectionDateFilter.value[1] = newValue;
+        }
+      },
+    },
   },
   mounted() {
   },
@@ -355,6 +397,18 @@ export default {
   text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
+}
+
+.default-calendar-button {
+    font-size: 12px; 
+    min-width: min-content; 
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 4px;
+    padding-right: 4px;
+    display: flex; 
+    flex-direction: column;
+    align-items: center; 
 }
 
 :deep(.p-button) {
