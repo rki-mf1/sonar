@@ -36,7 +36,7 @@ class sonarUtils1:
             data = json_response["detail"]
             log_message = "\n".join(
                 [
-                    f"Meta Data Coverage:",
+                    "Meta Data Coverage:",
                     *[
                         f"   {key}: {value}"
                         for key, value in data["meta_data_coverage"].items()
