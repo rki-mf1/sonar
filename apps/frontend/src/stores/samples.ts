@@ -113,6 +113,7 @@ export const useSamplesStore = defineStore('samples', {
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
     propertyOptions: [] as string[],
+    selectedColumns: ["genomic_profiles", "proteomic_profiles"],
     propertyValueOptions: {} as {
       [key: string]: {
         options: string[]
@@ -209,6 +210,18 @@ export const useSamplesStore = defineStore('samples', {
           this.propertyValueOptions[propertyName].loading = false
         })
     },
+
+    async updateSelectedColumns() {
+      const properties = ['lineage', 'collection_date', 'zip_code', 'lab', 'sequencing_tech', 
+        'sequencing_reason', 'isolation_source', 'init_upload_date', 'last_update_date'
+      ]
+      const columns = [
+        ...this.selectedColumns,
+        ...properties.filter(prop => this.propertyOptions.includes(prop))
+      ]
+      this.selectedColumns = columns.slice(0, 6)
+    },
+
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
       const metaData = this.filteredStatistics.meta_data_coverage
@@ -222,7 +235,8 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty & drop the 'name' column because the ID column is fixed
+      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty 
+      // & drop the 'name' column because the ID column is fixed
       this.propertyOptions = Object.keys(this.propertiesDict).filter( 
         (key) => key !== 'name' && metaData[key] > 0
       );
