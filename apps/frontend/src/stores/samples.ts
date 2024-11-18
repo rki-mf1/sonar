@@ -175,11 +175,8 @@ export const useSamplesStore = defineStore('samples', {
         } else {
           this.errorMessage = 'An unknown error occurred.';
         }
-      }else{
+      } else{
         this.samples = response.results;
-        this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-        this.filteredCount = this.filteredStatistics.filtered_total_count
-
       }
       this.loading = false
       this.filtersChanged = false
@@ -194,7 +191,6 @@ export const useSamplesStore = defineStore('samples', {
         new Date(statistics.first_sample_date),
         new Date(statistics.latest_sample_date ?? Date.now())
       ]
-      this.updateSamples()
     },
     updatePropertyValueOptions(propertyName: string) {
       if (this.propertyValueOptions[propertyName]) return
@@ -219,8 +215,9 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      this.propertyOptions = Object.keys(this.propertiesDict).filter(
-                (key) => metaData[key] > 0
+      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty & drop the 'name' column because the ID column is fixed
+      this.propertyOptions = Object.keys(this.propertiesDict).filter( 
+        (key) => key !== 'name' && metaData[key] > 0
       );
     },
     async updateRepliconAccessionOptions() {

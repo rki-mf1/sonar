@@ -54,7 +54,7 @@
             :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
             class="mr-1" 
             />
-            <div class="exclude-switch">
+            <div class="switch">
               Exclude?
               <InputSwitch v-model="profileFilter.exclude" />
             </div>
@@ -76,10 +76,10 @@
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
           <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
-            <div class="exclude-switch">
-              Exclude?
-              <InputSwitch v-model="filter.exclude" />
-            </div>
+          <div class="switch">
+            Exclude?
+            <InputSwitch v-model="filter.exclude" />
+          </div>
           <Button type="button" size="small" @click="
             filterGroup.filters?.repliconFilters?.splice(
               filterGroup.filters?.repliconFilters?.indexOf(filter),
@@ -103,13 +103,13 @@
             filter
             placeholder="Select Lineages" 
             :virtualScrollerOptions="{ itemSize: 30 }"
-            class="w-full md:w-80" 
+            style="max-width: 500px;"
           />
-          <div class="include-switch">
-            <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
+          <div class="switch">
             Include Sublineages?
+            <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
           </div>
-          <div class="exclude-switch">
+          <div class="switch">
             Exclude?
             <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
           </div>
@@ -512,14 +512,14 @@ export default {
   border: 2px solid var(--secondary-color-lighter);
 }
 
-.include-switch {
+.switch {
   /* font-variant: small-caps; */
   display: flex;
-  justify-content: center;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
 }
+
 </style>

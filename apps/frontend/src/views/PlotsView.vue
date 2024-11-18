@@ -174,8 +174,8 @@ export default {
     },
     lineage_barData() {
       // Access lineage_bar_chart data from filteredStatistics
-      const _data: LineageBarChartData[]= this.samplesStore.filteredStatistics 
-        ? this.samplesStore.filteredStatistics['lineage_bar_chart'] 
+      const _data: LineageBarChartData[] = this.samplesStore.filteredStatistics
+        ? this.samplesStore.filteredStatistics['lineage_bar_chart']
         : [];
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
@@ -243,7 +243,7 @@ export default {
     },
     lineage_areaData() {
       // Extract the data, ensuring it's an array
-      const _data = this.samplesStore.filteredStatistics 
+      const _data = this.samplesStore.filteredStatistics
         ? this.samplesStore.filteredStatistics['lineage_area_chart'] : [];
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
@@ -577,7 +577,7 @@ export default {
     },
     zipCodeChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['zip_code'] : {};
-      if (this.isDataEmpty(_data))  {
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       return {
@@ -665,8 +665,11 @@ export default {
       const hue = hash % 360;  // Base hue
       return `hsl(${hue}, 70%, 50%)`;  // Slightly darker for main color
     },
-    hashString(str: string) {
+    hashString(str: string | null | undefined) {
       let hash = 0;
+      if (!str) {
+        return hash; // in case there is no prop (null or undefined)
+      }
       for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
       }
@@ -685,9 +688,9 @@ export default {
       };
     },
 
-    isDataEmpty(data: {[key: string]: any }): boolean{
-      return (!data || Object.keys(data).length === 0 
-          || Object.keys(data).length === 1 &&  Object.keys(data)[0]=='null')
+    isDataEmpty(data: { [key: string]: any }): boolean {
+      return (!data || Object.keys(data).length === 0
+        || Object.keys(data).length === 1 && Object.keys(data)[0] == 'null')
     },
   }
 }

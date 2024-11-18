@@ -7,6 +7,7 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.db import transaction
 import pandas as pd
+
 from rest_api.models import Lineage
 
 

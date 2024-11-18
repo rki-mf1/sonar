@@ -21,7 +21,6 @@ try {
     if ($LASTEXITCODE -ne 0) {
         exit($LASTEXITCODE)
     }
-    scripts\win\dev-manage.ps1 migrate
     if ($LASTEXITCODE -ne 0) {
         exit($LASTEXITCODE)
     }

@@ -438,11 +438,12 @@ def construct_query(  # noqa: C901
                     or prop_type == "value_text"
                 ):
                     extract_value = prop_value[1:] if negate else prop_value
-                    if prop_name == "lineage" and with_sublineage:
+                    if prop_name == "lineage":
                         _query = {
-                            "label": "Sublineages",
-                            "lineage": extract_value,
+                            "label": "Lineages",
+                            "lineageList": extract_value,
                             "exclude": negate,
+                            "includeSublineages": with_sublineage,
                         }
 
                     else:

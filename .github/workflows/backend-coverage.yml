@@ -29,9 +29,11 @@ jobs:
     steps:
       - name: Check out pipeline code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: Build the backend container
         run: |
-          docker build -t backend:local -f Dockerfile .
+          docker build -t backend:local -f Dockerfile --progress=plain .
       - name: Bring up containers
         run: docker compose $COMPOSE_ARGS up --detach --quiet-pull
       - name: Install testing dependencies
@@ -39,14 +41,14 @@ jobs:
       - name: Run tests
         run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage run ./manage.py test --no-input
       - name: Generate reports
-        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage html
+        run: docker compose $COMPOSE_ARGS exec -T sonar-django-backend coverage html -d 'work/sonar/coverage'
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
-          path: 'work/sonar/coverage'
+          path: '/home/runner/work/sonar/sonar/apps/backend/work/sonar/coverage/'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

@@ -65,12 +65,14 @@ def test_snpeff_annotate_fail(monkeypatch, annotator, accesion_SARSCOV2, tmpfile
     output_vcf = os.path.join(tmpfile_name, "output.anno.vcf")
     database_name = accesion_SARSCOV2
 
-    with patch("builtins.open", mock_open()), patch("subprocess.run") as mock_run:
-        mock_run.return_value.returncode = 1
-        mock_run.return_value.stderr = b"Error"
+    with pytest.raises(RuntimeError, match="SnpEff annotation failed"):
+        with patch("builtins.open", mock_open()), patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 1
+            mock_run.return_value.stderr = b"Error"
 
-        annotator.snpeff_annotate(None, output_vcf, database_name)
+            annotator.snpeff_annotate(None, output_vcf, database_name)
 
+    # remove annotator path to trigger failure condition
     annotator.annotator = None
     with pytest.raises(ValueError, match="Annotator executable path is not provided"):
         annotator.snpeff_annotate(input_vcf, output_vcf, database_name)
