@@ -85,7 +85,7 @@
               severity="warning"
               raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
-              @click="samplesStore.updateSamples">
+              @click="updateSamplesInTableAndFIlteredStatistics()">
             </Button>
         </div>
       </div>
@@ -221,7 +221,6 @@ export default {
   name: "Filters",
   data() {
     const samplesStore = useSamplesStore();
-    
     samplesStore.initializeWatchers();
     if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
       samplesStore.filterGroup.filters.profileFilters.push({
@@ -264,9 +263,11 @@ export default {
     closeAdvancedFilterDialogAndUpdate() {
       if (this.samplesStore.filtersChanged) { 
         this.samplesStore.updateSamples();
+        this.samplesStore.updateFilteredStatistics();
       }
       this.displayDialogFilter = false;
       this.samplesStore.updateSamples();
+      this.samplesStore.updateFilteredStatistics();
     },
     toggleHelp(event: Event) {
       const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as { toggle?: (event: Event) => void };
@@ -276,8 +277,11 @@ export default {
       } else {
         console.warn('Help component does not exist');
       }
+    },
+    updateSamplesInTableAndFIlteredStatistics() {
+      this.samplesStore.updateFilteredStatistics()
+      return this.samplesStore.updateSamples()
     }
-
   },
   computed: {
     isAdvancedFiltersSet(): boolean {
