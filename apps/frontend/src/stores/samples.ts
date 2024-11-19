@@ -29,7 +29,8 @@ function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
               filter.filterType = DjangoFilterType.RANGE
               value = parseDateToDateRangeFilter(date_array)
             } else {
-              value = new Date(date_array[0]).toISOString().split('T')[0]
+              value = []
+              //value = new Date(date_array[0]).toISOString().split('T')[0]
             }
           }
           summary.andFilter.push({
@@ -111,7 +112,9 @@ export const useSamplesStore = defineStore('samples', {
     ordering: '-collection_date' as string,
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
-    propertyOptions: [] as string[],
+    propertyTableOptions: [] as string[],
+    propertyMenuOptions: [] as string[],
+    selectedColumns: ["genomic_profiles", "proteomic_profiles"],
     propertyValueOptions: {} as {
       [key: string]: {
         options: string[]
@@ -124,7 +127,12 @@ export const useSamplesStore = defineStore('samples', {
     filterGroup: reactive({
       filterGroups: [],
       filters: {
-        propertyFilters: [],
+        propertyFilters: [{
+          fetchOptions: false,
+          label: 'Property',
+          propertyName: 'collection_date',
+          filterType: DateDjangoFilterType.RANGE,
+          value: [] as (Date | null)[]}],
         profileFilters: [{"label":"DNA/AA Profile","value":"","exclude":false}],
         repliconFilters: [],
         lineageFilter: {
@@ -191,6 +199,7 @@ export const useSamplesStore = defineStore('samples', {
         new Date(statistics.first_sample_date),
         new Date(statistics.latest_sample_date ?? Date.now())
       ]
+      return this.timeRange
     },
     updatePropertyValueOptions(propertyName: string) {
       if (this.propertyValueOptions[propertyName]) return
@@ -202,8 +211,25 @@ export const useSamplesStore = defineStore('samples', {
           this.propertyValueOptions[propertyName].loading = false
         })
     },
+
+    async updateSelectedColumns() {
+      const properties = ['lineage', 'collection_date', 'zip_code', 'lab', 'sequencing_tech', 
+        'sequencing_reason', "isolation_source", 'init_upload_date', 'last_update_date'
+      ]
+      let columns = [
+        ...this.selectedColumns,
+        ...properties.filter(prop => this.propertyTableOptions.includes(prop))
+      ]
+      columns = [
+        ...columns,
+        ...this.propertyTableOptions.filter(prop => !columns.includes(prop))
+      ]
+      this.selectedColumns = columns.slice(0, 6)
+    },
+
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+      const metaData = this.filteredStatistics.meta_data_coverage
       this.propertiesDict = {}
       res.values.forEach((property: { name: string, query_type: string, description: string }) => {
         if (property.query_type === 'value_varchar') {
@@ -214,10 +240,15 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty & drop the 'name' column because the ID column is fixed
-      this.propertyOptions = Object.keys(this.propertiesDict).filter( 
-        (key) => key !== 'name' && this.filteredStatistics.meta_data_coverage[key] > 0
+      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty 
+      // & drop the 'name' column because the ID column is fixed
+      this.propertyTableOptions = Object.keys(this.propertiesDict).filter( 
+        (key) => key !== 'name' && metaData[key] > 0
       );
+      this.propertyMenuOptions = [
+        'name',
+        ... this.propertyTableOptions.filter(prop => !["genomic_profiles", "proteomic_profiles", "lineage"].includes(prop))
+      ]
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
@@ -263,22 +294,6 @@ export const useSamplesStore = defineStore('samples', {
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
-
-      if (this.timeRange[0] && this.timeRange[1] && !this.filterGroupFiltersHasDateFilter) {
-        filters.filters.andFilter.push({
-          label: 'Property',
-          property_name: 'collection_date',
-          filter_type: 'range',
-          value: `${this.timeRange[0].toLocaleDateString('en-CA')},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
-        })
-      }
-
-      // if (this.filterGroupFiltersHasDateFilter) {
-      //   this.timeRange = ''
-      // }
-      // else {
-      //   this.setDefaultTimeRange()
-      // }
       return filters as FilterGroupRoot
     }
   }

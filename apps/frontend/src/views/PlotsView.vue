@@ -1,8 +1,8 @@
 <template>
-  <div class="">
-    <!-- Row 1: Week Calendar (Full-width) -->
-    <div class="grid m-1">
-      <div class="col-12">
+  <div class="container">
+    <!-- seq per week plot-->
+    <div class="row">
+      <div class="col-lineage">
         <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <Panel v-else header="Week Calendar" class="w-full shadow-2">
@@ -13,19 +13,21 @@
         </Panel>
       </div>
     </div>
-
-    <div class="grid m-1">
-      <div class="col-12">
+<!-- lineage plots-->
+    <div class="row">
+      <div class="col-lineage">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <Panel v-else header="Lineage Plot" class="w-full shadow-2">
+          <!-- lineage area plot-->
           <h4>Area Plot - COVID-19 Lineages Over Time</h4>
-          <div style="width: 100%; display: flex; justify-content: center" class="h-30rem">
+          <div class="h-30rem plot">
 
             <Chart type="line" ref="lineageAreaPlot" :data="lineage_areaData()" :options="lineage_areaChartOptions()"
               style="width: 100%; height: 100%" />
           </div>
+          <!-- lineage bar plot-->
           <h4>Stacked Bar Plot - Lineage Distribution by Calendar Week</h4>
-          <div style="width: 100%; display: flex; justify-content: center" class="h-26rem">
+          <div class="h-26rem plot">
             <Chart type="bar" ref="lineageBarPlot" :data="lineage_barData()" :options="lineage_barChartOptions()"
               style="width: 100%; height: 100%" />
           </div>
@@ -33,10 +35,8 @@
       </div>
     </div>
 
-    <!-- 2x2 Grid Layout -->
-    <div class="grid m-1">
-      <!-- First Chart (Row 1, Column 1) -->
-      <div class="col-12 md:col-6">
+    <div class="row">
+      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Tech." class="w-full shadow-2">
           <div style="justify-content: center" class="h-20rem">
@@ -46,80 +46,71 @@
         </Panel>
       </div>
 
-      <!-- Second Chart (Row 1, Column 2) -->
-      <div class=" col-12 md:col-6">
+      <div v-if="samplesStore.propertyMenuOptions.includes('genome_completeness')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Genome completeness" class="w-full shadow-2">
-          <div style=" display: flex; justify-content: center" class="h-20rem">
+          <div style=" display: flex; justify-content: center" class="h-20rem plot">
             <Chart type="pie" :data="genomeCompleteChart()" :options="genome_pieChartOptions()" style="" />
           </div>
         </Panel>
       </div>
 
-      <!-- Third Chart (Row 2, Column 1) -->
-      <div class="col-12 md:col-6">
+      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_reason')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Reason" class="w-full shadow-2">
-          <div style=" display: flex; justify-content: center" class="h-20rem">
+          <div class="h-20rem plot">
             <Chart type="doughnut" :data="sequencingReasonChartData()" :options="sequencingReasonChartOptions()" />
           </div>
         </Panel>
       </div>
 
-      <!-- Fourth Chart (Row 2, Column 2) -->
-      <div class="col-12 md:col-6">
+      <div v-if="samplesStore.propertyMenuOptions.includes('zip_code')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Zip Code" class="w-full shadow-2">
-          <div style=" display: flex; justify-content: center" class="h-20rem">
+          <div class="h-20rem plot">
             <Chart type="bar" :data="zipCodeChartData()" :options="zipCodeChartOptions()" class="w-full h-full" />
           </div>
         </Panel>
       </div>
-    </div>
 
-    <!-- 2x2 Grid Layout -->
-    <div class="grid m-1">
-      <!-- First Chart (Row 1, Column 1) -->
-      <div class="col-12 md:col-6">
+
+      <div v-if="samplesStore.propertyMenuOptions.includes('sample_type')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sample Type" class="w-full shadow-2">
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-20rem">
+          <div class="h-20rem plot">
             <Chart type="pie" :data="sampleTypeChartData()" :options="sampleTypeChartOptions()" />
           </div>
         </Panel>
       </div>
 
-      <!-- Second Chart (Row 1, Column 2) -->
-      <div class="col-12 md:col-6">
+      <div v-if="samplesStore.propertyMenuOptions.includes('lab')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Lab" class="w-full shadow-2">
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center" class="h-20rem">
+          <div class="h-20rem plot">
             <Chart type="bar" :data="labChartData()" :options="labChartOptions()" class="w-full h-full" />
           </div>
         </Panel>
       </div>
 
-      <!-- Third Chart (Row 2, Column 1) -->
-      <div class="col-12 md:col-6">
+      <div v-if="samplesStore.propertyMenuOptions.includes('host')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Host" class="w-full shadow-2">
-          <div style="display: flex; justify-content: center" class="h-20rem">
+          <div class="h-20rem plot">
             <Chart type="bar" :data="hostChartData()" :options="hostChartOptions()" class="w-full h-full" />
           </div>
         </Panel>
       </div>
 
-      <!-- Fourth Chart (Row 2, Column 2) -->
-      <div class="col-12 md:col-6">
+      <div v-if="samplesStore.propertyMenuOptions.includes('length')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Length" class="w-full shadow-2">
-          <div style="width: 100%; display: flex; justify-content: center" class="h-20rem">
+        <Panel v-else header="Length" class="w-full shadow-2 ">
+          <div class="h-20rem plot">
             <Chart type="bar" :data="lengthChartData()" :options="lengthChartOptions()"
               style="width: 100%; height: 100%" /> <!-- scatter -->
           </div>
         </Panel>
       </div>
-    </div>
+          </div>
   </div>
 </template>
 
@@ -615,7 +606,7 @@ export default {
             },
             zoom: {
               wheel: {
-                enabled: true,
+                enabled: false,
                 speed: 0.5
               },
               mode: 'xy',
@@ -711,12 +702,100 @@ export default {
   height: 80%;
   width: 98%;
   display: flex;
-  flex-direction: row;
   justify-content: space-evenly;
   align-items: center;
   background-color: var(--text-color);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow);
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  overflow-x: auto;
+  width: 98%;
+}
+.col-lineage {
+  width: 98%;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 98%;
+}
+
+.col {
+  flex: 1 1 25%;
+  
+  max-width: 25%;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.plot {
+  display: flex; 
+  justify-content: center;
+  height: 100%; 
+  width: 100%; 
+}
+
+/* Panel-Styling */
+.panel {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.row:nth-child(1),
+.row:nth-child(2) {
+  .col {
+    flex: 1 1 100%; 
+    max-width: 100%;
+  }
+}
+
+/* Media Queries for different screen sizes */
+@media (max-width: 1024px) {
+  .row:nth-child(3),
+  .row:nth-child(4) {
+    .col {
+      flex: 1 1 50%; 
+      max-width: 50%;
+    }
+  }
+
+  .row:nth-child(1),
+  .row:nth-child(2) {
+    .col {
+      flex: 1 1 90%; /* Größe reduzieren */
+      max-width: 90%;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .row:nth-child(3),
+  .row:nth-child(4) {
+    .col {
+      flex: 1 1 50%; 
+      max-width: 50%;
+    }
+  }
+
+  .row:nth-child(1),
+  .row:nth-child(2) {
+    .col {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
+  }
 }
 </style>

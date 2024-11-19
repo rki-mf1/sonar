@@ -10,11 +10,11 @@
         <div style="display: flex; justify-content: space-between; ">
           <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised @click="displayDialogExport = true" />
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter
+            <MultiSelect v-model="samplesStore.selectedColumns" display="chip" :options="samplesStore.propertyTableOptions" filter
               placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
-                  {{ selectedColumns.length + 1 }} columns selected
+                  {{ samplesStore.selectedColumns.length + 1 }} columns selected
                 </div>
               </template>
             </MultiSelect>
@@ -31,7 +31,7 @@
           </div>
         </template>
       </Column>
-      <Column v-for="column in selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
+      <Column v-for="column in samplesStore.selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
         <template #header>
           <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
         </template>
@@ -89,7 +89,7 @@
           </div>
         </div>
       </template>
-      <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyOptions"></SampleDetails>
+      <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyTableOptions"></SampleDetails>
     </Dialog>
 
     <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
@@ -153,7 +153,6 @@ export default {
         proteomic_profiles: [],
       },
       displayDialogRow: false,
-      selectedColumns: ["genomic_profiles", "proteomic_profiles"],
       notSortable: ["genomic_profiles", "proteomic_profiles"],
     }
   },
@@ -186,7 +185,7 @@ export default {
 
       this.displayDialogExport = false;
       // this.samplesStore.loading = true;
-      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.selectedColumns, this.samplesStore.ordering, type == "xlsx")
+      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.samplesStore.selectedColumns, this.samplesStore.ordering, type == "xlsx")
         .then(() => {
           // Export completed, close the toast
           console.log("complete");
@@ -203,17 +202,17 @@ export default {
       //this.samplesStore.loading = false;
     },
     columnSelection(value: string[]) {
-      this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
+      this.samplesStore.selectedColumns = value.filter(v => this.samplesStore.propertyTableOptions.includes(v));
     },
     onColReorder(event: any) {
 
       const { dragIndex, dropIndex } = event as { dragIndex: number; dropIndex: number; };
       // Rearrange columns based on dragIndex and dropIndex
-      const reorderedColumns = ['name', ...this.selectedColumns]; // note: 'name' is fixed and cant be reordered
+      const reorderedColumns = ['name', ...this.samplesStore.selectedColumns]; // note: 'name' is fixed and cant be reordered
       const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
       reorderedColumns.splice(dropIndex, 0, movedColumn);
 
-      this.selectedColumns = reorderedColumns.slice(1); // drop 'name' from column list since it is fixed and cant be reordered
+      this.samplesStore.selectedColumns = reorderedColumns.slice(1); // drop 'name' from column list since it is fixed and cant be reordered
     },
     onRowSelect(event: any) {
       this.selectedRow = event.data;

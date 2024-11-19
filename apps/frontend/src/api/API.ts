@@ -68,6 +68,7 @@ export default class API {
     getRequest(url: string, params: JSON, suppressError: boolean) {
         return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
     }
+
     getSampleGenomes(filters: FilterGroupRoot, params: Record<string, string | number | boolean>) {
         let url = `samples/genomes/?`
         for (const key of Object.keys(params)) {
@@ -184,6 +185,10 @@ export default class API {
         return this.getRequest(`genes/distinct_gene_symbols`, {} as JSON, false)
     }
     parseQueryString(query: FilterGroupRoot) {
+        // remove properties (e.g. empty date ranges) with no value
+        query.filters.andFilter = query.filters.andFilter.filter(filter => {
+            return !(filter.value === '');
+            });
         if (Object.keys(query).length > 0) {
             return (
                 "?" +
