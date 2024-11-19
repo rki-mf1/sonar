@@ -10,7 +10,7 @@
         <div style="display: flex; justify-content: space-between; ">
           <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised @click="displayDialogExport = true" />
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="samplesStore.selectedColumns" display="chip" :options="samplesStore.propertyOptions" filter
+            <MultiSelect v-model="samplesStore.selectedColumns" display="chip" :options="samplesStore.propertyTableOptions" filter
               placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
@@ -89,7 +89,7 @@
           </div>
         </div>
       </template>
-      <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyOptions"></SampleDetails>
+      <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyTableOptions"></SampleDetails>
     </Dialog>
 
     <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
@@ -202,7 +202,7 @@ export default {
       //this.samplesStore.loading = false;
     },
     columnSelection(value: string[]) {
-      this.samplesStore.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
+      this.samplesStore.selectedColumns = value.filter(v => this.samplesStore.propertyTableOptions.includes(v));
     },
     onColReorder(event: any) {
 

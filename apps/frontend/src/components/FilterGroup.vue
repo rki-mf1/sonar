@@ -5,7 +5,6 @@
     || filterGroup.filters.lineageFilter.lineageList.length>0" class="single-filter">
       <div class="filter-container">
           <span class="filter-label">Lineage</span>
-          <div style="flex-grow: 1; max-width: 500px; margin-right: 10px;">
           <MultiSelect 
             v-model="filterGroup.filters.lineageFilter.lineageList" 
             display="chip" 
@@ -13,9 +12,8 @@
             filter
             placeholder="Select Lineages" 
             :virtualScrollerOptions="{ itemSize: 30 }"
-            style="max-width: 500px;"
+            style="flex-grow: 1;  margin-right: 10px;"
           />
-      </div>
           <div class="switch">
             Include Sublineages?
             <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
@@ -61,7 +59,7 @@
     <div v-for="(filter, index) in filterGroup.filters?.propertyFilters" :key="index"class="single-filter">
       <div class="flex align-items-center gap-0">
         <span class="filter-label">Property</span>
-        <Dropdown class="flex mr-2" :options="propertyOptions" v-model="filter.propertyName"
+        <Dropdown class="flex mr-2" :options="propertyMenuOptions" v-model="filter.propertyName"
           style="flex: 1; min-width: 150px;" @change="updatePropertyValueOptions(filter)" />
 
         <div v-if="['name', 'length', 'lab'].includes(filter.propertyName) 
@@ -77,18 +75,20 @@
         </div>
 
         <div v-if="isDateArray(filter.value)">
-          <Calendar 
-            v-model="filter.value[0]"  
-            style="flex: auto; min-width: 10rem;" 
-            showIcon
-            dateFormat="yy-mm-dd" 
+          <div class="filter-container">
+            <Calendar 
+              v-model="filter.value[0]"  
+              style="flex: auto; min-width: 10rem;" 
+              showIcon
+              dateFormat="yy-mm-dd" 
+              ></Calendar>
+            <Calendar 
+              v-model="filter.value[1]" 
+              style="flex: auto;min-width: 10rem;" 
+              showIcon
+              dateFormat="yy-mm-dd" 
             ></Calendar>
-          <Calendar 
-            v-model="filter.value[1]" 
-            style="flex: auto;min-width: 10rem;" 
-            showIcon
-            dateFormat="yy-mm-dd" 
-          ></Calendar>
+          </div>
         </div>
         <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
           <Dropdown 
@@ -157,7 +157,7 @@
       <FilterGroup 
         :filterGroup="subFilterGroup"
         :isSubGroup="true" 
-        :propertyOptions="propertyOptions" 
+        :propertyMenuOptions="propertyMenuOptions" 
         :symbolOptions="symbolOptions"
         :operators="operators" 
         :propertyValueOptions="propertyValueOptions"
@@ -199,7 +199,7 @@ export default {
       type: Object as () => FilterGroup,
       required: true
     },
-    propertyOptions: {
+    propertyMenuOptions: {
       type: Array as () => string[],
       required: true
     },    
@@ -330,8 +330,8 @@ export default {
             ||(this.filterGroup.filters.propertyFilters.length ==0)
           ) 
           &&
-          ((this.filterGroup.filters.lineageFilter.lineageList.length == 0) &&
-          (this.filterGroup.filters.repliconFilters.length==0))
+          (this.filterGroup.filters.lineageFilter.lineageList.length == 0) &&
+          (this.filterGroup.filters.repliconFilters.length==0)
       )
     )
     },

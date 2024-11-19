@@ -95,7 +95,7 @@
         <div style="display: flex; gap: 10px">
           <div>
             <FilterGroup style="width: fit-content; margin: auto" :filterGroup="samplesStore.filterGroup"
-              :propertyOptions="samplesStore.propertyOptions"
+              :propertyMenuOptions="samplesStore.propertyMenuOptions"
               :repliconAccessionOptions="samplesStore.repliconAccessionOptions"
               :lineageOptions="samplesStore.lineageOptions" :symbolOptions="samplesStore.symbolOptions"
               :operators="Object.values(DjangoFilterType)" :propertyValueOptions="samplesStore.propertyValueOptions"

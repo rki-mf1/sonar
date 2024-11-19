@@ -36,7 +36,7 @@
     </div>
 
     <div class="row">
-      <div v-if="samplesStore.propertyOptions.includes('sequencing_tech')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Tech." class="w-full shadow-2">
           <div style="justify-content: center" class="h-20rem">
@@ -46,7 +46,7 @@
         </Panel>
       </div>
 
-      <div v-if="samplesStore.propertyOptions.includes('genome_completeness')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('genome_completeness')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Genome completeness" class="w-full shadow-2">
           <div style=" display: flex; justify-content: center" class="h-20rem plot">
@@ -55,7 +55,7 @@
         </Panel>
       </div>
 
-      <div v-if="samplesStore.propertyOptions.includes('sequencing_reason')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_reason')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Reason" class="w-full shadow-2">
           <div class="h-20rem plot">
@@ -64,7 +64,7 @@
         </Panel>
       </div>
 
-      <div v-if="samplesStore.propertyOptions.includes('zip_code')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('zip_code')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Zip Code" class="w-full shadow-2">
           <div class="h-20rem plot">
@@ -74,7 +74,7 @@
       </div>
 
 
-      <div v-if="samplesStore.propertyOptions.includes('sample_type')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('sample_type')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sample Type" class="w-full shadow-2">
           <div class="h-20rem plot">
@@ -83,7 +83,7 @@
         </Panel>
       </div>
 
-      <div v-if="samplesStore.propertyOptions.includes('lab')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('lab')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Lab" class="w-full shadow-2">
           <div class="h-20rem plot">
@@ -92,7 +92,7 @@
         </Panel>
       </div>
 
-      <div v-if="samplesStore.propertyOptions.includes('host')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('host')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Host" class="w-full shadow-2">
           <div class="h-20rem plot">
@@ -101,7 +101,7 @@
         </Panel>
       </div>
 
-      <div v-if="samplesStore.propertyOptions.includes('length')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('length')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Length" class="w-full shadow-2 ">
           <div class="h-20rem plot">

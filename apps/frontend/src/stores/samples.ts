@@ -112,7 +112,8 @@ export const useSamplesStore = defineStore('samples', {
     ordering: '-collection_date' as string,
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
-    propertyOptions: [] as string[],
+    propertyTableOptions: [] as string[],
+    propertyMenuOptions: [] as string[],
     selectedColumns: ["genomic_profiles", "proteomic_profiles"],
     propertyValueOptions: {} as {
       [key: string]: {
@@ -213,11 +214,15 @@ export const useSamplesStore = defineStore('samples', {
 
     async updateSelectedColumns() {
       const properties = ['lineage', 'collection_date', 'zip_code', 'lab', 'sequencing_tech', 
-        'sequencing_reason', 'isolation_source', 'init_upload_date', 'last_update_date'
+        'sequencing_reason', "isolation_source", 'init_upload_date', 'last_update_date'
       ]
-      const columns = [
+      let columns = [
         ...this.selectedColumns,
-        ...properties.filter(prop => this.propertyOptions.includes(prop))
+        ...properties.filter(prop => this.propertyTableOptions.includes(prop))
+      ]
+      columns = [
+        ...columns,
+        ...this.propertyTableOptions.filter(prop => !columns.includes(prop))
       ]
       this.selectedColumns = columns.slice(0, 6)
     },
@@ -237,9 +242,13 @@ export const useSamplesStore = defineStore('samples', {
       });
       // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty 
       // & drop the 'name' column because the ID column is fixed
-      this.propertyOptions = Object.keys(this.propertiesDict).filter( 
+      this.propertyTableOptions = Object.keys(this.propertiesDict).filter( 
         (key) => key !== 'name' && metaData[key] > 0
       );
+      this.propertyMenuOptions = [
+        'name',
+        ... this.propertyTableOptions.filter(prop => !["genomic_profiles", "proteomic_profiles", "lineage"].includes(prop))
+      ]
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
