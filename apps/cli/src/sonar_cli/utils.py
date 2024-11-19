@@ -674,13 +674,15 @@ class sonarUtils:
                         f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
                     )
 
-        LOGGER.info("Displaying column-to-property mappings:")
+        LOGGER.info("Displaying property mappings:")
+        LOGGER.info("(Input table column name -> Sonar database property name)")
+
         for prop, prop_info in propnames.items():
             if prop == "sample":
-                LOGGER.verbose(f"{prop} <- {prop_info}")
+                LOGGER.info(f"{prop_info} -> {prop}")
                 continue
             db_property_name = prop_info.get("db_property_name", "N/A")
-            LOGGER.verbose(f"{prop} <- {db_property_name}")
+            LOGGER.info(f"{prop} -> {db_property_name}")
         LOGGER.info("--------")
 
         return propnames
