@@ -20,7 +20,7 @@
                 </router-link>
                 <a v-else :href="item.url" :target="item.target" v-bind="props.action">
                   <span :class="item.icon" />
-                  <span >{{ item.label }}</span>
+                  <span>{{ item.label }}</span>
                   <span v-if="hasSubmenu" class="pi pi-fw pi-angle-down" />
                 </a>
               </template>
@@ -31,9 +31,10 @@
 
       <div class="content">
         <Filters v-if="showFilters" />
-        <RouterView/>
+        <RouterView />
       </div>
     </main>
+    <Toast ref="toast" />
   </body>
 
 </template>
@@ -80,28 +81,39 @@ export default {
   },
   mounted() {
     this.samplesStore.updateSamples()
-    this.samplesStore.setDefaultTimeRange()
+    this.samplesStore.updateFilteredStatistics().then(
+      () => this.samplesStore.updatePropertyOptions()).then(
+        () => this.samplesStore.updateSelectedColumns())
     this.samplesStore.updateLineageOptions()
-    this.samplesStore.updatePropertyOptions()
     this.samplesStore.updateSymbolOptions()
     this.samplesStore.updateRepliconAccessionOptions()
+    this.$root.$toastRef = this.$refs.toast ?? null;
   },
+  watch: {
+    "samplesStore.errorMessage"(newValue) {
+      if (newValue) {
+        this.showToastError(newValue);
+        // Reset the state to prevent multiple calls
+        // this.samplesStore.errorMessage = "";
+      }
+    }
+  }
 } 
 </script>
 
 
 <style scoped>
-
-html, body {
-    height: 100%;               
-    margin: 0;                 
+html,
+body {
+  height: 100%;
+  margin: 0;
 }
 
 body {
   width: 100vw;
-  margin: -0.5em;   
+  margin: -0.5em;
   display: flex;
-  flex-direction: column;   
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   background-color: #adbed3;
@@ -109,7 +121,7 @@ body {
 
 
 main {
-  flex: 1; 
+  flex: 1;
   width: 98vw;
   border-radius: 20px;
   overflow: auto;
@@ -127,13 +139,14 @@ header {
   align-items: center;
   justify-content: flex-start;
   background-color: white;
-  min-height: 100vh;  
+  min-height: 100vh;
 }
 
-:deep(.p-menuitem-content){
+:deep(.p-menuitem-content) {
   font-size: 20px;
 }
-:deep(.p-menubar){
+
+:deep(.p-menubar) {
   padding: 0px
 }
 
@@ -203,5 +216,4 @@ header {
 :deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
   background: var(--primary-color);
 }
-
 </style>

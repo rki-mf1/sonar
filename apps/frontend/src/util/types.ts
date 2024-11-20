@@ -40,71 +40,17 @@ export enum IntegerDjangoFilterType {
 export type PropertyFilter = {
     fetchOptions: boolean;
     label: string;
-    value: string | number | string[] | Date[];
+    value: string | number | string[] | Date[] | null ;
     propertyName: string;
-    filterType: DjangoFilterType | null;
-}
-export type SNPProfileNtFilter = {
-    label: string,
-    geneSymbol: string,
-    refNuc: string,
-    refPos: string,
-    altNuc: string
-    exclude: boolean
-}
-export type SNPProfileAAFilter = {
-    label: string,
-    proteinSymbol: string,
-    refAA: string,
-    refPos: string,
-    altAA: string,
-    exclude: boolean
-}
-export type DelProfileNtFilter = {
-    label: string,
-    geneSymbol: string,
-    firstDeleted: string,
-    lastDeleted: string,
-    exclude: boolean
-}
-export type DelProfileAAFilter = {
-    label: string,
-    proteinSymbol: string,
-    firstDeleted: string,
-    lastDeleted: string,
-    exclude: boolean
-}
-export type InsProfileNtFilter = {
-    label: string,
-    geneSymbol: string,
-    refNuc: string,
-    refPos: string,
-    altNuc: string,
-    exclude: boolean
-}
-export type InsProfileAAFilter = {
-    label: string,
-    proteinSymbol: string,
-    refAA: string,
-    refPos: string,
-    altAA: string,
-    exclude: boolean
+    filterType: DateDjangoFilterType | IntegerDjangoFilterType | StringDjangoFilterType | 
+                DjangoFilterType | null;
 }
 
-export type ClassicFilter = {
+export type ProfileFilter = {
     label: string,
     value: string,
     exclude: boolean
 }
-
-export type ProfileFilter =
-    | ClassicFilter
-    | SNPProfileNtFilter
-    | SNPProfileAAFilter
-    | DelProfileNtFilter
-    | DelProfileAAFilter
-    | InsProfileNtFilter
-    | InsProfileAAFilter
 
 export type RepliconFilter = {
     label: string;
@@ -152,3 +98,37 @@ export type Property = {
     name: string;
     value: string;
 }
+
+export type GenomicProfile = {
+    [key: string]: string[];
+}
+
+export type SampleDetails = {
+    name : string;
+    properties: Property[];
+    genomic_profiles: GenomicProfile;
+    proteomic_profiles: string[];
+}
+
+export type LineageBarChartData = {
+  lineage: string;
+  week: string;
+  percentage: number;
+}
+// TODO: too unflexibel, change to more flexible structure allowing different properties
+export type FilteredStatistics = {
+  filtered_total_count: number;
+  meta_data_coverage: { [key: string]: number };
+  samples_per_week: { [key: string]: number };
+  genomecomplete_chart: { [key: string]: number };
+  lineage_area_chart: Array<{ date: string; lineage: string; percentage: number }>;
+  lineage_bar_chart: LineageBarChartData[];
+  sequencing_tech: { [key: string]: number };
+  sequencing_reason: { [key: string]: number };
+  sample_type: { [key: string]: number };
+  length: { [key: string]: number };
+  lab: { [key: string]: number };
+  zip_code: { [key: string]: number };
+  host: { [key: string]: number };
+}
+

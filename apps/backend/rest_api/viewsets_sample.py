@@ -1,50 +1,57 @@
 import ast
+from collections import defaultdict
 import csv
+from dataclasses import dataclass
+from datetime import datetime
 import json
 import os
 import pathlib
 import re
 import traceback
-from dataclasses import dataclass
-from datetime import datetime
 from typing import Generator
 
 import _csv
-from covsonar_backend.settings import DEBUG, LOGGER, SONAR_DATA_ENTRY_FOLDER
-from dateutil.rrule import WEEKLY, rrule
+from dateutil.rrule import rrule
+from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
-from django.db.models import (
-    Case,
-    Count,
-    IntegerField,
-    Min,
-    OuterRef,
-    Prefetch,
-    Q,
-    QuerySet,
-    Subquery,
-    When,
-)
+from django.db.models import Case
+from django.db.models import Count
+from django.db.models import IntegerField
+from django.db.models import Min
+from django.db.models import OuterRef
+from django.db.models import Prefetch
+from django.db.models import Q
+from django.db.models import QuerySet
+from django.db.models import Subquery
+from django.db.models import When
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_api.data_entry.sample_job import delete_sample
-from rest_api.serializers import SampleGenomesExportStreamSerializer, SampleSerializer
-from rest_api.utils import Response, define_profile, resolve_ambiguous_NT_AA, strtobool
-from rest_api.viewsets import PropertyViewSet
-from rest_framework import generics, status, viewsets
+from rest_framework import generics
+from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from covsonar_backend.settings import DEBUG
+from covsonar_backend.settings import LOGGER
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from rest_api.data_entry.sample_job import delete_sample
+from rest_api.serializers import SampleGenomesExportStreamSerializer
+from rest_api.serializers import SampleSerializer
+from rest_api.utils import define_profile
+from rest_api.utils import resolve_ambiguous_NT_AA
+from rest_api.utils import Response
+from rest_api.utils import strtobool
+from rest_api.viewsets import get_distinct_gene_symbols
+from rest_api.viewsets import PropertyViewSet
 from . import models
-from .serializers import (
-    SampleGenomesSerializer,
-    SampleGenomesSerializerVCF,
-    SampleSerializer,
-)
-from collections import defaultdict
+from .serializers import SampleGenomesSerializer
+from .serializers import SampleGenomesSerializerVCF
+from .serializers import SampleSerializer
+
 
 
 @dataclass
@@ -86,39 +93,31 @@ class SampleViewSet(
             "Sample": self.filter_sample,
             "Lineages": self.filter_sublineages,
             "Annotation": self.filter_annotation,
-            "Label": self.filter_label,
+            "DNA/AA Profile": self.filter_label,
         }
 
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
         response_dict = {}
-        response_dict["distinct_mutations_count"] = (
-            models.Mutation.objects.values("ref", "alt", "start", "end")
-            .distinct()
-            .count()
-        )
         response_dict["samples_total"] = models.Sample.objects.all().count()
 
-        first_collected_sample = (
+        first_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
             .order_by("collection_date")
             .first()
         )
-        if first_collected_sample:
-            response_dict["first_sample_date"] = first_collected_sample.collection_date
-        else:
-            response_dict["first_sample_date"] = None
-        latest_collected_sample = (
-            models.Sample.objects.filter(collection_date__isnull=False)
-            .order_by("-collection_date")
-            .first()
+        response_dict["first_sample_date"] = (
+            first_sample.collection_date if first_sample else None
         )
-        if latest_collected_sample:
-            response_dict["latest_sample_date"] = (
-                latest_collected_sample.collection_date
-            )
-        else:
-            response_dict["latest_sample_date"] = None
+
+        latest_sample = (
+            models.Sample.objects.filter(collection_date__isnull=False)
+            # '-' before column name mean "descending order", while without '-' mean "ascending".
+            .order_by("-collection_date").first()
+        )
+        response_dict["latest_sample_date"] = (
+            latest_sample.collection_date if latest_sample else None
+        )
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
@@ -191,18 +190,20 @@ class SampleViewSet(
                 models.Mutation.objects.filter(type="nt")
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
+                .order_by("start")
             )
             proteomic_profiles_qs = (
                 models.Mutation.objects.filter(type="cds")
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
+                .order_by("gene", "start")
             )
             annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
                 "mutation", "annotation"
             )
 
             if DEBUG:
-                print(queryset.query)
+                LOGGER.info(queryset.query)
 
             # filter out ambiguous nucleotides or unspecified amino acids
             if not showNX:
@@ -746,7 +747,14 @@ class SampleViewSet(
         mutations = re.split(r"[\s,]+", value.strip())
         for mutation in mutations:
             parsed_mutation = define_profile(mutation)
-
+            # check valid protien name
+            if (
+                "protein_symbol" in parsed_mutation
+                and parsed_mutation["protein_symbol"] not in get_distinct_gene_symbols()
+            ):
+                raise ValueError(
+                    f"Invalid protein name: {parsed_mutation['protein_symbol']}."
+                )
             # Check the parsed mutation type and call the appropriate filter function
             if parsed_mutation.get("label") == "SNP Nt":
                 q_obj = self.filter_snp_profile_nt(
@@ -772,12 +780,8 @@ class SampleViewSet(
             elif parsed_mutation.get("label") == "Del AA":
                 q_obj = self.filter_del_profile_aa(
                     protein_symbol=parsed_mutation["protein_symbol"],
-                    first_deleted=int(parsed_mutation["first_deleted"]),
-                    last_deleted=int(
-                        parsed_mutation.get(
-                            "last_deleted", parsed_mutation["first_deleted"]
-                        )
-                    ),
+                    first_deleted=parsed_mutation["first_deleted"],
+                    last_deleted=parsed_mutation.get("last_deleted", ""),
                 )
 
             elif parsed_mutation.get("label") == "Ins Nt":
@@ -920,7 +924,8 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aa (e.g. OPG098:E162K)
-
+        if protein_symbol not in get_distinct_gene_symbols():
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
@@ -974,14 +979,15 @@ class SampleViewSet(
     def filter_del_profile_aa(
         self,
         protein_symbol: str,
-        first_deleted: int,
-        last_deleted: int,
+        first_deleted: str,
+        last_deleted: str,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:del:first_AA_deleted-last_AA_deleted (e.g. OPG197:del:34-35)
-
+        if protein_symbol not in get_distinct_gene_symbols():
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         # in case only single deltion bp
         if last_deleted == "":
             last_deleted = first_deleted
@@ -1033,6 +1039,8 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aas (e.g. OPG197:A34AK)
+        if protein_symbol not in get_distinct_gene_symbols():
+            raise ValueError(f"Invalid protein name: {protein_symbol}.")
         alignment_qs = models.Alignment.objects.filter(
             mutations__end=ref_pos,
             mutations__ref=ref_aa,

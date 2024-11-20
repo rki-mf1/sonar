@@ -6,13 +6,21 @@ import os
 import pickle
 import uuid
 
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models import Count
 from django.db.models import F
 from django.db.models import Q
 from django.db.utils import IntegrityError
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics
+from rest_framework import serializers
+from rest_framework import status
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.request import Request
+from rest_framework.response import Response
+
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.gbk_import import import_gbk_file
 from rest_api.data_entry.property_job import delete_property
 from rest_api.data_entry.property_job import find_or_create_property
@@ -22,14 +30,6 @@ from rest_api.management.commands.import_lineage import LineageImport
 from rest_api.utils import generate_job_ID
 from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
-from rest_framework import generics
-from rest_framework import serializers
-from rest_framework import status
-from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.request import Request
-from rest_framework.response import Response
-
 from . import models
 from .serializers import AlignmentSerializer
 from .serializers import GeneSerializer
@@ -185,17 +185,27 @@ class RepliconViewSet(viewsets.ModelViewSet):
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
+def get_distinct_gene_symbols(reference=None):
+    """
+    Helper method to get distinct gene symbols.
+    This method can be called from anywhere.
+    """
+    queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
+    if reference:
+        queryset = queryset.filter(replicon__reference__accession=reference)
+    return [item["gene_symbol"] for item in queryset]
+
+
 class GeneViewSet(viewsets.ModelViewSet):
     queryset = models.Gene.objects.all()
     serializer_class = GeneSerializer
 
     @action(detail=False, methods=["get"])
     def distinct_gene_symbols(self, request: Request, *args, **kwargs):
-        queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(molecule__reference__accession=ref)
+        reference = request.query_params.get("reference")
+        gene_symbols = get_distinct_gene_symbols(reference=reference)
         return Response(
-            {"gene_symbols": [item["gene_symbol"] for item in queryset]},
+            {"gene_symbols": gene_symbols},
             status=status.HTTP_200_OK,
         )
 

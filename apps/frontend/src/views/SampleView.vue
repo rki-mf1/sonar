@@ -39,7 +39,10 @@ export default {
   methods: {
     async updateSample() {
       this.loading = true
-      this.selectedData = (await API.getInstance().getSingleSampleGenome(this.$route.params.id)).results[0]
+      const sampleID = Array.isArray(this.$route.params.id)
+        ? this.$route.params.id[0] 
+        : this.$route.params.id;
+      this.selectedData = (await API.getInstance().getSingleSampleGenome(sampleID)).results[0]
       this.loading = false
     },
     async updatePropertyOptions() {

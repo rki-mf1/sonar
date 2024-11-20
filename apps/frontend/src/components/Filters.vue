@@ -1,37 +1,36 @@
 <template>
   <div class="filter-and-statistic-panel my-2">
     <div class="filter-left">
-      <div >
+      <div style="max-width: 91%;">
         <div class="filter-container">
-          <span :style="{ color: isTimeRangeInvalid ? 'red' : 'black', fontWeight: '500' }">Time Range</span>
+          <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
           <Calendar 
-            v-model="samplesStore.timeRange[0]" 
+            v-model="startDate"  
             style="flex: auto; min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
-            :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
             ></Calendar>
           <Calendar 
-            v-model="samplesStore.timeRange[1]" style="flex: auto;min-width: 10rem;" 
+            v-model="endDate" 
+            style="flex: auto;min-width: 10rem;" 
             showIcon
             dateFormat="yy-mm-dd" 
-            :disabled="samplesStore.filterGroupFiltersHasDateFilter" 
-            :invalid="isTimeRangeInvalid"
           ></Calendar>
           <Button 
-            style="font-size: 10px; min-width: min-content;" 
-            @click="samplesStore.setDefaultTimeRange">
-          <i class="pi pi-arrow-circle-left" style="font-size: medium"/> &nbsp;reset
+              icon="pi pi-arrow-circle-left"   
+              label="&nbsp;Default"
+              class="default-calendar-button"
+              @click="setDefaultTimeRange">
           </Button>
           <Button 
+            v-if="startDate"
             class="ml-2 p-button-sm" 
             @click="removeTimeRange">
           <i class="pi pi-trash" style="font-size: medium"/>
           </Button>
         </div>
 
-        <div class="filter-container">
+        <div class="filter-container" >
           <span style="font-weight: 500">Lineage</span>
           <MultiSelect 
             v-model="lineageFilter.lineageList" 
@@ -39,13 +38,13 @@
             :options="samplesStore.lineageOptions" 
             filter
             placeholder="Select Lineages" 
-            class="w-full md:w-80"
+            style="width: 68%;"
             :virtualScrollerOptions="{ itemSize: 30 }"
             />
 
-            <div class="include-switch">
-              <InputSwitch v-model="lineageFilter.includeSublineages" />
+            <div class="switch">
               Include Sublineages?
+              <InputSwitch v-model="lineageFilter.includeSublineages" />
             </div>
             <Button 
             v-if="lineageFilter.lineageList.length>0"
@@ -75,16 +74,18 @@
           <Button 
             icon="pi pi-filter" 
             label="&nbsp;Set Advanced Filters" 
+            severity="warning"
             raised
-            style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
             :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
             @click="displayDialogFilter = true" 
         />
             <Button 
-              style="background-color: var(--secondary-color); border: 4px solid var(--primary-color) "
+              icon="pi pi-database"   
+              label="&nbsp;Update sample selection"
+              severity="warning"
+              raised
               :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
-              label="Update sample selection" 
-              @click="filterSamples">
+              @click="updateSamplesInTableAndFilteredStatistics()">
             </Button>
         </div>
       </div>
@@ -94,7 +95,7 @@
         <div style="display: flex; gap: 10px">
           <div>
             <FilterGroup style="width: fit-content; margin: auto" :filterGroup="samplesStore.filterGroup"
-              :propertyOptions="samplesStore.propertyOptions"
+              :propertyMenuOptions="samplesStore.propertyMenuOptions"
               :repliconAccessionOptions="samplesStore.repliconAccessionOptions"
               :lineageOptions="samplesStore.lineageOptions" :symbolOptions="samplesStore.symbolOptions"
               :operators="Object.values(DjangoFilterType)" :propertyValueOptions="samplesStore.propertyValueOptions"
@@ -106,12 +107,19 @@
           <Message severity="error">{{ samplesStore.errorMessage }}</Message>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button type="button" style="margin-top: 10px" label="OK" @click="closeAdvancedFilterDialog()"></Button>
+          <Button 
+              icon="pi pi-database"   
+              label="&nbsp;Update sample selection"  
+              severity="warning"
+              raised
+              :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+              @click="closeAdvancedFilterDialogAndUpdate">
+          </Button>
         </div>
-        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggle" />
+        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
       </Dialog>
 
-      <OverlayPanel ref="op">
+      <OverlayPanel ref="advancedFiltersHelp">
         <div class="flex flex-column gap-3 w-25rem">
           <div>
             <span class="font-medium text-900 block mb-2">Example of Input</span>
@@ -214,9 +222,10 @@ export default {
   data() {
     const samplesStore = useSamplesStore();
     samplesStore.initializeWatchers();
+    
     if (samplesStore.filterGroup.filters.profileFilters.length === 0) {
       samplesStore.filterGroup.filters.profileFilters.push({
-        label: 'Label',
+        label: 'DNA/AA Profile',
         value: '',
         exclude: false,
       });
@@ -229,27 +238,20 @@ export default {
   },
   methods: {
     removeTimeRange() {
-      this.samplesStore.timeRange = [null, null];
+      if (this.collectionDateFilter) {
+        this.collectionDateFilter.value = []
+      }
     },
     removeProfileFilter() {
       if (this.samplesStore.filterGroup.filters.profileFilters.length <= 1) {
       this.samplesStore.filterGroup.filters.profileFilters[0] = {
-        label: 'Label',
+        label: 'DNA/AA Profile',
         value: '',
         exclude: false,
       };
     }
       else {
         this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1);
-      }
-    },
-    filterSamples() {
-      if (!this.isTimeRangeInvalid) {
-        this.samplesStore.updateSamples();
-      }
-      else {
-        this.samplesStore.timeRange = [null, null]
-        this.samplesStore.updateSamples();
       }
     },
     removeLineageFilter() {
@@ -261,34 +263,84 @@ export default {
                                                               isVisible: true,
                                                             };
     },
-    closeAdvancedFilterDialog() {
-      this.displayDialogFilter = false;
-    },
-    toggle(event) {
-      if (this.$refs.op) {
-        this.$refs.op.toggle(event);
+    closeAdvancedFilterDialogAndUpdate() {
+      if (this.samplesStore.filtersChanged) { 
+        this.samplesStore.updateSamples();
+        this.samplesStore.updateFilteredStatistics();
       }
+      this.displayDialogFilter = false;
+      this.samplesStore.updateSamples();
+      this.samplesStore.updateFilteredStatistics();
+    },
+    toggleHelp(event: Event) {
+      const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as { toggle?: (event: Event) => void };
+
+      if (advancedFiltersHelpRef && typeof advancedFiltersHelpRef.toggle === 'function') {
+        advancedFiltersHelpRef.toggle(event);
+      } else {
+        console.warn('Help component does not exist');
+      }
+    },
+    updateSamplesInTableAndFilteredStatistics() {
+      this.samplesStore.updateFilteredStatistics()
+      return this.samplesStore.updateSamples()
+    },
+    async setDefaultTimeRange(){
+      const timeRange = await this.samplesStore.setDefaultTimeRange()
+      this.startDate =  timeRange[0] 
+      this.endDate = timeRange[1] 
     }
   },
   computed: {
     isAdvancedFiltersSet(): boolean {
       return this.samplesStore.filterGroup.filterGroups.length > 0 // OR-group set
-      || this.samplesStore.filterGroup.filters.propertyFilters.length > 0 // property for first group set
+      || this.samplesStore.filterGroup.filters.propertyFilters.length > 1 // other property than collection date for first group set
       || this.samplesStore.filterGroup.filters.repliconFilters.length > 0 // replicon for first group set
       || this.samplesStore.filterGroup.filters.profileFilters.length > 1 // more than one profile filter
       || this.samplesStore.filterGroup.filters.lineageFilter.exclude  // exclude set for first group lineage filter
       || this.samplesStore.filterGroup.filters.profileFilters.some(
         filter => filter.exclude === true) // exclude set for profile filter
     },
-    isTimeRangeInvalid(): boolean {
-      return this.samplesStore.timeRange.includes(null)
-    },
     profileFilter() {
       return this.samplesStore.filterGroup.filters.profileFilters[0];
     },
     lineageFilter(){
       return this.samplesStore.filterGroup.filters.lineageFilter;
-    }
+    },
+    collectionDateFilter() {
+      return this.samplesStore.filterGroup.filters.propertyFilters.find(
+        (filter) => filter.propertyName === 'collection_date'
+      );
+    },
+    startDate: {
+      get() {
+      if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value) &&
+          (this.collectionDateFilter.value[0] instanceof Date)) {
+        return this.collectionDateFilter.value[0];
+      }
+      return null;
+      },
+      set(newValue: Date) {
+        if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
+          this.collectionDateFilter.value[0] = newValue;
+        }
+      },
+    },
+    endDate: {
+    get() {
+      if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value) &&
+          (this.collectionDateFilter.value[1] instanceof Date)) {
+        return this.collectionDateFilter.value[1];
+      }
+      return null;
+    },
+
+      set(newValue: Date) {
+        if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
+          this.collectionDateFilter.value[1] = newValue;
+        }
+      },
+    },
   },
   mounted() {
   },
@@ -337,23 +389,26 @@ export default {
   margin-bottom: 0px;
 }
 
-.exclude-switch {
+.switch {
   /* font-variant: small-caps; */
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 0.7em;
-  margin: 2.5px;
-}
-.include-switch {
-  /* font-variant: small-caps; */
-  display: flex;
-  justify-content: center;
-  flex-direction: row;
-  align-items: center;
   text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
+}
+
+.default-calendar-button {
+    font-size: 12px; 
+    min-width: min-content; 
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 4px;
+    padding-right: 4px;
+    display: flex; 
+    flex-direction: column;
+    align-items: center; 
 }
 
 :deep(.p-button) {

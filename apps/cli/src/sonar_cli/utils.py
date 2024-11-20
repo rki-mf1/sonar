@@ -363,7 +363,9 @@ class sonarUtils:
             cache_dict = {"job_id": job_id}
             for sample_chunk in passed_samples_chunk_list:
                 LOGGER.info("Uploading and importing chunk.")
-                sonarUtils.zip_import_upload_multithread(cache_dict, sample_chunk)
+                sonarUtils.zip_import_upload_sample_singlethread(
+                    cache_dict, sample_chunk
+                )
 
             if auto_anno:
 
@@ -376,7 +378,9 @@ class sonarUtils:
                     disable=not progress,
                 ):
                     # LOGGER.info("Uploading and importing chunk.")
-                    sonarUtils.zip_import_upload_annotaion(cache_dict, each_file)
+                    sonarUtils.zip_import_upload_annotation_singlethread(
+                        cache_dict, each_file
+                    )
 
             LOGGER.info(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
@@ -394,7 +398,7 @@ class sonarUtils:
         )
 
     @staticmethod
-    def zip_import_upload_annotaion(shared_objects: dict, file_path):
+    def zip_import_upload_annotation_singlethread(shared_objects: dict, file_path):
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
@@ -420,7 +424,7 @@ class sonarUtils:
             LOGGER.error(msg)
 
     @staticmethod
-    def zip_import_upload_multithread(shared_objects: dict, sample_list):
+    def zip_import_upload_sample_singlethread(shared_objects: dict, sample_list):
 
         files_to_compress = []
         for kwargs in sample_list:
@@ -670,13 +674,15 @@ class sonarUtils:
                         f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
                     )
 
-        LOGGER.info("Displaying column-to-property mappings:")
+        LOGGER.info("Displaying property mappings:")
+        LOGGER.info("(Input table column name -> Sonar database property name)")
+
         for prop, prop_info in propnames.items():
             if prop == "sample":
-                LOGGER.verbose(f"{prop} <- {prop_info}")
+                LOGGER.info(f"{prop_info} -> {prop}")
                 continue
             db_property_name = prop_info.get("db_property_name", "N/A")
-            LOGGER.verbose(f"{prop} <- {db_property_name}")
+            LOGGER.info(f"{prop} -> {db_property_name}")
         LOGGER.info("--------")
 
         return propnames
