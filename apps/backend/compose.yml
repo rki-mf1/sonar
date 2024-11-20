@@ -97,10 +97,11 @@ services:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
       - ${SONAR_EXTERNAL}/coverage:/code/coverage
     healthcheck:
-      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9080/api/references/get_all_references/"]
-      interval: 10s
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:9080/api/database/get_database_tables_status/ | grep 'true'"]
+      start_period: 45s
+      start_interval: 10s
+      interval: 600s
       retries: 5
-      start_period: 30s
       timeout: 10s
     depends_on:
       sonar-django-backend-migrate:
