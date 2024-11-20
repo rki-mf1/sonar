@@ -46,6 +46,7 @@ from .serializers import (
 )
 from collections import defaultdict
 
+
 @dataclass
 class LineageInfo:
     name: str
@@ -668,13 +669,12 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-        queryset = queryset.extra(
-            select={"lineage_parent": "lineage1.name"},
-            tables=["lineage", '"lineage" AS "lineage1"'],
-            where=[
-                "lineage.name = sample.lineage and lineage.parent_id is not null",
-                "lineage1.id = lineage.parent_id",
-            ],
+        queryset = queryset.annotate(
+            lineage_parent=Subquery(
+                models.Lineage.objects.filter(name=OuterRef("lineage")).values(
+                    "parent"
+                )[:1]
+            )
         )
         queryset = queryset.extra(
             select={
