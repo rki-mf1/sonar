@@ -576,6 +576,8 @@ class SampleViewSet(
         # Construct the final result with percentages
         result = []
         for item in monthly_data:
+            if item["month"] is None:
+                continue
             month_str = (
                 f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
             )
@@ -602,6 +604,8 @@ class SampleViewSet(
         lineage_data = defaultdict(lambda: defaultdict(int))
 
         for item in weekly_data:
+            if item["week"] is None:
+                continue
             week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
             lineage_data[week_str][
                 LineageInfo(item["lineage"], item["lineage_parent"])
