@@ -114,10 +114,11 @@
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
 import { ref } from 'vue';
 const filterTypeMenu = ref();
-const toggleFilterTypeMenu = (event) => {
+const toggleFilterTypeMenu = (event: Event) => {
   filterTypeMenu.value.toggle(event)
 }
 </script>
@@ -218,7 +219,7 @@ export default {
   },
   computed: {
     filterTypeMethods(): MenuItem[] {
-      const menuItems = []
+      const menuItems: MenuItem[] = [];
       menuItems.push({
         label: 'DNA/AA Profile',
         icon: 'pi pi-plus',
@@ -244,19 +245,20 @@ export default {
           }
         })
       }
-      this.propertyMenuOptions.forEach((propertyName) => {
-        menuItems.push({
-          label: propertyName,
-          icon: 'pi pi-plus',
-          command: () => {
-            this.filterGroup.filters.propertyFilters.push({
-              ...this.PropertyFilter,
-              propertyName: propertyName
-            }
-            )
-          }
-        })
-      })
+  this.propertyMenuOptions.forEach((propertyName) => {
+    menuItems.push({
+      label: propertyName,
+      icon: 'pi pi-plus',
+      command: async () => {
+        const newFilter = {
+          ...this.PropertyFilter,
+          propertyName: propertyName,
+        };
+        this.filterGroup.filters.propertyFilters.push(newFilter);
+        await this.updatePropertyValueOptions(newFilter);
+      },
+    });
+  });
       return menuItems
     },
     cantAddOrGroup(): boolean {
@@ -336,6 +338,7 @@ export default {
     addProfileFilter() {
       this.filterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
     },
+
     async updatePropertyValueOptions(filter: PropertyFilter) {
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter)
