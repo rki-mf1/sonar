@@ -109,7 +109,8 @@ export const useSamplesStore = defineStore('samples', {
       ]
       this.updateSamples()
     },
-    updatePropertyValueOptions(propertyName: string) {
+    updatePropertyValueOptions(filter: PropertyFilter) {
+      const propertyName = filter.propertyName
       if (this.propertyValueOptions[propertyName]) return
       this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
