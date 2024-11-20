@@ -9,7 +9,8 @@ import {
   type FilteredStatistics,
   DjangoFilterType,
   StringDjangoFilterType,
-  DateDjangoFilterType
+  DateDjangoFilterType,
+  type PropertyFilter
 } from '@/util/types'
 import { reactive } from 'vue';
 import { watch} from 'vue';
