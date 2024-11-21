@@ -30,6 +30,8 @@ class APIClient:
     get_jobID_endpont = "tasks/generate_job_id"
     get_job_byID_endpont = "tasks/get_files_by_job_id"
 
+    get_database_info_endpont = "database/get_database_info"
+
     post_add_reference_endpoint = "references/import_gbk/"
     post_delete_reference_endpoint = "references/delete_reference/"
     post_delete_sample_endpoint = "samples/delete_sample_data/"
@@ -440,5 +442,15 @@ class APIClient:
         params["is_prop"] = is_prop_job
         json_response = self._make_request(
             "GET", endpoint=self.get_jobID_endpont, params=params
+        )
+        return json_response
+
+    def get_database_info(
+        self,
+    ):
+        params = {}
+
+        json_response = self._make_request(
+            "GET", endpoint=self.get_database_info_endpont, params=params
         )
         return json_response

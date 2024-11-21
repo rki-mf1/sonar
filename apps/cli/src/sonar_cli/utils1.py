@@ -26,7 +26,37 @@ class sonarUtils1:
     def __init__(self):
         pass
 
-    # DATA IMPORT
+    @staticmethod
+    def get_info(db: str = None):
+        API_URL = BASE_URL if db is None else db
+
+        json_response = APIClient(base_url=API_URL).get_database_info()
+        log_message = "No information available"
+        if len(json_response["detail"]) != 0:
+            data = json_response["detail"]
+            log_message = "\n".join(
+                [
+                    "Meta Data Coverage:",
+                    *[
+                        f"   {key}: {value}"
+                        for key, value in data["meta_data_coverage"].items()
+                    ],
+                    f"Samples Total: {data['samples_total']}",
+                    f"Earliest Sampling Date: {data['earliest_sampling_date']}",
+                    f"Latest Sampling Date: {data['latest_sampling_date']}",
+                    f"Database Size: {data['database_size']}",
+                    f"Database Version: {data['database_version']}",
+                    f"Earliest Genome Import: {data['earliest_genome_import']}",
+                    f"Latest Genome Import: {data['latest_genome_import']}",
+                    f"Unique Sequences: {data['unique_sequences']}",
+                    f"Genomes: {data['genomes']}",
+                    f"Reference Genome: {data['reference_genome']}",
+                    f"Reference Length: {data['reference_length']} bp",
+                    f"Annotated Proteins: {data['annotated_proteins']}",
+                ]
+            )
+        LOGGER.info(log_message)
+
     @staticmethod
     def get_all_jobs(db: str = None):
         API_URL = BASE_URL if db is None else db

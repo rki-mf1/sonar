@@ -96,8 +96,8 @@ class SampleViewSet(
             "DNA/AA Profile": self.filter_label,
         }
 
-    @action(detail=False, methods=["get"])
-    def statistics(self, request: Request, *args, **kwargs):
+    @staticmethod
+    def get_statistics():
         response_dict = {}
         response_dict["samples_total"] = models.Sample.objects.all().count()
 
@@ -112,12 +112,17 @@ class SampleViewSet(
 
         latest_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
-            # '-' before column name mean "descending order", while without '-' mean "ascending".
-            .order_by("-collection_date").first()
+            .order_by("-collection_date")
+            .first()
         )
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
+        return response_dict
+
+    @action(detail=False, methods=["get"])
+    def statistics(self, request: Request, *args, **kwargs):
+        response_dict = SampleViewSet.get_statistics()
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
