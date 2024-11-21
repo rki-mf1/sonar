@@ -454,7 +454,7 @@ def create_subparser_import(
     )
     parser.add_argument(
         "--cols",
-        help="assign column names used in the provided TSV/CSV file to the matching property names provided by the database in the form PROP=COL (e.g. SAMPLE=GenomeID)",
+        help="assign column names used in the provided TSV/CSV file to the matching property names provided by the database in the form PROP=COL (e.g. name=GenomeID)",
         type=str,
         nargs="+",
         default=[],
