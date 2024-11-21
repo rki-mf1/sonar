@@ -45,7 +45,7 @@ import Splitter from 'primevue/splitter';
 import SplitterPanel from 'primevue/splitterpanel';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
-
+import Menu from 'primevue/menu';
 addIcons(FaDna, FaCalendarAlt)
 
 // Import the chartjs plugin
@@ -117,6 +117,7 @@ app.component('Splitter', Splitter)
 app.component('SplitterPanel', SplitterPanel)
 app.component('TabView', TabView)
 app.component('TabPanel', TabPanel)
+app.component('Menu', Menu)
 
 app.directive('tooltip', Tooltip);
 app.directive('animateonscroll', AnimateOnScroll);

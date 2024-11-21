@@ -53,6 +53,7 @@ from .serializers import SampleGenomesSerializerVCF
 from .serializers import SampleSerializer
 
 
+
 @dataclass
 class LineageInfo:
     name: str
@@ -378,16 +379,13 @@ class SampleViewSet(
                     continue
                 datatype = property_to_datatype[property_name]
                 # Determine the exclusion value based on the datatype
-                annotations[f"not_null_count_{property_name}"] = Count(
-                    Case(
-                        When(
-                            properties__property__name=property_name,
-                            **{f"properties__{datatype}__isnull": False},
-                            then=1,
-                        ),
-                        output_field=IntegerField(),
-                    )
-                )
+                annotations[f"not_null_count_{property_name}"] = Count(Subquery(
+                    models.Sample.objects.filter(
+                        properties__property__name=property_name,
+                        **{f"properties__{datatype}__isnull": False},
+                        id=OuterRef("id"),
+                    ).values("id")[:1]
+                ))
             except ValueError as e:
                 LOGGER.error(
                     f"Error with property_name: {property_name}, datatype: {datatype}"
@@ -580,6 +578,8 @@ class SampleViewSet(
         # Construct the final result with percentages
         result = []
         for item in monthly_data:
+            if item["month"] is None:
+                continue
             month_str = (
                 f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
             )
@@ -606,6 +606,8 @@ class SampleViewSet(
         lineage_data = defaultdict(lambda: defaultdict(int))
 
         for item in weekly_data:
+            if item["week"] is None:
+                continue
             week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
             lineage_data[week_str][
                 LineageInfo(item["lineage"], item["lineage_parent"])
@@ -674,13 +676,12 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-        queryset = queryset.extra(
-            select={"lineage_parent": "lineage1.name"},
-            tables=["lineage", '"lineage" AS "lineage1"'],
-            where=[
-                "lineage.name = sample.lineage and lineage.parent_id is not null",
-                "lineage1.id = lineage.parent_id",
-            ],
+        queryset = queryset.annotate(
+            lineage_parent=Subquery(
+                models.Lineage.objects.filter(name=OuterRef("lineage")).values(
+                    "parent"
+                )[:1]
+            )
         )
         queryset = queryset.extra(
             select={

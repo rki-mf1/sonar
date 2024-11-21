@@ -9,7 +9,8 @@ import {
   type FilteredStatistics,
   DjangoFilterType,
   StringDjangoFilterType,
-  DateDjangoFilterType
+  DateDjangoFilterType,
+  type PropertyFilter
 } from '@/util/types'
 import { reactive } from 'vue';
 import { watch} from 'vue';
@@ -201,7 +202,8 @@ export const useSamplesStore = defineStore('samples', {
       ]
       return this.timeRange
     },
-    updatePropertyValueOptions(propertyName: string) {
+    updatePropertyValueOptions(filter: PropertyFilter) {
+      const propertyName = filter.propertyName
       if (this.propertyValueOptions[propertyName]) return
       this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
