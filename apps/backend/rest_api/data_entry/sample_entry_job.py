@@ -686,7 +686,7 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
                         "datatype": column_mapping[name].data_type,
                     }
                     for name, value in row.items()
-                    if name in custom_property_names
+                    if value.values[0] and name in custom_property_names
                 },
                 True,
                 property_cache,  # global variable
