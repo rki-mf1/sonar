@@ -1129,7 +1129,7 @@ class sonarUtils:
         querytype: str,
         description: str,
         subject: str,
-        standard: Optional[str] = None,
+        default: None,
         check_name: bool = True,
     ) -> int:
         data = {
@@ -1137,6 +1137,7 @@ class sonarUtils:
             "datatype": datatype,
             "querytype": querytype,
             "description": description,
+            "default": default,
         }
         json_response = APIClient(base_url=BASE_URL).post_add_property(data)
         LOGGER.info(json_response["detail"])

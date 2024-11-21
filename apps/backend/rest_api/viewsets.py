@@ -7,9 +7,10 @@ import pickle
 import uuid
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db.models import Count, Sum
+from django.db.models import Count
 from django.db.models import F
 from django.db.models import Q
+from django.db.models import Sum
 from django.db.utils import IntegrityError
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -510,9 +511,13 @@ class PropertyViewSet(
         datatype = request.data.get("datatype", None)
         querytype = request.data.get("querytype", None)
         description = request.data.get("description", None)
-
+        default = request.data.get("default", None)
         obj, created = find_or_create_property(
-            name=name, datatype=datatype, querytype=querytype, description=description
+            name=name,
+            datatype=datatype,
+            querytype=querytype,
+            description=description,
+            default=default,
         )
 
         if created:

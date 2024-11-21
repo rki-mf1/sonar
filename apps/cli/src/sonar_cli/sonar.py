@@ -846,20 +846,48 @@ def handle_add_prop(args: argparse.Namespace):
 
     if args.dtype == "value_integer":
         args.qtype = "numeric"
+        try:
+            args.default = int(args.default) if args.default is not None else None
+        except ValueError:
+            LOGGER.error(f"Cannot convert default value '{args.default}' to integer.")
+            exit(1)
     elif args.dtype == "value_float":
         args.qtype = "float"
+        try:
+            args.default = float(args.default) if args.default is not None else None
+        except ValueError:
+            LOGGER.error(f"Cannot convert default value '{args.default}' to float.")
+            exit(1)
     elif args.dtype == "value_varchar":
         args.qtype = "varchar"
+        args.default = str(args.default) if args.default is not None else None
     elif args.dtype == "value_text":
         args.qtype = "text"
+        args.default = str(args.default) if args.default is not None else None
     elif args.dtype == "value_date":
         args.qtype = "date"
+        try:
+            from datetime import datetime
+
+            args.default = (
+                datetime.strptime(args.default, "%Y-%m-%d").date()
+                if args.default is not None
+                else None
+            )
+        except ValueError:
+            LOGGER.error(
+                f"Cannot convert default value '{args.default}' to date. Expected format: YYYY-MM-DD."
+            )
+            exit(1)
     elif args.dtype == "value_zip":
         args.qtype = "zip"
+        args.default = str(args.default) if args.default is not None else None
     elif args.dtype == "value_blob":
         LOGGER.info("This type is not supported yet.")
+        args.default = None
     else:
-        LOGGER.info("This type is not supported .")
+        LOGGER.info("This type is not supported.")
+        args.default = None
 
     sonarUtils.add_property(
         args.name,
