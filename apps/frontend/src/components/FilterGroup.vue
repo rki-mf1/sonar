@@ -295,7 +295,7 @@ export default {
   },
   methods: {
 
-    async get_defaults_earliest_latest_collect_date(propertyName: string) {
+    async getDefaultsEarliestLatestCollectDate(propertyName: string) {
       // Check if the property already has a stored date range
       if (this.dateRanges[propertyName]) {
         return this.dateRanges[propertyName]; // Return the cached date range
@@ -346,7 +346,7 @@ export default {
       this.initializeOperators(filter);
       // If the property is a date, set the default value to the date range
       if (filter.propertyName?.includes('date')) {
-        const dateRange = await this.get_defaults_earliest_latest_collect_date(filter.propertyName);
+        const dateRange = await this.getDefaultsEarliestLatestCollectDate(filter.propertyName);
         if (dateRange) {
           filter.value = [new Date(dateRange.earliest), new Date(dateRange.latest)];
         }
