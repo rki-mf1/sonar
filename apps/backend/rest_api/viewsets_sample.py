@@ -501,15 +501,18 @@ class SampleViewSet(
             .annotate(count=Count("id"), collection_date=Min("collection_date"))
             .order_by("year", "week")
         )
+        LOGGER.info(len(queryset))
         if len(queryset) != 0:
-            start_date = queryset.first()["collection_date"]
-            end_date = queryset.last()["collection_date"]
+            filtered_queryset = queryset.filter(collection_date__isnull=False)
+            start_date = filtered_queryset.first()["collection_date"]
+            end_date = filtered_queryset.last()["collection_date"]
+            LOGGER.info(f"{start_date}, {end_date}")
             if start_date and end_date:
                 for dt in rrule(
                     WEEKLY, dtstart=start_date, until=end_date
                 ):  # generate all weeks between start and end dates and assign default value 0
                     result_dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
-                for item in queryset:  # fill in count values of present weeks
+                for item in filtered_queryset:  # fill in count values of present weeks
                     result_dict[f"{item['year']}-W{int(item['week']):02}"] = item[
                         "count"
                     ]
