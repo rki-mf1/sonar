@@ -50,7 +50,7 @@ def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
     #         func(** arg) for arg in args
     #     ),
     # )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --auto-anno --tsv covid19/meta.tsv --cols sample=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE "
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --auto-anno --tsv covid19/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE "
     code = run_cli(command)
 
     assert code == 0
@@ -116,7 +116,7 @@ def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
             func(arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 1  --tsv covid19/meta.tsv --cols sample=IMS_ID --auto-link"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 1  --tsv covid19/meta.tsv --cols name=IMS_ID --auto-link"
     code = run_cli(command)
 
     assert code == 0
@@ -133,7 +133,7 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
             func(arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2  --tsv covid19/meta.tsv --cols sample=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2  --tsv covid19/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE"
     code = run_cli(command)
 
     assert code == 0

@@ -139,7 +139,7 @@ class sonarUtils:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
                 LOGGER.error(
-                    "Cannot link ID. Please provide a mapping ID in the meta file, add --cols sample=(column ID/sample name) to the command line."
+                    "Cannot link ID. Please provide a mapping ID in the meta file, add --cols name=(column ID/sample name) to the command line."
                 )
                 sys.exit(1)
 
