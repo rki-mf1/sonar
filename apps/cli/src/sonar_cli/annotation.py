@@ -28,7 +28,13 @@ class Annotator:
             raise ValueError("Annotator executable path is not provided.")
         # Command to annotate using SnpEff
         command = " ".join(
-            [f"{self.annotator}", f"{database_name}", f"{input_vcf}", "-noStats"]
+            [
+                f"{self.annotator}",
+                f"{database_name}",
+                f"{input_vcf}",
+                "-noStats",
+                "-noLof",
+            ]
         )
         if self.config_path:
             command = command + f" -nodownload -config {self.config_path}"

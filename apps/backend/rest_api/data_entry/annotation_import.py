@@ -179,11 +179,10 @@ class AnnotationImport:
 
     def _parse_line_info(self, info: str) -> list[VCFInfoANNRaw]:
         # only ANN= is parsed, example:
-        # ANN=T|frameshift_variant|HIGH|ORF1a|Gene_265_13467|transcript|ORF1a|protein_coding|1/1|c.4964delA|p.Lys1655fs|4964/13203|4964/13203|1655/4400||WARNING_TRANSCRIPT_NO_STOP_CODON&INFO_REALIGN_3_PRIME;LOF=(ORF1a|Gene_265_13467|1|1.00)
+        # ANN=T|frameshift_variant|HIGH|ORF1a|Gene_265_13467|transcript|ORF1a|protein_coding|1/1|c.4964delA|p.Lys1655fs|4964/13203|4964/13203|1655/4400||WARNING_TRANSCRIPT_NO_STOP_CODON&INFO_REALIGN_3_PRIME
         if info.startswith("ANN="):
             # r = re.compile(r"\(([^()]*|(R))*\)")
             info = info[4:]
-            info = info.split(";")[0]
             annotations = []
             for annotation in info.split(","):
                 # replace pipes inside paranthesis
