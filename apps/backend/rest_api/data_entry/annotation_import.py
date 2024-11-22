@@ -178,14 +178,16 @@ class AnnotationImport:
         return mutation_lookups_to_annotations
 
     def _parse_line_info(self, info: str) -> list[VCFInfoANNRaw]:
-        # only ANN= is parsed
+        # only ANN= is parsed, example:
+        # ANN=T|frameshift_variant|HIGH|ORF1a|Gene_265_13467|transcript|ORF1a|protein_coding|1/1|c.4964delA|p.Lys1655fs|4964/13203|4964/13203|1655/4400||WARNING_TRANSCRIPT_NO_STOP_CODON&INFO_REALIGN_3_PRIME;LOF=(ORF1a|Gene_265_13467|1|1.00)
         if info.startswith("ANN="):
-            r = re.compile(r"\(([^()]*|(R))*\)")
+            # r = re.compile(r"\(([^()]*|(R))*\)")
             info = info[4:]
+            info = info.split(";")[0]
             annotations = []
             for annotation in info.split(","):
                 # replace pipes inside paranthesis
-                annotation = r.sub(lambda x: x.group().replace("|", "-"), annotation)
+                # annotation = r.sub(lambda x: x.group().replace("|", "-"), annotation)
                 annotation = annotation.split("|")
                 try:
                     annotations.append(VCFInfoANNRaw(*annotation))
@@ -193,7 +195,6 @@ class AnnotationImport:
                     LOGGER.warning(
                         f"Failed to parse annotation: {annotation}, from file {self.vcf_file_path}"
                     )
-
             return annotations
         return None
 
