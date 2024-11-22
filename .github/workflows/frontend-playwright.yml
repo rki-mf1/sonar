@@ -1,0 +1,39 @@
+name: Frontend E2E Playwright Tests
+on:
+  pull_request:
+    paths:
+      - 'apps/backend/**'
+      - 'apps/frontend/**'
+  workflow_dispatch:
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Start backend containers 🙈
+        working-directory: ./apps/backend
+        id: docker_compose_build
+        run: |
+          ./scripts/linux/build-docker-dev.sh
+          ./scripts/linux/dc-gh-action.sh up -d --build --wait
+      - name: Install frontend dependencies
+        working-directory: ./apps/frontend
+        run: npm ci
+      - name: Install Playwright Browsers
+        working-directory: ./apps/frontend
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        working-directory: ./apps/frontend
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
