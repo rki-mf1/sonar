@@ -53,7 +53,6 @@ from .serializers import SampleGenomesSerializerVCF
 from .serializers import SampleSerializer
 
 
-
 @dataclass
 class LineageInfo:
     name: str
@@ -379,13 +378,15 @@ class SampleViewSet(
                     continue
                 datatype = property_to_datatype[property_name]
                 # Determine the exclusion value based on the datatype
-                annotations[f"not_null_count_{property_name}"] = Count(Subquery(
-                    models.Sample.objects.filter(
-                        properties__property__name=property_name,
-                        **{f"properties__{datatype}__isnull": False},
-                        id=OuterRef("id"),
-                    ).values("id")[:1]
-                ))
+                annotations[f"not_null_count_{property_name}"] = Count(
+                    Subquery(
+                        models.Sample.objects.filter(
+                            properties__property__name=property_name,
+                            **{f"properties__{datatype}__isnull": False},
+                            id=OuterRef("id"),
+                        ).values("id")[:1]
+                    )
+                )
             except ValueError as e:
                 LOGGER.error(
                     f"Error with property_name: {property_name}, datatype: {datatype}"
@@ -501,12 +502,10 @@ class SampleViewSet(
             .annotate(count=Count("id"), collection_date=Min("collection_date"))
             .order_by("year", "week")
         )
-        LOGGER.info(len(queryset))
         if len(queryset) != 0:
             filtered_queryset = queryset.filter(collection_date__isnull=False)
             start_date = filtered_queryset.first()["collection_date"]
             end_date = filtered_queryset.last()["collection_date"]
-            LOGGER.info(f"{start_date}, {end_date}")
             if start_date and end_date:
                 for dt in rrule(
                     WEEKLY, dtstart=start_date, until=end_date
