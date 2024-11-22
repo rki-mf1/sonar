@@ -53,7 +53,6 @@ from .serializers import SampleGenomesSerializerVCF
 from .serializers import SampleSerializer
 
 
-
 @dataclass
 class LineageInfo:
     name: str
@@ -379,13 +378,15 @@ class SampleViewSet(
                     continue
                 datatype = property_to_datatype[property_name]
                 # Determine the exclusion value based on the datatype
-                annotations[f"not_null_count_{property_name}"] = Count(Subquery(
-                    models.Sample.objects.filter(
-                        properties__property__name=property_name,
-                        **{f"properties__{datatype}__isnull": False},
-                        id=OuterRef("id"),
-                    ).values("id")[:1]
-                ))
+                annotations[f"not_null_count_{property_name}"] = Count(
+                    Subquery(
+                        models.Sample.objects.filter(
+                            properties__property__name=property_name,
+                            **{f"properties__{datatype}__isnull": False},
+                            id=OuterRef("id"),
+                        ).values("id")[:1]
+                    )
+                )
             except ValueError as e:
                 LOGGER.error(
                     f"Error with property_name: {property_name}, datatype: {datatype}"
@@ -502,14 +503,15 @@ class SampleViewSet(
             .order_by("year", "week")
         )
         if len(queryset) != 0:
-            start_date = queryset.first()["collection_date"]
-            end_date = queryset.last()["collection_date"]
+            filtered_queryset = queryset.filter(collection_date__isnull=False)
+            start_date = filtered_queryset.first()["collection_date"]
+            end_date = filtered_queryset.last()["collection_date"]
             if start_date and end_date:
                 for dt in rrule(
                     WEEKLY, dtstart=start_date, until=end_date
                 ):  # generate all weeks between start and end dates and assign default value 0
                     result_dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
-                for item in queryset:  # fill in count values of present weeks
+                for item in filtered_queryset:  # fill in count values of present weeks
                     result_dict[f"{item['year']}-W{int(item['week']):02}"] = item[
                         "count"
                     ]
