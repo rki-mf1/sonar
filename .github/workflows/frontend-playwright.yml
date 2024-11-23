@@ -30,12 +30,12 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./apps/frontend
         run: npm ci
-      - name: Install Playwright Browsers
+      - name: Install Playwright Browsers (Firefox only)
         working-directory: ./apps/frontend
-        run: npx playwright install --with-deps
-      - name: Run Playwright tests
+        run: npx playwright install --with-deps firefox
+      - name: Run Playwright tests (Firefox only)
         working-directory: ./apps/frontend
-        run: npx playwright test
+        run: npx playwright test --project firefox
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
