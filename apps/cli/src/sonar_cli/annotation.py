@@ -27,34 +27,34 @@ class Annotator:
         if not self.annotator:
             raise ValueError("Annotator executable path is not provided.")
         # Command to annotate using SnpEff
-        command = " ".join(
-            [
-                f"{self.annotator}",
-                f"{database_name}",
-                f"{input_vcf}",
-                "-noStats",
-                "-noLof",
-            ]
-        )
+        command = [
+            f"{self.annotator}",
+            f"{database_name}",
+            f"{input_vcf}",
+            "-noStats",
+            "-noLof",
+        ]
+
         if self.config_path:
-            command = command + f" -nodownload -config {self.config_path}"
+            command.extend(["-nodownload", "-config", f"{self.config_path}"])
 
         try:
             # Run the SnpEff annotation
             with open(output_vcf, "w") as output_file:
                 result = subprocess.run(
-                    command, shell=True, stdout=output_file, stderr=subprocess.PIPE
+                    command,
+                    stdout=output_file,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=True,
                 )
-            # result = subprocess.run(['java', '-version'], stderr=subprocess.STDOUT)
             if result.returncode != 0:
                 LOGGER.error(
-                    "SnpEff annotation failed with exit code: %s", result.returncode
+                    f"SnpEff annotation failed with exit code: {result.returncode}"
                 )
-                LOGGER.error("Command to reproduce the error: %s", command)
-
+                LOGGER.error(f"Command to reproduce the error: {' '.join(command)}")
                 with open(self.sonar_cache.error_logfile_name, "a+") as writer:
-                    writer.write("Fail anno:" + command + "\n")
-
+                    writer.write(f"Fail anno: {' '.join(command)}\n")
                 LOGGER.error(result.stderr.decode("utf-8").splitlines())
                 # in case the file is corrupted during annotation
                 if os.path.exists(output_vcf):
@@ -63,13 +63,13 @@ class Annotator:
                 raise RuntimeError("SnpEff annotation failed")
 
         except subprocess.CalledProcessError as e:
-            LOGGER.error("SnpEff annotation failed: %s", e)
+            LOGGER.error(f"SnpEff annotation failed: {e}")
             # in case the file is corrupted during annotation
             if os.path.exists(output_vcf):
                 os.remove(output_vcf)
             with open(self.sonar_cache.error_logfile_name, "a+") as writer:
-                writer.write("Annotation failed:" + e + "\n")
-            raise  # Raise exception to stop the process
+                writer.write(f"Annotation failed: {e}\n")
+            raise
 
     def bcftools_filter(self, input_vcf, output_vcf):
         filter_command = f"bcftools view -e 'INFO/ANN=\".\"' {input_vcf} > {output_vcf}"

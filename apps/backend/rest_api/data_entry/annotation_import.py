@@ -178,15 +178,24 @@ class AnnotationImport:
         return mutation_lookups_to_annotations
 
     def _parse_line_info(self, info: str) -> list[VCFInfoANNRaw]:
-        # only ANN= is parsed, example:
-        # ANN=T|frameshift_variant|HIGH|ORF1a|Gene_265_13467|transcript|ORF1a|protein_coding|1/1|c.4964delA|p.Lys1655fs|4964/13203|4964/13203|1655/4400||WARNING_TRANSCRIPT_NO_STOP_CODON&INFO_REALIGN_3_PRIME
+        """
+        Extracts the SNP effect annotation (ANN) substring from the 8th column of a tab-separated SnpEff annotation line.
+
+        Parameters:
+            info (str): The 8th column of a tab-separated SnpEff annotation line. Example:
+                "ANN=C|upstream_gene_variant|MODIFIER|ORF1a|Gene_265_13467|transcript|ORF1a|protein_coding||c.-217_-213delTCTTG|||||217|WARNING_TRANSCRIPT_NO_STOP_CODON,
+                C|intergenic_region|MODIFIER|CHR_START-ORF1a|CHR_START-Gene_265_13467|intergenic_region|CHR_START-Gene_265_13467|||n.49_53delTCTTG||||||"
+
+        Returns:
+            list[VCFInfoANNRaw]: list of extracted annotations, different annotations are seperated by ','
+        """
         if info.startswith("ANN="):
-            # r = re.compile(r"\(([^()]*|(R))*\)")
+            # ignoring additional annotations, e.g. LOF
+            if ";" in info:
+                info = info.split(";")[0]
             info = info[4:]
             annotations = []
             for annotation in info.split(","):
-                # replace pipes inside paranthesis
-                # annotation = r.sub(lambda x: x.group().replace("|", "-"), annotation)
                 annotation = annotation.split("|")
                 try:
                     annotations.append(VCFInfoANNRaw(*annotation))
