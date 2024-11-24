@@ -187,10 +187,10 @@ class AnnotationImport:
                 C|intergenic_region|MODIFIER|CHR_START-ORF1a|CHR_START-Gene_265_13467|intergenic_region|CHR_START-Gene_265_13467|||n.49_53delTCTTG||||||"
 
         Returns:
-            list[VCFInfoANNRaw]: list of extracted annotations, different annotations are seperated by ','
+            list[VCFInfoANNRaw]: list of extracted annotations, different annotations are separated by ','
         """
         if "ANN=" in info:
-            # at the moment we consider only ANN= annotaions and ignoring all others (seperated by ;)
+            # at the moment we consider only ANN= annotations and ignoring all others (separated by ;)
             info = next(
                 (part for part in info.split(";") if part.startswith("ANN=")), None
             )
