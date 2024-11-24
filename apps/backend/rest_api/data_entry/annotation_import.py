@@ -189,10 +189,11 @@ class AnnotationImport:
         Returns:
             list[VCFInfoANNRaw]: list of extracted annotations, different annotations are seperated by ','
         """
-        if info.startswith("ANN="):
-            # ignoring additional annotations, e.g. LOF
-            if ";" in info:
-                info = info.split(";")[0]
+        if "ANN=" in info:
+            # at the moment we consider only ANN= annotaions and ignoring all others (seperated by ;)
+            info = next(
+                (part for part in info.split(";") if part.startswith("ANN=")), None
+            )
             info = info[4:]
             annotations = []
             for annotation in info.split(","):
