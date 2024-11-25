@@ -137,6 +137,25 @@ export default {
   beforeUnmount() {
   },
   methods: {
+    cleanDataAndAddNullSamples(data: { [key: string]: number }) {
+      if (!data || typeof data !== 'object') return { labels: [], data: [] };
+        const cleanedData = Object.fromEntries(
+          Object.entries(data).filter(([key, value]) => key !== "null" && value !== 0)
+        );
+        const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0;
+        const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0);
+        const noMetadataSamples = totalSamples - metadataSamples;
+        const labels = [...Object.keys(cleanedData)];
+        const dataset = [...Object.values(cleanedData)];
+        
+        // Add a "Not Reported" category if there are samples without metadata
+        if (noMetadataSamples > 0) {
+          labels.push('Not Reported');
+          dataset.push(noMetadataSamples);
+        }
+        return { labels, data: dataset }
+      },
+
     generateColorPalette(itemCount: number): string[] {
       return chroma.scale(['#00429d', '#00b792', '#ffdb9d', '#fdae61', '#f84959', '#93003a']) // ['#9e0142', '#d53e4f', '#f46d43', '#fdae61', '#fee08b', '#e6f598', '#abdda4', '#66c2a5', '#3288bd', '#5e4fa2']
         .mode('lch') // color mode (lch is perceptually uniform)
@@ -371,13 +390,13 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      const keys = Object.keys(_data);
-      const colors = this.generateColorPalette(keys.length);
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        labels: keys,
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
+            data,
             backgroundColor: colors, 
           }
         ]
@@ -405,15 +424,15 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      const keys = Object.keys(_data);
-      const colors = this.generateColorPalette(keys.length);
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        labels: keys,
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
-            backgroundColor: keys.map((_, index) => colors[index]), 
-            borderColor: keys.map((_, index) => colors[index]).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            data,
+            backgroundColor: labels.map((_, index) => colors[index]), 
+            borderColor: labels.map((_, index) => colors[index]).map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
           }
         ]
@@ -452,13 +471,13 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      const keys = Object.keys(_data);
-      const colors = this.generateColorPalette(keys.length);
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        labels: keys,
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
+            data,
             backgroundColor: colors,
             borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
@@ -484,11 +503,12 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
+            data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
@@ -517,12 +537,13 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
             label: 'Samples',
-            data: Object.values(_data),
+            data,
             backgroundColor: this.generateColorPalette(1), 
             borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
@@ -550,15 +571,13 @@ export default {
     },
     labChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lab'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
             label: 'Samples',
-            data: Object.values(_data),
+            data: data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
@@ -602,12 +621,13 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
             label: 'Samples',
-            data: Object.values(_data),
+            data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
@@ -643,8 +663,12 @@ export default {
         scales: {
           x: {
             beginAtZero: true,
-            min: 0,
-          }
+          },
+          y: {
+            ticks: {
+              autoSkip: false, // Ensure all labels, including "Not Reported," are shown
+            },
+          },
         },
         responsive: true,
         maintainAspectRatio: false,
@@ -655,13 +679,13 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      const keys = Object.keys(_data);
-      const colors = this.generateColorPalette(keys.length);
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        labels: keys,
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
+            data,
             backgroundColor: colors,
             borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
