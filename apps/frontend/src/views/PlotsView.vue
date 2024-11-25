@@ -118,13 +118,14 @@
 import { useSamplesStore } from '@/stores/samples';
 import type { LineageBarChartData } from '@/util/types';
 import { RiAndroidFill } from 'oh-vue-icons/icons';
+import chroma from 'chroma-js';
 
 export default {
   name: 'PlotsView',
   data() {
     return {
       samplesStore: useSamplesStore(),
-      chartInstances: {}
+      chartInstances: {},
     }
   },
   watch: {
@@ -137,136 +138,107 @@ export default {
   beforeUnmount() {
   },
   methods: {
-    genomeCompleteChart() {
-      const documentStyle = getComputedStyle(document.body);
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      return {
-        labels: Object.keys(_data),
-        datasets: [
-          {
-            data: Object.values(_data),
-            backgroundColor: [documentStyle.getPropertyValue('--cyan-500'), documentStyle.getPropertyValue('--orange-500'), documentStyle.getPropertyValue('--gray-500')],
-            hoverBackgroundColor: [documentStyle.getPropertyValue('--cyan-400'), documentStyle.getPropertyValue('--orange-400'), documentStyle.getPropertyValue('--gray-400')]
-          }
-        ]
-      };
+    generateColorPalette(itemCount) {
+      return chroma.scale(['#00429d', '#00b792', '#ffdb9d', '#fdae61', '#f84959', '#93003a']) // ['#9e0142', '#d53e4f', '#f46d43', '#fdae61', '#fee08b', '#e6f598', '#abdda4', '#66c2a5', '#3288bd', '#5e4fa2']
+        .mode('lch') // color mode (lch is perceptually uniform)
+        .colors(itemCount); // number of colors
     },
-    genome_pieChartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement);
-      const textColor = '#333';
-
+    chartData() {
+      const samples_per_week = this.samplesStore.filteredStatistics
+        ? this.samplesStore.filteredStatistics['samples_per_week']
+        : {};
+      const labels: string[] = [];
+      const data: number[] = [];
+      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
+        Object.keys(samples_per_week).forEach((key) => {
+          labels.push(key);
+          data.push(samples_per_week[key]);
+        });
+        return {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Samples',
+              data: data,
+              backgroundColor: this.generateColorPalette(1), 
+              borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.5).hex()), // darkened border
+              borderWidth: 1
+            }
+          ]
+        };
+      } else {
+        // Return an empty chart structure
+        return {
+          labels: ['No data available'],
+          datasets: [
+            {
+              label: 'Samples',
+              data: [], // no data points
+              backgroundColor: 'rgba(249, 115, 22, 0.2)',
+              borderColor: 'rgb(249, 115, 22)',
+              borderWidth: 1
+            }
+          ]
+        };
+      }
+    },
+    chartOptions() {
+      const documentStyle = getComputedStyle(document.documentElement)
+      const textColor = documentStyle.getPropertyValue('--text-color')
+      const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
+      const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
       return {
         animation: false,
         plugins: {
           legend: {
-            labels: {
-              usePointStyle: true,
-              color: textColor
-            }
+            display: false
           }
         },
         responsive: true,
         maintainAspectRatio: false,
-      };
-    },
-    lineage_barData() {
-      // Access lineage_bar_chart data from filteredStatistics
-      const _data: LineageBarChartData[] = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_bar_chart']
-        : [];
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      let datasets = [];
-      let weeks = [];
-
-      const lineages = [...new Set(_data.map(item => item.lineage))];
-      weeks = [...new Set(_data.map(item => item.week))];
-
-      datasets = lineages.map(lineage => ({
-        label: lineage,
-        data: weeks.map(
-          week =>
-            _data.find(item => item.week === week && item.lineage === lineage)?.percentage || 0
-        ),
-        backgroundColor: this.getColor(lineage),
-      }));
-
-
-      return { labels: weeks, datasets };
-    },
-    lineage_barChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: { display: true, position: "bottom", },
-          // tooltip: {
-          //   mode: 'index',
-          //   intersect: false,
-          // },
-          zoom: {
-            zoom: {
-              wheel: { enabled: true },
-              pinch: { enabled: true },
-              mode: 'x',
-            },
-            pan: {
-              enabled: true,
-              mode: 'x'
-            },
-          }
-        },
         scales: {
           x: {
-            stacked: true,
-            beginAtZero: true,
-            min: 0,
-            max: 30,
+            ticks: {
+              color: textColorSecondary
+            },
+            grid: {
+              color: surfaceBorder
+            }
           },
           y: {
-            stacked: true,
             beginAtZero: true,
-            max: 100,
             ticks: {
-              callback: function (value: number) {
-                return value + '%';
-              },
+              color: textColorSecondary
             },
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
+            grid: {
+              color: surfaceBorder
+            }
+          }
+        }
       }
     },
     lineage_areaData() {
-      // Extract the data, ensuring it's an array
       const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_area_chart'] : [];
+        ? this.samplesStore.filteredStatistics['lineage_area_chart']
+        : [];
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
       }
-      let datasets = [];
-      let dates = [];
-      // Extract unique lineages and dates
       const lineages = [...new Set(_data.map(item => item.lineage))];
-      dates = [...new Set(_data.map(item => item.date))];
-
-      dates.sort();
-      datasets = lineages.map(lineage => ({
+      const dates = [...new Set(_data.map(item => item.date))].sort();
+      const colors = this.generateColorPalette(lineages.length);
+      const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: dates.map(date =>
           _data.find(item => item.date === date && item.lineage === lineage)
             ?.percentage || 0
         ),
         fill: true,
-        backgroundColor: this.getColor(lineage),
+        backgroundColor: colors[index], 
+        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
+        borderWidth: 1,
       }));
 
-
-      // Return the data structure expected by the area chart component
       return { labels: dates, datasets };
     },
     lineage_areaChartOptions() {
@@ -316,92 +288,120 @@ export default {
         maintainAspectRatio: false,
       }
     },
-    chartData() {
-      const samples_per_week = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['samples_per_week'] : {}
-      const labels: string[] = []
-      const data: number[] = []
-
-      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
-        Object.keys(samples_per_week).forEach((key) => {
-          labels.push(key)
-          data.push(samples_per_week[key])
-        })
-      } else {
-        // Return an empty chart structure
-        return {
-          labels: ['No data available'], // A label to indicate no data
-          datasets: [
-            {
-              label: 'Samples',
-              data: [], // No data points
-              backgroundColor: 'rgba(249, 115, 22, 0.2)',
-              borderColor: 'rgb(249, 115, 22)',
-              borderWidth: 1
-            }
-          ]
-        }
+    lineage_barData() {
+      const _data = this.samplesStore.filteredStatistics
+        ? this.samplesStore.filteredStatistics['lineage_bar_chart']
+        : [];
+      if (this.isDataEmpty(_data)) {
+        return this.emptyChartData();
       }
-
+      const lineages = [...new Set(_data.map(item => item.lineage))];
+      const weeks = [...new Set(_data.map(item => item.week))];
+      const colors = this.generateColorPalette(lineages.length);
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: weeks.map(
+          week =>
+            _data.find(item => item.week === week && item.lineage === lineage)?.percentage || 0
+        ),
+        backgroundColor: colors[index],
+        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
+        borderWidth: 2,
+      }));
+      return { labels: weeks, datasets };
+    },
+    lineage_barChartOptions() {
       return {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data: data,
-            backgroundColor: 'rgba(249, 115, 22, 0.2)',
-            borderColor: 'rgb(249, 115, 22)',
-            borderWidth: 1
+        animation: false,
+        plugins: {
+          legend: { display: true, position: "bottom", },
+          // tooltip: {
+          //   mode: 'index',
+          //   intersect: false,
+          // },
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+            pan: {
+              enabled: true,
+              mode: 'x'
+            },
           }
-        ]
+        },
+        scales: {
+          x: {
+            stacked: true,
+            beginAtZero: true,
+            min: 0,
+            max: 30,
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function (value: number) {
+                return value + '%';
+              },
+            },
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
       }
     },
-    chartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement)
-      const textColor = documentStyle.getPropertyValue('--text-color')
-      const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
-      const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
+    genomeCompleteChart() {
+      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {};
+      if (this.isDataEmpty(_data)) {
+        return this.emptyChartData();
+      }
+      const keys = Object.keys(_data);
+      const colors = this.generateColorPalette(keys.length);
+      return {
+        labels: keys,
+        datasets: [
+          {
+            data: Object.values(_data),
+            backgroundColor: colors, 
+          }
+        ]
+      };
+    },
+    genome_pieChartOptions() {
+      const documentStyle = getComputedStyle(document.documentElement);
+      const textColor = '#333';
       return {
         animation: false,
         plugins: {
           legend: {
-            display: false
+            labels: {
+              usePointStyle: true,
+              color: textColor
+            }
           }
         },
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          x: {
-            ticks: {
-              color: textColorSecondary
-            },
-            grid: {
-              color: surfaceBorder
-            }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: textColorSecondary
-            },
-            grid: {
-              color: surfaceBorder
-            }
-          }
-        }
-      }
+      };
     },
     sequencingTechChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_tech'] : {};
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const keys = Object.keys(_data);
+      const colors = this.generateColorPalette(keys.length);
       return {
-        labels: Object.keys(_data),
+        labels: keys,
         datasets: [
           {
             data: Object.values(_data),
-            backgroundColor: Object.keys(_data).map(x => this.getColor(x)),
-
+            backgroundColor: keys.map((_, index) => colors[index]), 
+            borderColor: keys.map((_, index) => colors[index]).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -439,13 +439,16 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const keys = Object.keys(_data);
+      const colors = this.generateColorPalette(keys.length);
       return {
-        labels: Object.keys(_data),
+        labels: keys,
         datasets: [
           {
             data: Object.values(_data),
-            backgroundColor: Object.keys(_data).map(x => this.getColor(x)),
-            // hoverBackgroundColor: Object.keys(_data).map(x => this.getHoverColor(x))
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -473,7 +476,9 @@ export default {
         datasets: [
           {
             data: Object.values(_data),
-            backgroundColor: '#FFD1DC'
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -505,7 +510,9 @@ export default {
           {
             label: 'Samples',
             data: Object.values(_data),
-            backgroundColor: '#FFA726'
+            backgroundColor: this.generateColorPalette(1), 
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -539,7 +546,9 @@ export default {
           {
             label: 'Samples',
             data: Object.values(_data),
-            backgroundColor: '#FFA726'
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -586,7 +595,9 @@ export default {
           {
             label: 'Samples',
             data: Object.values(_data),
-            backgroundColor: '#42A5F5'
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -631,13 +642,16 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const keys = Object.keys(_data);
+      const colors = this.generateColorPalette(keys.length);
       return {
-        labels: Object.keys(_data),
+        labels: keys,
         datasets: [
           {
             data: Object.values(_data),
-            backgroundColor: Object.keys(_data).map(x => this.getColor(x)),
-
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -655,27 +669,6 @@ export default {
         maintainAspectRatio: false,
       };
     },
-    getHoverColor(str: string) {
-      const hash = this.hashString(str);
-      const hue = (hash % 360 + 30) % 360;  // Offset hue for hover for differentiation
-      return `hsl(${hue}, 80%, 70%)`; // Adjusted saturation and lightness for hover effect
-    },
-    getColor(str: string) {
-      const hash = this.hashString(str);
-      const hue = hash % 360;  // Base hue
-      return `hsl(${hue}, 70%, 50%)`;  // Slightly darker for main color
-    },
-    hashString(str: string | null | undefined) {
-      let hash = 0;
-      if (!str) {
-        return hash; // in case there is no prop (null or undefined)
-      }
-      for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      return Math.abs(hash); //* (Math.random() * (10 - 5) + 5);
-    },
-
     emptyChartData(label = 'No data available') {
       return {
         labels: [label], // A label to indicate no data
@@ -687,7 +680,6 @@ export default {
         ]
       };
     },
-
     isDataEmpty(data: { [key: string]: any }): boolean {
       return (!data || Object.keys(data).length === 0
         || Object.keys(data).length === 1 && Object.keys(data)[0] == 'null')
