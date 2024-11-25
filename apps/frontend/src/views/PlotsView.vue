@@ -7,7 +7,7 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <Panel v-else header="Week Calendar" class="w-full shadow-2">
           <div style="height: 95%; width: 95%; display: flex; justify-content: center">
-            <Chart ref="weekCalendarPlot" type="bar" :data="chartData()" :options="chartOptions()"
+            <Chart ref="weekCalendarPlot" type="bar" :data="samplesPerWeekChart()" :options="samplesPerWeekChartOptions()"
               style="width: 100%" />
           </div>
         </Panel>
@@ -116,6 +116,7 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples';
+import type { TooltipItem } from 'chart.js';
 import chroma from 'chroma-js';
 
 export default {
@@ -141,7 +142,7 @@ export default {
         .mode('lch') // color mode (lch is perceptually uniform)
         .colors(itemCount); // number of colors
     },
-    chartData() {
+    samplesPerWeekChart() {
       const samples_per_week = this.samplesStore.filteredStatistics
         ? this.samplesStore.filteredStatistics['samples_per_week']
         : {};
@@ -180,7 +181,7 @@ export default {
         };
       }
     },
-    chartOptions() {
+    samplesPerWeekChartOptions() {
       const documentStyle = getComputedStyle(document.documentElement)
       const textColor = documentStyle.getPropertyValue('--text-color')
       const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
@@ -244,8 +245,22 @@ export default {
         animation: false,
         plugins: {
           legend: {
-            display: false, position: "bottom",
+            display: false, 
+            position: "bottom",
           },
+                tooltip: {
+        enabled: true,
+        mode: 'nearest', // Displays the closest point's details
+        intersect: false, // Allows hover even when not directly on a point
+        callbacks: {
+          label: function (tooltipItem: TooltipItem<'line'>) {
+            // Customize the tooltip content
+            const dataset = tooltipItem.dataset;
+            const value = tooltipItem.raw as number; ;
+            return `${dataset.label}: ${value.toFixed(2)}%`;
+          },
+        },
+      },
           zoom: {
             zoom: {
               wheel: { enabled: true },
