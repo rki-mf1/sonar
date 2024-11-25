@@ -116,8 +116,6 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples';
-import type { LineageBarChartData } from '@/util/types';
-import { RiAndroidFill } from 'oh-vue-icons/icons';
 import chroma from 'chroma-js';
 
 export default {
@@ -138,7 +136,7 @@ export default {
   beforeUnmount() {
   },
   methods: {
-    generateColorPalette(itemCount) {
+    generateColorPalette(itemCount: number): string[] {
       return chroma.scale(['#00429d', '#00b792', '#ffdb9d', '#fdae61', '#f84959', '#93003a']) // ['#9e0142', '#d53e4f', '#f46d43', '#fdae61', '#fee08b', '#e6f598', '#abdda4', '#66c2a5', '#3288bd', '#5e4fa2']
         .mode('lch') // color mode (lch is perceptually uniform)
         .colors(itemCount); // number of colors
