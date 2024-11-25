@@ -40,7 +40,7 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Tech." class="w-full shadow-2">
           <div style="justify-content: center" class="h-20rem">
-            <Chart type="polarArea" :data="sequencingTechChartData()" :options="sequencingTechChartOptions()" style=""
+            <Chart type="doughnut" :data="sequencingTechChartData()" :options="sequencingTechChartOptions()" style=""
               class="h-full" />
           </div>
         </Panel>
@@ -242,13 +242,14 @@ export default {
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
       }
-      const lineages = [...new Set(_data.map(item => item.lineage))];
-      const dates = [...new Set(_data.map(item => item.date))].sort();
+      const validData = _data.filter(item => item.date !== 'None-None' && item.lineage !== null);
+      const lineages = [...new Set(validData.map(item => item.lineage))];
+      const dates = [...new Set(validData.map(item => item.date))].sort();
       const colors = this.generateColorPalette(lineages.length);
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: dates.map(date =>
-          _data.find(item => item.date === date && item.lineage === lineage)
+          validData.find(item => item.date === date && item.lineage === lineage)
             ?.percentage || 0
         ),
         fill: true,
@@ -267,19 +268,18 @@ export default {
             display: false, 
             position: "bottom",
           },
-                tooltip: {
-        enabled: true,
-        mode: 'nearest', // Displays the closest point's details
-        intersect: false, // Allows hover even when not directly on a point
-        callbacks: {
-          label: function (tooltipItem: TooltipItem<'line'>) {
-            // Customize the tooltip content
-            const dataset = tooltipItem.dataset;
-            const value = tooltipItem.raw as number; ;
-            return `${dataset.label}: ${value.toFixed(2)}%`;
+        tooltip: {
+          enabled: true,
+          mode: 'nearest',
+          intersect: false,
+          callbacks: {
+            label: function (tooltipItem: TooltipItem<'line'>) {
+              const dataset = tooltipItem.dataset;
+              const value = tooltipItem.raw as number; ;
+              return `${dataset.label}: ${value.toFixed(2)}%`;
+            },
           },
         },
-      },
           zoom: {
             zoom: {
               wheel: { enabled: true },
@@ -311,7 +311,7 @@ export default {
             max: 100,
             ticks: {
               callback: function (value: number) {
-                return value + '%'; // Add percentage symbol
+                return value + '%';
               },
             },
           },
@@ -431,8 +431,8 @@ export default {
         datasets: [
           {
             data,
-            backgroundColor: labels.map((_, index) => colors[index]), 
-            borderColor: labels.map((_, index) => colors[index]).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
             borderWidth: 1
           }
         ]
@@ -444,22 +444,7 @@ export default {
         plugins: {
           legend: {
             display: true,
-            position: 'right'
-          },
-          responsive: true,
-          maintainAspectRatio: false,
-          zoom: {
-            pan: {
-              enabled: true,
-              mode: 'yx',
-            },
-            zoom: {
-              wheel: {
-                enabled: true,
-                speed: 0.5
-              },
-              mode: 'xy',
-            },
+            position: 'bottom'
           }
         },
         responsive: true,
@@ -491,7 +476,7 @@ export default {
         plugins: {
           legend: {
             display: true,
-            position: 'right'
+            position: 'bottom'
           }
         },
         responsive: true,
@@ -666,7 +651,7 @@ export default {
           },
           y: {
             ticks: {
-              autoSkip: false, // Ensure all labels, including "Not Reported," are shown
+              autoSkip: false, // Ensure all labels
             },
           },
         },
@@ -708,11 +693,11 @@ export default {
     },
     emptyChartData(label = 'No data available') {
       return {
-        labels: [label], // A label to indicate no data
+        labels: [label],
         datasets: [
           {
             label: 'No data available',
-            data: [], // No data points
+            data: [], 
           }
         ]
       };
