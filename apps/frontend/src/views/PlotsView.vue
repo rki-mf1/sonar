@@ -7,7 +7,7 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <Panel v-else header="Week Calendar" class="w-full shadow-2">
           <div style="height: 95%; width: 95%; display: flex; justify-content: center">
-            <Chart ref="weekCalendarPlot" type="bar" :data="chartData()" :options="chartOptions()"
+            <Chart ref="weekCalendarPlot" type="bar" :data="samplesPerWeekChart()" :options="samplesPerWeekChartOptions()"
               style="width: 100%" />
           </div>
         </Panel>
@@ -40,7 +40,7 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Tech." class="w-full shadow-2">
           <div style="justify-content: center" class="h-20rem">
-            <Chart type="polarArea" :data="sequencingTechChartData()" :options="sequencingTechChartOptions()" style=""
+            <Chart type="doughnut" :data="sequencingTechChartData()" :options="sequencingTechChartOptions()" style=""
               class="h-full" />
           </div>
         </Panel>
@@ -116,15 +116,15 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples';
-import type { LineageBarChartData } from '@/util/types';
-import { RiAndroidFill } from 'oh-vue-icons/icons';
+import type { TooltipItem } from 'chart.js';
+import chroma from 'chroma-js';
 
 export default {
   name: 'PlotsView',
   data() {
     return {
       samplesStore: useSamplesStore(),
-      chartInstances: {}
+      chartInstances: {},
     }
   },
   watch: {
@@ -137,65 +137,209 @@ export default {
   beforeUnmount() {
   },
   methods: {
-    genomeCompleteChart() {
-      const documentStyle = getComputedStyle(document.body);
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      return {
-        labels: Object.keys(_data),
-        datasets: [
-          {
-            data: Object.values(_data),
-            backgroundColor: [documentStyle.getPropertyValue('--cyan-500'), documentStyle.getPropertyValue('--orange-500'), documentStyle.getPropertyValue('--gray-500')],
-            hoverBackgroundColor: [documentStyle.getPropertyValue('--cyan-400'), documentStyle.getPropertyValue('--orange-400'), documentStyle.getPropertyValue('--gray-400')]
-          }
-        ]
-      };
-    },
-    genome_pieChartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement);
-      const textColor = '#333';
+    cleanDataAndAddNullSamples(data: { [key: string]: number }) {
+      if (!data || typeof data !== 'object') return { labels: [], data: [] };
+        const cleanedData = Object.fromEntries(
+          Object.entries(data).filter(([key, value]) => key !== "null" && value !== 0)
+        );
+        const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0;
+        const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0);
+        const noMetadataSamples = totalSamples - metadataSamples;
+        const labels = [...Object.keys(cleanedData)];
+        const dataset = [...Object.values(cleanedData)];
+        
+        // Add a "Not Reported" category if there are samples without metadata
+        if (noMetadataSamples > 0) {
+          labels.push('Not Reported');
+          dataset.push(noMetadataSamples);
+        }
+        return { labels, data: dataset }
+      },
 
+    generateColorPalette(itemCount: number): string[] {
+      return chroma.scale(['#00429d', '#00b792', '#ffdb9d', '#fdae61', '#f84959', '#93003a']) // ['#9e0142', '#d53e4f', '#f46d43', '#fdae61', '#fee08b', '#e6f598', '#abdda4', '#66c2a5', '#3288bd', '#5e4fa2']
+        .mode('lch') // color mode (lch is perceptually uniform)
+        .colors(itemCount); // number of colors
+    },
+    samplesPerWeekChart() {
+      const samples_per_week = this.samplesStore.filteredStatistics
+        ? this.samplesStore.filteredStatistics['samples_per_week']
+        : {};
+      const labels: string[] = [];
+      const data: number[] = [];
+      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
+        Object.keys(samples_per_week).forEach((key) => {
+          labels.push(key);
+          data.push(samples_per_week[key]);
+        });
+        return {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Samples',
+              data: data,
+              backgroundColor: this.generateColorPalette(1), 
+              borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.5).hex()), // darkened border
+              borderWidth: 1
+            }
+          ]
+        };
+      } else {
+        // Return an empty chart structure
+        return {
+          labels: ['No data available'],
+          datasets: [
+            {
+              label: 'Samples',
+              data: [], // no data points
+              backgroundColor: 'rgba(249, 115, 22, 0.2)',
+              borderColor: 'rgb(249, 115, 22)',
+              borderWidth: 1
+            }
+          ]
+        };
+      }
+    },
+    samplesPerWeekChartOptions() {
+      const documentStyle = getComputedStyle(document.documentElement)
+      const textColor = documentStyle.getPropertyValue('--text-color')
+      const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
+      const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
       return {
         animation: false,
         plugins: {
           legend: {
-            labels: {
-              usePointStyle: true,
-              color: textColor
-            }
+            display: false
           }
         },
         responsive: true,
         maintainAspectRatio: false,
-      };
+        scales: {
+          x: {
+            ticks: {
+              color: textColorSecondary
+            },
+            grid: {
+              color: surfaceBorder
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: textColorSecondary
+            },
+            grid: {
+              color: surfaceBorder
+            }
+          }
+        }
+      }
+    },
+    lineage_areaData() {
+      const _data = this.samplesStore.filteredStatistics
+        ? this.samplesStore.filteredStatistics['lineage_area_chart']
+        : [];
+      if (!_data || Object.keys(_data).length === 0) {
+        return this.emptyChartData();
+      }
+      const validData = _data.filter(item => item.date !== 'None-None' && item.lineage !== null);
+      const lineages = [...new Set(validData.map(item => item.lineage))];
+      const dates = [...new Set(validData.map(item => item.date))].sort();
+      const colors = this.generateColorPalette(lineages.length);
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: dates.map(date =>
+          validData.find(item => item.date === date && item.lineage === lineage)
+            ?.percentage || 0
+        ),
+        fill: true,
+        backgroundColor: colors[index], 
+        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
+        borderWidth: 1,
+      }));
+
+      return { labels: dates, datasets };
+    },
+    lineage_areaChartOptions() {
+      return {
+        animation: false,
+        plugins: {
+          legend: {
+            display: false, 
+            position: "bottom",
+          },
+        tooltip: {
+          enabled: true,
+          mode: 'nearest',
+          intersect: false,
+          callbacks: {
+            label: function (tooltipItem: TooltipItem<'line'>) {
+              const dataset = tooltipItem.dataset;
+              const value = tooltipItem.raw as number; ;
+              return `${dataset.label}: ${value.toFixed(2)}%`;
+            },
+          },
+        },
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+            pan: {
+              enabled: true,
+              mode: 'x'
+            },
+          },
+          decimation: {
+            enabled: true,
+            algorithm: 'lttb',
+            samples: 1000,
+            threshold: 5
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            beginAtZero: true,
+            min: 0,
+            max: 10,
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function (value: number) {
+                return value + '%';
+              },
+            },
+          },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+      }
     },
     lineage_barData() {
-      // Access lineage_bar_chart data from filteredStatistics
-      const _data: LineageBarChartData[] = this.samplesStore.filteredStatistics
+      const _data = this.samplesStore.filteredStatistics
         ? this.samplesStore.filteredStatistics['lineage_bar_chart']
         : [];
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      let datasets = [];
-      let weeks = [];
-
       const lineages = [...new Set(_data.map(item => item.lineage))];
-      weeks = [...new Set(_data.map(item => item.week))];
-
-      datasets = lineages.map(lineage => ({
+      const weeks = [...new Set(_data.map(item => item.week))];
+      const colors = this.generateColorPalette(lineages.length);
+      const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: weeks.map(
           week =>
             _data.find(item => item.week === week && item.lineage === lineage)?.percentage || 0
         ),
-        backgroundColor: this.getColor(lineage),
+        backgroundColor: colors[index],
+        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
+        borderWidth: 2,
       }));
-
-
       return { labels: weeks, datasets };
     },
     lineage_barChartOptions() {
@@ -241,167 +385,55 @@ export default {
         maintainAspectRatio: false,
       }
     },
-    lineage_areaData() {
-      // Extract the data, ensuring it's an array
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_area_chart'] : [];
-      if (!_data || Object.keys(_data).length === 0) {
+    genomeCompleteChart() {
+      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {};
+      if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      let datasets = [];
-      let dates = [];
-      // Extract unique lineages and dates
-      const lineages = [...new Set(_data.map(item => item.lineage))];
-      dates = [...new Set(_data.map(item => item.date))];
-
-      dates.sort();
-      datasets = lineages.map(lineage => ({
-        label: lineage,
-        data: dates.map(date =>
-          _data.find(item => item.date === date && item.lineage === lineage)
-            ?.percentage || 0
-        ),
-        fill: true,
-        backgroundColor: this.getColor(lineage),
-      }));
-
-
-      // Return the data structure expected by the area chart component
-      return { labels: dates, datasets };
-    },
-    lineage_areaChartOptions() {
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: false, position: "bottom",
-          },
-          zoom: {
-            zoom: {
-              wheel: { enabled: true },
-              pinch: { enabled: true },
-              mode: 'x',
-            },
-            pan: {
-              enabled: true,
-              mode: 'x'
-            },
-          },
-          decimation: {
-            enabled: true,
-            algorithm: 'lttb',
-            samples: 1000,
-            threshold: 5
-          }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            beginAtZero: true,
-            min: 0,
-            max: 10,
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              callback: function (value: number) {
-                return value + '%'; // Add percentage symbol
-              },
-            },
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    chartData() {
-      const samples_per_week = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['samples_per_week'] : {}
-      const labels: string[] = []
-      const data: number[] = []
-
-      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
-        Object.keys(samples_per_week).forEach((key) => {
-          labels.push(key)
-          data.push(samples_per_week[key])
-        })
-      } else {
-        // Return an empty chart structure
-        return {
-          labels: ['No data available'], // A label to indicate no data
-          datasets: [
-            {
-              label: 'Samples',
-              data: [], // No data points
-              backgroundColor: 'rgba(249, 115, 22, 0.2)',
-              borderColor: 'rgb(249, 115, 22)',
-              borderWidth: 1
-            }
-          ]
-        }
-      }
-
-      return {
-        labels: labels,
+        labels,
         datasets: [
           {
-            label: 'Samples',
-            data: data,
-            backgroundColor: 'rgba(249, 115, 22, 0.2)',
-            borderColor: 'rgb(249, 115, 22)',
-            borderWidth: 1
+            data,
+            backgroundColor: colors, 
           }
         ]
-      }
+      };
     },
-    chartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement)
-      const textColor = documentStyle.getPropertyValue('--text-color')
-      const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
-      const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
+    genome_pieChartOptions() {
+      const documentStyle = getComputedStyle(document.documentElement);
+      const textColor = '#333';
       return {
         animation: false,
         plugins: {
           legend: {
-            display: false
+            labels: {
+              usePointStyle: true,
+              color: textColor
+            }
           }
         },
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          x: {
-            ticks: {
-              color: textColorSecondary
-            },
-            grid: {
-              color: surfaceBorder
-            }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: textColorSecondary
-            },
-            grid: {
-              color: surfaceBorder
-            }
-          }
-        }
-      }
+      };
     },
     sequencingTechChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_tech'] : {};
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
-            backgroundColor: Object.keys(_data).map(x => this.getColor(x)),
-
+            data,
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -412,22 +444,7 @@ export default {
         plugins: {
           legend: {
             display: true,
-            position: 'right'
-          },
-          responsive: true,
-          maintainAspectRatio: false,
-          zoom: {
-            pan: {
-              enabled: true,
-              mode: 'yx',
-            },
-            zoom: {
-              wheel: {
-                enabled: true,
-                speed: 0.5
-              },
-              mode: 'xy',
-            },
+            position: 'bottom'
           }
         },
         responsive: true,
@@ -439,13 +456,16 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
-            backgroundColor: Object.keys(_data).map(x => this.getColor(x)),
-            // hoverBackgroundColor: Object.keys(_data).map(x => this.getHoverColor(x))
+            data,
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -456,7 +476,7 @@ export default {
         plugins: {
           legend: {
             display: true,
-            position: 'right'
+            position: 'bottom'
           }
         },
         responsive: true,
@@ -468,12 +488,15 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
-            backgroundColor: '#FFD1DC'
+            data,
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -499,13 +522,16 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
             label: 'Samples',
-            data: Object.values(_data),
-            backgroundColor: '#FFA726'
+            data,
+            backgroundColor: this.generateColorPalette(1), 
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -530,16 +556,16 @@ export default {
     },
     labChartData() {
       const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lab'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
             label: 'Samples',
-            data: Object.values(_data),
-            backgroundColor: '#FFA726'
+            data: data,
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -580,13 +606,16 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
             label: 'Samples',
-            data: Object.values(_data),
-            backgroundColor: '#42A5F5'
+            data,
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -619,8 +648,12 @@ export default {
         scales: {
           x: {
             beginAtZero: true,
-            min: 0,
-          }
+          },
+          y: {
+            ticks: {
+              autoSkip: false, // Ensure all labels
+            },
+          },
         },
         responsive: true,
         maintainAspectRatio: false,
@@ -631,13 +664,16 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const colors = this.generateColorPalette(labels.length);
       return {
-        labels: Object.keys(_data),
+        labels,
         datasets: [
           {
-            data: Object.values(_data),
-            backgroundColor: Object.keys(_data).map(x => this.getColor(x)),
-
+            data,
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
@@ -655,39 +691,17 @@ export default {
         maintainAspectRatio: false,
       };
     },
-    getHoverColor(str: string) {
-      const hash = this.hashString(str);
-      const hue = (hash % 360 + 30) % 360;  // Offset hue for hover for differentiation
-      return `hsl(${hue}, 80%, 70%)`; // Adjusted saturation and lightness for hover effect
-    },
-    getColor(str: string) {
-      const hash = this.hashString(str);
-      const hue = hash % 360;  // Base hue
-      return `hsl(${hue}, 70%, 50%)`;  // Slightly darker for main color
-    },
-    hashString(str: string | null | undefined) {
-      let hash = 0;
-      if (!str) {
-        return hash; // in case there is no prop (null or undefined)
-      }
-      for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      return Math.abs(hash); //* (Math.random() * (10 - 5) + 5);
-    },
-
     emptyChartData(label = 'No data available') {
       return {
-        labels: [label], // A label to indicate no data
+        labels: [label],
         datasets: [
           {
             label: 'No data available',
-            data: [], // No data points
+            data: [], 
           }
         ]
       };
     },
-
     isDataEmpty(data: { [key: string]: any }): boolean {
       return (!data || Object.keys(data).length === 0
         || Object.keys(data).length === 1 && Object.keys(data)[0] == 'null')
