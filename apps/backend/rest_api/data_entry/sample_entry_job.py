@@ -545,6 +545,7 @@ def process_batch_single_thread(
 def import_property(
     property_file, sep, use_celery=False, column_mapping=None, batch_size=1000
 ):
+
     try:
         # Load the CSV file in batches
         properties_df = pd.read_csv(
@@ -554,10 +555,12 @@ def import_property(
             keep_default_na=False,
             # chunksize=batch_size,
         )
+
         timer = datetime.now()
 
         # Use Celery if parallel processing is enabled
         # Convert column_mapping object (PropertyColumnMapping class) to a JSON-serializable format
+        # because celery takes JSON-serializable data (like dictionaries or lists) and  passes to the Celery tasks
         if column_mapping is not None:
             serializable_column_mapping = {
                 k: {
@@ -571,10 +574,29 @@ def import_property(
         else:
             serializable_column_mapping = None
             sample_id_column = "ID"
-        print("serializable_column_mapping")
-        print(serializable_column_mapping)
-        # Format columns with 'value_date' type
+
+        # Data preprocessing
+
         for column_name, col_info in serializable_column_mapping.items():
+            # Apply default values for missing or empty fields
+
+            default_value = col_info["default"]
+            print(column_name, col_info)
+            if default_value is not None:
+                properties_df[column_name] = (
+                    properties_df[column_name]
+                    .replace("", default_value)  # Replace empty strings
+                    .fillna(default_value)
+                )  # Replace NaN values
+
+            # # Explicitly convert the column to string to avoid .0 issues
+            # if (
+            #     col_info["data_type"] == "value_varchar"
+            #     and column_name in properties_df.columns
+            # ):
+            #     properties_df[column_name] = properties_df[column_name].astype(str)
+
+            # Format columns with 'value_date' type
             if (
                 col_info["data_type"] == "value_date"
                 and column_name in properties_df.columns
@@ -582,7 +604,6 @@ def import_property(
                 properties_df[column_name] = properties_df[column_name].apply(
                     parse_date
                 )
-
         if use_celery:
             print("Setting up property import celery jobs...")
 
@@ -639,8 +660,9 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
     try:
         _process_property_file(batch_as_dict, sample_id_column, column_mapping)
     except Exception as e:
-        print(f"error in process_property_batch line#: {e.__traceback__}")
-        raise Exception(f"Error message : {str(e)}")
+        print(f"error in process_property_batch line#: {e.__traceback__.tb_lineno}")
+        print(f"Error :{e}")
+        return False, "Failed or interrupted batch job ..."
     return True, "Batch processed successfully"
 
 
@@ -684,23 +706,23 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
             sample_updates.append(sample)
 
             # Update custom properties
-
             property_updates += _create_property_updates(
                 sample,
                 {
                     column_mapping[name].db_property_name: {
                         "value": (
                             value.values[0]
-                            if value.values[0] is not None
+                            if value.values[0]
                             else column_mapping[name].default
+                            # Fallback value if default is also None (NULL in database)
                         ),
                         "datatype": column_mapping[name].data_type,
                     }
                     for name, value in row.items()
                     if name in custom_property_names
                 },
-                True,
-                property_cache,  # global variable
+                use_property_cache=True,
+                property_cache=property_cache,  # global variable
             )
     except Exception as e:
         print(f"Error :{e}")
@@ -741,20 +763,26 @@ def _create_property_updates(
     sample, properties: dict, use_property_cache=False, property_cache=None
 ) -> list[dict]:
     property_objects = []
-    if use_property_cache and property_cache is None:
-        property_cache = {}
+    if use_property_cache:
+        if property_cache is None:
+            property_cache = {}
+        # Pre-build or refresh cache for all properties
+        for name, value in properties.items():
+            # if name not in property_cache:
+            property_cache[name] = models.Property.objects.get_or_create(
+                name=name, datatype=value["datatype"]
+            )[0].id
+
     for name, value in properties.items():
         property = {"sample": sample.id, value["datatype"]: value["value"]}
         if use_property_cache:
-            if name in property_cache.keys():
-                property["property"] = property_cache[name]
-            else:
-                property["property"] = property_cache[name] = (
-                    models.Property.objects.get_or_create(
-                        name=name, datatype=value["datatype"]
-                    )[0].id
-                )
+            # Use the prebuilt property_cache
+            property["property"] = property_cache[name]
         else:
-            property["property__name"] = name
+            # Fetch property directly
+            property["property"] = models.Property.objects.get_or_create(
+                name=name, datatype=value["datatype"]
+            )[0].id
+
         property_objects.append(property)
     return property_objects

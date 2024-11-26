@@ -127,7 +127,6 @@ class sonarUtils:
                 csv_files=csv_files,
                 tsv_files=tsv_files,
             )
-            print(properties)
             if "name" not in properties:
                 LOGGER.error(
                     "Cannot link ID. Please provide a mapping ID in the meta file, add '--cols name=(column ID/sample name)' to the command line."
@@ -588,7 +587,10 @@ class sonarUtils:
                 time.sleep(sleep_time)
 
         time_diff = calculate_time_difference(start_time, get_current_time())
-        LOGGER.info(f"[runtime] Job {job_id} is {job_status}: {time_diff}")
+        if job_status == "F":
+            LOGGER.error(f"Job {job_id} is {job_status}: {time_diff}")
+        else:
+            LOGGER.info(f"[runtime] Job {job_id} is {job_status}: {time_diff}")
 
     @staticmethod
     def _get_prop_names(  # noqa: C901
@@ -848,8 +850,12 @@ class sonarUtils:
         params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
-        # hack (to get all result by using max bigint)
-        params["limit"] = 999999999999999999
+
+        if format == "count":
+            params["limit"] = 1
+        else:
+            # hack (to get all result by using max bigint)
+            params["limit"] = 999999999999999999
         params["offset"] = 0
 
         LOGGER.debug(params["filters"])

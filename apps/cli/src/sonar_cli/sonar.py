@@ -565,7 +565,7 @@ def create_subparser_add_prop(
     parser.add_argument(
         "--default",
         metavar="VAR",
-        help="the default value of the property (none by default)",
+        help="the default value of the property (None by default)",
         type=str,
         default=None,
     )

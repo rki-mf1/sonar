@@ -615,7 +615,7 @@ class PropertyViewSet(
                 "name": "host",
                 "query_type": "value_varchar",
                 "description": "Host organism from which the sample was taken (e.g., Human) (predefined prop.)",
-                "default": "9",
+                "default": None,
             },
             {
                 "name": "genome_completeness",
