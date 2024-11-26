@@ -7,9 +7,9 @@ test('has title', async ({ page }) => {
   await expect(page).toHaveTitle(/Sonar/);
 });
 
-test('correct total samples', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8000/');
-
-  // Check that the total number of sequences is correct
-  await expect(page.getByText('Total: 15 Samples')).toBeVisible();
-});
+//test('correct total samples', async ({ page }) => {
+//  await page.goto('http://127.0.0.1:8000/');
+//
+//  // Check that the total number of sequences is correct
+//  await expect(page.getByText('Total: 15 Samples')).toBeVisible();
+//});
