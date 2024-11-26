@@ -25,6 +25,8 @@ jobs:
       - name: Start backend containers
         working-directory: ./apps/backend
         run: ./scripts/linux/clean-dev-env.sh
+      - name: See if the web server is responding
+        run: curl "http://127.0.0.1:8000"
       - name: Install Playwright Browsers (Firefox only)
         working-directory: ./apps/frontend
         run: npx playwright install --with-deps firefox
