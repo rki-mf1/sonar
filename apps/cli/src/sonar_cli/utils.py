@@ -127,6 +127,7 @@ class sonarUtils:
                 csv_files=csv_files,
                 tsv_files=tsv_files,
             )
+            print(properties)
             if "name" not in properties:
                 LOGGER.error(
                     "Cannot link ID. Please provide a mapping ID in the meta file, add '--cols name=(column ID/sample name)' to the command line."
@@ -639,9 +640,11 @@ class sonarUtils:
                 if not _row_df.empty:
                     query_type = _row_df["query_type"].values[0]
                     name = _row_df["name"].values[0]
+                    default = _row_df["default"].values[0]
                     propnames[col_name] = {
                         "db_property_name": name,
                         "data_type": query_type,
+                        "default": default,
                     }
 
             # Handle sample ID linking
@@ -669,7 +672,12 @@ class sonarUtils:
                 ]
                 if not _row_df.empty:
                     query_type = _row_df["query_type"].values[0]
-                    propnames[col] = {"db_property_name": prop, "data_type": query_type}
+                    default = _row_df["default"].values[0]
+                    propnames[col] = {
+                        "db_property_name": prop,
+                        "data_type": query_type,
+                        "default": default,
+                    }
                 else:
                     LOGGER.warning(
                         f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."

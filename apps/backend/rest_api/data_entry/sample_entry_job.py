@@ -557,17 +557,22 @@ def import_property(
         timer = datetime.now()
 
         # Use Celery if parallel processing is enabled
-        # Convert column_mapping to a JSON-serializable format
+        # Convert column_mapping object (PropertyColumnMapping class) to a JSON-serializable format
         if column_mapping is not None:
             serializable_column_mapping = {
-                k: {"db_property_name": v.db_property_name, "data_type": v.data_type}
+                k: {
+                    "db_property_name": v.db_property_name,
+                    "data_type": v.data_type,
+                    "default": v.default,
+                }
                 for k, v in column_mapping["column_mapping"].items()
             }
             sample_id_column = column_mapping["sample_id_column"]
         else:
             serializable_column_mapping = None
             sample_id_column = "ID"
-
+        print("serializable_column_mapping")
+        print(serializable_column_mapping)
         # Format columns with 'value_date' type
         for column_name, col_info in serializable_column_mapping.items():
             if (
@@ -622,7 +627,9 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
     if serialized_column_mapping is not None:
         column_mapping = {
             k: PropertyColumnMapping(
-                db_property_name=v["db_property_name"], data_type=v["data_type"]
+                db_property_name=v["db_property_name"],
+                data_type=v["data_type"],
+                default=v["default"],
             )
             for k, v in serialized_column_mapping.items()
         }
@@ -682,11 +689,15 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
                 sample,
                 {
                     column_mapping[name].db_property_name: {
-                        "value": value.values[0],
+                        "value": (
+                            value.values[0]
+                            if value.values[0] is not None
+                            else column_mapping[name].default
+                        ),
                         "datatype": column_mapping[name].data_type,
                     }
                     for name, value in row.items()
-                    if value.values[0] and name in custom_property_names
+                    if name in custom_property_names
                 },
                 True,
                 property_cache,  # global variable

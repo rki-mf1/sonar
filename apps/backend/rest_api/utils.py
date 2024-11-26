@@ -173,6 +173,7 @@ def define_profile(mutation):  # noqa: C901
 class PropertyColumnMapping:
     db_property_name: str
     data_type: str
+    default: any
 
 
 def generate_job_ID(is_prop: bool):
