@@ -16,20 +16,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-      - name: Build frontend
-        working-directory: ./apps/frontend
-        run: |
-          npm install
-          npm run build
-      - name: Start backend containers 🙈
-        working-directory: ./apps/backend
-        id: docker_compose_build
-        run: |
-          ./scripts/linux/build-docker-dev.sh
-          ./scripts/linux/clean-dev-env.sh
       - name: Install frontend dependencies
         working-directory: ./apps/frontend
         run: npm ci
+      - name: Build frontend
+        working-directory: ./apps/frontend
+        run: npm run build
+      - name: Start backend containers
+        working-directory: ./apps/backend
+        run: ./scripts/linux/clean-dev-env.sh
       - name: Install Playwright Browsers (Firefox only)
         working-directory: ./apps/frontend
         run: npx playwright install --with-deps firefox
