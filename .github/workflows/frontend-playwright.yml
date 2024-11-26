@@ -26,7 +26,7 @@ jobs:
         id: docker_compose_build
         run: |
           ./scripts/linux/build-docker-dev.sh
-          ./scripts/linux/dc-gh-action.sh up -d --build --wait
+          ./scripts/linux/clean-dev-env.sh
       - name: Install frontend dependencies
         working-directory: ./apps/frontend
         run: npm ci
