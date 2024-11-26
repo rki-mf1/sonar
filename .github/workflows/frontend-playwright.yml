@@ -19,17 +19,20 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./apps/frontend
         run: npm ci
+      - name: Set backend API url
+        working-directory: ./apps/frontend
+        run: echo 'VITE_SONAR_BACKEND_ADDRESS="http://127.0.0.1:8000/api/"' >> .env.production.local
       - name: Build frontend
         working-directory: ./apps/frontend
         run: npm run build
       - name: Start backend containers
         working-directory: ./apps/backend
         run: ./scripts/linux/clean-dev-env.sh
-      - name: See if the web server is responding
-        run: curl "http://127.0.0.1:8000"
       - name: Install Playwright Browsers (Firefox only)
         working-directory: ./apps/frontend
         run: npx playwright install --with-deps firefox
+      - name: See if the web server is responding
+        run: curl "http://127.0.0.1:8000"
       - name: Run Playwright tests (Firefox only)
         working-directory: ./apps/frontend
         run: npx playwright test --project firefox
