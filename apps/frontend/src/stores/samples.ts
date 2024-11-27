@@ -299,11 +299,6 @@ export const useSamplesStore = defineStore('samples', {
     filterGroupsFilters(state): FilterGroupRoot {
       return { filters: getFilterGroupFilters(this.filterGroup) }
     },
-    filterGroupFiltersHasDateFilter(state): boolean {
-      return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") 
-      ||  this.filterGroupsFilters.filters.orFilter.some(orFilterGroup => 
-        orFilterGroup.andFilter.some(item => item.property_name === "collection_date"))
-    },
     filters(state): FilterGroupRoot {
       const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters));
       if (!filters.filters?.andFilter) {
