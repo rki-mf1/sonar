@@ -6,7 +6,7 @@
         <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <Panel v-else header="Week Calendar" class="w-full shadow-2">
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center">
+          <div style="height: 100%; width: 100%; display: flex; justify-content: center">
             <Chart ref="weekCalendarPlot" type="bar" :data="samplesPerWeekChart()" :options="samplesPerWeekChartOptions()"
               style="width: 100%" />
           </div>
@@ -30,6 +30,20 @@
           <div class="h-26rem plot">
             <Chart type="bar" ref="lineageBarPlot" :data="lineage_barData()" :options="lineage_barChartOptions()"
               style="width: 100%; height: 100%" />
+          </div>
+        </Panel>
+      </div>
+    </div>
+
+    <!-- meta data plot-->
+    <div class="row">
+      <div class="col-lineage">
+        <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
+        <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
+        <Panel v-else header="Meta Data Coverage" class="w-full shadow-2">
+          <div style="height: 100%; width: 100%; display: flex; justify-content: center">
+            <Chart ref="metaDataPlot" type="bar" :data="metaDataChart()" :options="metaDataChartOptions()"
+              style="width: 100%" />
           </div>
         </Panel>
       </div>
@@ -383,6 +397,53 @@ export default {
         },
         responsive: true,
         maintainAspectRatio: false,
+      }
+    },
+    metaDataChart() {
+      // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
+      // what about the property 'name' ?? its not in the list, but its always shown in the table
+      const coverage = Object.fromEntries(
+        Object.entries(this.samplesStore.filteredStatistics?.["meta_data_coverage"] || {})
+          .filter(([key]) => this.samplesStore.propertyTableOptions.includes(key))
+      );
+
+      const totalCount = this.samplesStore.filteredCount;
+      const labels = Object.keys(coverage);
+      const data = Object.values(coverage).map((value) => Math.round((value / totalCount) * 100));
+
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: "Coverage (in %)",
+            data: data,
+            backgroundColor: this.generateColorPalette(1), 
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.5).hex()), // darkened border
+            borderWidth: 1
+          }
+        ]
+      };
+    },
+    metaDataChartOptions() {
+      return {
+        animation: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function (value: number) {
+                return value + '%';
+              }
+            }
+          }
+        }
       }
     },
     genomeCompleteChart() {
