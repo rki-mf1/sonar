@@ -345,13 +345,24 @@ class SampleViewSet(
                 if field.name in ["id", "name", "datahash"]:
                     continue
                 field_name = field.name
-                annotations[f"not_null_count_{field_name}"] = Count(
-                    Case(
-                        When(**{f"{field_name}__isnull": False}, then=1),
-                        output_field=IntegerField(),
+                if field.get_internal_type() == "CharField":
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        Case(
+                            When(
+                                Q(**{f"{field_name}__isnull": False})
+                                & ~Q(**{f"{field_name}": ""}),
+                                then=1,
+                            ),
+                            output_field=IntegerField(),
+                        )
                     )
-                )
-        # property table meta data fields
+                else:
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        Case(
+                            When(**{f"{field_name}__isnull": False}, then=1),
+                            output_field=IntegerField(),
+                        )
+                    )
         property_to_datatype = {
             property.name: property.datatype
             for property in models.Property.objects.all()
