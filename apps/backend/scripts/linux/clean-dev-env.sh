@@ -61,7 +61,7 @@ if [ $REBUILD -eq 0 ]; then
   DC_ARGS="--build"
 fi
 
-$SCRIPTPATH/dc-dev.sh up -d $DC_ARGS
+$SCRIPTPATH/dc-dev.sh up --wait -d $DC_ARGS
 
 if [ $TEST_DATA -eq 0 ]; then
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_sm
