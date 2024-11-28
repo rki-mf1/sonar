@@ -158,15 +158,15 @@ export default class API {
 
 
     getSampleGenomePropertyOptions() {
-        return this.getRequest(`properties/distinct_property_names`, {} as JSON, false)
+        return this.getRequest(`properties/distinct_property_names/`, {} as JSON, false)
     }
 
     getSampleGenomePropertyOptionsAndTypes() {
-        return this.getRequest(`properties/get_all_properties`, {} as JSON, false)
+        return this.getRequest(`properties/get_all_properties/`, {} as JSON, false)
     }
 
     getSampleStatistics() {
-        return this.getRequest(`samples/statistics`, {} as JSON, false)
+        return this.getRequest(`samples/statistics/`, {} as JSON, false)
     }
 
     getSampleGenomePropertyValueOptions(propertyName: string) {
@@ -182,7 +182,7 @@ export default class API {
         return this.getRequest(url, {} as JSON, false)
     }
     getGeneSymbolOptions() {
-        return this.getRequest(`genes/distinct_gene_symbols`, {} as JSON, false)
+        return this.getRequest(`genes/distinct_gene_symbols/`, {} as JSON, false)
     }
     parseQueryString(query: FilterGroupRoot) {
         // remove properties (e.g. empty date ranges) with no value
@@ -211,6 +211,6 @@ export default class API {
         } else return "";
     }
     uniqueMutationCount() {
-        return this.getRequest(`mutations/distinct_mutations_count`, {} as JSON, false)
+        return this.getRequest(`mutations/distinct_mutations_count/`, {} as JSON, false)
     }
 }
