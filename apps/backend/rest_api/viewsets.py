@@ -29,6 +29,7 @@ from rest_api.data_entry.reference_job import delete_reference
 from rest_api.data_entry.sample_entry_job import check_for_new_data
 from rest_api.management.commands.import_lineage import LineageImport
 from rest_api.utils import generate_job_ID
+from rest_api.utils import parse_default_data
 from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
 from . import models
@@ -511,7 +512,7 @@ class PropertyViewSet(
         datatype = request.data.get("datatype", None)
         querytype = request.data.get("querytype", None)
         description = request.data.get("description", None)
-        default = request.data.get("default", None)
+        default = parse_default_data(request.data.get("default", None))
         obj, created = find_or_create_property(
             name=name,
             datatype=datatype,
@@ -821,7 +822,6 @@ class FileUploadViewSet(viewsets.ViewSet):
             column_mapping = self._convert_property_column_mapping(
                 json.loads(column_mapping_json)
             )
-            print(column_mapping)
             if not column_mapping:
                 return Response(
                     {"detail": "No column_mapping could be processed."},

@@ -551,7 +551,7 @@ def import_property(
         properties_df = pd.read_csv(
             property_file,
             sep=sep,
-            dtype=object,
+            dtype="string",
             keep_default_na=False,
             # chunksize=batch_size,
         )
@@ -578,16 +578,23 @@ def import_property(
         # Data preprocessing
 
         for column_name, col_info in serializable_column_mapping.items():
-            # Apply default values for missing or empty fields
 
+            if column_name not in properties_df.columns:
+                print(
+                    f"Skipping column '{column_name}' as it is not in the property file."
+                )
+                continue
+            # Apply default values for missing or empty fields
             default_value = col_info["default"]
-            print(column_name, col_info)
+            print(f"{column_name} :pairs with: {col_info}")
+
             if default_value is not None:
+
                 properties_df[column_name] = (
                     properties_df[column_name]
                     .replace("", default_value)  # Replace empty strings
-                    .fillna(default_value)
-                )  # Replace NaN values
+                    .fillna(default_value)  # Replace NaN values
+                )
 
             # # Explicitly convert the column to string to avoid .0 issues
             # if (
@@ -637,8 +644,8 @@ def import_property(
         print(f"Property import usage time: {datetime.now() - timer}")
 
     except Exception as e:
-        print(f"Error in import_property: {e}")
-        print(f"error in process_property_batch line#: {e.__traceback__.tb_lineno}")
+        print("Error in import_property func.:", e)
+        print(f"Error in import_property line#: {e.__traceback__.tb_lineno}")
         raise  # Re-raise the exception to propagate it up the stack?
 
 
@@ -660,9 +667,9 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
     try:
         _process_property_file(batch_as_dict, sample_id_column, column_mapping)
     except Exception as e:
-        print(f"error in process_property_batch line#: {e.__traceback__.tb_lineno}")
-        print(f"Error :{e}")
-        return False, "Failed or interrupted batch job ..."
+        print("Error in process_property_batch func.:", e)
+        print(f"Error in process_property_batch line#: {e.__traceback__.tb_lineno}")
+        return False, f"Failed or interrupted batch job: {e}"
     return True, "Batch processed successfully"
 
 

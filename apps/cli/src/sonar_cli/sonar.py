@@ -1,9 +1,11 @@
 import argparse
+from datetime import datetime
 import sys
 from typing import Optional
 
 from sonar_cli import config
 from sonar_cli.common_utils import combine_sample_argument
+from sonar_cli.common_utils import convert_default
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils import sonarUtils
 from sonar_cli.utils1 import sonarUtils1
@@ -844,51 +846,45 @@ def handle_add_prop(args: argparse.Namespace):
     # value_varchar is best suited for storing short to medium-length strings,
     # while value_text is better suited for storing large amounts of textual data.
 
-    if args.dtype == "value_integer":
-        args.qtype = "numeric"
-        try:
-            args.default = int(args.default) if args.default is not None else None
-        except ValueError:
-            LOGGER.error(f"Cannot convert default value '{args.default}' to integer.")
-            exit(1)
-    elif args.dtype == "value_float":
-        args.qtype = "float"
-        try:
-            args.default = float(args.default) if args.default is not None else None
-        except ValueError:
-            LOGGER.error(f"Cannot convert default value '{args.default}' to float.")
-            exit(1)
-    elif args.dtype == "value_varchar":
-        args.qtype = "varchar"
-        args.default = str(args.default) if args.default is not None else None
-    elif args.dtype == "value_text":
-        args.qtype = "text"
-        args.default = str(args.default) if args.default is not None else None
-    elif args.dtype == "value_date":
-        args.qtype = "date"
-        try:
-            from datetime import datetime
+    # Define a mapping for dtype to qtype and their respective conversion functions
+    dtype_mapping = {
+        "value_integer": (
+            "numeric",
+            lambda v: convert_default(
+                v, int, f"Cannot convert default value '{v}' to integer."
+            ),
+        ),
+        "value_float": (
+            "float",
+            lambda v: convert_default(
+                v, float, f"Cannot convert default value '{v}' to float."
+            ),
+        ),
+        "value_varchar": ("varchar", str),
+        "value_text": ("text", str),
+        "value_date": (
+            "date",
+            lambda v: convert_default(
+                v,
+                lambda x: datetime.strptime(x, "%Y-%m-%d").date(),
+                f"Cannot convert default value '{v}' to date. Expected format: YYYY-MM-DD.",
+            ),
+        ),
+        "value_zip": ("zip", str),
+    }
 
-            args.default = (
-                datetime.strptime(args.default, "%Y-%m-%d").date()
-                if args.default is not None
-                else None
-            )
-        except ValueError:
-            LOGGER.error(
-                f"Cannot convert default value '{args.default}' to date. Expected format: YYYY-MM-DD."
-            )
-            exit(1)
-    elif args.dtype == "value_zip":
-        args.qtype = "zip"
-        args.default = str(args.default) if args.default is not None else None
+    # Get qtype and conversion function
+    if args.dtype in dtype_mapping:
+        args.qtype, converter = dtype_mapping[args.dtype]
+        args.default = converter(args.default) if converter else None
     elif args.dtype == "value_blob":
         LOGGER.info("This type is not supported yet.")
-        args.default = None
+        args.qtype, args.default = None, None
     else:
         LOGGER.info("This type is not supported.")
-        args.default = None
+        args.qtype, args.default = None, None
 
+    # Call the utility function
     sonarUtils.add_property(
         args.name,
         args.dtype,

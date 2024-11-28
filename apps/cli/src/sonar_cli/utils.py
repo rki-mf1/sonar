@@ -520,6 +520,7 @@ class sonarUtils:
             chunk_iter = pd.read_csv(
                 _file,
                 sep="\t" if file_extension == ".tsv" else ",",
+                dtype="string",
                 chunksize=PROP_CHUNK_SIZE,
             )
             chunk_num = 0
