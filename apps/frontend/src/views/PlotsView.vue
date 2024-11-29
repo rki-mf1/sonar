@@ -409,7 +409,7 @@ export default {
 
       const totalCount = this.samplesStore.filteredCount;
       const labels = Object.keys(coverage);
-      const data = Object.values(coverage).map((value) => Math.round((value / totalCount) * 100));
+      const data = Object.values(coverage).map((value) => ((value / totalCount) * 100).toFixed(2));
 
       return {
         labels: labels,
