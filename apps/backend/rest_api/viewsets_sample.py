@@ -228,7 +228,7 @@ class SampleViewSet(
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__mutation2annotation_set",
+                    "sequence__alignments__mutations__mutation2annotation_set",
                     queryset=annotation_qs,
                     to_attr="alignment_annotations",
                 ),

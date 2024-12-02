@@ -56,6 +56,9 @@ class AnnotationType(models.Model):
     seq_ontology = models.CharField(max_length=50, blank=True, null=True)
     region = models.CharField(max_length=50, blank=True, null=True)
     impact = models.CharField(max_length=20, blank=True, null=True)
+    mutations = models.ManyToManyField(
+        Mutation, through="Mutation2Annotation", related_name="annotations"
+    )
 
     def __str__(self) -> str:
         return f"{self.seq_ontology} {self.impact} {self.region if self.region else ''}".strip()
@@ -71,6 +74,25 @@ class AnnotationType(models.Model):
                 name="unique_annotation_null_region",
                 fields=["seq_ontology", "impact"],
                 condition=models.Q(region__isnull=True),
+            ),
+        ]
+
+
+class Mutation2Annotation(models.Model):
+    annotation = models.ForeignKey(AnnotationType, models.CASCADE)
+    mutation = models.ForeignKey(Mutation, models.CASCADE)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["annotation", "mutation"],
+            )
+        ]
+        db_table = "mutation2annotation"
+        constraints = [
+            UniqueConstraint(
+                name="unique_mutation2annotation",
+                fields=["mutation", "annotation"],
             ),
         ]
 
@@ -300,21 +322,6 @@ class Mutation(models.Model):
                 name="unique_mutation_null_alt_null_gene",
                 fields=["ref", "start", "end", "type", "replicon"],
                 condition=models.Q(alt__isnull=True) & models.Q(gene__isnull=True),
-            ),
-        ]
-
-
-class Mutation2Annotation(models.Model):
-    mutation = models.ForeignKey(Mutation, models.DO_NOTHING)
-    alignment = models.ForeignKey(Alignment, models.CASCADE)
-    annotation = models.ForeignKey(AnnotationType, models.DO_NOTHING)
-
-    class Meta:
-        db_table = "mutation2annotation"
-        constraints = [
-            UniqueConstraint(
-                name="unique_mutation2annotation",
-                fields=["mutation", "alignment", "annotation"],
             ),
         ]
 
