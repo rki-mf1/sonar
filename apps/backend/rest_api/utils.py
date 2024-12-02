@@ -8,6 +8,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework import status
 from rest_framework.response import Response
 
+from . import models
+
 IUPAC_CODES = {
     "nt": {
         "A": set("A"),
@@ -106,64 +108,79 @@ def resolve_ambiguous_NT_AA(type, char):
 
 def define_profile(mutation):  # noqa: C901
     """
-    # check profile
+    Parse and validate mutation profile.
     """
     _query = {"label": ""}
     match = None
     for mutation_type, regex in regexes.items():
         match = regex.match(mutation)
         if match:
-            if match.group(3):
-                gene_name = match.group(3)[:-1]
-            else:
-                gene_name = None
+            gene_name = match.group(3)[:-1] if match.group(3) else None
 
             if mutation_type == "snv":
-
                 alt = match.group(6)
+                ref = match.group(4)
 
-                for x in alt:
-                    if (
-                        x not in IUPAC_CODES["aa"].keys()
-                        and x not in IUPAC_CODES["nt"].keys()
-                    ):
-                        raise ValueError(f"Invalid alternate allele notation '{alt}'.")
+                # Validate alternates based on IUPAC codes
+                alt_is_aa = all(c in IUPAC_CODES["aa"] for c in alt)
+                alt_is_nt = all(c in IUPAC_CODES["nt"] for c in alt)
 
-                if gene_name is not None:  # AA
+                if gene_name:  # AA mutation
+                    if not alt_is_aa:
+                        raise ValueError(
+                            f"Invalid AA mutation: '{alt}' contains non-AA characters."
+                        )
+                    if not ref in IUPAC_CODES["aa"]:
+                        raise ValueError(
+                            f"Invalid AA reference: '{ref}' is not a valid amino acid."
+                        )
                     _query["alt_aa"] = alt
-                    _query["ref_aa"] = match.group(4)
+                    _query["ref_aa"] = ref
                     _query["ref_pos"] = match.group(5)
-
                     _query["protein_symbol"] = gene_name
-                    if len(alt) == 1:  # SNP AA
-                        _query["label"] = "SNP AA"
-                    else:  # Ins AA
-                        _query["label"] = "Ins AA"
-                else:  # Nt
-                    _query["alt_nuc"] = alt
-                    _query["ref_nuc"] = match.group(4)
-                    _query["ref_pos"] = match.group(5)
+                    _query["label"] = "SNP AA" if len(alt) == 1 else "Ins AA"
+                else:  # NT mutation
+                    if not alt_is_nt or not ref in IUPAC_CODES["nt"]:
+                        error_message = (
+                            f"Invalid NT mutation: '{alt}' contains non-NT characters."
+                            if not alt_is_nt
+                            else f"Invalid NT reference: '{ref}' is not a valid nucleotide."
+                        )
 
-                    if len(alt) == 1:  # SNP Nt
-                        _query["label"] = "SNP Nt"
-                    else:  # Ins Nt
-                        _query["label"] = "Ins Nt"
+                        if alt_is_aa:
+                            error_message = (
+                                error_message
+                                + "\n"
+                                + "Did you mean an AA query? Querying for AA mutations without specifying a gene name is not allowed."
+                            )
+                        raise ValueError(error_message)
+
+                        sys.exit(1)
+                    _query["alt_nuc"] = alt
+                    _query["ref_nuc"] = ref
+                    _query["ref_pos"] = match.group(5)
+                    _query["label"] = "SNP Nt" if len(alt) == 1 else "Ins Nt"
 
             elif mutation_type == "del":
-                _query["first_deleted"] = match.group(4)
-                _query["last_deleted"] = match.group(5)[1:]
+                first_deleted = match.group(4)
+                last_deleted = match.group(5)[1:] if match.group(5) else None
 
-                if gene_name is not None:  # Del AA
+                if gene_name:  # AA deletion
                     _query["protein_symbol"] = gene_name
+                    _query["first_deleted"] = first_deleted
+                    _query["last_deleted"] = last_deleted
                     _query["label"] = "Del AA"
-                else:  # Del Nt
+                else:  # NT deletion
+                    _query["first_deleted"] = first_deleted
+                    _query["last_deleted"] = last_deleted
                     _query["label"] = "Del Nt"
 
+            # Flag for exclusion
             negate = True if match.group(1) else False
             _query["exclude"] = negate
             break
+
     if not match:
-        # fail to validate
         raise ValueError(f"Invalid mutation notation '{mutation}'.")
 
     return _query
@@ -200,3 +217,14 @@ def parse_date(value):
         raise TypeError(f"TypeError: Invalid type for date parsing - '{value}'")
     # or return None?
     # raise ValueError(f"Failed to parse date '{value}': {str(e)}") from e
+
+
+def get_distinct_gene_symbols(reference=None):
+    """
+    Helper method to get distinct gene symbols.
+    This method can be called from anywhere.
+    """
+    queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
+    if reference:
+        queryset = queryset.filter(replicon__reference__accession=reference)
+    return [item["gene_symbol"] for item in queryset]
