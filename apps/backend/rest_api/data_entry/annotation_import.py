@@ -189,22 +189,21 @@ class AnnotationImport:
         Returns:
             list[VCFInfoANNRaw]: list of extracted annotations, different annotations are separated by ','
         """
-        if "ANN=" in info:
-            # at the moment we consider only ANN= annotations and ignoring all others (separated by ;)
-            info = next(
-                (part for part in info.split(";") if part.startswith("ANN=")), None
-            )
-            info = info[4:]
-            annotations = []
-            for annotation in info.split(","):
-                annotation = annotation.split("|")
-                try:
-                    annotations.append(VCFInfoANNRaw(*annotation))
-                except Exception:
-                    LOGGER.warning(
-                        f"Failed to parse annotation: {annotation}, from file {self.vcf_file_path}"
-                    )
-            return annotations
+        for field in info.split(";"):
+            if field.startswith("ANN="):
+                ann_field = field.removeprefix("ANN=")
+                annotations = []
+                for annotation in ann_field.split(","):
+                    annotation = annotation.split("|")
+                    try:
+                        annotations.append(VCFInfoANNRaw(*annotation))
+                    except Exception:
+                        LOGGER.warning(
+                            f"Failed to parse annotation: {annotation}, from file {self.vcf_file_path}"
+                        )
+                # Return after finding the first ANN= field. If there are
+                # multiple, all others will be ignored.
+                return annotations
         return None
 
     def get_annotation_objs(
