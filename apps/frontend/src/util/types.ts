@@ -134,3 +134,7 @@ export type FilteredStatistics = {
 }
 export type FilteredStatisticsKeys = keyof FilteredStatistics;
 
+export type CustomPercentageLabelsOptions = {
+    enabled: boolean;
+    threshold: number;
+}

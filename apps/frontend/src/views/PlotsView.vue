@@ -188,8 +188,46 @@ import { useSamplesStore } from '@/stores/samples';
 import type { FilteredStatisticsKeys } from '@/util/types';
 import type { TooltipItem } from 'chart.js';
 import chroma from 'chroma-js';
-import { Chart } from 'chart.js';
+import { Chart, type ChartDataset } from 'chart.js';
+import type { CustomPercentageLabelsOptions } from '@/util/types';
 
+// Labels for bar plots, text inside the bar for values > 40%
+const percentageLabelPlugin = {
+  id: 'customPercentageLabels',
+  afterDatasetsDraw(chart: Chart, args: any, options: CustomPercentageLabelsOptions) {
+    if (!options.enabled) return; 
+
+    const ctx = chart.ctx;
+    const datasets = chart.data.datasets;
+
+    datasets.forEach((dataset: ChartDataset, datasetIndex: number) => {
+      chart.getDatasetMeta(datasetIndex).data.forEach((bar: any, index: number) => {
+        let value = dataset.data[index];
+        const percentage = `${value}%`;
+
+        const x = bar.x;
+        if (typeof value === 'string') {
+          value = parseFloat(value);
+          if (isNaN(value)) return;
+        }
+        if (typeof value !== 'number') return;
+        const y =
+          value < options.threshold
+            ? bar.y - 10 // Display above the bar for small values
+            : bar.y + bar.height / 2; // Center inside the bar for larger values
+
+        ctx.save();
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#000'; 
+        ctx.textAlign = 'center';
+        ctx.fillText(percentage, x, y);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+Chart.register(percentageLabelPlugin);
 
 export default {
   name: 'PlotsView',
@@ -477,7 +515,7 @@ export default {
       // what about the property 'name' ?? its not in the list, but its always shown in the table
       const coverage = Object.fromEntries(
         Object.entries(this.samplesStore.filteredStatistics?.["meta_data_coverage"] || {})
-          .filter(([key]) => this.samplesStore.propertyTableOptions.includes(key))
+          .filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key))
       );
 
       const totalCount = this.samplesStore.filteredCount;
@@ -503,7 +541,11 @@ export default {
         plugins: {
           legend: {
             display: false
-          }
+          },
+        customPercentageLabels: {
+        enabled: true,
+        threshold: 40,
+        },
         },
         responsive: true,
         maintainAspectRatio: false,
