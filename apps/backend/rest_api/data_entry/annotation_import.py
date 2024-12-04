@@ -6,7 +6,6 @@ from django.db.models import Q
 from covsonar_backend.settings import LOGGER
 from rest_api.models import AnnotationType
 from rest_api.models import Mutation
-from rest_api.models import Mutation2Annotation
 
 
 @dataclass
@@ -150,7 +149,7 @@ class AnnotationImport:
 
     def get_annotation_objs(
         self,
-    ) -> tuple[list[AnnotationType], list[Mutation2Annotation]]:
+    ) -> tuple[list[AnnotationType], list[AnnotationType.mutations.through]]:
         annotation_objs = []
         q_obj = Q()
         # self.mutation_lookups_to_annotations read from vcf file.
@@ -236,7 +235,7 @@ class AnnotationImport:
         self.relation_info = relation_info
         return annotation_objs
 
-    def get_annotation2mutation_objs(self) -> list[Mutation2Annotation]:
+    def get_annotation2mutation_objs(self) -> list[AnnotationType.mutations.through]:
         annotations = AnnotationType.objects.filter(self.annotation_q_obj)
         mutation2annotation_objs = []
         for annotation in annotations:
@@ -245,9 +244,9 @@ class AnnotationImport:
             ]:
                 mutation = relation["mutation"]
                 mutation2annotation_objs.append(
-                    Mutation2Annotation(
-                        annotation=annotation,
-                        mutation=mutation,
+                    AnnotationType.mutations.through(
+                        annotationtype_id=annotation.id,
+                        mutation_id=mutation.id,
                     )
                 )
         return mutation2annotation_objs

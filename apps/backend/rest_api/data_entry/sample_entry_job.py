@@ -32,7 +32,6 @@ from rest_api.models import AnnotationType
 from rest_api.models import FileProcessing
 from rest_api.models import ImportLog
 from rest_api.models import Mutation
-from rest_api.models import Mutation2Annotation
 from rest_api.models import ProcessingJob
 from rest_api.models import Sample
 from rest_api.models import Sequence
@@ -447,7 +446,7 @@ def process_annotation(file_name):
                     ignore_conflicts=True,
                 )
             with cache.lock("annotation2mutation"):
-                Mutation2Annotation.objects.bulk_create(
+                AnnotationType.mutations.through.objects.bulk_create(
                     annotation_import.get_annotation2mutation_objs(),
                     ignore_conflicts=True,
                 )
@@ -456,7 +455,7 @@ def process_annotation(file_name):
                 annotation_import.get_annotation_objs(),
                 ignore_conflicts=True,
             )
-            Mutation2Annotation.objects.bulk_create(
+            AnnotationType.mutations.through.objects.bulk_create(
                 annotation_import.get_annotation2mutation_objs(), ignore_conflicts=True
             )
     except Exception as e:

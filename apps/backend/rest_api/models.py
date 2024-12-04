@@ -54,9 +54,7 @@ class AnnotationType(models.Model):
     seq_ontology = models.CharField(max_length=50)
     region = models.CharField(max_length=50, blank=True, null=True)
     impact = models.CharField(max_length=20)
-    mutations = models.ManyToManyField(
-        Mutation, through="Mutation2Annotation", related_name="annotations"
-    )
+    mutations = models.ManyToManyField("Mutation", related_name="annotations")
 
     def __str__(self) -> str:
         return f"{self.seq_ontology} {self.impact} {self.region if self.region else ''}".strip()
@@ -72,25 +70,6 @@ class AnnotationType(models.Model):
                 name="unique_annotation_null_region",
                 fields=["seq_ontology", "impact"],
                 condition=models.Q(region__isnull=True),
-            ),
-        ]
-
-
-class Mutation2Annotation(models.Model):
-    annotation = models.ForeignKey(AnnotationType, models.CASCADE)
-    mutation = models.ForeignKey(Mutation, models.CASCADE)
-
-    class Meta:
-        indexes = [
-            models.Index(
-                fields=["annotation", "mutation"],
-            )
-        ]
-        db_table = "mutation2annotation"
-        constraints = [
-            UniqueConstraint(
-                name="unique_mutation2annotation",
-                fields=["mutation", "annotation"],
             ),
         ]
 
@@ -119,7 +98,7 @@ class Gene(models.Model):
         max_length=50, unique=False, blank=True, null=True
     )
     cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    gene_sequence = models.TextField()
+    gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
 
     replicon = models.ForeignKey(Replicon, models.CASCADE)
