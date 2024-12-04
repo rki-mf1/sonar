@@ -520,6 +520,7 @@ class sonarUtils:
             chunk_iter = pd.read_csv(
                 _file,
                 sep="\t" if file_extension == ".tsv" else ",",
+                dtype="string",
                 chunksize=PROP_CHUNK_SIZE,
             )
             chunk_num = 0
@@ -587,7 +588,10 @@ class sonarUtils:
                 time.sleep(sleep_time)
 
         time_diff = calculate_time_difference(start_time, get_current_time())
-        LOGGER.info(f"[runtime] Job {job_id} is {job_status}: {time_diff}")
+        if job_status == "F":
+            LOGGER.error(f"Job {job_id} is {job_status}: {time_diff}")
+        else:
+            LOGGER.info(f"[runtime] Job {job_id} is {job_status}: {time_diff}")
 
     @staticmethod
     def _get_prop_names(  # noqa: C901
@@ -639,9 +643,11 @@ class sonarUtils:
                 if not _row_df.empty:
                     query_type = _row_df["query_type"].values[0]
                     name = _row_df["name"].values[0]
+                    default = _row_df["default"].values[0]
                     propnames[col_name] = {
                         "db_property_name": name,
                         "data_type": query_type,
+                        "default": default,
                     }
 
             # Handle sample ID linking
@@ -669,7 +675,12 @@ class sonarUtils:
                 ]
                 if not _row_df.empty:
                     query_type = _row_df["query_type"].values[0]
-                    propnames[col] = {"db_property_name": prop, "data_type": query_type}
+                    default = _row_df["default"].values[0]
+                    propnames[col] = {
+                        "db_property_name": prop,
+                        "data_type": query_type,
+                        "default": default,
+                    }
                 else:
                     LOGGER.warning(
                         f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
@@ -840,8 +851,12 @@ class sonarUtils:
         params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
-        # hack (to get all result by using max bigint)
-        params["limit"] = 999999999999999999
+
+        if format == "count":
+            params["limit"] = 1
+        else:
+            # hack (to get all result by using max bigint)
+            params["limit"] = 999999999999999999
         params["offset"] = 0
 
         LOGGER.debug(params["filters"])
@@ -1130,7 +1145,7 @@ class sonarUtils:
         querytype: str,
         description: str,
         subject: str,
-        standard: Optional[str] = None,
+        default: None,
         check_name: bool = True,
     ) -> int:
         data = {
@@ -1138,6 +1153,7 @@ class sonarUtils:
             "datatype": datatype,
             "querytype": querytype,
             "description": description,
+            "default": default,
         }
         json_response = APIClient(base_url=BASE_URL).post_add_property(data)
         LOGGER.info(json_response["detail"])
