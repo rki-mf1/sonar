@@ -173,6 +173,7 @@ def define_profile(mutation):  # noqa: C901
 class PropertyColumnMapping:
     db_property_name: str
     data_type: str
+    default: any
 
 
 def generate_job_ID(is_prop: bool):
@@ -200,3 +201,10 @@ def parse_date(value):
         raise TypeError(f"TypeError: Invalid type for date parsing - '{value}'")
     # or return None?
     # raise ValueError(f"Failed to parse date '{value}': {str(e)}") from e
+
+
+def parse_default_data(value):
+    # Convert "None", "null", or empty strings to Python None
+    if value in {"None", "null", ""}:
+        return None
+    return value

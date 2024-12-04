@@ -386,3 +386,16 @@ def copy_file(src, dest):
     LOGGER.info(f"File {src} has been copied to {dest}")
     # Return the new file path
     return new_file_path
+
+
+def convert_default(value, converter, error_message):
+    # if value is None:
+    #     return None
+    # Convert "None", or empty strings to Python None
+    if value in {None, ""}:
+        return None
+    try:
+        return converter(value)
+    except ValueError:
+        LOGGER.error(error_message)
+        exit(1)

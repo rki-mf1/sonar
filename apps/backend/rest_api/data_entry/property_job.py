@@ -3,7 +3,7 @@ from rest_api.serializers import PropertySerializer
 
 
 def find_or_create_property(
-    name, datatype="value_varchar", querytype=None, description=None
+    name, datatype="value_varchar", querytype=None, description=None, default=None
 ):
     try:
         obj = Property.objects.get(name=name)
@@ -16,6 +16,7 @@ def find_or_create_property(
                 "datatype": datatype,
                 "naquerytypeme": querytype,
                 "description": description,
+                "standard": default,
             }
         )
         if obj.is_valid():
