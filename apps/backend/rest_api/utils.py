@@ -162,17 +162,13 @@ def define_profile(mutation):  # noqa: C901
                     _query["label"] = "SNP Nt" if len(alt) == 1 else "Ins Nt"
 
             elif mutation_type == "del":
-                first_deleted = match.group(4)
-                last_deleted = match.group(5)[1:] if match.group(5) else None
+                _query["first_deleted"] = match.group(4)
+                _query["last_deleted"] = match.group(5)[1:]
 
                 if gene_name:  # AA deletion
                     _query["protein_symbol"] = gene_name
-                    _query["first_deleted"] = first_deleted
-                    _query["last_deleted"] = last_deleted
                     _query["label"] = "Del AA"
                 else:  # NT deletion
-                    _query["first_deleted"] = first_deleted
-                    _query["last_deleted"] = last_deleted
                     _query["label"] = "Del Nt"
 
             # Flag for exclusion

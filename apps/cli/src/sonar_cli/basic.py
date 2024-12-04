@@ -181,7 +181,7 @@ def define_profile(mutation):  # noqa: C901
                             f"Invalid AA mutation: '{alt}' contains non-AA characters."
                         )
                         sys.exit(1)
-                    if not ref in IUPAC_CODES["aa"]:
+                    if ref not in IUPAC_CODES["aa"]:
                         LOGGER.error(
                             f"Invalid AA reference: '{ref}' is not a valid amino acid."
                         )
@@ -192,7 +192,7 @@ def define_profile(mutation):  # noqa: C901
                     _query["protein_symbol"] = gene_name
                     _query["label"] = "SNP AA" if len(alt) == 1 else "Ins AA"
                 else:  # NT mutation
-                    if not alt_is_nt or not ref in IUPAC_CODES["nt"]:
+                    if not alt_is_nt or ref not in IUPAC_CODES["nt"]:
                         error_message = (
                             f"Invalid NT mutation: '{alt}' contains non-NT characters."
                             if not alt_is_nt
@@ -211,17 +211,13 @@ def define_profile(mutation):  # noqa: C901
                     _query["label"] = "SNP Nt" if len(alt) == 1 else "Ins Nt"
 
             elif mutation_type == "del":
-                first_deleted = match.group(4)
-                last_deleted = match.group(5)[1:] if match.group(5) else None
+                _query["first_deleted"] = match.group(4)
+                _query["last_deleted"] = match.group(5)[1:]
 
                 if gene_name:  # AA deletion
                     _query["protein_symbol"] = gene_name
-                    _query["first_deleted"] = first_deleted
-                    _query["last_deleted"] = last_deleted
                     _query["label"] = "Del AA"
                 else:  # NT deletion
-                    _query["first_deleted"] = first_deleted
-                    _query["last_deleted"] = last_deleted
                     _query["label"] = "Del Nt"
 
             # Flag for exclusion
