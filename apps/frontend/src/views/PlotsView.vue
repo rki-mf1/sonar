@@ -6,7 +6,7 @@
         <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <Panel v-else header="Week Calendar" class="w-full shadow-2">
-          <div style="height: 95%; width: 95%; display: flex; justify-content: center">
+          <div style="height: 100%; width: 100%; display: flex; justify-content: center">
             <Chart ref="weekCalendarPlot" type="bar" :data="samplesPerWeekChart()" :options="samplesPerWeekChartOptions()"
               style="width: 100%" />
           </div>
@@ -30,6 +30,20 @@
           <div class="h-26rem plot">
             <Chart type="bar" ref="lineageBarPlot" :data="lineage_barData()" :options="lineage_barChartOptions()"
               style="width: 100%; height: 100%" />
+          </div>
+        </Panel>
+      </div>
+    </div>
+
+    <!-- meta data plot-->
+    <div class="row">
+      <div class="col-lineage">
+        <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
+        <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
+        <Panel v-else header="Meta Data Coverage" class="w-full shadow-2">
+          <div style="height: 100%; width: 100%; display: flex; justify-content: center">
+            <Chart ref="metaDataPlot" type="bar" :data="metaDataChart()" :options="metaDataChartOptions()"
+              style="width: 100%" />
           </div>
         </Panel>
       </div>
@@ -118,6 +132,46 @@
 import { useSamplesStore } from '@/stores/samples';
 import type { TooltipItem } from 'chart.js';
 import chroma from 'chroma-js';
+import { Chart, type ChartDataset } from 'chart.js';
+import type { CustomPercentageLabelsOptions } from '@/util/types';
+
+// Labels for bar plots, text inside the bar for values > 40%
+const percentageLabelPlugin = {
+  id: 'customPercentageLabels',
+  afterDatasetsDraw(chart: Chart, args: any, options: CustomPercentageLabelsOptions) {
+    if (!options.enabled) return; 
+
+    const ctx = chart.ctx;
+    const datasets = chart.data.datasets;
+
+    datasets.forEach((dataset: ChartDataset, datasetIndex: number) => {
+      chart.getDatasetMeta(datasetIndex).data.forEach((bar: any, index: number) => {
+        let value = dataset.data[index];
+        const percentage = `${value}%`;
+
+        const x = bar.x;
+        if (typeof value === 'string') {
+          value = parseFloat(value);
+          if (isNaN(value)) return;
+        }
+        if (typeof value !== 'number') return;
+        const y =
+          value < options.threshold
+            ? bar.y - 10 // Display above the bar for small values
+            : bar.y + bar.height / 2; // Center inside the bar for larger values
+
+        ctx.save();
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#000'; 
+        ctx.textAlign = 'center';
+        ctx.fillText(percentage, x, y);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+Chart.register(percentageLabelPlugin);
 
 export default {
   name: 'PlotsView',
@@ -383,6 +437,57 @@ export default {
         },
         responsive: true,
         maintainAspectRatio: false,
+      }
+    },
+    metaDataChart() {
+      // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
+      // what about the property 'name' ?? its not in the list, but its always shown in the table
+      const coverage = Object.fromEntries(
+        Object.entries(this.samplesStore.filteredStatistics?.["meta_data_coverage"] || {})
+          .filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key))
+      );
+
+      const totalCount = this.samplesStore.filteredCount;
+      const labels = Object.keys(coverage);
+      const data = Object.values(coverage).map((value) => ((value / totalCount) * 100).toFixed(2));
+
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: "Coverage (in %)",
+            data: data,
+            backgroundColor: this.generateColorPalette(1), 
+            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.5).hex()), // darkened border
+            borderWidth: 1
+          }
+        ]
+      };
+    },
+    metaDataChartOptions() {
+      return {
+        animation: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+        customPercentageLabels: {
+        enabled: true,
+        threshold: 40,
+        },
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function (value: number) {
+                return value + '%';
+              }
+            }
+          }
+        }
       }
     },
     genomeCompleteChart() {

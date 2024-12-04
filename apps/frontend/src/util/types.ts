@@ -132,3 +132,7 @@ export type FilteredStatistics = {
   host: { [key: string]: number };
 }
 
+export type CustomPercentageLabelsOptions = {
+    enabled: boolean;
+    threshold: number;
+}
