@@ -339,26 +339,11 @@ class SampleViewSet(
         dict = {}
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
-        annotations["not_null_count_genomic_profiles"] = Count(
-            Subquery(
-                models.Sample.objects.filter(
-                    sequence__alignments__mutations__type="nt", id=OuterRef("id")
-                ).values("id")[
-                    :1
-                ]  # Return only one to indicate existence
-            )
-        )
-        annotations["not_null_count_proteomic_profiles"] = Count(
-            Subquery(
-                models.Sample.objects.filter(
-                    sequence__alignments__mutations__type="cds", id=OuterRef("id")
-                ).values("id")[
-                    :1
-                ]  # Return only one to indicate existence
-            )
-        )
+        # sample table meta data fields
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
+                if field.name in ["id", "name", "datahash"]:
+                    continue
                 field_name = field.name
                 annotations[f"not_null_count_{field_name}"] = Count(
                     Case(
@@ -366,6 +351,7 @@ class SampleViewSet(
                         output_field=IntegerField(),
                     )
                 )
+        # property table meta data fields
         property_to_datatype = {
             property.name: property.datatype
             for property in models.Property.objects.all()

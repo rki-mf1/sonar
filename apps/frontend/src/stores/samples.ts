@@ -115,6 +115,12 @@ export const useSamplesStore = defineStore('samples', {
     propertiesDict: {} as { [key: string]: string[] },
     propertyTableOptions: [] as string[],
     propertyMenuOptions: [] as string[],
+    flexiblePropertyOptions: [] as string[],
+    profileColumns: ["genomic_profiles", "proteomic_profiles"],
+    sampleTableProperties: [ 
+      'lineage', "collection_date", "zip_code", "lab", "country", "genome_completeness",
+      "sequencing_tech", "host", "length", "init_upload_date", "last_update_date"
+    ],
     selectedColumns: ["genomic_profiles", "proteomic_profiles"],
     propertyValueOptions: {} as {
       [key: string]: {
@@ -215,23 +221,27 @@ export const useSamplesStore = defineStore('samples', {
     },
 
     async updateSelectedColumns() {
-      const properties = ['lineage', 'collection_date', 'zip_code', 'lab', 'sequencing_tech', 
-        'sequencing_reason', "isolation_source", 'init_upload_date', 'last_update_date'
-      ]
+      // always nt and aa profiles as first 2 columns, followed by existing properties of sample table
+      // in order of sampleTableProperties, followed by properties of property table, 
       let columns = [
-        ...this.selectedColumns,
-        ...properties.filter(prop => this.propertyTableOptions.includes(prop))
+        ...this.profileColumns,
+        ...this.sampleTableProperties.filter(prop => this.propertyTableOptions.includes(prop))
       ]
+      if (columns.length < 6) {
       columns = [
         ...columns,
         ...this.propertyTableOptions.filter(prop => !columns.includes(prop))
       ]
+          }
       this.selectedColumns = columns.slice(0, 6)
     },
 
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-      const metaData = this.filteredStatistics.meta_data_coverage
+      //  properties that have a non-zero coverage, i.e. that are not entirly empty
+      const notEmptyMetadata = Object.entries(this.filteredStatistics.meta_data_coverage)
+          .filter(([key, value]) => value > 0) 
+          .map(([key]) => key)
       this.propertiesDict = {}
       res.values.forEach((property: { name: string, query_type: string, description: string }) => {
         if (property.query_type === 'value_varchar') {
@@ -242,14 +252,17 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty 
-      // & drop the 'name' column because the ID column is fixed
-      this.propertyTableOptions = Object.keys(this.propertiesDict).filter( 
-        (key) => key !== 'name' && metaData[key] > 0
-      );
+      // no 'name' column because the ID column is fixed
+      this.propertyTableOptions = [
+        ... this.profileColumns,
+        ... notEmptyMetadata,
+      ];
       this.propertyMenuOptions = [
         'name',
-        ... this.propertyTableOptions.filter(prop => !["genomic_profiles", "proteomic_profiles", "lineage"].includes(prop))
+         ... notEmptyMetadata.filter(prop => prop != 'lineage')
+      ]
+      this.flexiblePropertyOptions = [
+        ... notEmptyMetadata.filter(prop => !this.sampleTableProperties.includes(prop))
       ]
     },
     async updateRepliconAccessionOptions() {

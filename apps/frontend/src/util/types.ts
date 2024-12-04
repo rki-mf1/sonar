@@ -130,5 +130,7 @@ export type FilteredStatistics = {
   lab: { [key: string]: number };
   zip_code: { [key: string]: number };
   host: { [key: string]: number };
+  [key: string]: any; // Dynamic keys from the database
 }
+export type FilteredStatisticsKeys = keyof FilteredStatistics;
 

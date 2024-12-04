@@ -22,13 +22,17 @@
           <h4>Area Plot - COVID-19 Lineages Over Time</h4>
           <div class="h-30rem plot">
 
-            <Chart type="line" ref="lineageAreaPlot" :data="lineage_areaData()" :options="lineage_areaChartOptions()"
+            <Chart type="line" ref="lineageAreaPlot" 
+              :data="lineage_areaData()" 
+              :options="lineage_areaChartOptions()"
               style="width: 100%; height: 100%" />
           </div>
           <!-- lineage bar plot-->
           <h4>Stacked Bar Plot - Lineage Distribution by Calendar Week</h4>
           <div class="h-26rem plot">
-            <Chart type="bar" ref="lineageBarPlot" :data="lineage_barData()" :options="lineage_barChartOptions()"
+            <Chart type="bar" ref="lineageBarPlot" 
+              :data="lineage_barData()" 
+              :options="lineage_barChartOptions()"
               style="width: 100%; height: 100%" />
           </div>
         </Panel>
@@ -38,19 +42,27 @@
     <div class="row">
       <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Tech." class="w-full shadow-2">
+        <Panel v-else header="Sequencing Technology" class="w-full shadow-2">
           <div style="justify-content: center" class="h-20rem">
-            <Chart type="doughnut" :data="sequencingTechChartData()" :options="sequencingTechChartOptions()" style=""
-              class="h-full" />
+            <Chart 
+              type="doughnut" 
+              :data="PropertyChartData('sequencing_tech', 'doughnut')" 
+              :options="DoughnutAndPieChartOptions()" 
+              class="h-full" 
+            />
           </div>
         </Panel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('genome_completeness')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Genome completeness" class="w-full shadow-2">
+        <Panel v-else header="Genome Completeness" class="w-full shadow-2">
           <div style=" display: flex; justify-content: center" class="h-20rem plot">
-            <Chart type="pie" :data="genomeCompleteChart()" :options="genome_pieChartOptions()" style="" />
+            <Chart 
+              type="pie" 
+              :data="PropertyChartData('genome_completeness', 'pie')" 
+              :options="DoughnutAndPieChartOptions()" 
+            />
           </div>
         </Panel>
       </div>
@@ -59,7 +71,11 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Reason" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart type="doughnut" :data="sequencingReasonChartData()" :options="sequencingReasonChartOptions()" />
+            <Chart 
+              type="doughnut" 
+              :data="PropertyChartData('sequencing_reason','doughnut')" 
+              :options="DoughnutAndPieChartOptions()" 
+              />
           </div>
         </Panel>
       </div>
@@ -68,17 +84,25 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Zip Code" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart type="bar" :data="zipCodeChartData()" :options="zipCodeChartOptions()" class="w-full h-full" />
+            <Chart 
+              type="bar" 
+              :data="PropertyChartData('zip_code','bar')" 
+              :options="BarPlotChartOptions('y')" 
+              class="w-full h-full" 
+          />
           </div>
         </Panel>
       </div>
-
 
       <div v-if="samplesStore.propertyMenuOptions.includes('sample_type')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sample Type" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart type="pie" :data="sampleTypeChartData()" :options="sampleTypeChartOptions()" />
+            <Chart 
+              type="pie" 
+              :data="PropertyChartData('sample_type','pie')" 
+              :options="DoughnutAndPieChartOptions()" 
+              />
           </div>
         </Panel>
       </div>
@@ -87,7 +111,11 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Lab" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart type="bar" :data="labChartData()" :options="labChartOptions()" class="w-full h-full" />
+            <Chart 
+              type="bar" 
+              :data="PropertyChartData('lab', 'bar')" 
+              :options="BarPlotChartOptions('x')" 
+              class="w-full h-full" />
           </div>
         </Panel>
       </div>
@@ -96,26 +124,51 @@
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Host" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart type="bar" :data="hostChartData()" :options="hostChartOptions()" class="w-full h-full" />
+            <Chart 
+              type="bar" 
+              :data="PropertyChartData('host', 'bar')" 
+              :options="BarPlotChartOptions('y')" 
+              class="w-full h-full" />
           </div>
         </Panel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('length')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Length" class="w-full shadow-2 ">
+        <Panel v-else header="Length" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart type="bar" :data="lengthChartData()" :options="lengthChartOptions()"
-              style="width: 100%; height: 100%" /> <!-- scatter -->
+            <Chart 
+              type="bar" 
+              :data="HistogrammChartData('length',)" 
+              :options="BarPlotChartOptions('x')" 
+            /> <!-- scatter -->
           </div>
         </Panel>
       </div>
-          </div>
+
+      <div v-for="prop in samplesStore.flexiblePropertyOptions" class="col"> 
+        <div>
+          <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+          <Panel v-else :header="prop" class="w-full shadow-2">
+            <div class="h-20rem plot">
+              <Chart 
+                type="doughnut" 
+                :data="PropertyChartData(prop, 'doughnut')" 
+                :options="DoughnutAndPieChartOptions()"
+                style="align-items:center"
+                 />
+            </div>
+          </Panel>
+        </div>
+      </div>
+
+    </div>
   </div>
 </template>
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples';
+import type { FilteredStatisticsKeys } from '@/util/types';
 import type { TooltipItem } from 'chart.js';
 import chroma from 'chroma-js';
 
@@ -137,10 +190,11 @@ export default {
   beforeUnmount() {
   },
   methods: {
+    
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] };
         const cleanedData = Object.fromEntries(
-          Object.entries(data).filter(([key, value]) => key !== "null" && value !== 0)
+          Object.entries(data).filter(([key, value]) => key !== "null" && value !== 0 && key)
         );
         const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0;
         const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0);
@@ -385,33 +439,91 @@ export default {
         maintainAspectRatio: false,
       }
     },
-    genomeCompleteChart() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['genomecomplete_chart'] : {};
+    // Property Data
+    PropertyChartData(prop:FilteredStatisticsKeys, plotType:string){
+      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics[prop] : {};
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
       const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      const colors = this.generateColorPalette(labels.length);
+      let colors: string[];
+      if (plotType=="bar"){
+        colors = this.generateColorPalette(1);
+        }
+      else {
+        colors = this.generateColorPalette(labels.length);
+        }
+      
       return {
         labels,
         datasets: [
           {
+            label: 'Sample Number',
             data,
-            backgroundColor: colors, 
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
+            borderWidth: 1
           }
         ]
       };
     },
-    genome_pieChartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement);
-      const textColor = '#333';
+
+    HistogrammChartData(prop:FilteredStatisticsKeys){
+      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics[prop] : {};
+      if (this.isDataEmpty(_data)) {
+        return this.emptyChartData();
+      }
+      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      const numericLabels = labels.map((label) => parseFloat(label)).filter((l) => !isNaN(l));
+      const minLength = Math.min(...numericLabels);
+      const maxLength = Math.max(...numericLabels);
+      const numberOfBins = 20;
+      const binSize = Math.ceil((maxLength - minLength) / numberOfBins);
+      const bins = Array.from({ length: numberOfBins }, (_, i) => ({
+          range: [minLength + i * binSize, minLength + (i + 1) * binSize],
+          count: 0,
+        }));
+
+      // Populate bins with data
+      numericLabels.forEach((label, index) => {
+        const value = data[index];
+        const binIndex = Math.min(
+          Math.floor((label - minLength) / binSize),
+          numberOfBins - 1 // Ensure the last bin includes maxLength
+        );
+        bins[binIndex].count += value;
+      });
+
+      // Prepare labels and counts for charting
+      const chartLabels = bins.map(
+        (bin) => `${Math.floor(bin.range[0])}-${Math.floor(bin.range[1] - 1)}`
+      );
+      const chartData = bins.map((bin) => bin.count);
+      const colors = this.generateColorPalette(1);
+      // Return chart-compatible data
+      return {
+        labels: chartLabels,
+        datasets: [
+          {
+            data: chartData,
+            backgroundColor: colors,
+            borderColor: colors.map(color => chroma(color).darken(1.0).hex()),
+            borderWidth: 1,
+          },
+        ],
+      };
+    },
+
+    DoughnutAndPieChartOptions() {
       return {
         animation: false,
         plugins: {
           legend: {
+            display: true,
+            position: 'bottom',
             labels: {
-              usePointStyle: true,
-              color: textColor
+              // usePointStyle: true,
+              color: '#333'
             }
           }
         },
@@ -419,226 +531,22 @@ export default {
         maintainAspectRatio: false,
       };
     },
-    sequencingTechChartData() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_tech'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      const colors = this.generateColorPalette(labels.length);
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
-      };
-    },
-    sequencingTechChartOptions() {
+    BarPlotChartOptions(orientation: string) {
       return {
         animation: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'bottom'
-          }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      };
-    },
-    sequencingReasonChartData() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sequencing_reason'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      const colors = this.generateColorPalette(labels.length);
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
-      };
-    },
-    sequencingReasonChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'bottom'
-          }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      };
-    },
-    lengthChartData() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['length'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: this.generateColorPalette(1),
-            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
-      };
-    },
-    lengthChartOptions() {
-      return {
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      };
-    },
-    hostChartData() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['host'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data,
-            backgroundColor: this.generateColorPalette(1), 
-            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
-      };
-    },
-    hostChartOptions() {
-      return {
-        animation: false,
-        indexAxis: 'y',
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          x: {
-            beginAtZero: true
-          }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      };
-    },
-    labChartData() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['lab'] : {};
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data: data,
-            backgroundColor: this.generateColorPalette(1),
-            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
-      };
-    },
-    labChartOptions() {
-      return {
-        plugins: {
-          legend: {
-            display: false
-
-          },
-          zoom: {
-            zoom: {
-              wheel: { enabled: true },
-              pinch: { enabled: true },
-              mode: 'x',
-            },
-            pan: {
-              enabled: true,
-              mode: 'x'
-            },
-            limits: {
-              x: { min: 0, minRange: 10 },
-            },
-          },
-
-        },
-        scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      };
-    },
-    zipCodeChartData() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['zip_code'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data,
-            backgroundColor: this.generateColorPalette(1),
-            borderColor: this.generateColorPalette(1).map(color => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
-      };
-    },
-    zipCodeChartOptions() {
-      return {
-        animation: false,
-        indexAxis: 'y', // Makes the bar chart horizontal
+        indexAxis: orientation, // y = horizontal
         plugins: {
           legend: {
             display: false
           },
           zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x', //'xy'
             pan: {
               enabled: true,
-              mode: 'yx',
-            },
-            zoom: {
-              wheel: {
-                enabled: false,
-                speed: 0.5
-              },
-              mode: 'xy',
+              speed: 0.5,
+              mode: 'x', //'xy'
             },
             limits: {
               x: { min: 0, minRange: 10 },
@@ -648,44 +556,14 @@ export default {
         scales: {
           x: {
             beginAtZero: true,
+            stacked: true ,
           },
           y: {
+            stacked: true ,
             ticks: {
               autoSkip: false, // Ensure all labels
             },
           },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      };
-    },
-    sampleTypeChartData() {
-      const _data = this.samplesStore.filteredStatistics ? this.samplesStore.filteredStatistics['sample_type'] : {};
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData();
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
-      const colors = this.generateColorPalette(labels.length);
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-            borderColor: colors.map(color => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
-      };
-    },
-    sampleTypeChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'right'
-          }
         },
         responsive: true,
         maintainAspectRatio: false,
@@ -737,13 +615,12 @@ export default {
 .row {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: space-evenly;
   width: 98%;
 }
 
 .col {
-  flex: 1 1 25%;
-  
+  flex: 1 1 auto;
   max-width: 25%;
   padding: 0.5rem;
   box-sizing: border-box;
@@ -752,7 +629,6 @@ export default {
 .plot {
   display: flex; 
   justify-content: center;
-  height: 100%; 
   width: 100%; 
 }
 
@@ -789,7 +665,7 @@ export default {
   .row:nth-child(1),
   .row:nth-child(2) {
     .col {
-      flex: 1 1 90%; /* Größe reduzieren */
+      flex: 1 1 90%;
       max-width: 90%;
     }
   }
