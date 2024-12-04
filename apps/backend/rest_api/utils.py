@@ -186,6 +186,7 @@ def define_profile(mutation):  # noqa: C901
 class PropertyColumnMapping:
     db_property_name: str
     data_type: str
+    default: any
 
 
 def generate_job_ID(is_prop: bool):
@@ -224,3 +225,10 @@ def get_distinct_gene_symbols(reference=None):
     if reference:
         queryset = queryset.filter(replicon__reference__accession=reference)
     return [item["gene_symbol"] for item in queryset]
+
+
+def parse_default_data(value):
+    # Convert "None", "null", or empty strings to Python None
+    if value in {"None", "null", ""}:
+        return None
+    return value

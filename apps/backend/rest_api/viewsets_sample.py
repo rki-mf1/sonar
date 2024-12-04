@@ -360,12 +360,24 @@ class SampleViewSet(
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
                 field_name = field.name
-                annotations[f"not_null_count_{field_name}"] = Count(
-                    Case(
-                        When(**{f"{field_name}__isnull": False}, then=1),
-                        output_field=IntegerField(),
+                if field.get_internal_type() == "CharField":
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        Case(
+                            When(
+                                Q(**{f"{field_name}__isnull": False})
+                                & ~Q(**{f"{field_name}": ""}),
+                                then=1,
+                            ),
+                            output_field=IntegerField(),
+                        )
                     )
-                )
+                else:
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        Case(
+                            When(**{f"{field_name}__isnull": False}, then=1),
+                            output_field=IntegerField(),
+                        )
+                    )
         property_to_datatype = {
             property.name: property.datatype
             for property in models.Property.objects.all()

@@ -115,6 +115,7 @@ export const useSamplesStore = defineStore('samples', {
     propertiesDict: {} as { [key: string]: string[] },
     propertyTableOptions: [] as string[],
     propertyMenuOptions: [] as string[],
+    metaCoverageOptions: [] as string[],
     selectedColumns: ["genomic_profiles", "proteomic_profiles"],
     propertyValueOptions: {} as {
       [key: string]: {
@@ -251,6 +252,10 @@ export const useSamplesStore = defineStore('samples', {
         'name',
         ... this.propertyTableOptions.filter(prop => !["genomic_profiles", "proteomic_profiles", "lineage"].includes(prop))
       ]
+      this.metaCoverageOptions = [
+        ... this.propertyMenuOptions.filter(prop => !["name", "init_upload_date", "last_update_date"].includes(prop))
+      ]
+
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
@@ -285,11 +290,6 @@ export const useSamplesStore = defineStore('samples', {
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
       return { filters: getFilterGroupFilters(this.filterGroup) }
-    },
-    filterGroupFiltersHasDateFilter(state): boolean {
-      return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") 
-      ||  this.filterGroupsFilters.filters.orFilter.some(orFilterGroup => 
-        orFilterGroup.andFilter.some(item => item.property_name === "collection_date"))
     },
     filters(state): FilterGroupRoot {
       const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters));

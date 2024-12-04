@@ -30,6 +30,7 @@ from rest_api.data_entry.sample_entry_job import check_for_new_data
 from rest_api.management.commands.import_lineage import LineageImport
 from rest_api.utils import generate_job_ID
 from rest_api.utils import get_distinct_gene_symbols
+from rest_api.utils import parse_default_data
 from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
 from . import models
@@ -501,9 +502,13 @@ class PropertyViewSet(
         datatype = request.data.get("datatype", None)
         querytype = request.data.get("querytype", None)
         description = request.data.get("description", None)
-
+        default = parse_default_data(request.data.get("default", None))
         obj, created = find_or_create_property(
-            name=name, datatype=datatype, querytype=querytype, description=description
+            name=name,
+            datatype=datatype,
+            querytype=querytype,
+            description=description,
+            default=default,
         )
 
         if created:
@@ -559,71 +564,85 @@ class PropertyViewSet(
                 "name": "name",
                 "query_type": "value_varchar",
                 "description": "sample name or ID (fixed prop.)",
+                "default": None,
             },
             {
                 "name": "genomic_profiles",
                 "query_type": "value_varchar",
                 "description": "list of neuclotide mutation (fixed prop.)",
+                "default": None,
             },
             {
                 "name": "proteomic_profiles",
                 "query_type": "value_varchar",
                 "description": "list of amino acid mutation (fixed prop.)",
+                "default": None,
             },
             {
                 "name": "collection_date",
                 "query_type": "value_date",
                 "description": "Date when the sample was collected (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "length",
                 "query_type": "value_integer",
                 "description": "Length of the genetic sequence (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "lab",
                 "query_type": "value_varchar",
                 "description": "Name of the laboratory where the sample was analyzed (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "zip_code",
                 "query_type": "value_varchar",
                 "description": "ZIP code of the location where the sample was collected (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "host",
                 "query_type": "value_varchar",
                 "description": "Host organism from which the sample was taken (e.g., Human) (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "genome_completeness",
                 "query_type": "value_varchar",
                 "description": "Completeness of the genome (e.g., partial or complete) (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "lineage",
                 "query_type": "value_varchar",
                 "description": "Lineage (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "sequencing_tech",
                 "query_type": "value_varchar",
                 "description": "Technology used for sequencing the genome (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "country",
                 "query_type": "value_varchar",
                 "description": "Country where the sample was collected (predefined prop.)",
+                "default": None,
             },
             {
                 "name": "init_upload_date",
                 "query_type": "value_date",
-                "description": "Date when the sample data was initially uploaded to the database (predefined prop.)",
+                "description": "Date when the sample data was initially uploaded to the database (fixed prop.)",
+                "default": "current date and time",
             },
             {
                 "name": "last_update_date",
                 "query_type": "value_date",
-                "description": "Date when the sample data was last updated in the database (predefined prop.)",
+                "description": "Date when the sample data was last updated in the database (fixed prop.)",
+                "default": "current date and time",
             },
         ]  # from SAMPLE TABLE
 
@@ -631,6 +650,7 @@ class PropertyViewSet(
             "name",
             "query_type",
             "description",
+            "default",
         ]
 
         for _property_queryset in models.Property.objects.all():
@@ -639,6 +659,7 @@ class PropertyViewSet(
                     "name": _property_queryset.name,
                     "query_type": _property_queryset.datatype,
                     "description": _property_queryset.description,
+                    "default": _property_queryset.standard,
                 }
             )
         data = {"keys": cols, "values": data_list}
@@ -791,7 +812,6 @@ class FileUploadViewSet(viewsets.ViewSet):
             column_mapping = self._convert_property_column_mapping(
                 json.loads(column_mapping_json)
             )
-
             if not column_mapping:
                 return Response(
                     {"detail": "No column_mapping could be processed."},
