@@ -40,6 +40,7 @@
     </div>
 
     <!-- meta data plot-->
+
     <div class="row">
       <div class="col-lineage">
         <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
