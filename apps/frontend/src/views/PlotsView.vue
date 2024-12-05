@@ -220,6 +220,20 @@ export default {
         .mode('lch') // color mode (lch is perceptually uniform)
         .colors(itemCount); // number of colors
     },
+
+    generateColorDict(labels: string[], fixedLabels: { [label: string]: string }): [string[], string[]] {
+        const fixedColors = { ... fixedLabels, ... { 'Not Reported': '#b0b0b0' }};
+        const dynamicLabels = labels.filter(label => !(label in fixedColors));
+        const colorPalette: string[] = this.generateColorPalette(dynamicLabels.length);
+        const colorDict: { [key: string]: string } = {};
+        for (let i = 0; i < dynamicLabels.length; i++) {
+          colorDict[dynamicLabels[i]] = colorPalette[i];
+        }
+        const finalColorDict = {...colorDict, ...fixedColors}
+
+        return [Object.keys(finalColorDict), Object.values(finalColorDict),]
+    },
+
     samplesPerWeekChart() {
       const samples_per_week = this.samplesStore.filteredStatistics
         ? this.samplesStore.filteredStatistics['samples_per_week']
@@ -298,7 +312,7 @@ export default {
       const _data = this.samplesStore.filteredStatistics
         ? this.samplesStore.filteredStatistics['lineage_area_chart']
         : [];
-      if (!_data || Object.keys(_data).length === 0) {
+      if (this.isDataEmpty(_data) || !_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
       }
       const validData = _data.filter(item => item.date !== 'None-None' && item.lineage !== null);
@@ -383,7 +397,7 @@ export default {
       const _data = this.samplesStore.filteredStatistics
         ? this.samplesStore.filteredStatistics['lineage_bar_chart']
         : [];
-      if (this.isDataEmpty(_data)) {
+      if (this.isDataEmpty(_data) || !_data || Object.keys(_data).length === 0) {
         return this.emptyChartData();
       }
       const lineages = [...new Set(_data.map(item => item.lineage))];
@@ -450,15 +464,15 @@ export default {
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data);
+      let { labels, data } = this.cleanDataAndAddNullSamples(_data);
       let colors: string[];
       if (plotType=="bar"){
         colors = this.generateColorPalette(1);
         }
       else {
-        colors = this.generateColorPalette(labels.length);
+        [labels, colors] = this.generateColorDict(labels, {});
         }
-      
+            
       return {
         labels,
         datasets: [
