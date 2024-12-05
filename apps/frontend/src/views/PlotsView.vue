@@ -54,50 +54,23 @@
     </div>
 
     <div class="row">
-      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Technology" class="w-full shadow-2" >
-          <div style="justify-content: center" class="h-20rem ">
-            <Chart 
-              type="doughnut" 
-              :data="PropertyChartData('sequencing_tech', 'doughnut')" 
-              :options="DoughnutAndPieChartOptions()" 
-              class="h-full" 
-            />
-          </div>
-        </Panel>
-      </div>
 
-      <div v-if="samplesStore.propertyMenuOptions.includes('genome_completeness')" class="col">
+      <div v-if="samplesStore.propertyMenuOptions.includes('country')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Genome Completeness" class="w-full shadow-2">
-          <div style=" display: flex; justify-content: center" class="h-20rem plot">
+        <Panel v-else :header="formattedHeader('country')"  class="w-full shadow-2">
+          <div class="h-20rem plot">
             <Chart 
-              type="pie" 
-              :data="PropertyChartData('genome_completeness', 'pie')" 
-              :options="DoughnutAndPieChartOptions()" 
-            />
-          </div>
-        </Panel>
-      </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_reason')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Reason" class="w-full shadow-2">
-          <div class="h-20rem">
-            <Chart 
-              type="doughnut" 
-              :data="PropertyChartData('sequencing_reason','doughnut')" 
-              :options="DoughnutAndPieChartOptions()" 
-              class="h-full" 
-              />
+              type="bar" 
+              :data="PropertyChartData('country', 'bar')" 
+              :options="BarPlotChartOptions('y')" 
+              class="w-full h-full" />
           </div>
         </Panel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('zip_code')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Zip Code" class="w-full shadow-2">
+        <Panel v-else  :header="formattedHeader('zip_code')" class="w-full shadow-2">
           <div class="h-20rem plot">
             <Chart 
               type="bar" 
@@ -109,36 +82,9 @@
         </Panel>
       </div>
 
-      <div v-if="samplesStore.propertyMenuOptions.includes('sample_type')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sample Type" class="w-full shadow-2">
-          <div class="h-20rem">
-            <Chart 
-              type="pie" 
-              :data="PropertyChartData('sample_type','pie')" 
-              :options="DoughnutAndPieChartOptions()" 
-              class="h-full" 
-              />
-          </div>
-        </Panel>
-      </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('lab')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Lab" class="w-full shadow-2">
-          <div class="h-20rem">
-            <Chart 
-              type="bar" 
-              :data="PropertyChartData('lab', 'bar')" 
-              :options="BarPlotChartOptions('x')" 
-              class="w-full h-full" />
-          </div>
-        </Panel>
-      </div>
-
       <div v-if="samplesStore.propertyMenuOptions.includes('host')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Host" class="w-full shadow-2">
+        <Panel v-else :header="formattedHeader('host')"  class="w-full shadow-2">
           <div class="h-20rem">
             <Chart 
               type="bar" 
@@ -149,9 +95,49 @@
         </Panel>
       </div>
 
+      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
+        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <Panel v-else header="SEQUENCING TECHNOLOGY" class="w-full shadow-2" >
+          <div style="justify-content: center" class="h-20rem ">
+            <Chart 
+              type="doughnut" 
+              :data="PropertyChartData('sequencing_tech', 'doughnut')" 
+              :options="DoughnutAndPieChartOptions()" 
+              class="h-full" 
+            />
+          </div>
+        </Panel>
+      </div>
+      
+      <div v-if="samplesStore.propertyMenuOptions.includes('lab')" class="col">
+        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <Panel v-else :header="formattedHeader('lab')" class="w-full shadow-2">
+          <div class="h-20rem">
+            <Chart 
+              type="bar" 
+              :data="PropertyChartData('lab', 'bar')" 
+              :options="BarPlotChartOptions('x')" 
+              class="w-full h-full" />
+          </div>
+        </Panel>
+      </div>
+
+      <div v-if="samplesStore.propertyMenuOptions.includes('genome_completeness')" class="col">
+        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <Panel v-else :header="formattedHeader('genome_completeness')"  class="w-full shadow-2">
+          <div style=" display: flex; justify-content: center" class="h-20rem plot">
+            <Chart 
+              type="pie" 
+              :data="PropertyChartData('genome_completeness', 'pie')" 
+              :options="DoughnutAndPieChartOptions()" 
+            />
+          </div>
+        </Panel>
+      </div>
+
       <div v-if="samplesStore.propertyMenuOptions.includes('length')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Length" class="w-full shadow-2">
+        <Panel v-else :header="formattedHeader('length')"  class="w-full shadow-2">
           <div class="h-20rem">
             <Chart 
               type="bar" 
@@ -166,7 +152,7 @@
       <div v-for="prop in samplesStore.flexiblePropertyOptions" class="col"> 
         <div>
           <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-          <Panel v-else :header="prop" class="w-full shadow-2">
+          <Panel v-else :header="formattedHeader(prop)" class="w-full shadow-2">
             <div class="h-20rem">
               <Chart 
                 type="doughnut" 
@@ -247,7 +233,11 @@ export default {
   beforeUnmount() {
   },
   methods: {
-    
+
+      formattedHeader(prop: string) {
+        return prop.replace(/_/g, ' ').toUpperCase(); // Replace underscores and convert to uppercase
+      },
+	  
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] };
         const cleanedData = Object.fromEntries(
@@ -273,7 +263,7 @@ export default {
         .colors(itemCount); // number of colors
     },
 
-    generateColorDict(labels: string[], fixedLabels: { [label: string]: string }): [string[], string[]] {
+    generateOrderedColorList(labels: string[], fixedLabels: { [label: string]: string }): [string[], string[]] {
         const fixedColors = { ... fixedLabels, ... { 'Not Reported': '#b0b0b0' }};
         const dynamicLabels = labels.filter(label => !(label in fixedColors));
         const colorPalette: string[] = this.generateColorPalette(dynamicLabels.length);
@@ -573,7 +563,7 @@ export default {
         colors = this.generateColorPalette(1);
         }
       else {
-        [labels, colors] = this.generateColorDict(labels, {});
+        [labels, colors] = this.generateOrderedColorList(labels, {});
         }
             
       return {
