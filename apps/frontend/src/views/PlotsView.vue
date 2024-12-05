@@ -42,8 +42,8 @@
     <div class="row">
       <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Technology" class="w-full shadow-2">
-          <div style="justify-content: center" class="h-20rem">
+        <Panel v-else header="Sequencing Technology" class="w-full shadow-2" >
+          <div style="justify-content: center" class="h-20rem ">
             <Chart 
               type="doughnut" 
               :data="PropertyChartData('sequencing_tech', 'doughnut')" 
@@ -70,11 +70,12 @@
       <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_reason')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sequencing Reason" class="w-full shadow-2">
-          <div class="h-20rem plot">
+          <div class="h-20rem">
             <Chart 
               type="doughnut" 
               :data="PropertyChartData('sequencing_reason','doughnut')" 
               :options="DoughnutAndPieChartOptions()" 
+              class="h-full" 
               />
           </div>
         </Panel>
@@ -97,11 +98,12 @@
       <div v-if="samplesStore.propertyMenuOptions.includes('sample_type')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Sample Type" class="w-full shadow-2">
-          <div class="h-20rem plot">
+          <div class="h-20rem">
             <Chart 
               type="pie" 
               :data="PropertyChartData('sample_type','pie')" 
               :options="DoughnutAndPieChartOptions()" 
+              class="h-full" 
               />
           </div>
         </Panel>
@@ -110,7 +112,7 @@
       <div v-if="samplesStore.propertyMenuOptions.includes('lab')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Lab" class="w-full shadow-2">
-          <div class="h-20rem plot">
+          <div class="h-20rem">
             <Chart 
               type="bar" 
               :data="PropertyChartData('lab', 'bar')" 
@@ -123,7 +125,7 @@
       <div v-if="samplesStore.propertyMenuOptions.includes('host')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Host" class="w-full shadow-2">
-          <div class="h-20rem plot">
+          <div class="h-20rem">
             <Chart 
               type="bar" 
               :data="PropertyChartData('host', 'bar')" 
@@ -136,11 +138,12 @@
       <div v-if="samplesStore.propertyMenuOptions.includes('length')" class="col">
         <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <Panel v-else header="Length" class="w-full shadow-2">
-          <div class="h-20rem plot">
+          <div class="h-20rem">
             <Chart 
               type="bar" 
               :data="HistogrammChartData('length',)" 
               :options="BarPlotChartOptions('x')" 
+              class="w-full h-full"
             /> <!-- scatter -->
           </div>
         </Panel>
@@ -150,12 +153,12 @@
         <div>
           <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
           <Panel v-else :header="prop" class="w-full shadow-2">
-            <div class="h-20rem plot">
+            <div class="h-20rem">
               <Chart 
                 type="doughnut" 
                 :data="PropertyChartData(prop, 'doughnut')" 
                 :options="DoughnutAndPieChartOptions()"
-                style="align-items:center"
+                class="h-full" 
                  />
             </div>
           </Panel>
@@ -171,6 +174,8 @@ import { useSamplesStore } from '@/stores/samples';
 import type { FilteredStatisticsKeys } from '@/util/types';
 import type { TooltipItem } from 'chart.js';
 import chroma from 'chroma-js';
+import { Chart } from 'chart.js';
+
 
 export default {
   name: 'PlotsView',
@@ -531,6 +536,7 @@ export default {
         maintainAspectRatio: false,
       };
     },
+
     BarPlotChartOptions(orientation: string) {
       return {
         animation: false,
@@ -540,13 +546,15 @@ export default {
             display: false
           },
           zoom: {
+            zoom: {
             wheel: { enabled: true },
             pinch: { enabled: true },
-            mode: 'x', //'xy'
+            mode: orientation,
+            },
             pan: {
               enabled: true,
               speed: 0.5,
-              mode: 'x', //'xy'
+              mode: orientation,
             },
             limits: {
               x: { min: 0, minRange: 10 },
@@ -620,7 +628,7 @@ export default {
 }
 
 .col {
-  flex: 1 1 auto;
+  flex: 1 1 25;
   max-width: 25%;
   padding: 0.5rem;
   box-sizing: border-box;
@@ -642,6 +650,11 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+
+}
+
+.p-panel-header {
+  text-align: center;
 }
 
 .row:nth-child(1),
@@ -651,7 +664,13 @@ export default {
     max-width: 100%;
   }
 }
-
+  .row:nth-child(3),
+  .row:nth-child(4) {
+    .col {
+      flex: 1 1 25%; 
+      max-width: 25%;
+    }
+  }
 /* Media Queries for different screen sizes */
 @media (max-width: 1024px) {
   .row:nth-child(3),
