@@ -269,6 +269,7 @@ class sonarCache:
             "algnid": algnid,
             "header": header,
             "seqhash": seqhash,
+            "sample_sequence_length": len(sequence),
             # "sample_sequence": sequence,
             "seq_file": seqfile,
             "mafft_seqfile": mafft_seqfile,
