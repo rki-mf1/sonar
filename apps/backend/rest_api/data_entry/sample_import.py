@@ -5,6 +5,7 @@ import typing
 from typing import Any
 from typing import Optional
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -48,12 +49,15 @@ class SampleRaw:
 
 @dataclass
 class VarRaw:
+    id: int
     ref: str
     start: int
     end: int
     alt: str | None
     replicon_or_cds_accession: str
+    # lable: str
     type: str
+    parent_id: int | None
 
 
 class VCFInfoLOFRaw:
@@ -133,6 +137,129 @@ class SampleImport:
             sequence=self.sequence, replicon=self.replicon
         )[0]
         return self.alignment
+
+    def get_mutation_objs_V2(
+        self,
+        gene_cache_by_accession: dict[str, Gene | None],
+        replicon_cache: dict[str, Replicon | None],
+        gene_cache_by_var_pos: dict[Replicon | None, dict[int, dict[int, Gene | None]]],
+    ) -> list[Mutation]:
+        sample_mutations = []
+        self.mutation_query_data = []
+        # Separate NT and CDS mutations
+        nt_vars = [var_raw for var_raw in self.vars_raw if var_raw.type == "nt"]
+        cds_vars = [var_raw for var_raw in self.vars_raw if var_raw.type == "cds"]
+        # Insert NT mutations and do mapping of original IDs to database IDs
+        nt_id_mapping = {}
+        nt_mutations = []
+        for var_raw in nt_vars:
+            gene = None
+            replicon = None
+            if not var_raw.replicon_or_cds_accession in replicon_cache:
+                replicon_cache[var_raw.replicon_or_cds_accession] = (
+                    Replicon.objects.get(accession=var_raw.replicon_or_cds_accession)
+                )
+            replicon = replicon_cache[var_raw.replicon_or_cds_accession]
+            if not replicon in gene_cache_by_var_pos:
+                gene_cache_by_var_pos[replicon] = {}
+            if not var_raw.start in gene_cache_by_var_pos[replicon]:
+                gene_cache_by_var_pos[replicon][var_raw.start] = {}
+            if not var_raw.end in gene_cache_by_var_pos[replicon][var_raw.start]:
+                gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end] = (
+                    Gene.objects.filter(
+                        replicon=replicon,
+                        start__gte=var_raw.start,
+                        end__lte=var_raw.end,
+                    ).first()
+                )
+            gene = gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end]
+
+            # in DEL, we dont keep REF in the database.
+            if var_raw.alt is None:
+                var_raw.ref = ""
+
+            mutation_data = {
+                "gene": gene if gene else None,
+                "ref": var_raw.ref,
+                "alt": var_raw.alt,
+                "start": var_raw.start,
+                "end": var_raw.end,
+                "replicon": replicon,
+                "type": var_raw.type,
+            }
+            mutation = Mutation(**mutation_data)
+            nt_mutations.append(mutation)
+            self.mutation_query_data.append(mutation_data)
+
+        # Bulk insert NT mutations and map their IDs with the original ID (in var file)
+        with transaction.atomic():
+            nt_inserted = Mutation.objects.bulk_create(
+                nt_mutations, ignore_conflicts=True
+            )
+
+        # seem the bulk_create with setting the ignore_conflicts will disable returning ID
+        # https://docs.djangoproject.com/en/4.2/ref/models/querysets/#bulk-create
+        # Fetch the inserted rows and map their IDs back
+        inserted_rows = Mutation.objects.filter(
+            # gene__in=[nt.gene for nt in nt_mutations], might not need
+            ref__in=[nt.ref for nt in nt_mutations],
+            alt__in=[nt.alt for nt in nt_mutations],
+            start__in=[nt.start for nt in nt_mutations],
+            end__in=[nt.end for nt in nt_mutations],
+            replicon__in=[nt.replicon for nt in nt_mutations],
+            type__in=[nt.type for nt in nt_mutations],
+        )
+        nt_id_mapping = {
+            var_raw.id: mutation.id for var_raw, mutation in zip(nt_vars, inserted_rows)
+        }
+        # for CDS mutations
+        cds_mutations = []
+        for var_raw in cds_vars:
+            # Update parent IDs for CDS mutations
+            parent_id = nt_id_mapping.get(var_raw.parent_id)
+            gene = None
+            replicon = None
+            if not var_raw.replicon_or_cds_accession in gene_cache_by_accession:
+                try:
+                    gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
+                        Gene.objects.get(
+                            cds_accession=var_raw.replicon_or_cds_accession
+                        )
+                    )
+                except Gene.DoesNotExist:
+                    gene_cache_by_accession[var_raw.replicon_or_cds_accession] = None
+            gene = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
+            replicon = gene.replicon if gene else None
+
+            # in DEL, we dont keep REF in the database.
+            if var_raw.alt is None:
+                var_raw.ref = ""
+
+            mutation_data = {
+                "gene": gene if gene else None,
+                "ref": var_raw.ref,
+                "alt": var_raw.alt,
+                "start": var_raw.start,
+                "end": var_raw.end,
+                "replicon": replicon,
+                "type": var_raw.type,
+                "parent_id": parent_id,  # Updated parent ID
+            }
+            mutation = Mutation(**mutation_data)
+            cds_mutations.append(mutation)
+            self.mutation_query_data.append(mutation_data)
+
+        # Bulk insert CDS mutations
+        with transaction.atomic():
+            Mutation.objects.bulk_create(cds_mutations, ignore_conflicts=True)
+
+        # Combine NT and CDS mutations into the result
+        # we might dont need sample_mutations because
+        # we insert data into database in this function
+        sample_mutations.extend(nt_mutations)
+        sample_mutations.extend(cds_mutations)
+
+        return sample_mutations
 
     def get_mutation_objs(
         self,
@@ -346,12 +473,15 @@ class SampleImport:
                     break
                 var_raw = line.strip("\r\n").split("\t")
                 yield VarRaw(
-                    var_raw[0],  # ref
-                    int(var_raw[1]),  # start
-                    int(var_raw[2]),  # end
-                    None if var_raw[3] == " " else var_raw[3],  # alt
-                    var_raw[4],  # replicon_or_cds_accession
-                    var_raw[6],  # type
+                    var_raw[0],  # id
+                    var_raw[1],  # ref
+                    int(var_raw[2]),  # start
+                    int(var_raw[3]),  # end
+                    None if var_raw[4] == " " else var_raw[4],  # alt
+                    var_raw[5],  # replicon_or_cds_accession
+                    # var_raw[6],  # label
+                    var_raw[7],  # type
+                    var_raw[8] if len(var_raw) > 8 else None,  # parent_id
                 )
 
     def _import_seq(self, path):

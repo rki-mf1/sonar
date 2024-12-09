@@ -810,14 +810,14 @@ class sonarCache:
                             if line == "//":
                                 break
                             vardat = line.strip("\r\n").split("\t")
-                            if vardat[6] == "cds":
+                            if vardat[7] == "cds":
                                 break
                             iter_dna_list.append(
                                 {
-                                    "variant.ref": vardat[0],  # ref
-                                    "variant.alt": vardat[3],  # alt
-                                    "variant.start": int(vardat[1]),  # start
-                                    "variant.end": int(vardat[2]),  # end
+                                    "variant.ref": vardat[1],  # ref
+                                    "variant.alt": vardat[4],  # alt
+                                    "variant.start": int(vardat[2]),  # start
+                                    "variant.end": int(vardat[3]),  # end
                                 }  # frameshift
                             )
                         # NOTE: disable check feature because we stop at "NT"
