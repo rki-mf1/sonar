@@ -1,17 +1,42 @@
 <template>
   <div class="table-content">
-
-    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows
-      :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
-      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect"
-      @rowUnselect="onRowUnselect">
+    <DataTable
+      v-model:selection="selectedRow"
+      :value="samplesStore.samples"
+      style="max-width: 95vw"
+      size="large"
+      data-key="name"
+      striped-rows
+      :reorderable-columns="true"
+      scrollable
+      scroll-height="flex"
+      sortable
+      selection-mode="single"
+      @column-reorder="onColReorder"
+      @sort="sortingChanged($event)"
+      @row-select="onRowSelect"
+      @row-unselect="onRowUnselect"
+    >
       <template #empty> No Results </template>
       <template #header>
-        <div style="display: flex; justify-content: space-between; ">
-          <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised @click="displayDialogExport = true" />
+        <div style="display: flex; justify-content: space-between">
+          <Button
+            icon="pi pi-external-link"
+            label="&nbsp;Export"
+            severity="warning"
+            raised
+            @click="displayDialogExport = true"
+          />
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="samplesStore.selectedColumns" display="chip" :options="samplesStore.propertyTableOptions" filter
-              placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
+            <MultiSelect
+              v-model="samplesStore.selectedColumns"
+              display="chip"
+              :options="samplesStore.propertyTableOptions"
+              filter
+              placeholder="Select Columns"
+              class="w-full md:w-20rem"
+              @update:model-value="columnSelection"
+            >
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
                   {{ samplesStore.selectedColumns.length + 1 }} columns selected
@@ -21,7 +46,7 @@
           </div>
         </div>
       </template>
-      <Column field="name" sortable :reorderableColumn="false">
+      <Column field="name" sortable :reorderable-column="false">
         <template #header>
           <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
@@ -31,23 +56,32 @@
           </div>
         </template>
       </Column>
-      <Column v-for="column in samplesStore.selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
+      <Column
+        v-for="column in samplesStore.selectedColumns"
+        :sortable="!notSortable.includes(column)"
+        :field="column"
+      >
         <template #header>
           <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
         </template>
         <template #body="slotProps">
           <div v-if="column === 'genomic_profiles'" class="cell-content">
             <div>
-              <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
-                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
+              <GenomicProfileLabel
+                v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                :variant-string="variant"
+                :annotations="slotProps.data.genomic_profiles[variant]"
+                :is-last="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
+              />
             </div>
           </div>
           <div v-else-if="column === 'proteomic_profiles'" class="cell-content">
             <div>
-              <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
-                :variantString="variant"
-                :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
+              <GenomicProfileLabel
+                v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                :variant-string="variant"
+                :is-last="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
+              />
             </div>
           </div>
           <div v-else-if="column === 'init_upload_date'" class="cell-content">
@@ -66,39 +100,62 @@
         <div style="display: flex; justify-content: space-between">
           Total: {{ samplesStore.filteredCount }} Samples
         </div>
-        <Paginator :totalRecords="samplesStore.filteredCount" v-model:rows="samplesStore.perPage"
-          :rowsPerPageOptions="[10, 25, 50, 100, 1000, 10000, 100000]" v-model:first="samplesStore.firstRow"
-          @update:rows="samplesStore.updateSamples()" />
+        <Paginator
+          v-model:rows="samplesStore.perPage"
+          v-model:first="samplesStore.firstRow"
+          :total-records="samplesStore.filteredCount"
+          :rows-per-page-options="[10, 25, 50, 100, 1000, 10000, 100000]"
+          @update:rows="samplesStore.updateSamples()"
+        />
       </template>
     </DataTable>
 
-    <Dialog class="flex" v-model:visible="samplesStore.loading" modal :closable="false" header="Loading...">
-      <ProgressSpinner class="flex-1 p-3" size="small" v-if="samplesStore.loading" style="color: whitesmoke" />
+    <Dialog
+      v-model:visible="samplesStore.loading"
+      class="flex"
+      modal
+      :closable="false"
+      header="Loading..."
+    >
+      <ProgressSpinner
+        v-if="samplesStore.loading"
+        class="flex-1 p-3"
+        size="small"
+        style="color: whitesmoke"
+      />
     </Dialog>
 
-    <Dialog v-model:visible="displayDialogRow" modal dismissableMask :style="{ width: '60vw' }">
+    <Dialog v-model:visible="displayDialogRow" modal dismissable-mask :style="{ width: '60vw' }">
       <template #header>
         <div style="display: flex; align-items: center">
           <strong>Sample Details</strong>
           <div v-if="selectedRow">
             <router-link v-slot="{ href, navigate }" :to="`sample/${selectedRow.name}`" custom>
-              <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px">
+              <a :href="href" target="_blank" style="margin-left: 8px" @click="navigate">
                 <i class="pi pi-external-link"></i>
               </a>
             </router-link>
           </div>
         </div>
       </template>
-      <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyTableOptions"></SampleDetails>
+      <SampleDetails
+        :selected-row="selectedRow"
+        :all-columns="samplesStore.propertyTableOptions"
+      ></SampleDetails>
     </Dialog>
 
-    <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
-      :style="{ width: '25vw' }">
+    <Dialog
+      v-model:visible="displayDialogExport"
+      header="Export Settings"
+      modal
+      dismissable-mask
+      :style="{ width: '25vw' }"
+    >
       <div>
-        <RadioButton v-model="exportFormat" inputId="exportFormat1" value="csv" />
+        <RadioButton v-model="exportFormat" input-id="exportFormat1" value="csv" />
         <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
         <br /><br />
-        <RadioButton v-model="exportFormat" inputId="exportFormat2" value="xlsx" />
+        <RadioButton v-model="exportFormat" input-id="exportFormat2" value="xlsx" />
         <label for="exportFormat2" class="ml-2"> Excel (.xlsx)</label>
         <br /><br />
       </div>
@@ -106,15 +163,21 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised :loading="samplesStore.loading"
-          @click="exportFile(exportFormat)" />
+        <Button
+          icon="pi pi-external-link"
+          label="&nbsp;Export"
+          severity="warning"
+          raised
+          :loading="samplesStore.loading"
+          @click="exportFile(exportFormat)"
+        />
       </div>
     </Dialog>
   </div>
 
   <Toast ref="exportToast" position="bottom-right" group="br">
     <template #container="{ message, closeCallback }">
-      <section class="flex p-3 gap-3 " style="border-radius: 10px">
+      <section class="flex p-3 gap-3" style="border-radius: 10px">
         <i class="pi pi-cloud-download text-primary-500 text-2xl"></i>
         <div class="flex flex-column gap-3 w-full">
           <p class="m-0 font-semibold text-base text-blue">{{ message.summary }}</p>
@@ -124,7 +187,11 @@
           </div>
         </div>
         <!-- Close Icon (X button) -->
-        <button class="p-toast-close p-link" style="position: absolute; top: 5px; right: 5px" @click="closeCallback">
+        <button
+          class="p-toast-close p-link"
+          style="position: absolute; top: 5px; right: 5px"
+          @click="closeCallback"
+        >
           <i class="pi pi-times"></i>
         </button>
       </section>
@@ -134,9 +201,9 @@
 
 <script lang="ts">
 import API from '@/api/API'
-import { useSamplesStore } from '@/stores/samples';
-import { type Property } from '@/util/types';
-import type { DataTableSortEvent } from 'primevue/datatable';
+import { useSamplesStore } from '@/stores/samples'
+import { type Property } from '@/util/types'
+import type { DataTableSortEvent } from 'primevue/datatable'
 
 export default {
   name: 'HomeView',
@@ -147,116 +214,125 @@ export default {
       displayDialogExport: false,
       exportFormat: 'csv',
       selectedRow: {
-        name: "",
+        name: '',
         properties: [],
         genomic_profiles: {},
-        proteomic_profiles: [],
+        proteomic_profiles: []
       },
       displayDialogRow: false,
-      notSortable: ["genomic_profiles", "proteomic_profiles"],
+      notSortable: ['genomic_profiles', 'proteomic_profiles']
     }
   },
+  computed: {},
+  mounted() {},
   methods: {
     findProperty(properties: Array<Property>, propertyName: string) {
-      const property = properties.find(property => property.name === propertyName);
-      return property ? property.value : undefined;
+      const property = properties.find((property) => property.name === propertyName)
+      return property ? property.value : undefined
     },
     exportFile(type: string) {
       // Show the progress bar in the toast
       const exportToastRef = this.$refs.exportToast as {
-        add:
-        (options: {
-          severity: string;
-          summary: string;
-          detail: string;
-          id: number;
-          group: string;
-          closable: boolean;
+        add: (options: {
+          severity: string
+          summary: string
+          detail: string
+          id: number
+          group: string
+          closable: boolean
         }) => void
-      };
+      }
       exportToastRef.add({
         severity: 'info',
         summary: 'Exporting...',
         detail: 'Your file is being prepared.',
         id: 1,
         group: 'br',
-        closable: true,
-      });
+        closable: true
+      })
 
-      this.displayDialogExport = false;
+      this.displayDialogExport = false
       // this.samplesStore.loading = true;
-      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.samplesStore.selectedColumns, this.samplesStore.ordering, type == "xlsx")
+      API.getInstance()
+        .getSampleGenomesExport(
+          this.samplesStore.filters,
+          this.samplesStore.selectedColumns,
+          this.samplesStore.ordering,
+          type == 'xlsx'
+        )
         .then(() => {
           // Export completed, close the toast
-          console.log("complete");
+          console.log('complete')
           this.$toast.removeGroup('br')
         })
         .catch((error) => {
           // Handle the error, also close the toast in case of error
-          this.showToastError('Export failed. Please try again.');
+          this.showToastError('Export failed. Please try again.')
           this.$toast.removeGroup('br')
         })
         .finally(() => {
           // this.samplesStore.loading = false;
-        });
+        })
       //this.samplesStore.loading = false;
     },
     columnSelection(value: string[]) {
-      this.samplesStore.selectedColumns = value.filter(v => this.samplesStore.propertyTableOptions.includes(v));
+      this.samplesStore.selectedColumns = value.filter((v) =>
+        this.samplesStore.propertyTableOptions.includes(v)
+      )
     },
     onColReorder(event: any) {
-
-      const { dragIndex, dropIndex } = event as { dragIndex: number; dropIndex: number; };
+      const { dragIndex, dropIndex } = event as { dragIndex: number; dropIndex: number }
       // Rearrange columns based on dragIndex and dropIndex
-      const reorderedColumns = ['name', ...this.samplesStore.selectedColumns]; // note: 'name' is fixed and cant be reordered
-      const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
-      reorderedColumns.splice(dropIndex, 0, movedColumn);
+      const reorderedColumns = ['name', ...this.samplesStore.selectedColumns] // note: 'name' is fixed and cant be reordered
+      const movedColumn = reorderedColumns.splice(dragIndex, 1)[0]
+      reorderedColumns.splice(dropIndex, 0, movedColumn)
 
-      this.samplesStore.selectedColumns = reorderedColumns.slice(1); // drop 'name' from column list since it is fixed and cant be reordered
+      this.samplesStore.selectedColumns = reorderedColumns.slice(1) // drop 'name' from column list since it is fixed and cant be reordered
     },
     onRowSelect(event: any) {
-      this.selectedRow = event.data;
-      this.displayDialogRow = true;
+      this.selectedRow = event.data
+      this.displayDialogRow = true
     },
     onRowUnselect() {
       this.selectedRow = {
-        name: "",
+        name: '',
         properties: [],
         genomic_profiles: {},
-        proteomic_profiles: [],
-      };
-      this.displayDialogRow = false;
+        proteomic_profiles: []
+      }
+      this.displayDialogRow = false
     },
     sortingChanged(sortBy: DataTableSortEvent) {
       if (sortBy.sortOrder) {
-        if (sortBy.sortOrder > 0 && typeof (sortBy.sortField) === "string") {
-          this.samplesStore.ordering = sortBy.sortField;
+        if (sortBy.sortOrder > 0 && typeof sortBy.sortField === 'string') {
+          this.samplesStore.ordering = sortBy.sortField
         } else {
-          this.samplesStore.ordering = `-${sortBy.sortField}`;
+          this.samplesStore.ordering = `-${sortBy.sortField}`
         }
-        this.samplesStore.updateSamples();
+        this.samplesStore.updateSamples()
       }
     },
     formatDate(dateStr: string): string {
-      if (!dateStr) return ''; // Handle case where dateStr is undefined or null
-      return dateStr.split('T')[0];
+      if (!dateStr) return '' // Handle case where dateStr is undefined or null
+      return dateStr.split('T')[0]
     },
     metaDataCoverage(column: string) {
-      if (this.samplesStore.filteredCount != 0 && this.samplesStore.filteredStatistics["meta_data_coverage"] != undefined) {
-        const coverage = (this.samplesStore.filteredStatistics["meta_data_coverage"][column] / this.samplesStore.filteredCount * 100).toFixed(0);
-        return 'Coverage: ' + coverage.toString() + ' %';
+      if (
+        this.samplesStore.filteredCount != 0 &&
+        this.samplesStore.filteredStatistics['meta_data_coverage'] != undefined
+      ) {
+        const coverage = (
+          (this.samplesStore.filteredStatistics['meta_data_coverage'][column] /
+            this.samplesStore.filteredCount) *
+          100
+        ).toFixed(0)
+        return 'Coverage: ' + coverage.toString() + ' %'
       } else {
-        return '';
+        return ''
       }
-    },
-  },
-  computed: {
-  },
-  mounted() {
-
-  },
+    }
+  }
 }
-
 </script>
 
 <style scoped>
