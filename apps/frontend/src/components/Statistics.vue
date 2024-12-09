@@ -51,7 +51,6 @@ export default {
     data() {
         return {
             statistics: {
-                distinct_mutations_count: 0,
                 samples_total: 0,
                 latest_sample_date: ""
             }
@@ -60,7 +59,6 @@ export default {
     methods: {
         async fetchStatistics() {
             const sample_statistics = await API.getInstance().getSampleStatistics()
-            this.statistics.distinct_mutations_count = sample_statistics.distinct_mutations_count
             this.statistics.samples_total = sample_statistics.samples_total
             this.statistics.latest_sample_date = sample_statistics.latest_sample_date
         }
@@ -78,7 +76,8 @@ export default {
     margin: 10px;
     box-shadow: var(--shadow);
     box-sizing: border-box; 
-};
+}
+
 .card-container {
     display: flex;
     flex-direction: column;

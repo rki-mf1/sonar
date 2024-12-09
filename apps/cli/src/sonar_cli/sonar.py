@@ -90,6 +90,7 @@ def parse_args(args=None):
     # admin
     subparsers, _ = create_subparser_tasks(subparsers, database_parser)
 
+    subparsers, _ = create_subparser_info(subparsers, database_parser)
     # version parser
     parser.add_argument(
         "-v",
@@ -171,6 +172,18 @@ def create_parser_reference() -> argparse.ArgumentParser:
         required=True,
     )
     return parser
+
+
+def create_subparser_info(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    parser = subparsers.add_parser(
+        "info",
+        parents=parent_parsers,
+        help="Deletes a reference from the database.",
+    )
+
+    return subparsers, parser
 
 
 def create_subparser_delete_reference(
@@ -441,7 +454,7 @@ def create_subparser_import(
     )
     parser.add_argument(
         "--cols",
-        help="assign column names used in the provided TSV/CSV file to the matching property names provided by the database in the form PROP=COL (e.g. SAMPLE=GenomeID)",
+        help="assign column names used in the provided TSV/CSV file to the matching property names provided by the database in the form PROP=COL (e.g. name=GenomeID)",
         type=str,
         nargs="+",
         default=[],
@@ -949,6 +962,10 @@ def handle_lineage(args: argparse.Namespace):
     sonarUtils1.upload_lineage(lineage_file=args.lineage)
 
 
+def handle_info(args: argparse.Namespace):
+    sonarUtils1.get_info()
+
+
 def execute_commands(args):  # noqa: C901
     """
     Execute the appropriate function based on the provided command.
@@ -991,6 +1008,8 @@ def execute_commands(args):  # noqa: C901
         handle_tasks(args)
     elif args.command == "import-lineage":
         handle_lineage(args)
+    elif args.command == "info":
+        handle_info(args)
 
 
 def main(args: Optional[argparse.Namespace] = None) -> int:

@@ -61,8 +61,7 @@ if [ $REBUILD -eq 0 ]; then
   DC_ARGS="--build"
 fi
 
-$SCRIPTPATH/dc-dev.sh up -d $DC_ARGS
-$SCRIPTPATH/dev-manage.sh migrate
+$SCRIPTPATH/dc-dev.sh up --wait -d $DC_ARGS
 
 if [ $TEST_DATA -eq 0 ]; then
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_sm
@@ -70,6 +69,3 @@ if [ $TEST_DATA -eq 0 ]; then
 else
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth
 fi
-
-# This is a hack to resolve the annoying apserver log messages
-$SCRIPTPATH/dc-dev.sh restart sonar-django-apscheduler

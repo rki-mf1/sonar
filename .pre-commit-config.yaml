@@ -1,20 +1,24 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
-  hooks:
-  - id: check-yaml
-  - id: end-of-file-fixer
-    types_or: [python, markdown, shell, vue, ts]
-  - id: trailing-whitespace
-    types_or: [python, markdown, shell, vue, ts]
-- repo: https://github.com/sqlalchemyorg/zimports/
-  rev: v0.6.1
-  hooks:
-  - id: zimports
-    args: [--keep-unused]
-    exclude: ^apps/backend/rest_api/migrations/
-- repo: https://github.com/psf/black
-  rev: 24.10.0
-  hooks:
-  - id: black
-    exclude: ^apps/backend/rest_api/migrations/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+        types_or: [python, markdown, shell, vue, ts]
+      - id: trailing-whitespace
+        types_or: [python, markdown, shell, vue, ts]
+  - repo: https://github.com/sqlalchemyorg/zimports/
+    rev: v0.6.1
+    hooks:
+      - id: zimports
+        args: ["--keep-unused", "-m", "rest_api,covsonar_backend,permission_model"]
+        exclude: ^apps/backend/rest_api/migrations/
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        exclude: ^apps/backend/rest_api/migrations/
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.14.0
+    hooks:
+      - id: yamlfmt

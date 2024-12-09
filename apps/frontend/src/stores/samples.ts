@@ -6,29 +6,116 @@ import {
   type FilterGroupFilters,
   type GenomeFilter,
   type ProfileFilter,
-  type LineageFilter,
-  type PropertyFilter,
-  type Property,
+  type FilteredStatistics,
   DjangoFilterType,
   StringDjangoFilterType,
-  DateDjangoFilterType
+  DateDjangoFilterType,
+  type PropertyFilter
 } from '@/util/types'
 import { reactive } from 'vue';
-import { watch, ref } from 'vue';
+import { watch} from 'vue';
+
+// called in getters, not allowed in actions
+function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
+      const summary = {
+        andFilter: [] as GenomeFilter[],
+        orFilter: [] as FilterGroupFilters[]
+      } as FilterGroupFilters
+      for (const filter of filterGroup.filters.propertyFilters) {
+        if (filter.propertyName && filter.filterType && filter.value) {
+          var value = filter.value
+          if (Array.isArray(filter.value) && filter.value.every(item => item instanceof Date)) {
+            var date_array = filter.value as Date[] 
+            if (date_array[1]) {
+              filter.filterType = DjangoFilterType.RANGE
+              value = parseDateToDateRangeFilter(date_array)
+            } else {
+              value = []
+              //value = new Date(date_array[0]).toISOString().split('T')[0]
+            }
+          }
+          summary.andFilter.push({
+            label: filter.label,
+            property_name: filter.propertyName,
+            filter_type: filter.filterType,
+            value: value.toString()
+          })
+        }
+      }
+      for (const filter of filterGroup.filters.profileFilters) {
+        var valid = true
+        const translatedFilter = {} as Record<string, string | number | boolean>
+        for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
+          //snake_case conversion
+          var translatedKey = key.replace('AA', '_aa')
+          translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
+          translatedFilter[translatedKey] = filter[key]
+          if (!filter[key] && key != 'exclude') {
+            valid = false
+            break
+          }
+        }
+        if (valid) {
+          summary.andFilter.push(translatedFilter)
+        }
+      }
+      for (const filter of filterGroup.filters.repliconFilters) {
+        if (filter.accession) {
+          summary.andFilter.push({
+            label: filter.label,
+            accession: filter.accession,
+            exclude: filter.exclude
+          })
+        }
+      }
+      if (filterGroup.filters.lineageFilter.lineageList 
+            && filterGroup.filters.lineageFilter.lineageList.length > 0) {
+          summary.andFilter.push(filterGroup.filters.lineageFilter)
+      }
+      for (const subFilterGroup of filterGroup.filterGroups) {
+        summary.orFilter.push(getFilterGroupFilters(subFilterGroup))
+      }
+      return summary
+    }
+
+function parseDateToDateRangeFilter(data: Date[]) {
+      // Parse the first date
+      data[0] = new Date(Date.parse(data[0].toString()))
+      //  format the date according to your local timezone instead of UTC.
+      const formatDateToLocal = (date: Date) => {
+        return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .split('T')[0]
+      }
+
+      // Check if there's a second date
+      if (data[1]) {
+        data[1] = new Date(Date.parse(data[1].toString()))
+        const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])]
+        return formatted
+      } else {
+        // If there's no second date, assume a range of one day?
+        const nextDay = new Date(Date.parse(data[0].toString()) + 1000 * 60 * 60 * 24)
+        return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)]
+      }
+    }
+
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
     samples: [],
-    filteredStatistics: {},
+    filteredStatistics: {} as FilteredStatistics,
     filteredCount: 0,
     loading: false,
     perPage: 10,
     firstRow: 0,
     filtersChanged: false,
-    ordering: '-collection_date',
+    ordering: '-collection_date' as string,
     timeRange: [] as (Date | null)[],
     propertiesDict: {} as { [key: string]: string[] },
-    propertyOptions: [] as string[],
+    propertyTableOptions: [] as string[],
+    propertyMenuOptions: [] as string[],
+    selectedColumns: ["genomic_profiles", "proteomic_profiles"],
     propertyValueOptions: {} as {
       [key: string]: {
         options: string[]
@@ -41,8 +128,13 @@ export const useSamplesStore = defineStore('samples', {
     filterGroup: reactive({
       filterGroups: [],
       filters: {
-        propertyFilters: [],
-        profileFilters: [{"label":"Label","value":"","exclude":false}],
+        propertyFilters: [{
+          fetchOptions: false,
+          label: 'Property',
+          propertyName: 'collection_date',
+          filterType: DateDjangoFilterType.RANGE,
+          value: [] as (Date | null)[]}],
+        profileFilters: [{"label":"DNA/AA Profile","value":"","exclude":false}],
         repliconFilters: [],
         lineageFilter: {
           label: "Lineages",
@@ -92,14 +184,15 @@ export const useSamplesStore = defineStore('samples', {
         } else {
           this.errorMessage = 'An unknown error occurred.';
         }
-      }else{
+      } else{
         this.samples = response.results;
-        this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-        this.filteredCount = this.filteredStatistics.filtered_total_count
-
       }
       this.loading = false
       this.filtersChanged = false
+    },
+    async updateFilteredStatistics() {
+      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+      this.filteredCount = this.filteredStatistics.filtered_total_count
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
@@ -107,9 +200,10 @@ export const useSamplesStore = defineStore('samples', {
         new Date(statistics.first_sample_date),
         new Date(statistics.latest_sample_date ?? Date.now())
       ]
-      this.updateSamples()
+      return this.timeRange
     },
-    updatePropertyValueOptions(propertyName: string) {
+    updatePropertyValueOptions(filter: PropertyFilter) {
+      const propertyName = filter.propertyName
       if (this.propertyValueOptions[propertyName]) return
       this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
@@ -119,8 +213,25 @@ export const useSamplesStore = defineStore('samples', {
           this.propertyValueOptions[propertyName].loading = false
         })
     },
+
+    async updateSelectedColumns() {
+      const properties = ['lineage', 'collection_date', 'zip_code', 'lab', 'sequencing_tech', 
+        'sequencing_reason', "isolation_source", 'init_upload_date', 'last_update_date'
+      ]
+      let columns = [
+        ...this.selectedColumns,
+        ...properties.filter(prop => this.propertyTableOptions.includes(prop))
+      ]
+      columns = [
+        ...columns,
+        ...this.propertyTableOptions.filter(prop => !columns.includes(prop))
+      ]
+      this.selectedColumns = columns.slice(0, 6)
+    },
+
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+      const metaData = this.filteredStatistics.meta_data_coverage
       this.propertiesDict = {}
       res.values.forEach((property: { name: string, query_type: string, description: string }) => {
         if (property.query_type === 'value_varchar') {
@@ -131,7 +242,15 @@ export const useSamplesStore = defineStore('samples', {
           this.propertiesDict[property.name] = Object.values(DjangoFilterType);
         }
       });
-      this.propertyOptions = Object.keys(this.propertiesDict)
+      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty 
+      // & drop the 'name' column because the ID column is fixed
+      this.propertyTableOptions = Object.keys(this.propertiesDict).filter( 
+        (key) => key !== 'name' && metaData[key] > 0
+      );
+      this.propertyMenuOptions = [
+        'name',
+        ... this.propertyTableOptions.filter(prop => !["genomic_profiles", "proteomic_profiles", "lineage"].includes(prop))
+      ]
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
@@ -145,86 +264,10 @@ export const useSamplesStore = defineStore('samples', {
       const res = await API.getInstance().getGeneSymbolOptions()
       this.symbolOptions = res.gene_symbols
     },
-    getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
-      const summary = {
-        andFilter: [] as GenomeFilter[],
-        orFilter: [] as FilterGroupFilters[]
-      } as FilterGroupFilters
-      for (const filter of filterGroup.filters.propertyFilters) {
-        if (filter.propertyName && filter.filterType && filter.value) {
-          var value = filter.value
-          if (filter.propertyName.includes('date')) {
-            if (value[1]) {
-              filter.filterType = DjangoFilterType.RANGE
-              value = this.parseDateToDateRangeFilter(value)
-            } else {
-              value = new Date(value[0]).toISOString().split('T')[0]
-            }
-          }
-          summary.andFilter.push({
-            label: filter.label,
-            property_name: filter.propertyName,
-            filter_type: filter.filterType,
-            value: value.toString()
-          })
-        }
-      }
-      for (const filter of filterGroup.filters.profileFilters) {
-        var valid = true
-        const translatedFilter = {} as Record<string, string | number | boolean>
-        for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
-          //snake_case conversion
-          var translatedKey = key.replace('AA', '_aa')
-          translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
-          translatedFilter[translatedKey] = filter[key]
-          if (!filter[key] && key != 'exclude') {
-            valid = false
-            break
-          }
-        }
-        if (valid) {
-          summary.andFilter.push(translatedFilter)
-        }
-      }
-      for (const filter of filterGroup.filters.repliconFilters) {
-        if (filter.accession) {
-          summary.andFilter.push({
-            label: filter.label,
-            accession: filter.accession,
-            exclude: filter.exclude
-          })
-        }
-      }
-      if (filterGroup.filters.lineageFilter.lineageList 
-            && filterGroup.filters.lineageFilter.lineageList.length > 0) {
-          summary.andFilter.push(filterGroup.filters.lineageFilter)
-      }
-      for (const subFilterGroup of filterGroup.filterGroups) {
-        summary.orFilter.push(this.getFilterGroupFilters(subFilterGroup))
-      }
-      return summary
+        isDateArray(value: any): value is Date[] {
+      return Array.isArray(value) && value.every(item => item instanceof Date);
     },
-    parseDateToDateRangeFilter(data) {
-      // Parse the first date
-      data[0] = new Date(Date.parse(data[0].toString()))
-      //  format the date according to your local timezone instead of UTC.
-      const formatDateToLocal = (date) => {
-        return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-          .toISOString()
-          .split('T')[0]
-      }
 
-      // Check if there's a second date
-      if (data[1]) {
-        data[1] = new Date(Date.parse(data[1].toString()))
-        const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])]
-        return formatted
-      } else {
-        // If there's no second date, assume a range of one day?
-        const nextDay = new Date(Date.parse(data[0]) + 1000 * 60 * 60 * 24)
-        return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)]
-      }
-    },
     initializeWatchers() {
     watch(
       () => this.filterGroup,
@@ -241,32 +284,18 @@ export const useSamplesStore = defineStore('samples', {
 },
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
-      return { filters: this.getFilterGroupFilters(this.filterGroup) }
+      return { filters: getFilterGroupFilters(this.filterGroup) }
     },
     filterGroupFiltersHasDateFilter(state): boolean {
-      return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") || this.filterGroupsFilters.filters.orFilter.some(item => item.property_name === "collection_date");
+      return this.filterGroupsFilters.filters.andFilter.some(item => item.property_name === "collection_date") 
+      ||  this.filterGroupsFilters.filters.orFilter.some(orFilterGroup => 
+        orFilterGroup.andFilter.some(item => item.property_name === "collection_date"))
     },
     filters(state): FilterGroupRoot {
       const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters));
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
-
-      if (this.timeRange[0] && this.timeRange[1] && !this.filterGroupFiltersHasDateFilter) {
-        filters.filters.andFilter.push({
-          label: 'Property',
-          property_name: 'collection_date',
-          filter_type: 'range',
-          value: `${this.timeRange[0].toLocaleDateString('en-CA')},${this.timeRange[1].toLocaleDateString('en-CA')}` // formatted as "yyyy-mm-dd,yyyy-mm-dd"
-        })
-      }
-
-      // if (this.filterGroupFiltersHasDateFilter) {
-      //   this.timeRange = ''
-      // }
-      // else {
-      //   this.setDefaultTimeRange()
-      // }
       return filters as FilterGroupRoot
     }
   }

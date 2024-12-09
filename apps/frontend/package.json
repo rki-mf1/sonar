@@ -7,10 +7,10 @@
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
-    "build-only": "vite build",
     "format": "prettier . --write",
     "format-check": "prettier . --check",
     "lint": "eslint --fix src",
+    "build-only": "vite build --emptyOutDir --outDir ../backend/work/frontend/dist",
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {
@@ -18,6 +18,7 @@
     "chart.js": "^4.4.3",
     "chartjs-adapter-moment": "^1.0.1",
     "chartjs-plugin-zoom": "^2.0.1",
+    "chroma-js": "^3.1.2",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "oh-vue-icons": "^1.0.0-rc3",
@@ -32,8 +33,12 @@
   "devDependencies": {
     "@eslint/compat": "^1.2.4",
     "@eslint/js": "^9.16.0",
+    "@playwright/test": "^1.49.0",
     "@tsconfig/node20": "^20.1.2",
+    "@types/chroma-js": "^2.4.4",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^20.11.28",
+    "@types/qs": "^6.9.16",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/tsconfig": "^0.5.1",
     "eslint": "^9.16.0",

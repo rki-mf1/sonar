@@ -127,19 +127,19 @@ class sonarUtils:
                 csv_files=csv_files,
                 tsv_files=tsv_files,
             )
-            if "sample" not in properties:
+            if "name" not in properties:
                 LOGGER.error(
-                    "Cannot link sample id. Please provide a mapping id in the meta file, add --cols sample=(column name) to the command line."
+                    "Cannot link ID. Please provide a mapping ID in the meta file, add '--cols name=(column ID/sample name)' to the command line."
                 )
                 sys.exit(1)
-            sample_id_column = properties["sample"]
-            del properties["sample"]
+            sample_id_column = properties["name"]
+            del properties["name"]
 
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
                 LOGGER.error(
-                    "Cannot link sample id. Please provide a mapping id in the meta file, add --cols sample=(column name) to the command line."
+                    "Cannot link ID. Please provide a mapping ID in the meta file, add --cols name=(column ID/sample name) to the command line."
                 )
                 sys.exit(1)
 
@@ -363,7 +363,9 @@ class sonarUtils:
             cache_dict = {"job_id": job_id}
             for sample_chunk in passed_samples_chunk_list:
                 LOGGER.info("Uploading and importing chunk.")
-                sonarUtils.zip_import_upload_multithread(cache_dict, sample_chunk)
+                sonarUtils.zip_import_upload_sample_singlethread(
+                    cache_dict, sample_chunk
+                )
 
             if auto_anno:
 
@@ -376,7 +378,9 @@ class sonarUtils:
                     disable=not progress,
                 ):
                     # LOGGER.info("Uploading and importing chunk.")
-                    sonarUtils.zip_import_upload_annotaion(cache_dict, each_file)
+                    sonarUtils.zip_import_upload_annotation_singlethread(
+                        cache_dict, each_file
+                    )
 
             LOGGER.info(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
@@ -394,7 +398,7 @@ class sonarUtils:
         )
 
     @staticmethod
-    def zip_import_upload_annotaion(shared_objects: dict, file_path):
+    def zip_import_upload_annotation_singlethread(shared_objects: dict, file_path):
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
@@ -420,7 +424,7 @@ class sonarUtils:
             LOGGER.error(msg)
 
     @staticmethod
-    def zip_import_upload_multithread(shared_objects: dict, sample_list):
+    def zip_import_upload_sample_singlethread(shared_objects: dict, sample_list):
 
         files_to_compress = []
         for kwargs in sample_list:
@@ -643,8 +647,8 @@ class sonarUtils:
             # Handle sample ID linking
             for link in prop_links:
                 prop, col = link.split("=")
-                if prop.upper() == "SAMPLE":
-                    propnames["sample"] = col
+                if prop.upper() == "NAME":
+                    propnames["name"] = col
 
         else:
             LOGGER.info("Reading property names from user-provided '--cols'")
@@ -654,9 +658,10 @@ class sonarUtils:
                         f"'{link}' is not a valid column-to-property assignment."
                     )
                     sys.exit(1)
+                # Handle sample ID linking
                 prop, col = link.split("=")
-                if prop.upper() == "SAMPLE":
-                    propnames["sample"] = col
+                if prop.upper() == "NAME":
+                    propnames["name"] = col
                     continue
 
                 _row_df = prop_df[
@@ -670,13 +675,15 @@ class sonarUtils:
                         f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
                     )
 
-        LOGGER.info("Displaying column-to-property mappings:")
+        LOGGER.info("Displaying property mappings:")
+        LOGGER.info("(Input table column name -> Sonar database property name)")
+
         for prop, prop_info in propnames.items():
-            if prop == "sample":
-                LOGGER.verbose(f"{prop} <- {prop_info}")
+            if prop == "name":
+                LOGGER.info(f"{prop_info} -> {prop}")
                 continue
             db_property_name = prop_info.get("db_property_name", "N/A")
-            LOGGER.verbose(f"{prop} <- {db_property_name}")
+            LOGGER.info(f"{prop} -> {db_property_name}")
         LOGGER.info("--------")
 
         return propnames

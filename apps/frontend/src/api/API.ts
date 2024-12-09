@@ -65,10 +65,11 @@ export default class API {
                 }
             })
     }
-    getRequest(url: string, params, suppressError: boolean) {
+    getRequest(url: string, params: JSON, suppressError: boolean) {
         return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
     }
-    getSampleGenomes(filters: FilterGroupRoot, params) {
+
+    getSampleGenomes(filters: FilterGroupRoot, params: Record<string, string | number | boolean>) {
         let url = `samples/genomes/?`
         for (const key of Object.keys(params)) {
             url += `${key}=${params[key]}&`
@@ -77,21 +78,20 @@ export default class API {
         if (Object.keys(filters).length > 0) {
             url += this.parseQueryString(filters).replace('?', '&')
         }
-        return this.getRequest(url, {}, false)
+        return this.getRequest(url, {} as JSON, false)
     }
 
     getSingleSampleGenome(name: string) {
-        return this.getRequest(`samples/genomes/?name=${name}`, {}, false)
+        return this.getRequest(`samples/genomes/?name=${name}`, {} as JSON, false)
     }
 
     getFilteredStatistics(params: FilterGroupRoot) {
         const queryString = this.parseQueryString(params)
         const url = `samples/filtered_statistics/${queryString}`
-        console.log(url)
-        return this.getRequest(url, {}, false)
+        return this.getRequest(url, {} as JSON, false)
     }
     async getSampleGenomesExport(params: FilterGroupRoot, columns: string[], ordering: string, xls = true) {
-        const exportColumns = ['name', ...columns]
+        const exportColumns: string[] = ['name', ...columns]
         const queryString = this.parseQueryString(params)
 
         let url = `${this.BACKEND_ADDRESS}samples/genomes/${queryString}`
@@ -105,7 +105,7 @@ export default class API {
         })
         const stream = response.data;
         if (xls) {
-            const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
+            const reader: ReadableStreamDefaultReader<string> = stream.pipeThrough(new TextDecoderStream()).getReader();
             this.saveAsXLSX(reader, exportColumns)
             return
         }
@@ -127,11 +127,10 @@ export default class API {
         saveAs(blob, 'export.csv')
     }
 
-    async saveAsXLSX(reader, columns) {
+    async saveAsXLSX(reader: ReadableStreamDefaultReader<string>, columns: string[]) {
         const workbook = new Workbook();
         const worksheet = workbook.addWorksheet('Sheet 1');
         worksheet.columns = columns.map((c) => ({ header: c, key: c, width: 20 }));
-        let row = 1;
         let data = '' as string;
         while (true) {
             const { done, value } = await reader.read();
@@ -141,15 +140,14 @@ export default class API {
             data += value;
             if (data && data.includes('\n')) {
                 const lines = data.split('\n');
-                data = lines.pop();
+                data = lines.pop() || "";
                 for (const line of lines) {
                     const values = line.split(';');
-                    const rowValues = {};
+                    const rowValues: { [key: string]: string | undefined } = {};
                     columns.forEach((c, i) => {
                         rowValues[c] = values[i];
                     });
-                    worksheet.addRow(rowValues, row);
-                    row++;
+                    worksheet.addRow(rowValues);
                 }
             }
         }
@@ -160,41 +158,46 @@ export default class API {
 
 
     getSampleGenomePropertyOptions() {
-        return this.getRequest(`properties/distinct_property_names`, {}, false)
+        return this.getRequest(`properties/distinct_property_names/`, {} as JSON, false)
     }
 
     getSampleGenomePropertyOptionsAndTypes() {
-        return this.getRequest(`properties/get_all_properties`, {}, false)
+        return this.getRequest(`properties/get_all_properties/`, {} as JSON, false)
     }
 
     getSampleStatistics() {
-        return this.getRequest(`samples/statistics`, {}, false)
+        return this.getRequest(`samples/statistics/`, {} as JSON, false)
     }
 
     getSampleGenomePropertyValueOptions(propertyName: string) {
         // get unique value2 of each property_name
-        return this.getRequest(`properties/distinct_properties/?property_name=${propertyName}`, {}, false)
+        return this.getRequest(`properties/distinct_properties/?property_name=${propertyName}`, {} as JSON, false)
     }
     getRepliconAccessionOptions() {
         const url = `replicons/distinct_accessions/`
-        return this.getRequest(url, {}, false)
+        return this.getRequest(url, {} as JSON, false)
     }
     getLineageOptions() {
         const url = `lineages/distinct_lineages/`
-        return this.getRequest(url, {}, false)
+        return this.getRequest(url, {} as JSON, false)
     }
     getGeneSymbolOptions() {
-        return this.getRequest(`genes/distinct_gene_symbols`, {}, false)
+        return this.getRequest(`genes/distinct_gene_symbols/`, {} as JSON, false)
     }
-    parseQueryString(query) {
+    parseQueryString(query: FilterGroupRoot) {
+        // remove properties (e.g. empty date ranges) with no value
+        query.filters.andFilter = query.filters.andFilter.filter(filter => {
+            return !(filter.value === '');
+            });
         if (Object.keys(query).length > 0) {
             return (
                 "?" +
                 Object.keys(query)
                     .map(function (k) {
-                        let value = JSON.stringify(query[k])
+                        const key = k as keyof FilterGroupRoot;
+                        let value = JSON.stringify(query[key]);
                         if (value === undefined || value === null) {
-                            value = query[k].toString()
+                            value = query[key]?.toString() || ''; 
                         }
                         const param = (
                             encodeURIComponent(k.toString().trim()) +
@@ -208,6 +211,6 @@ export default class API {
         } else return "";
     }
     uniqueMutationCount() {
-        return this.getRequest(`mutations/distinct_mutations_count`, {}, false)
+        return this.getRequest(`mutations/distinct_mutations_count/`, {} as JSON, false)
     }
 }

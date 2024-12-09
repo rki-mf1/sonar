@@ -1,42 +1,20 @@
 <template>
   <div class="table-content">
-    
-    <DataTable 
-      :value="samplesStore.samples" 
-      style="max-width: 95vw" 
-      size="large" 
-      dataKey="name" 
-      stripedRows 
-      :reorderableColumns="true" 
-      @columnReorder="onColReorder" 
-      scrollable 
-      scrollHeight="flex" 
-      sortable
-      @sort="sortingChanged($event)" 
-      selectionMode="single" 
-      v-model:selection="selectedRow" 
-      @rowSelect="onRowSelect" 
-      @rowUnselect="onRowUnselect"
-      >
+
+    <DataTable :value="samplesStore.samples" style="max-width: 95vw" size="large" dataKey="name" stripedRows
+      :reorderableColumns="true" @columnReorder="onColReorder" scrollable scrollHeight="flex" sortable
+      @sort="sortingChanged($event)" selectionMode="single" v-model:selection="selectedRow" @rowSelect="onRowSelect"
+      @rowUnselect="onRowUnselect">
       <template #empty> No Results </template>
       <template #header>
         <div style="display: flex; justify-content: space-between; ">
-          <div>
-            <Button icon="pi pi-external-link" label="&nbsp;Export" raised @click="displayDialogExport = true" />
-          </div>
+          <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised @click="displayDialogExport = true" />
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect 
-              v-model="selectedColumns" 
-              display="chip" 
-              :options="samplesStore.propertyOptions" 
-              filter 
-              placeholder="Select Columns" 
-              class="w-full md:w-20rem" 
-              @update:modelValue="columnSelection"
-              >
+            <MultiSelect v-model="samplesStore.selectedColumns" display="chip" :options="samplesStore.propertyTableOptions" filter
+              placeholder="Select Columns" class="w-full md:w-20rem" @update:modelValue="columnSelection">
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
-                  {{ selectedColumns.length }} columns selected
+                  {{ samplesStore.selectedColumns.length + 1 }} columns selected
                 </div>
               </template>
             </MultiSelect>
@@ -47,41 +25,36 @@
         <template #header>
           <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
-        <template #body="slotProps" >
-          <div class="cell-content-sample-id"
-            :title="slotProps.data.name">
+        <template #body="slotProps">
+          <div class="cell-content-sample-id" :title="slotProps.data.name">
             {{ slotProps.data.name }}
           </div>
         </template>
       </Column>
-      <Column v-for="column in selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
+      <Column v-for="column in samplesStore.selectedColumns" :sortable="!notSortable.includes(column)" :field="column">
         <template #header>
           <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
         </template>
-        <template #body="slotProps" >
-          <div v-if="column === 'genomic_profiles'" class="cell-content" >
+        <template #body="slotProps">
+          <div v-if="column === 'genomic_profiles'" class="cell-content">
             <div>
-              <GenomicProfileLabel
-                v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
-                :variantString="variant"
-                :annotations="slotProps.data.genomic_profiles[variant]"
-                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
-              />
+              <GenomicProfileLabel v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                :variantString="variant" :annotations="slotProps.data.genomic_profiles[variant]"
+                :isLast="index === Object.keys(slotProps.data.genomic_profiles).length - 1" />
             </div>
           </div>
-          <div v-else-if="column === 'proteomic_profiles'" class="cell-content"  >
-            <div >
-              <GenomicProfileLabel
-                v-for="(variant, index) in slotProps.data.proteomic_profiles"
+          <div v-else-if="column === 'proteomic_profiles'" class="cell-content">
+            <div>
+              <GenomicProfileLabel v-for="(variant, index) in slotProps.data.proteomic_profiles"
                 :variantString="variant"
                 :isLast="index === Object.keys(slotProps.data.proteomic_profiles).length - 1" />
             </div>
           </div>
-          <div v-else-if="column === 'init_upload_date'" class="cell-content" >
+          <div v-else-if="column === 'init_upload_date'" class="cell-content">
             {{ formatDate(slotProps.data.init_upload_date) }}
           </div>
 
-          <div v-else-if="column === 'last_update_date'" class="cell-content" >
+          <div v-else-if="column === 'last_update_date'" class="cell-content">
             {{ formatDate(slotProps.data.last_update_date) }}
           </div>
           <span v-else class="cell-content">
@@ -107,14 +80,16 @@
       <template #header>
         <div style="display: flex; align-items: center">
           <strong>Sample Details</strong>
-          <router-link v-slot="{ href, navigate }" :to="`sample/${selectedRow.name}`" custom>
-            <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px">
-              <i class="pi pi-external-link"></i>
-            </a>
-          </router-link>
+          <div v-if="selectedRow">
+            <router-link v-slot="{ href, navigate }" :to="`sample/${selectedRow.name}`" custom>
+              <a :href="href" target="_blank" @click="navigate" style="margin-left: 8px">
+                <i class="pi pi-external-link"></i>
+              </a>
+            </router-link>
+          </div>
         </div>
       </template>
-      <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyOptions"></SampleDetails>
+      <SampleDetails :selectedRow="selectedRow" :allColumns="samplesStore.propertyTableOptions"></SampleDetails>
     </Dialog>
 
     <Dialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissableMask
@@ -131,12 +106,11 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button icon="pi pi-external-link" label="&nbsp;Export" raised :loading="samplesStore.loading"
+        <Button icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised :loading="samplesStore.loading"
           @click="exportFile(exportFormat)" />
       </div>
     </Dialog>
   </div>
-  <Toast ref="toast" />
 
   <Toast ref="exportToast" position="bottom-right" group="br">
     <template #container="{ message, closeCallback }">
@@ -161,18 +135,24 @@
 <script lang="ts">
 import API from '@/api/API'
 import { useSamplesStore } from '@/stores/samples';
-import { type Property } from '@/util/types'
+import { type Property } from '@/util/types';
+import type { DataTableSortEvent } from 'primevue/datatable';
 
 export default {
   name: 'HomeView',
+
   data() {
     return {
       samplesStore: useSamplesStore(),
       displayDialogExport: false,
       exportFormat: 'csv',
-      selectedRow: null,
+      selectedRow: {
+        name: "",
+        properties: [],
+        genomic_profiles: {},
+        proteomic_profiles: [],
+      },
       displayDialogRow: false,
-      selectedColumns: ['sequencing_reason', 'collection_date', 'lineage', 'lab', 'zip_code', 'genomic_profiles', 'proteomic_profiles'],
       notSortable: ["genomic_profiles", "proteomic_profiles"],
     }
   },
@@ -183,7 +163,18 @@ export default {
     },
     exportFile(type: string) {
       // Show the progress bar in the toast
-      this.$refs.exportToast.add({
+      const exportToastRef = this.$refs.exportToast as {
+        add:
+        (options: {
+          severity: string;
+          summary: string;
+          detail: string;
+          id: number;
+          group: string;
+          closable: boolean;
+        }) => void
+      };
+      exportToastRef.add({
         severity: 'info',
         summary: 'Exporting...',
         detail: 'Your file is being prepared.',
@@ -194,7 +185,7 @@ export default {
 
       this.displayDialogExport = false;
       // this.samplesStore.loading = true;
-      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.selectedColumns, this.samplesStore.ordering, type == "xlsx")
+      API.getInstance().getSampleGenomesExport(this.samplesStore.filters, this.samplesStore.selectedColumns, this.samplesStore.ordering, type == "xlsx")
         .then(() => {
           // Export completed, close the toast
           console.log("complete");
@@ -210,33 +201,41 @@ export default {
         });
       //this.samplesStore.loading = false;
     },
-    columnSelection(value) {
-      this.selectedColumns = value.filter(v => this.samplesStore.propertyOptions.includes(v));
+    columnSelection(value: string[]) {
+      this.samplesStore.selectedColumns = value.filter(v => this.samplesStore.propertyTableOptions.includes(v));
     },
-    onColReorder(event) {
-      const { dragIndex, dropIndex } = event;
+    onColReorder(event: any) {
+
+      const { dragIndex, dropIndex } = event as { dragIndex: number; dropIndex: number; };
       // Rearrange columns based on dragIndex and dropIndex
-      const reorderedColumns = ['name', ...this.selectedColumns]; // note: 'name' is fixed and cant be reordered
+      const reorderedColumns = ['name', ...this.samplesStore.selectedColumns]; // note: 'name' is fixed and cant be reordered
       const movedColumn = reorderedColumns.splice(dragIndex, 1)[0];
       reorderedColumns.splice(dropIndex, 0, movedColumn);
 
-      this.selectedColumns = reorderedColumns.slice(1); // drop 'name' from column list since it is fixed and cant be reordered
+      this.samplesStore.selectedColumns = reorderedColumns.slice(1); // drop 'name' from column list since it is fixed and cant be reordered
     },
-    onRowSelect(event) {
+    onRowSelect(event: any) {
       this.selectedRow = event.data;
       this.displayDialogRow = true;
     },
-    onRowUnselect(event) {
-      this.selectedRow = null;
+    onRowUnselect() {
+      this.selectedRow = {
+        name: "",
+        properties: [],
+        genomic_profiles: {},
+        proteomic_profiles: [],
+      };
       this.displayDialogRow = false;
     },
-    sortingChanged(sortBy) {
-      if (sortBy.sortOrder > 0) {
-        this.samplesStore.ordering = sortBy.sortField;
-      } else {
-        this.samplesStore.ordering = `-${sortBy.sortField}`;
+    sortingChanged(sortBy: DataTableSortEvent) {
+      if (sortBy.sortOrder) {
+        if (sortBy.sortOrder > 0 && typeof (sortBy.sortField) === "string") {
+          this.samplesStore.ordering = sortBy.sortField;
+        } else {
+          this.samplesStore.ordering = `-${sortBy.sortField}`;
+        }
+        this.samplesStore.updateSamples();
       }
-      this.samplesStore.updateSamples();
     },
     formatDate(dateStr: string): string {
       if (!dateStr) return ''; // Handle case where dateStr is undefined or null
@@ -250,35 +249,17 @@ export default {
         return '';
       }
     },
-    showToastError(message: string) {
-      this.$refs.toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: message,
-        life: 10000
-      });
-    }
   },
   computed: {
   },
   mounted() {
 
   },
-  watch: {
-    "samplesStore.errorMessage"(newValue) {
-      if (newValue) {
-        this.showToastError(newValue);
-        // Reset the state to prevent multiple calls
-        // this.samplesStore.errorMessage = "";
-      }
-    }
-  }
 }
 
 </script>
 
 <style scoped>
-
 .table-content {
   height: 80%;
   width: 98%;
@@ -293,34 +274,35 @@ export default {
 }
 
 .cell-content-sample-id {
-  height: 2em; 
+  height: 2em;
   flex: 1;
   min-width: 5rem;
   max-width: 20rem;
-  overflow-x: auto; 
+  overflow-x: auto;
   white-space: nowrap;
   padding: 0;
   margin: 0;
   text-align: right;
-  text-overflow: ellipsis; 
-  direction: rtl; 
+  text-overflow: ellipsis;
+  direction: rtl;
 }
 
 .cell-content {
-  height: 2em; 
+  height: 2em;
   flex: 1;
   min-width: 5rem;
   max-width: 20rem;
-  overflow-x: auto; 
+  overflow-x: auto;
   white-space: nowrap;
   padding: 0;
   margin: 0;
 }
-:deep(.p-datatable.p-datatable-lg .p-datatable-tbody  > tr > td ) {
+
+:deep(.p-datatable.p-datatable-lg .p-datatable-tbody > tr > td) {
   padding-top: 0.5rem !important;
   padding-right: 0.5rem !important;
   padding-bottom: 0.5rem !important;
-  padding-left: 0.5rem!important;
+  padding-left: 0.5rem !important;
 }
 
 :deep(.p-button) {

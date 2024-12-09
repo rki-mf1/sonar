@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 import re
 
-from covsonar_backend.settings import LOGGER
 from django.db.models import Q
+
+from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
 from rest_api.models import AnnotationType
 from rest_api.models import Mutation
@@ -177,23 +178,32 @@ class AnnotationImport:
         return mutation_lookups_to_annotations
 
     def _parse_line_info(self, info: str) -> list[VCFInfoANNRaw]:
-        # only ANN= is parsed
-        if info.startswith("ANN="):
-            r = re.compile(r"\(([^()]*|(R))*\)")
-            info = info[4:]
-            annotations = []
-            for annotation in info.split(","):
-                # replace pipes inside paranthesis
-                annotation = r.sub(lambda x: x.group().replace("|", "-"), annotation)
-                annotation = annotation.split("|")
-                try:
-                    annotations.append(VCFInfoANNRaw(*annotation))
-                except Exception:
-                    LOGGER.warning(
-                        f"Failed to parse annotation: {annotation}, from file {self.vcf_file_path}"
-                    )
+        """
+        Extracts the SNP effect annotation (ANN) substring from the 8th column of a tab-separated SnpEff annotation line.
 
-            return annotations
+        Parameters:
+            info (str): The 8th column of a tab-separated SnpEff annotation line. Example:
+                "ANN=C|upstream_gene_variant|MODIFIER|ORF1a|Gene_265_13467|transcript|ORF1a|protein_coding||c.-217_-213delTCTTG|||||217|WARNING_TRANSCRIPT_NO_STOP_CODON,
+                C|intergenic_region|MODIFIER|CHR_START-ORF1a|CHR_START-Gene_265_13467|intergenic_region|CHR_START-Gene_265_13467|||n.49_53delTCTTG||||||"
+
+        Returns:
+            list[VCFInfoANNRaw]: list of extracted annotations, different annotations are separated by ','
+        """
+        for field in info.split(";"):
+            if field.startswith("ANN="):
+                ann_field = field.removeprefix("ANN=")
+                annotations = []
+                for annotation in ann_field.split(","):
+                    annotation = annotation.split("|")
+                    try:
+                        annotations.append(VCFInfoANNRaw(*annotation))
+                    except Exception:
+                        LOGGER.warning(
+                            f"Failed to parse annotation: {annotation}, from file {self.vcf_file_path}"
+                        )
+                # Return after finding the first ANN= field. If there are
+                # multiple, all others will be ignored.
+                return annotations
         return None
 
     def get_annotation_objs(
