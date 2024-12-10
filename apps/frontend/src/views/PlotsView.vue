@@ -533,8 +533,6 @@ export default {
             threshold: 40
           }
         },
-        responsive: true,
-        maintainAspectRatio: false,
         scales: {
           y: {
             beginAtZero: true,
