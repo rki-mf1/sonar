@@ -495,6 +495,7 @@ class sonarAligner:
         qrylen = len(qryseq)
         prefix = False
         vars = []
+        id_counter = count(1)  # Create an incremental counter starting from 1 (ID)
 
         for match in self.cigar_pattern.finditer(cigar):
             vartype = match.group(2)
@@ -512,6 +513,7 @@ class sonarAligner:
 
                     vars.append(
                         (
+                            str(next(id_counter)),
                             ref,
                             str(refpos),
                             str(refpos + 1),
@@ -530,6 +532,7 @@ class sonarAligner:
                 ) or qrypos == qrylen:  # deletion at sequence terminus
                     vars.append(
                         (
+                            str(next(id_counter)),
                             refseq[refpos : refpos + varlen],
                             str(refpos),
                             str(refpos + varlen),
@@ -544,6 +547,7 @@ class sonarAligner:
 
                     vars.append(
                         (
+                            str(next(id_counter)),
                             refseq[refpos],
                             str(refpos),
                             str(refpos + 1),
@@ -561,6 +565,7 @@ class sonarAligner:
 
                     vars.append(
                         (
+                            str(next(id_counter)),
                             refseq[refpos : refpos + varlen],
                             str(refpos),
                             str(refpos + varlen),
@@ -590,6 +595,7 @@ class sonarAligner:
                     # )
                 vars.append(
                     (
+                        str(next(id_counter)),
                         ref,
                         str(refpos - 1),
                         str(refpos),
