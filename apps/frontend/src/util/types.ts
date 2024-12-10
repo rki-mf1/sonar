@@ -133,3 +133,8 @@ export type FilteredStatistics = {
   zip_code: { [key: string]: number }
   host: { [key: string]: number }
 }
+
+export type CustomPercentageLabelsOptions = {
+  enabled: boolean
+  threshold: number
+}

@@ -32,6 +32,7 @@ class SampleRaw:
     refmolid: int
     seq_file: str
     seqhash: str
+    sample_sequence_length: int
     sourceid: int
     translationid: int
     tt_file: Optional[str] = None
@@ -116,6 +117,7 @@ class SampleImport:
         self.sample = Sample(
             name=self.sample_raw.name,
             sequence=self.sequence,
+            length=self.sample_raw.sample_sequence_length,
             last_update_date=timezone.now(),
             # properties=self.sample_raw.properties,
         )
