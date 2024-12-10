@@ -17,66 +17,68 @@ import { watch } from 'vue'
 
 // called in getters, not allowed in actions
 function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
-      const summary = {
-        andFilter: [] as GenomeFilter[],
-        orFilter: [] as FilterGroupFilters[]
-      } as FilterGroupFilters
-      for (const filter of filterGroup.filters.propertyFilters) {
-        if (filter.propertyName && filter.filterType && filter.value) {
-          var value = filter.value
-          if (Array.isArray(filter.value) && filter.value.every(item => item instanceof Date)) {
-            var date_array = filter.value as Date[]
-            if (date_array[1]) {
-              filter.filterType = DjangoFilterType.RANGE
-              value = parseDateToDateRangeFilter(date_array)
-            } else {
-              value = []
-              //value = new Date(date_array[0]).toISOString().split('T')[0]
-            }
-          }
-          summary.andFilter.push({
-            label: filter.label,
-            property_name: filter.propertyName,
-            filter_type: filter.filterType,
-            value: value.toString()
-          })
+  const summary = {
+    andFilter: [] as GenomeFilter[],
+    orFilter: [] as FilterGroupFilters[]
+  } as FilterGroupFilters
+  for (const filter of filterGroup.filters.propertyFilters) {
+    if (filter.propertyName && filter.filterType && filter.value) {
+      var value = filter.value
+      if (Array.isArray(filter.value) && filter.value.every((item) => item instanceof Date)) {
+        var date_array = filter.value as Date[]
+        if (date_array[1]) {
+          filter.filterType = DjangoFilterType.RANGE
+          value = parseDateToDateRangeFilter(date_array)
+        } else {
+          value = []
+          //value = new Date(date_array[0]).toISOString().split('T')[0]
         }
       }
-      for (const filter of filterGroup.filters.profileFilters) {
-        var valid = true
-        const translatedFilter = {} as Record<string, string | number | boolean>
-        for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
-          //snake_case conversion
-          var translatedKey = key.replace('AA', '_aa')
-          translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
-          translatedFilter[translatedKey] = filter[key]
-          if (!filter[key] && key != 'exclude') {
-            valid = false
-            break
-          }
-        }
-        if (valid) {
-          summary.andFilter.push(translatedFilter)
-        }
-      }
-      for (const filter of filterGroup.filters.repliconFilters) {
-        if (filter.accession) {
-          summary.andFilter.push({
-            label: filter.label,
-            accession: filter.accession,
-            exclude: filter.exclude
-          })
-        }
-      }
-      if (filterGroup.filters.lineageFilter.lineageList
-            && filterGroup.filters.lineageFilter.lineageList.length > 0) {
-          summary.andFilter.push(filterGroup.filters.lineageFilter)
-      }
-      for (const subFilterGroup of filterGroup.filterGroups) {
-        summary.orFilter.push(getFilterGroupFilters(subFilterGroup))
-      }
-      return summary
+      summary.andFilter.push({
+        label: filter.label,
+        property_name: filter.propertyName,
+        filter_type: filter.filterType,
+        value: value.toString()
+      })
     }
+  }
+  for (const filter of filterGroup.filters.profileFilters) {
+    var valid = true
+    const translatedFilter = {} as Record<string, string | number | boolean>
+    for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
+      //snake_case conversion
+      var translatedKey = key.replace('AA', '_aa')
+      translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
+      translatedFilter[translatedKey] = filter[key]
+      if (!filter[key] && key != 'exclude') {
+        valid = false
+        break
+      }
+    }
+    if (valid) {
+      summary.andFilter.push(translatedFilter)
+    }
+  }
+  for (const filter of filterGroup.filters.repliconFilters) {
+    if (filter.accession) {
+      summary.andFilter.push({
+        label: filter.label,
+        accession: filter.accession,
+        exclude: filter.exclude
+      })
+    }
+  }
+  if (
+    filterGroup.filters.lineageFilter.lineageList &&
+    filterGroup.filters.lineageFilter.lineageList.length > 0
+  ) {
+    summary.andFilter.push(filterGroup.filters.lineageFilter)
+  }
+  for (const subFilterGroup of filterGroup.filterGroups) {
+    summary.orFilter.push(getFilterGroupFilters(subFilterGroup))
+  }
+  return summary
+}
 
 function parseDateToDateRangeFilter(data: Date[]) {
   // Parse the first date
@@ -260,9 +262,10 @@ export const useSamplesStore = defineStore('samples', {
         )
       ]
       this.metaCoverageOptions = [
-        ... this.propertyMenuOptions.filter(prop => !["name", "init_upload_date", "last_update_date"].includes(prop))
+        ...this.propertyMenuOptions.filter(
+          (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop)
+        )
       ]
-
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
@@ -294,7 +297,6 @@ export const useSamplesStore = defineStore('samples', {
       )
     }
   },
-},
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
       return { filters: getFilterGroupFilters(this.filterGroup) }
