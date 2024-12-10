@@ -199,19 +199,63 @@ class SampleImport:
 
         # seem the bulk_create with setting the ignore_conflicts will disable returning ID
         # https://docs.djangoproject.com/en/4.2/ref/models/querysets/#bulk-create
-        # Fetch the inserted rows and map their IDs back
-        inserted_rows = Mutation.objects.filter(
-            # gene__in=[nt.gene for nt in nt_mutations], might not need
-            ref__in=[nt.ref for nt in nt_mutations],
-            alt__in=[nt.alt for nt in nt_mutations],
-            start__in=[nt.start for nt in nt_mutations],
-            end__in=[nt.end for nt in nt_mutations],
-            replicon__in=[nt.replicon for nt in nt_mutations],
-            type__in=[nt.type for nt in nt_mutations],
-        )
-        nt_id_mapping = {
-            var_raw.id: mutation.id for var_raw, mutation in zip(nt_vars, inserted_rows)
+
+        # V.2 ------------------------------
+        # optimize for performance
+        # a single query with OR conditions for all mutations
+        query = Q()
+        for nt in nt_mutations:
+            query |= Q(
+                ref=nt.ref,
+                alt=nt.alt,
+                start=nt.start,
+                end=nt.end,
+                replicon=nt.replicon,
+                type=nt.type,
+            )
+        inserted_rows = Mutation.objects.filter(query)
+
+        # Create a dictionary mapping (ref, alt, start, end, replicon, type) to mutation IDs
+        inserted_mapping = {
+            (
+                mutation.ref,
+                mutation.alt,
+                mutation.start,
+                mutation.end,
+                mutation.replicon_id,
+                mutation.type,
+            ): mutation.id
+            for mutation in inserted_rows
         }
+
+        # Map back to var_raw.id
+        nt_id_mapping = {
+            var_raw.id: inserted_mapping.get(
+                (nt.ref, nt.alt, nt.start, nt.end, nt.replicon.id, nt.type), None
+            )
+            for nt, var_raw in zip(nt_mutations, nt_vars)
+        }
+
+        # V.1 ------------------------------
+        # # Fetch the inserted rows and map their IDs back
+        # #  a dictionary to map `var_raw` IDs to mutation IDs
+        # nt_id_mapping = {}
+        # # Iterate over nt_mutations and nt_vars to perform exact matching
+        # # order is matter!
+        # for nt, var_raw in zip(nt_mutations, nt_vars):
+        #     # Perform exact match for this specific mutation
+        #     mutation = Mutation.objects.get(
+        #         ref=nt.ref,
+        #         alt=nt.alt,
+        #         start=nt.start,
+        #         end=nt.end,
+        #         replicon=nt.replicon,
+        #         type=nt.type,
+        #     )
+        #     # Map the var_raw.id to the mutation ID
+        #     nt_id_mapping[var_raw.id] = mutation.id
+        # ----------------
+
         # for CDS mutations
         cds_mutations = []
         for var_raw in cds_vars:
