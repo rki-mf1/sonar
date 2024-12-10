@@ -42,7 +42,7 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(3)
 def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
-    """Test import command using parasail method"""
+    """Test import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     # monkeypatch.setattr(
     #     "mpire.WorkerPool.map_unordered",
