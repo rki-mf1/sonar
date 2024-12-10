@@ -482,9 +482,12 @@ class sonarUtils:
                 LOGGER.info(f"Job {shared_objects['job_id']} is {job_status}.")
                 time.sleep(sleep_time)
         time_diff = calculate_time_difference(start_time, get_current_time())
-        LOGGER.info(
-            f"Job {shared_objects['job_id']} is {job_status} after {time_diff}."
-        )
+        if job_status == "F":
+            LOGGER.error(f"Job {shared_objects['job_id']} is {job_status}: {time_diff}")
+        else:
+            LOGGER.info(
+                f"[runtime] Job {shared_objects['job_id']} is {job_status}: {time_diff}"
+            )
 
     @staticmethod
     def _import_properties(

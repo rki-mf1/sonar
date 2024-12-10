@@ -340,7 +340,7 @@ def process_batch_run(
                 samples,
                 update_conflicts=True,
                 unique_fields=["name"],
-                update_fields=["sequence", "last_update_date"],
+                update_fields=["length", "sequence", "last_update_date"],
             )
         [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
         alignments = [
