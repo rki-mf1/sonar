@@ -23,9 +23,9 @@ function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
   } as FilterGroupFilters
   for (const filter of filterGroup.filters.propertyFilters) {
     if (filter.propertyName && filter.filterType && filter.value) {
-      var value = filter.value
+      let value = filter.value
       if (Array.isArray(filter.value) && filter.value.every((item) => item instanceof Date)) {
-        var date_array = filter.value as Date[]
+        const date_array = filter.value as Date[]
         if (date_array[1]) {
           filter.filterType = DjangoFilterType.RANGE
           value = parseDateToDateRangeFilter(date_array)
@@ -43,11 +43,11 @@ function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
     }
   }
   for (const filter of filterGroup.filters.profileFilters) {
-    var valid = true
+    let valid = true
     const translatedFilter = {} as Record<string, string | number | boolean>
     for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
       //snake_case conversion
-      var translatedKey = key.replace('AA', '_aa')
+      let translatedKey = key.replace('AA', '_aa')
       translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
       translatedFilter[translatedKey] = filter[key]
       if (!filter[key] && key != 'exclude') {
