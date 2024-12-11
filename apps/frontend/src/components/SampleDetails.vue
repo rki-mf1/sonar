@@ -57,18 +57,18 @@ export default {
   props: {
     selectedRow: {
       type: Object as () => SampleDetails,
-      required: true
+      required: true,
     },
     allColumns: {
       // type: Object as PropType<number>,
-      required: true
-    }
+      required: true,
+    },
   },
   methods: {
     isProperty(item: any): item is Property {
       return typeof item === 'object' && 'name' in item && 'value' in item
-    }
-  }
+    },
+  },
 }
 </script>
 

@@ -31,7 +31,7 @@ export default {
     return {
       selectedData: '',
       allColumns: [],
-      loading: true
+      loading: true,
     }
   },
   mounted() {
@@ -50,8 +50,8 @@ export default {
     async updatePropertyOptions() {
       const res = await API.getInstance().getSampleGenomePropertyOptions()
       this.allColumns = res.property_names.concat(['genomic_profiles', 'proteomic_profiles']).sort()
-    }
-  }
+    },
+  },
 }
 </script>
 

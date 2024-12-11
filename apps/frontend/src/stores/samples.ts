@@ -10,7 +10,7 @@ import {
   DjangoFilterType,
   StringDjangoFilterType,
   DateDjangoFilterType,
-  type PropertyFilter
+  type PropertyFilter,
 } from '@/util/types'
 import { reactive } from 'vue'
 import { watch } from 'vue'
@@ -19,7 +19,7 @@ import { watch } from 'vue'
 function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
   const summary = {
     andFilter: [] as GenomeFilter[],
-    orFilter: [] as FilterGroupFilters[]
+    orFilter: [] as FilterGroupFilters[],
   } as FilterGroupFilters
   for (const filter of filterGroup.filters.propertyFilters) {
     if (filter.propertyName && filter.filterType && filter.value) {
@@ -38,7 +38,7 @@ function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
         label: filter.label,
         property_name: filter.propertyName,
         filter_type: filter.filterType,
-        value: value.toString()
+        value: value.toString(),
       })
     }
   }
@@ -64,7 +64,7 @@ function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
       summary.andFilter.push({
         label: filter.label,
         accession: filter.accession,
-        exclude: filter.exclude
+        exclude: filter.exclude,
       })
     }
   }
@@ -134,8 +134,8 @@ export const useSamplesStore = defineStore('samples', {
             label: 'Property',
             propertyName: 'collection_date',
             filterType: DateDjangoFilterType.RANGE,
-            value: [] as (Date | null)[]
-          }
+            value: [] as (Date | null)[],
+          },
         ],
         profileFilters: [{ label: 'DNA/AA Profile', value: '', exclude: false }],
         repliconFilters: [],
@@ -144,9 +144,9 @@ export const useSamplesStore = defineStore('samples', {
           lineageList: [],
           exclude: false,
           includeSublineages: true,
-          isVisible: true
-        } // first lineage filter always shown
-      }
+          isVisible: true,
+        }, // first lineage filter always shown
+      },
     }) as FilterGroup,
     DjangoFilterType,
     errorMessage: '',
@@ -161,10 +161,10 @@ export const useSamplesStore = defineStore('samples', {
           lineageList: [],
           exclude: false,
           includeSublineages: true,
-          isVisible: true
-        }
-      }
-    })
+          isVisible: true,
+        },
+      },
+    }),
   }),
   actions: {
     async updateSamples() {
@@ -173,7 +173,7 @@ export const useSamplesStore = defineStore('samples', {
       const params = {
         limit: this.perPage,
         offset: this.firstRow,
-        ordering: this.ordering
+        ordering: this.ordering,
       }
       this.lastSentFilterGroup = JSON.stringify(this.filterGroup)
       const response = await API.getInstance().getSampleGenomes(this.filters, params)
@@ -201,7 +201,7 @@ export const useSamplesStore = defineStore('samples', {
       const statistics = await API.getInstance().getSampleStatistics()
       this.timeRange = [
         new Date(statistics.first_sample_date),
-        new Date(statistics.latest_sample_date ?? Date.now())
+        new Date(statistics.latest_sample_date ?? Date.now()),
       ]
       return this.timeRange
     },
@@ -227,11 +227,11 @@ export const useSamplesStore = defineStore('samples', {
         'sequencing_reason',
         'isolation_source',
         'init_upload_date',
-        'last_update_date'
+        'last_update_date',
       ]
       let columns = [
         ...this.selectedColumns,
-        ...properties.filter((prop) => this.propertyTableOptions.includes(prop))
+        ...properties.filter((prop) => this.propertyTableOptions.includes(prop)),
       ]
       columns = [...columns, ...this.propertyTableOptions.filter((prop) => !columns.includes(prop))]
       this.selectedColumns = columns.slice(0, 6)
@@ -253,18 +253,18 @@ export const useSamplesStore = defineStore('samples', {
       // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
       // & drop the 'name' column because the ID column is fixed
       this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-        (key) => key !== 'name' && metaData[key] > 0
+        (key) => key !== 'name' && metaData[key] > 0,
       )
       this.propertyMenuOptions = [
         'name',
         ...this.propertyTableOptions.filter(
-          (prop) => !['genomic_profiles', 'proteomic_profiles', 'lineage'].includes(prop)
-        )
+          (prop) => !['genomic_profiles', 'proteomic_profiles', 'lineage'].includes(prop),
+        ),
       ]
       this.metaCoverageOptions = [
         ...this.propertyMenuOptions.filter(
-          (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop)
-        )
+          (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
+        ),
       ]
     },
     async updateRepliconAccessionOptions() {
@@ -293,9 +293,9 @@ export const useSamplesStore = defineStore('samples', {
             this.filtersChanged = false
           }
         },
-        { deep: true }
+        { deep: true },
       )
-    }
+    },
   },
   getters: {
     filterGroupsFilters(state): FilterGroupRoot {
@@ -307,8 +307,8 @@ export const useSamplesStore = defineStore('samples', {
         filters.filters.andFilter = []
       }
       return filters as FilterGroupRoot
-    }
-  }
+    },
+  },
 })
 
 let storeInitialized = false

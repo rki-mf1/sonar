@@ -34,15 +34,15 @@ export default {
   props: {
     filteredCount: {
       // type: Object as PropType<number>,
-      required: true
-    }
+      required: true,
+    },
   },
   data() {
     return {
       statistics: {
         samples_total: 0,
-        latest_sample_date: ''
-      }
+        latest_sample_date: '',
+      },
     }
   },
   mounted() {
@@ -53,8 +53,8 @@ export default {
       const sample_statistics = await API.getInstance().getSampleStatistics()
       this.statistics.samples_total = sample_statistics.samples_total
       this.statistics.latest_sample_date = sample_statistics.latest_sample_date
-    }
-  }
+    },
+  },
 }
 </script>
 

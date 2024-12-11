@@ -50,7 +50,7 @@ export default {
   name: 'App',
   components: {
     RouterView,
-    Filters
+    Filters,
   },
   data() {
     return {
@@ -59,25 +59,25 @@ export default {
         {
           label: 'Home',
           icon: 'pi pi-home',
-          route: '/'
+          route: '/',
         },
         {
           label: 'Plots',
           icon: 'pi pi-chart-bar',
-          route: '/plots'
+          route: '/plots',
         },
         {
           label: 'About',
           icon: 'pi pi-star',
-          route: '/about'
-        }
-      ]
+          route: '/about',
+        },
+      ],
     }
   },
   computed: {
     showFilters() {
       return this.$route.name === 'Home' || this.$route.name === 'Plots'
-    }
+    },
   },
   watch: {
     'samplesStore.errorMessage'(newValue) {
@@ -86,7 +86,7 @@ export default {
         // Reset the state to prevent multiple calls
         // this.samplesStore.errorMessage = "";
       }
-    }
+    },
   },
   mounted() {
     this.samplesStore.updateSamples()
@@ -98,7 +98,7 @@ export default {
     this.samplesStore.updateSymbolOptions()
     this.samplesStore.updateRepliconAccessionOptions()
     this.$root.$toastRef = this.$refs.toast ?? null
-  }
+  },
 }
 </script>
 

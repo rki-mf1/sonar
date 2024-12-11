@@ -31,7 +31,7 @@ export default class API {
   fillAuthenticationHeader() {
     axios.defaults.headers.common = {
       Authorization: `Token M2BtbMGQMHsPg9CwPjIuDdWNfv3NkJL8`,
-      Accept: 'application/json; version=1.0.1'
+      Accept: 'application/json; version=1.0.1',
     }
   }
   async getRequestFullUrl(url: string, params: JSON, suppressError: boolean) {
@@ -39,7 +39,7 @@ export default class API {
     return axios
       .get(url, {
         data: stringifiedParams,
-        timeout: this.TIMEOUT
+        timeout: this.TIMEOUT,
       })
       .then((result) => result.data)
       .catch((error) => {
@@ -95,7 +95,7 @@ export default class API {
     params: FilterGroupRoot,
     columns: string[],
     ordering: string,
-    xls = true
+    xls = true,
   ) {
     const exportColumns: string[] = ['name', ...columns]
     const queryString = this.parseQueryString(params)
@@ -107,7 +107,7 @@ export default class API {
 
     const response = await axios.get(url, {
       responseType: 'stream',
-      adapter: 'fetch'
+      adapter: 'fetch',
     })
     const stream = response.data
     if (xls) {
@@ -127,7 +127,7 @@ export default class API {
       },
       close() {
         // console.log('Stream closed')
-      }
+      },
     })
     await stream.pipeThrough(new TextDecoderStream()).pipeTo(outStream)
     const arrayBuffer = await new Blob(chunks).arrayBuffer()
@@ -162,9 +162,9 @@ export default class API {
     const buffer = await workbook.xlsx.writeBuffer()
     saveAs(
       new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       }),
-      'export.xlsx'
+      'export.xlsx',
     )
   }
 
@@ -185,7 +185,7 @@ export default class API {
     return this.getRequest(
       `properties/distinct_properties/?property_name=${propertyName}`,
       {} as JSON,
-      false
+      false,
     )
   }
   getRepliconAccessionOptions() {

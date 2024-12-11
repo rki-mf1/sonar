@@ -220,7 +220,7 @@ const percentageLabelPlugin = {
         ctx.restore()
       })
     })
-  }
+  },
 }
 
 Chart.register(percentageLabelPlugin)
@@ -230,7 +230,7 @@ export default {
   data() {
     return {
       samplesStore: useSamplesStore(),
-      chartInstances: {}
+      chartInstances: {},
     }
   },
   watch: {
@@ -244,7 +244,7 @@ export default {
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] }
       const cleanedData = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => key !== 'null' && value !== 0)
+        Object.entries(data).filter(([key, value]) => key !== 'null' && value !== 0),
       )
       const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0
       const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0)
@@ -285,11 +285,11 @@ export default {
               data: data,
               backgroundColor: this.generateColorPalette(1),
               borderColor: this.generateColorPalette(1).map((color) =>
-                chroma(color).darken(1.5).hex()
+                chroma(color).darken(1.5).hex(),
               ), // darkened border
-              borderWidth: 1
-            }
-          ]
+              borderWidth: 1,
+            },
+          ],
         }
       } else {
         // Return an empty chart structure
@@ -301,9 +301,9 @@ export default {
               data: [], // no data points
               backgroundColor: 'rgba(249, 115, 22, 0.2)',
               borderColor: 'rgb(249, 115, 22)',
-              borderWidth: 1
-            }
-          ]
+              borderWidth: 1,
+            },
+          ],
         }
       }
     },
@@ -316,30 +316,30 @@ export default {
         animation: false,
         plugins: {
           legend: {
-            display: false
-          }
+            display: false,
+          },
         },
         responsive: true,
         maintainAspectRatio: false,
         scales: {
           x: {
             ticks: {
-              color: textColorSecondary
+              color: textColorSecondary,
             },
             grid: {
-              color: surfaceBorder
-            }
+              color: surfaceBorder,
+            },
           },
           y: {
             beginAtZero: true,
             ticks: {
-              color: textColorSecondary
+              color: textColorSecondary,
             },
             grid: {
-              color: surfaceBorder
-            }
-          }
-        }
+              color: surfaceBorder,
+            },
+          },
+        },
       }
     },
     lineage_areaData() {
@@ -358,12 +358,12 @@ export default {
         data: dates.map(
           (date) =>
             validData.find((item) => item.date === date && item.lineage === lineage)?.percentage ||
-            0
+            0,
         ),
         fill: true,
         backgroundColor: colors[index],
         borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
-        borderWidth: 1
+        borderWidth: 1,
       }))
 
       return { labels: dates, datasets }
@@ -374,7 +374,7 @@ export default {
         plugins: {
           legend: {
             display: false,
-            position: 'bottom'
+            position: 'bottom',
           },
           tooltip: {
             enabled: true,
@@ -385,33 +385,33 @@ export default {
                 const dataset = tooltipItem.dataset
                 const value = tooltipItem.raw as number
                 return `${dataset.label}: ${value.toFixed(2)}%`
-              }
-            }
+              },
+            },
           },
           zoom: {
             zoom: {
               wheel: { enabled: true },
               pinch: { enabled: true },
-              mode: 'x'
+              mode: 'x',
             },
             pan: {
               enabled: true,
-              mode: 'x'
-            }
+              mode: 'x',
+            },
           },
           decimation: {
             enabled: true,
             algorithm: 'lttb',
             samples: 1000,
-            threshold: 5
-          }
+            threshold: 5,
+          },
         },
         scales: {
           x: {
             stacked: true,
             beginAtZero: true,
             min: 0,
-            max: 10
+            max: 10,
           },
           y: {
             stacked: true,
@@ -420,12 +420,12 @@ export default {
             ticks: {
               callback: function (value: number) {
                 return value + '%'
-              }
-            }
-          }
+              },
+            },
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     lineage_barData() {
@@ -442,11 +442,11 @@ export default {
         label: lineage,
         data: weeks.map(
           (week) =>
-            _data.find((item) => item.week === week && item.lineage === lineage)?.percentage || 0
+            _data.find((item) => item.week === week && item.lineage === lineage)?.percentage || 0,
         ),
         backgroundColor: colors[index],
         borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
-        borderWidth: 2
+        borderWidth: 2,
       }))
       return { labels: weeks, datasets }
     },
@@ -463,20 +463,20 @@ export default {
             zoom: {
               wheel: { enabled: true },
               pinch: { enabled: true },
-              mode: 'x'
+              mode: 'x',
             },
             pan: {
               enabled: true,
-              mode: 'x'
-            }
-          }
+              mode: 'x',
+            },
+          },
         },
         scales: {
           x: {
             stacked: true,
             beginAtZero: true,
             min: 0,
-            max: 30
+            max: 30,
           },
           y: {
             stacked: true,
@@ -485,12 +485,12 @@ export default {
             ticks: {
               callback: function (value: number) {
                 return value + '%'
-              }
-            }
-          }
+              },
+            },
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     metaDataChart() {
@@ -498,8 +498,8 @@ export default {
       // what about the property 'name' ?? its not in the list, but its always shown in the table
       const coverage = Object.fromEntries(
         Object.entries(this.samplesStore.filteredStatistics?.['meta_data_coverage'] || {}).filter(
-          ([key]) => this.samplesStore.metaCoverageOptions.includes(key)
-        )
+          ([key]) => this.samplesStore.metaCoverageOptions.includes(key),
+        ),
       )
 
       const totalCount = this.samplesStore.filteredCount
@@ -514,11 +514,11 @@ export default {
             data: data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.5).hex()
+              chroma(color).darken(1.5).hex(),
             ), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     metaDataChartOptions() {
@@ -526,12 +526,12 @@ export default {
         animation: false,
         plugins: {
           legend: {
-            display: false
+            display: false,
           },
           customPercentageLabels: {
             enabled: true,
-            threshold: 40
-          }
+            threshold: 40,
+          },
         },
         scales: {
           y: {
@@ -539,12 +539,12 @@ export default {
             ticks: {
               callback: function (value: number) {
                 return value + '%'
-              }
-            }
-          }
+              },
+            },
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     genomeCompleteChart() {
@@ -561,9 +561,9 @@ export default {
         datasets: [
           {
             data,
-            backgroundColor: colors
-          }
-        ]
+            backgroundColor: colors,
+          },
+        ],
       }
     },
     genome_pieChartOptions() {
@@ -575,12 +575,12 @@ export default {
           legend: {
             labels: {
               usePointStyle: true,
-              color: textColor
-            }
-          }
+              color: textColor,
+            },
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     sequencingTechChartData() {
@@ -599,9 +599,9 @@ export default {
             data,
             backgroundColor: colors,
             borderColor: colors.map((color) => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     sequencingTechChartOptions() {
@@ -610,11 +610,11 @@ export default {
         plugins: {
           legend: {
             display: true,
-            position: 'bottom'
-          }
+            position: 'bottom',
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     sequencingReasonChartData() {
@@ -633,9 +633,9 @@ export default {
             data,
             backgroundColor: colors,
             borderColor: colors.map((color) => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     sequencingReasonChartOptions() {
@@ -644,11 +644,11 @@ export default {
         plugins: {
           legend: {
             display: true,
-            position: 'bottom'
-          }
+            position: 'bottom',
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     lengthChartData() {
@@ -666,27 +666,27 @@ export default {
             data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex()
+              chroma(color).darken(1.0).hex(),
             ), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     lengthChartOptions() {
       return {
         plugins: {
           legend: {
-            display: false
-          }
+            display: false,
+          },
         },
         scales: {
           y: {
-            beginAtZero: true
-          }
+            beginAtZero: true,
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     hostChartData() {
@@ -705,11 +705,11 @@ export default {
             data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex()
+              chroma(color).darken(1.0).hex(),
             ), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     hostChartOptions() {
@@ -718,16 +718,16 @@ export default {
         indexAxis: 'y',
         plugins: {
           legend: {
-            display: false
-          }
+            display: false,
+          },
         },
         scales: {
           x: {
-            beginAtZero: true
-          }
+            beginAtZero: true,
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     labChartData() {
@@ -743,40 +743,40 @@ export default {
             data: data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex()
+              chroma(color).darken(1.0).hex(),
             ), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     labChartOptions() {
       return {
         plugins: {
           legend: {
-            display: false
+            display: false,
           },
           zoom: {
             zoom: {
               wheel: { enabled: true },
               pinch: { enabled: true },
-              mode: 'x'
+              mode: 'x',
             },
             pan: {
               enabled: true,
-              mode: 'x'
+              mode: 'x',
             },
             limits: {
-              x: { min: 0, minRange: 10 }
-            }
-          }
+              x: { min: 0, minRange: 10 },
+            },
+          },
         },
         scales: {
           x: { stacked: true },
-          y: { stacked: true, beginAtZero: true }
+          y: { stacked: true, beginAtZero: true },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     zipCodeChartData() {
@@ -795,11 +795,11 @@ export default {
             data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex()
+              chroma(color).darken(1.0).hex(),
             ), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     zipCodeChartOptions() {
@@ -808,37 +808,37 @@ export default {
         indexAxis: 'y', // Makes the bar chart horizontal
         plugins: {
           legend: {
-            display: false
+            display: false,
           },
           zoom: {
             pan: {
               enabled: true,
-              mode: 'yx'
+              mode: 'yx',
             },
             zoom: {
               wheel: {
                 enabled: false,
-                speed: 0.5
+                speed: 0.5,
               },
-              mode: 'xy'
+              mode: 'xy',
             },
             limits: {
-              x: { min: 0, minRange: 10 }
-            }
-          }
+              x: { min: 0, minRange: 10 },
+            },
+          },
         },
         scales: {
           x: {
-            beginAtZero: true
+            beginAtZero: true,
           },
           y: {
             ticks: {
-              autoSkip: false // Ensure all labels
-            }
-          }
+              autoSkip: false, // Ensure all labels
+            },
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     sampleTypeChartData() {
@@ -857,9 +857,9 @@ export default {
             data,
             backgroundColor: colors,
             borderColor: colors.map((color) => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       }
     },
     sampleTypeChartOptions() {
@@ -868,11 +868,11 @@ export default {
         plugins: {
           legend: {
             display: true,
-            position: 'right'
-          }
+            position: 'right',
+          },
         },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
       }
     },
     emptyChartData(label = 'No data available') {
@@ -881,9 +881,9 @@ export default {
         datasets: [
           {
             label: 'No data available',
-            data: []
-          }
-        ]
+            data: [],
+          },
+        ],
       }
     },
     isDataEmpty(data: { [key: string]: any }): boolean {
@@ -892,8 +892,8 @@ export default {
         Object.keys(data).length === 0 ||
         (Object.keys(data).length === 1 && Object.keys(data)[0] == 'null')
       )
-    }
-  }
+    },
+  },
 }
 </script>
 

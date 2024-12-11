@@ -62,7 +62,7 @@
             removeProfileFilter(
               filterGroup,
               filterGroup.filters?.profileFilters?.indexOf(profileFilter),
-              isSubGroup
+              isSubGroup,
             )
           "
         />
@@ -162,7 +162,7 @@
             @click="
               filterGroup.filters?.repliconFilters?.splice(
                 filterGroup.filters?.repliconFilters?.indexOf(filter),
-                1
+                1,
               )
             "
           />
@@ -242,7 +242,7 @@ import {
   DjangoFilterType,
   StringDjangoFilterType,
   DateDjangoFilterType,
-  IntegerDjangoFilterType
+  IntegerDjangoFilterType,
 } from '@/util/types'
 
 import type { MenuItem } from 'primevue/menuitem'
@@ -252,40 +252,40 @@ export default {
   props: {
     filterGroup: {
       type: Object as () => FilterGroup,
-      required: true
+      required: true,
     },
     propertyMenuOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     isSubGroup: {
       type: Boolean,
-      default: false
+      default: false,
     },
     symbolOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     repliconAccessionOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     lineageOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     operators: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     propertyValueOptions: {
       type: Object as () => { [key: string]: { options: string[]; loading: boolean } },
-      required: true
+      required: true,
     },
     propertiesDict: {
       type: Object as () => { [key: string]: string },
-      required: true
-    }
+      required: true,
+    },
   },
   data() {
     return {
@@ -297,33 +297,33 @@ export default {
         'zip_code',
         'country',
         'host',
-        'isolation_source'
+        'isolation_source',
       ],
       ProfileFilter: {
         label: 'DNA/AA Profile',
         value: '',
-        exclude: false
+        exclude: false,
       } as ProfileFilter,
       PropertyFilter: {
         label: 'Property',
         value: '',
         propertyName: '',
-        filterType: null
+        filterType: null,
       } as PropertyFilter,
       RepliconFilter: {
         label: 'Replicon',
         accession: '',
-        exclude: false
+        exclude: false,
       } as RepliconFilter,
       LineageFilter: {
         label: 'Lineages',
         lineageList: [],
         exclude: false,
         includeSublineages: true,
-        isVisible: false
+        isVisible: false,
       } as LineageFilter,
       // to store the earliest and latest dates for each property.
-      dateRanges: {} as { [key: string]: { earliest: string; latest: string } }
+      dateRanges: {} as { [key: string]: { earliest: string; latest: string } },
     }
   },
   computed: {
@@ -334,14 +334,14 @@ export default {
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
-        }
+        },
       })
       menuItems.push({
         label: 'RepliconFilter',
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
-        }
+        },
       })
       // only one lineage filter per group
       if (!this.filterGroup.filters.lineageFilter.isVisible) {
@@ -351,7 +351,7 @@ export default {
           icon: 'pi pi-plus',
           command: () => {
             this.filterGroup.filters.lineageFilter = { ...this.LineageFilter }
-          }
+          },
         })
       }
       this.propertyMenuOptions.forEach((propertyName) => {
@@ -361,11 +361,11 @@ export default {
           command: async () => {
             const newFilter = {
               ...this.PropertyFilter,
-              propertyName: propertyName
+              propertyName: propertyName,
             }
             this.filterGroup.filters.propertyFilters.push(newFilter)
             await this.updatePropertyValueOptions(newFilter)
-          }
+          },
         })
       })
       return menuItems
@@ -389,7 +389,7 @@ export default {
           this.filterGroup.filters.lineageFilter.lineageList.length == 0 &&
           this.filterGroup.filters.repliconFilters.length == 0)
       )
-    }
+    },
   },
   watch: {},
   mounted() {
@@ -413,11 +413,11 @@ export default {
       // Sort dates and store the earliest and latest dates in the dictionary
       if (dateArray) {
         const sortedDates = dateArray.sort(
-          (a: string, b: string) => new Date(a).getTime() - new Date(b).getTime()
+          (a: string, b: string) => new Date(a).getTime() - new Date(b).getTime(),
         )
         this.dateRanges[propertyName] = {
           earliest: sortedDates[0],
-          latest: sortedDates[sortedDates.length - 1]
+          latest: sortedDates[sortedDates.length - 1],
         }
       }
       return this.dateRanges[propertyName]
@@ -434,9 +434,9 @@ export default {
             lineageList: [],
             exclude: false,
             includeSublineages: true,
-            isVisible: false
-          }
-        }
+            isVisible: false,
+          },
+        },
       })
     },
     markGroup(group: FilterGroup, mark: boolean) {
@@ -469,7 +469,7 @@ export default {
           filterGroup.filters.profileFilters[0] = {
             label: 'DNA/AA Profile',
             value: '',
-            exclude: false
+            exclude: false,
           }
         } else {
           filterGroup.filters.profileFilters.splice(index, 1)
@@ -486,7 +486,7 @@ export default {
           lineageList: [],
           exclude: false,
           includeSublineages: true,
-          isVisible: true
+          isVisible: true,
         }
       } else {
         filterGroup.filters.lineageFilter = {
@@ -494,7 +494,7 @@ export default {
           lineageList: [],
           exclude: false,
           includeSublineages: true,
-          isVisible: false
+          isVisible: false,
         }
       }
     },
@@ -507,7 +507,7 @@ export default {
             label: 'Property',
             propertyName: 'collection_date',
             filterType: DateDjangoFilterType.RANGE,
-            value: [] as Date[]
+            value: [] as Date[],
           }
         } else {
           propertyFilters.splice(index, 1)
@@ -537,8 +537,8 @@ export default {
     },
     isStringOrNull(value: any): boolean {
       return typeof value === 'string' || typeof value === null
-    }
-  }
+    },
+  },
 }
 </script>
 

@@ -217,10 +217,10 @@ export default {
         name: '',
         properties: [],
         genomic_profiles: {},
-        proteomic_profiles: []
+        proteomic_profiles: [],
       },
       displayDialogRow: false,
-      notSortable: ['genomic_profiles', 'proteomic_profiles']
+      notSortable: ['genomic_profiles', 'proteomic_profiles'],
     }
   },
   computed: {},
@@ -248,7 +248,7 @@ export default {
         detail: 'Your file is being prepared.',
         id: 1,
         group: 'br',
-        closable: true
+        closable: true,
       })
 
       this.displayDialogExport = false
@@ -258,7 +258,7 @@ export default {
           this.samplesStore.filters,
           this.samplesStore.selectedColumns,
           this.samplesStore.ordering,
-          type == 'xlsx'
+          type == 'xlsx',
         )
         .then(() => {
           // Export completed, close the toast
@@ -277,7 +277,7 @@ export default {
     },
     columnSelection(value: string[]) {
       this.samplesStore.selectedColumns = value.filter((v) =>
-        this.samplesStore.propertyTableOptions.includes(v)
+        this.samplesStore.propertyTableOptions.includes(v),
       )
     },
     onColReorder(event: any) {
@@ -298,7 +298,7 @@ export default {
         name: '',
         properties: [],
         genomic_profiles: {},
-        proteomic_profiles: []
+        proteomic_profiles: [],
       }
       this.displayDialogRow = false
     },
@@ -330,8 +330,8 @@ export default {
       } else {
         return ''
       }
-    }
-  }
+    },
+  },
 }
 </script>
 

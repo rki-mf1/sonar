@@ -229,13 +229,13 @@ export default {
       samplesStore.filterGroup.filters.profileFilters.push({
         label: 'DNA/AA Profile',
         value: '',
-        exclude: false
+        exclude: false,
       })
     }
     return {
       samplesStore,
       displayDialogFilter: false,
-      DjangoFilterType
+      DjangoFilterType,
     }
   },
   computed: {
@@ -247,7 +247,7 @@ export default {
         this.samplesStore.filterGroup.filters.profileFilters.length > 1 || // more than one profile filter
         this.samplesStore.filterGroup.filters.lineageFilter.exclude || // exclude set for first group lineage filter
         this.samplesStore.filterGroup.filters.profileFilters.some(
-          (filter) => filter.exclude === true
+          (filter) => filter.exclude === true,
         )
       ) // exclude set for profile filter
     },
@@ -259,7 +259,7 @@ export default {
     },
     collectionDateFilter() {
       return this.samplesStore.filterGroup.filters.propertyFilters.find(
-        (filter) => filter.propertyName === 'collection_date'
+        (filter) => filter.propertyName === 'collection_date',
       )
     },
     startDate: {
@@ -277,7 +277,7 @@ export default {
         if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
           this.collectionDateFilter.value[0] = newValue
         }
-      }
+      },
     },
     endDate: {
       get() {
@@ -295,8 +295,8 @@ export default {
         if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
           this.collectionDateFilter.value[1] = newValue
         }
-      }
-    }
+      },
+    },
   },
   mounted() {},
   methods: {
@@ -310,7 +310,7 @@ export default {
         this.samplesStore.filterGroup.filters.profileFilters[0] = {
           label: 'DNA/AA Profile',
           value: '',
-          exclude: false
+          exclude: false,
         }
       } else {
         this.samplesStore.filterGroup.filters.profileFilters.splice(0, 1)
@@ -322,7 +322,7 @@ export default {
         lineageList: [],
         exclude: false,
         includeSublineages: true,
-        isVisible: true
+        isVisible: true,
       }
     },
     closeAdvancedFilterDialogAndUpdate() {
@@ -353,8 +353,8 @@ export default {
       const timeRange = await this.samplesStore.setDefaultTimeRange()
       this.startDate = timeRange[0]
       this.endDate = timeRange[1]
-    }
-  }
+    },
+  },
 }
 </script>
 

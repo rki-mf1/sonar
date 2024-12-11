@@ -7,9 +7,9 @@ export default {
           severity: 'error',
           summary: 'Error',
           detail: message,
-          life: 10000
+          life: 10000,
         })
       }
-    }
-  }
+    },
+  },
 }

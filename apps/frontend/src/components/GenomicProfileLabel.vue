@@ -10,16 +10,16 @@ export default {
   props: {
     variantString: {
       type: String,
-      required: true
+      required: true,
     },
     annotations: {
       type: Array<string>,
-      required: false
+      required: false,
     },
     isLast: {
       type: Boolean,
-      required: true
-    }
+      required: true,
+    },
   },
   computed: {
     variantColor(): string {
@@ -39,7 +39,7 @@ export default {
         return this.annotations.join(', ')
       }
       return ''
-    }
-  }
+    },
+  },
 }
 </script>

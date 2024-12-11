@@ -15,17 +15,17 @@ export enum DjangoFilterType {
   RANGE = 'range',
   ISNULL = 'isnull',
   REGEX = 'regex',
-  IREGEX = 'iregex'
+  IREGEX = 'iregex',
 }
 
 export enum StringDjangoFilterType {
   EXACT = 'exact',
   CONTAINS = 'contains',
-  REGEX = 'regex'
+  REGEX = 'regex',
 }
 
 export enum DateDjangoFilterType {
-  RANGE = 'range'
+  RANGE = 'range',
 }
 
 export enum IntegerDjangoFilterType {
@@ -35,7 +35,7 @@ export enum IntegerDjangoFilterType {
   LT = 'lt',
   LTE = 'lte',
   RANGE = 'range',
-  IN = 'in'
+  IN = 'in',
 }
 export type PropertyFilter = {
   fetchOptions: boolean
