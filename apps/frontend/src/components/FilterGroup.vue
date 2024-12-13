@@ -27,7 +27,7 @@
           Exclude?
           <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
         </div>
-        <Button
+        <PrimeButton
           type="button"
           severity="danger"
           raised
@@ -52,7 +52,7 @@
           <InputSwitch v-model="profileFilter.exclude" />
         </div>
         <!-- the button has to stay outside-->
-        <Button
+        <PrimeButton
           type="button"
           severity="danger"
           size="small"
@@ -76,7 +76,7 @@
     >
       <div class="flex align-items-center gap-0">
         <span class="filter-label">Property</span>
-        <Dropdown
+        <PrimeDropdown
           v-model="filter.propertyName"
           class="flex mr-2"
           :options="propertyMenuOptions"
@@ -92,7 +92,7 @@
           class="mr-2"
         >
           <span class="filter-label">Operator</span>
-          <Dropdown
+          <PrimeDropdown
             v-model="filter.filterType"
             :options="localOperators"
             style="flex: 1; min-width: 150px"
@@ -103,24 +103,24 @@
 
         <div v-if="isDateArray(filter.value)">
           <div class="filter-container">
-            <Calendar
+            <PrimeCalendar
               v-model="filter.value[0]"
               style="flex: auto; min-width: 10rem"
               show-icon
               date-format="yy-mm-dd"
             >
-            </Calendar>
-            <Calendar
+            </PrimeCalendar>
+            <PrimeCalendar
               v-model="filter.value[1]"
               style="flex: auto; min-width: 10rem"
               show-icon
               date-format="yy-mm-dd"
             >
-            </Calendar>
+            </PrimeCalendar>
           </div>
         </div>
         <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
-          <Dropdown
+          <PrimeDropdown
             v-model="filter.value"
             :options="propertyValueOptions[filter.propertyName]?.options"
             :loading="propertyValueOptions[filter.propertyName]?.loading"
@@ -129,7 +129,7 @@
             filter
           />
         </div>
-        <Button
+        <PrimeButton
           type="button"
           raised
           size="small"
@@ -146,7 +146,7 @@
       <div class="flex flex-column">
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
-          <Dropdown
+          <PrimeDropdown
             v-model="filter.accession"
             :options="repliconAccessionOptions"
             style="flex: auto"
@@ -155,7 +155,7 @@
             Exclude?
             <InputSwitch v-model="filter.exclude" />
           </div>
-          <Button
+          <PrimeButton
             type="button"
             size="small"
             icon="pi pi-trash"
@@ -172,15 +172,15 @@
 
     <!-- Button Bar -->
     <div class="button-bar">
-      <Button
+      <PrimeButton
         size="small"
         icon="pi pi-filter-fill"
         label="Add AND Filter"
         @click="toggleFilterTypeMenu"
       />
-      <Menu ref="filterTypeMenu" :model="filterTypeMethods" append-to="body" :popup="true" />
+      <PrimeMenu ref="filterTypeMenu" :model="filterTypeMethods" append-to="body" :popup="true" />
       <!-- OR part -->
-      <Button
+      <PrimeButton
         size="small"
         icon="pi pi-filter-fill"
         label="Add OR Group"
@@ -206,7 +206,7 @@
         :lineage-options="lineageOptions"
         @update-property-value-options="updatePropertyValueOptions"
       />
-      <Button
+      <PrimeButton
         type="button"
         severity="danger"
         size="small"
@@ -218,7 +218,7 @@
         @mouseleave="markGroup(subFilterGroup, false)"
       >
         <i class="pi pi-trash"></i>
-      </Button>
+      </PrimeButton>
     </div>
   </div>
 </template>
@@ -532,11 +532,11 @@ export default {
       this.localOperators = newOperators
       filter.filterType = newOperators[0]
     },
-    isDateArray(value: any): value is Date[] {
+    isDateArray(value: unknown): value is Date[] {
       return Array.isArray(value) && value.every((item) => item instanceof Date)
     },
-    isStringOrNull(value: any): boolean {
-      return typeof value === 'string' || typeof value === null
+    isStringOrNull(value: unknown): boolean {
+      return typeof value === 'string' || value === null
     },
   },
 }

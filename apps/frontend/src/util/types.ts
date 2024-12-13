@@ -138,3 +138,17 @@ export type CustomPercentageLabelsOptions = {
   enabled: boolean
   threshold: number
 }
+
+export type RowSelectEvent<T = unknown> = {
+  data: T;
+  index: number;
+  originalEvent: Event;
+  type: string;
+}
+
+export type SelectedRowData = {
+  name: string;
+  properties: never[];
+  genomic_profiles:  {[variant: string]: string[]};
+  proteomic_profiles: string[];
+}

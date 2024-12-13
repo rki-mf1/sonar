@@ -26,7 +26,6 @@ import MultiSelect from 'primevue/multiselect'
 import Calendar from 'primevue/calendar'
 import Chart from 'primevue/chart'
 import Tooltip from 'primevue/tooltip'
-import Slider from 'primevue/slider'
 import Accordion from 'primevue/accordion'
 import AccordionTab from 'primevue/accordiontab'
 import OverlayPanel from 'primevue/overlaypanel'
@@ -37,7 +36,6 @@ import { FaDna } from 'oh-vue-icons/icons'
 import { FaCalendarAlt } from 'oh-vue-icons/icons'
 import Toast from 'primevue/toast'
 import ToastService from 'primevue/toastservice'
-import Fieldset from 'primevue/fieldset'
 import AnimateOnScroll from 'primevue/animateonscroll'
 import Panel from 'primevue/panel'
 import Skeleton from 'primevue/skeleton'
@@ -60,10 +58,10 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import FilterGroup from './components/FilterGroup.vue'
-import Filters from './components/Filters.vue'
+import FilterBar from './components/FilterBar.vue'
 import GenomicProfileLabel from './components/GenomicProfileLabel.vue'
 import SampleDetails from './components/SampleDetails.vue'
-import Statistics from './components/Statistics.vue'
+import SampleNumberStatistics from './components/SampleNumberStatistics.vue'
 
 import App from './App.vue'
 import router from './router'
@@ -77,47 +75,45 @@ app.use(PrimeVue)
 app.use(ToastService)
 
 app.component('FilterGroup', FilterGroup)
-app.component('Filters', FilterGroup)
+app.component('FilterBar', FilterBar)
 app.component('GenomicProfileLabel', GenomicProfileLabel)
 app.component('SampleDetails', SampleDetails)
-app.component('Statistics', Statistics)
+app.component('SampleNumberStatistics', SampleNumberStatistics)
 app.component('IconField', IconField)
-app.component('Menubar', Menubar)
+app.component('PrimeMenubar', Menubar)
 app.component('InputIcon', InputIcon)
-app.component('Dialog', Dialog)
+app.component('PrimeDialog', Dialog)
 app.component('MultiSelect', MultiSelect)
-app.component('Button', Button)
+app.component('PrimeButton', Button)
 app.component('RadioButton', RadioButton)
 app.component('InputText', InputText)
-app.component('Dropdown', Dropdown)
+app.component('PrimeDropdown', Dropdown)
 app.component('InputNumber', InputNumber)
 app.component('DataTable', DataTable)
-app.component('Paginator', Paginator)
-app.component('Column', Column)
-app.component('Card', Card)
+app.component('PrimePaginator', Paginator)
+app.component('PrimeColumn', Column)
+app.component('PrimeCard', Card)
 app.component('ProgressSpinner', ProgressSpinner)
 app.component('ProgressBar', ProgressBar)
 app.component('InputSwitch', InputSwitch)
 app.component('SplitButton', SplitButton)
-app.component('Calendar', Calendar)
-app.component('Chart', Chart)
-app.component('Slider', Slider)
+app.component('PrimeCalendar', Calendar)
+app.component('PrimeChart', Chart)
 app.component('AccordionTab', AccordionTab)
-app.component('Accordion', Accordion)
+app.component('PrimeAccordion', Accordion)
 app.component('VIcon', OhVueIcon)
 app.component('OverlayPanel', OverlayPanel)
-app.component('Chip', Chip)
+app.component('PrimeChip', Chip)
 
-app.component('Message', Message)
-app.component('Toast', Toast)
-app.component('Fieldset', Fieldset)
-app.component('Panel', Panel)
-app.component('Skeleton', Skeleton)
-app.component('Splitter', Splitter)
+app.component('PrimeMessage', Message)
+app.component('PrimeToast', Toast)
+app.component('PrimePanel', Panel)
+app.component('PrimeSkeleton', Skeleton)
+app.component('PrimeSplitter', Splitter)
 app.component('SplitterPanel', SplitterPanel)
 app.component('TabView', TabView)
 app.component('TabPanel', TabPanel)
-app.component('Menu', Menu)
+app.component('PrimeMenu', Menu)
 
 app.directive('tooltip', Tooltip)
 app.directive('animateonscroll', AnimateOnScroll)

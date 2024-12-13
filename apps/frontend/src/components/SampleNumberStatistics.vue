@@ -1,6 +1,6 @@
 <template>
   <div class="card-container">
-    <Card class="card">
+    <PrimeCard class="card">
       <template #content>
         <v-icon name="fa-calendar-alt" fill="var(--text-color)" scale="2" style="float: right" />
         <div style="color: var(--text-color); font-size: 22px; font-weight: bold">
@@ -10,8 +10,8 @@
           Date of newest sequence in database
         </div>
       </template>
-    </Card>
-    <Card class="card">
+    </PrimeCard>
+    <PrimeCard class="card">
       <template #content>
         <v-icon name="fa-dna" scale="2" fill="var(--text-color)" style="float: right" />
         <div style="color: var(--text-color); font-size: 22px; font-weight: bold">
@@ -21,19 +21,18 @@
           Sequences selected from database
         </div>
       </template>
-    </Card>
+    </PrimeCard>
   </div>
 </template>
 
 <script lang="ts">
 import API from '@/api/API'
-import type { PropType } from 'vue'
 
 export default {
-  name: 'Statistics',
+  name: 'SampleNumberStatistics',
   props: {
     filteredCount: {
-      // type: Object as PropType<number>,
+      type: Number,
       required: true,
     },
   },

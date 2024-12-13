@@ -5,7 +5,7 @@
       v-animateonscroll="{ enterClass: 'fadein', leaveClass: 'fadeout' }"
       class="shadow-4 align-center animation-duration-1000 animation-ease-in-out mb-4"
     >
-      <Card>
+      <PrimeCard>
         <template #title>
           <h3 class="text-primary mt-4">About Sonar</h3>
         </template>
@@ -17,10 +17,10 @@
             better analysis and research.
           </p>
         </template>
-      </Card>
+      </PrimeCard>
     </div>
 
-    <Panel header="" class="shadow-4 mb-4 w-full">
+    <PrimePanel header="" class="shadow-4 mb-4 w-full">
       <div
         v-animateonscroll="{ enterClass: 'fadein', leaveClass: 'fadeout' }"
         class="align-center animation-duration-1000 animation-ease-in-out"
@@ -38,8 +38,8 @@
           </TabPanel>
         </TabView>
       </div>
-    </Panel>
-    <Splitter style="" class="mb-5 shadow-4">
+    </PrimePanel>
+    <PrimeSplitter style="" class="mb-5 shadow-4">
       <SplitterPanel class="flex align-items-center justify-content-center">
         <!-- Acknowledgements Section -->
         <div
@@ -79,7 +79,7 @@
           </div>
         </div>
       </SplitterPanel>
-    </Splitter>
+    </PrimeSplitter>
   </div>
 </template>
 

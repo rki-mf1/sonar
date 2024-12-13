@@ -1,8 +1,8 @@
-import type { FilterGroupFilters, FilterGroupRoot } from '@/util/types'
+import type {FilterGroupRoot } from '@/util/types'
 import axios from 'axios'
 import { saveAs } from 'file-saver'
 import qs from 'qs'
-import { Workbook } from 'exceljs'
+import Workbook from 'exceljs'
 
 export default class API {
   CODE_OK = 200

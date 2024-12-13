@@ -4,28 +4,28 @@
       <div style="max-width: 91%">
         <div class="filter-container">
           <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
-          <Calendar
+          <PrimeCalendar
             v-model="startDate"
             style="flex: auto; min-width: 10rem"
             show-icon
             date-format="yy-mm-dd"
-          ></Calendar>
-          <Calendar
+          ></PrimeCalendar>
+          <PrimeCalendar
             v-model="endDate"
             style="flex: auto; min-width: 10rem"
             show-icon
             date-format="yy-mm-dd"
-          ></Calendar>
-          <Button
+          ></PrimeCalendar>
+          <PrimeButton
             icon="pi pi-arrow-circle-left"
             label="&nbsp;Default"
             class="default-calendar-button"
             @click="setDefaultTimeRange"
           >
-          </Button>
-          <Button v-if="startDate" class="ml-2 p-button-sm" @click="removeTimeRange">
+          </PrimeButton>
+          <PrimeButton v-if="startDate" class="ml-2 p-button-sm" @click="removeTimeRange">
             <i class="pi pi-trash" style="font-size: medium" />
-          </Button>
+          </PrimeButton>
         </div>
 
         <div class="filter-container">
@@ -44,7 +44,7 @@
             Include Sublineages?
             <InputSwitch v-model="lineageFilter.includeSublineages" />
           </div>
-          <Button
+          <PrimeButton
             v-if="lineageFilter.lineageList.length > 0"
             icon="pi pi-trash"
             class="ml-2 p-button-sm"
@@ -60,7 +60,7 @@
             :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
             class="mr-1"
           />
-          <Button
+          <PrimeButton
             v-if="profileFilter.value"
             icon="pi pi-trash"
             class="ml-2 p-button-sm"
@@ -69,7 +69,7 @@
         </div>
 
         <div class="button-1">
-          <Button
+          <PrimeButton
             icon="pi pi-filter"
             label="&nbsp;Set Advanced Filters"
             severity="warning"
@@ -77,7 +77,7 @@
             :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
             @click="displayDialogFilter = true"
           />
-          <Button
+          <PrimeButton
             icon="pi pi-database"
             label="&nbsp;Update sample selection"
             severity="warning"
@@ -85,11 +85,11 @@
             :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
             @click="updateSamplesInTableAndFilteredStatistics()"
           >
-          </Button>
+          </PrimeButton>
         </div>
       </div>
 
-      <Dialog v-model:visible="displayDialogFilter" modal header="Set Filters">
+      <PrimeDialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
             <FilterGroup
@@ -107,10 +107,10 @@
           </div>
         </div>
         <div v-if="samplesStore.errorMessage" style="margin-top: 20px">
-          <Message severity="error">{{ samplesStore.errorMessage }}</Message>
+          <PrimeMessage severity="error">{{ samplesStore.errorMessage }}</PrimeMessage>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <Button
+          <PrimeButton
             icon="pi pi-database"
             label="&nbsp;Update sample selection"
             severity="warning"
@@ -118,21 +118,21 @@
             :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
             @click="closeAdvancedFilterDialogAndUpdate"
           >
-          </Button>
+          </PrimeButton>
         </div>
-        <Button type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
-      </Dialog>
+        <PrimeButton type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
+      </PrimeDialog>
 
       <OverlayPanel ref="advancedFiltersHelp">
         <div class="flex flex-column gap-3 w-25rem">
           <div>
             <span class="font-medium text-900 block mb-2">Example of Input</span>
-            <Accordion :active-index="0">
+            <PrimeAccordion :active-index="0">
               <AccordionTab header="Property: Date">
                 <p class="m-0">
                   We let users select a range of dates where first date is the start of the range
                   and second date is the end.
-                  <Chip label="2021-12-30 - 2023-01-18" />
+                  <PrimeChip label="2021-12-30 - 2023-01-18" />
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: exact">
@@ -142,7 +142,7 @@
                   This operator filters values that exactly match the given input.
                   <br />
                   Example: A ID(name) filter with
-                  <Chip label="ID-001" /> will return records with this exact ID.
+                  <PrimeChip label="ID-001" /> will return records with this exact ID.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: contain">
@@ -152,21 +152,21 @@
                   Filters records that contain the input value as a substring.
                   <br />
                   Example: A name filter with
-                  <Chip label="John" /> will return names like "Johnathan" or "Johnny."
+                  <PrimeChip label="John" /> will return names like "Johnathan" or "Johnny."
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: gt">
                 <p class="m-0">
                   gt = "greater than" <br />
                   Example:
-                  <Chip label="10" /> will filter records where the value is greater than 10.
+                  <PrimeChip label="10" /> will filter records where the value is greater than 10.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: gte">
                 <p class="m-0">
                   gte = "greater than or equal" <br />
                   Example:
-                  <Chip label="15" /> will filter records where the value is greater than or equal
+                  <PrimeChip label="15" /> will filter records where the value is greater than or equal
                   to 15.
                 </p>
               </AccordionTab>
@@ -174,14 +174,14 @@
                 <p class="m-0">
                   lt = "less than" <br />
                   Example:
-                  <Chip label="20" /> will filter records where the value is less than 20.
+                  <PrimeChip label="20" /> will filter records where the value is less than 20.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: lte">
                 <p class="m-0">
                   lte = "less than or equal" <br />
                   Example:
-                  <Chip label="25" /> will filter records where the value is less than or equal to
+                  <PrimeChip label="25" /> will filter records where the value is less than or equal to
                   25.
                 </p>
               </AccordionTab>
@@ -189,7 +189,7 @@
                 <p class="m-0">
                   range = "value between two numbers" <br />
                   Example value input:
-                  <Chip label="(1, 5)" /> <br />
+                  <PrimeChip label="(1, 5)" /> <br />
                   This means the value starts from 1 and goes up to 5, inclusive.
                 </p>
               </AccordionTab>
@@ -197,20 +197,20 @@
                 <p class="m-0">
                   regex = "matches regular expression" <br />
                   Example:
-                  <Chip label="^IMS-101" /> will filter records where the value starts with
+                  <PrimeChip label="^IMS-101" /> will filter records where the value starts with
                   'IMS-101'. <br />
                   For more regex expressions, please visit
                   <a href="https://regex101.com/" target="_blank">this link</a>.
                 </p>
               </AccordionTab>
-            </Accordion>
+            </PrimeAccordion>
           </div>
         </div>
       </OverlayPanel>
     </div>
 
     <div class="statistics-right">
-      <Statistics :filtered-count="samplesStore.filteredCount"></Statistics>
+      <SampleNumberStatistics :filtered-count="samplesStore.filteredCount"></SampleNumberStatistics>
     </div>
   </div>
 </template>
@@ -220,7 +220,7 @@ import { useSamplesStore } from '@/stores/samples'
 import { DjangoFilterType } from '@/util/types'
 
 export default {
-  name: 'Filters',
+  name: 'FilterBar',
   data() {
     const samplesStore = useSamplesStore()
     samplesStore.initializeWatchers()

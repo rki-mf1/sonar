@@ -7,7 +7,7 @@
             <div style="font-size: 2rem; color: var(--text-color)">Sonar</div>
           </div>
           <div class="flex align-items-center justify-content-center">
-            <Menubar :model="menuItems">
+            <PrimeMenubar :model="menuItems">
               <template #item="{ item, props, hasSubmenu }">
                 <router-link v-if="item.route" v-slot="{ href, navigate }" :to="item.route" custom>
                   <a
@@ -26,7 +26,7 @@
                   <span v-if="hasSubmenu" class="pi pi-fw pi-angle-down" />
                 </a>
               </template>
-            </Menubar>
+            </PrimeMenubar>
           </div>
         </div>
       </header>
@@ -36,14 +36,14 @@
         <RouterView />
       </div>
     </main>
-    <Toast ref="toast" />
+    <PrimeToast ref="toast" />
   </body>
 </template>
 
 <script lang="ts">
 import { RouterView } from 'vue-router'
 import 'primeicons/primeicons.css'
-import Filters from './components/Filters.vue'
+import Filters from './components/FilterBar.vue'
 import { useSamplesStore } from '@/stores/samples'
 
 export default {

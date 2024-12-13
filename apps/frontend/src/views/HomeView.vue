@@ -20,7 +20,7 @@
       <template #empty> No Results </template>
       <template #header>
         <div style="display: flex; justify-content: space-between">
-          <Button
+          <PrimeButton
             icon="pi pi-external-link"
             label="&nbsp;Export"
             severity="warning"
@@ -46,7 +46,7 @@
           </div>
         </div>
       </template>
-      <Column field="name" sortable :reorderable-column="false">
+      <PrimeColumn field="name" sortable :reorderable-column="false">
         <template #header>
           <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
         </template>
@@ -55,9 +55,10 @@
             {{ slotProps.data.name }}
           </div>
         </template>
-      </Column>
-      <Column
+      </PrimeColumn>
+      <PrimeColumn
         v-for="column in samplesStore.selectedColumns"
+        :key="column"
         :sortable="!notSortable.includes(column)"
         :field="column"
       >
@@ -69,6 +70,7 @@
             <div>
               <GenomicProfileLabel
                 v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                :key="variant"
                 :variant-string="variant"
                 :annotations="slotProps.data.genomic_profiles[variant]"
                 :is-last="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
@@ -79,6 +81,7 @@
             <div>
               <GenomicProfileLabel
                 v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                :key="variant"
                 :variant-string="variant"
                 :is-last="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
               />
@@ -95,12 +98,12 @@
             {{ findProperty(slotProps.data.properties, column) }}
           </span>
         </template>
-      </Column>
+      </PrimeColumn>
       <template #footer>
         <div style="display: flex; justify-content: space-between">
           Total: {{ samplesStore.filteredCount }} Samples
         </div>
-        <Paginator
+        <PrimePaginator
           v-model:rows="samplesStore.perPage"
           v-model:first="samplesStore.firstRow"
           :total-records="samplesStore.filteredCount"
@@ -110,7 +113,7 @@
       </template>
     </DataTable>
 
-    <Dialog
+    <PrimeDialog
       v-model:visible="samplesStore.loading"
       class="flex"
       modal
@@ -123,9 +126,9 @@
         size="small"
         style="color: whitesmoke"
       />
-    </Dialog>
+    </PrimeDialog>
 
-    <Dialog v-model:visible="displayDialogRow" modal dismissable-mask :style="{ width: '60vw' }">
+    <PrimeDialog v-model:visible="displayDialogRow" modal dismissable-mask :style="{ width: '60vw' }">
       <template #header>
         <div style="display: flex; align-items: center">
           <strong>Sample Details</strong>
@@ -142,9 +145,9 @@
         :selected-row="selectedRow"
         :all-columns="samplesStore.propertyTableOptions"
       ></SampleDetails>
-    </Dialog>
+    </PrimeDialog>
 
-    <Dialog
+    <PrimeDialog
       v-model:visible="displayDialogExport"
       header="Export Settings"
       modal
@@ -163,7 +166,7 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <Button
+        <PrimeButton
           icon="pi pi-external-link"
           label="&nbsp;Export"
           severity="warning"
@@ -172,10 +175,10 @@
           @click="exportFile(exportFormat)"
         />
       </div>
-    </Dialog>
+    </PrimeDialog>
   </div>
 
-  <Toast ref="exportToast" position="bottom-right" group="br">
+  <PrimeToast ref="exportToast" position="bottom-right" group="br">
     <template #container="{ message, closeCallback }">
       <section class="flex p-3 gap-3" style="border-radius: 10px">
         <i class="pi pi-cloud-download text-primary-500 text-2xl"></i>
@@ -187,22 +190,22 @@
           </div>
         </div>
         <!-- Close Icon (X button) -->
-        <button
+        <PrimeButton
           class="p-toast-close p-link"
           style="position: absolute; top: 5px; right: 5px"
           @click="closeCallback"
         >
           <i class="pi pi-times"></i>
-        </button>
+        </PrimeButton>
       </section>
     </template>
-  </Toast>
+  </PrimeToast>
 </template>
 
 <script lang="ts">
 import API from '@/api/API'
 import { useSamplesStore } from '@/stores/samples'
-import { type Property } from '@/util/types'
+import { type Property, type RowSelectEvent, type SelectedRowData } from '@/util/types'
 import type { DataTableSortEvent } from 'primevue/datatable'
 
 export default {
@@ -218,7 +221,7 @@ export default {
         properties: [],
         genomic_profiles: {},
         proteomic_profiles: [],
-      },
+      } as SelectedRowData,
       displayDialogRow: false,
       notSortable: ['genomic_profiles', 'proteomic_profiles'],
     }
@@ -265,7 +268,7 @@ export default {
           console.log('complete')
           this.$toast.removeGroup('br')
         })
-        .catch((error) => {
+        .catch(() => {
           // Handle the error, also close the toast in case of error
           this.showToastError('Export failed. Please try again.')
           this.$toast.removeGroup('br')
@@ -280,7 +283,7 @@ export default {
         this.samplesStore.propertyTableOptions.includes(v),
       )
     },
-    onColReorder(event: any) {
+    onColReorder(event:  {dragIndex: number; dropIndex: number; originalEvent: Event }) {
       const { dragIndex, dropIndex } = event as { dragIndex: number; dropIndex: number }
       // Rearrange columns based on dragIndex and dropIndex
       const reorderedColumns = ['name', ...this.samplesStore.selectedColumns] // note: 'name' is fixed and cant be reordered
@@ -289,7 +292,7 @@ export default {
 
       this.samplesStore.selectedColumns = reorderedColumns.slice(1) // drop 'name' from column list since it is fixed and cant be reordered
     },
-    onRowSelect(event: any) {
+    onRowSelect(event: RowSelectEvent<SelectedRowData>) {
       this.selectedRow = event.data
       this.displayDialogRow = true
     },

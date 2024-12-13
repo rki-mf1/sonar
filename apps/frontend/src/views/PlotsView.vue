@@ -4,10 +4,10 @@
     <div class="row">
       <div class="col-lineage">
         <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <Panel v-else header="Week Calendar" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
+        <PrimePanel v-else header="Week Calendar" class="w-full shadow-2">
           <div style="height: 100%; width: 100%; display: flex; justify-content: center">
-            <Chart
+            <PrimeChart
               ref="weekCalendarPlot"
               type="bar"
               :data="samplesPerWeekChart()"
@@ -15,18 +15,18 @@
               style="width: 100%"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
     </div>
     <!-- lineage plots-->
     <div class="row">
       <div class="col-lineage">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <Panel v-else header="Lineage Plot" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
+        <PrimePanel v-else header="Lineage Plot" class="w-full shadow-2">
           <!-- lineage area plot-->
           <h4>Area Plot - COVID-19 Lineages Over Time</h4>
           <div class="h-30rem plot">
-            <Chart
+            <PrimeChart
               ref="lineageAreaPlot"
               type="line"
               :data="lineage_areaData()"
@@ -37,7 +37,7 @@
           <!-- lineage bar plot-->
           <h4>Stacked Bar Plot - Lineage Distribution by Calendar Week</h4>
           <div class="h-26rem plot">
-            <Chart
+            <PrimeChart
               ref="lineageBarPlot"
               type="bar"
               :data="lineage_barData()"
@@ -45,7 +45,7 @@
               style="width: 100%; height: 100%"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
     </div>
 
@@ -53,10 +53,10 @@
     <div class="row">
       <div class="col-lineage">
         <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <Panel v-else header="Meta Data Coverage" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
+        <PrimePanel v-else header="Meta Data Coverage" class="w-full shadow-2">
           <div style="height: 100%; width: 100%; display: flex; justify-content: center">
-            <Chart
+            <PrimeChart
               ref="metaDataPlot"
               type="bar"
               :data="metaDataChart()"
@@ -64,16 +64,16 @@
               style="width: 100%"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
     </div>
 
     <div class="row">
       <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Tech." class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Sequencing Tech." class="w-full shadow-2">
           <div style="justify-content: center" class="h-20rem">
-            <Chart
+            <PrimeChart
               type="doughnut"
               :data="sequencingTechChartData()"
               :options="sequencingTechChartOptions()"
@@ -81,92 +81,92 @@
               class="h-full"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('genome_completeness')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Genome completeness" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Genome completeness" class="w-full shadow-2">
           <div style="display: flex; justify-content: center" class="h-20rem plot">
-            <Chart
+            <PrimeChart
               type="pie"
               :data="genomeCompleteChart()"
               :options="genome_pieChartOptions()"
               style=""
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_reason')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sequencing Reason" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Sequencing Reason" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart
+            <PrimeChart
               type="doughnut"
               :data="sequencingReasonChartData()"
               :options="sequencingReasonChartOptions()"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('zip_code')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Zip Code" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Zip Code" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart
+            <PrimeChart
               type="bar"
               :data="zipCodeChartData()"
               :options="zipCodeChartOptions()"
               class="w-full h-full"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('sample_type')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Sample Type" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Sample Type" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart type="pie" :data="sampleTypeChartData()" :options="sampleTypeChartOptions()" />
+            <PrimeChart type="pie" :data="sampleTypeChartData()" :options="sampleTypeChartOptions()" />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('lab')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Lab" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Lab" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart
+            <PrimeChart
               type="bar"
               :data="labChartData()"
               :options="labChartOptions()"
               class="w-full h-full"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('host')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Host" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Host" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart
+            <PrimeChart
               type="bar"
               :data="hostChartData()"
               :options="hostChartOptions()"
               class="w-full h-full"
             />
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
 
       <div v-if="samplesStore.propertyMenuOptions.includes('length')" class="col">
-        <Skeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <Panel v-else header="Length" class="w-full shadow-2">
+        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
+        <PrimePanel v-else header="Length" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <Chart
+            <PrimeChart
               type="bar"
               :data="lengthChartData()"
               :options="lengthChartOptions()"
@@ -174,7 +174,7 @@
             />
             <!-- scatter -->
           </div>
-        </Panel>
+        </PrimePanel>
       </div>
     </div>
   </div>
@@ -184,20 +184,21 @@
 import { useSamplesStore } from '@/stores/samples'
 import type { TooltipItem } from 'chart.js'
 import chroma from 'chroma-js'
-import { Chart, type ChartDataset } from 'chart.js'
+import { Chart, type ChartDataset, type BarElement } from 'chart.js'
 import type { CustomPercentageLabelsOptions } from '@/util/types'
 
 // Labels for bar plots, text inside the bar for values > 40%
 const percentageLabelPlugin = {
   id: 'customPercentageLabels',
-  afterDatasetsDraw(chart: Chart, args: any, options: CustomPercentageLabelsOptions) {
+  afterDatasetsDraw(chart: Chart<'bar'>, args: unknown, options: CustomPercentageLabelsOptions) {
     if (!options.enabled) return
 
     const ctx = chart.ctx
     const datasets = chart.data.datasets
 
     datasets.forEach((dataset: ChartDataset, datasetIndex: number) => {
-      chart.getDatasetMeta(datasetIndex).data.forEach((bar: any, index: number) => {
+      (chart.getDatasetMeta(datasetIndex).data as BarElement[]).forEach((bar, index) => {
+
         let value = dataset.data[index]
         const percentage = `${value}%`
 
@@ -309,7 +310,6 @@ export default {
     },
     samplesPerWeekChartOptions() {
       const documentStyle = getComputedStyle(document.documentElement)
-      const textColor = documentStyle.getPropertyValue('--text-color')
       const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
       const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
       return {
@@ -567,7 +567,6 @@ export default {
       }
     },
     genome_pieChartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement)
       const textColor = '#333'
       return {
         animation: false,
@@ -886,7 +885,7 @@ export default {
         ],
       }
     },
-    isDataEmpty(data: { [key: string]: any }): boolean {
+    isDataEmpty(data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>): boolean {
       return (
         !data ||
         Object.keys(data).length === 0 ||

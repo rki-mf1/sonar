@@ -194,8 +194,36 @@ export const useSamplesStore = defineStore('samples', {
       this.filtersChanged = false
     },
     async updateFilteredStatistics() {
-      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-      this.filteredCount = this.filteredStatistics.filtered_total_count
+      const emptyStatistics = {
+            filtered_total_count: 0,
+            meta_data_coverage: {},
+            samples_per_week: {},
+            genomecomplete_chart: {},
+            lineage_area_chart: [],
+            lineage_bar_chart: [],
+            sequencing_tech: {},
+            sequencing_reason: {},
+            sample_type: { },
+            length: {},
+            lab: {},
+            zip_code: {},
+            host: {},
+          }
+      try {
+        const filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+        if (!filteredStatistics){
+          this.filteredStatistics = emptyStatistics
+        }
+        else{
+          this.filteredStatistics = filteredStatistics
+        }
+        this.filteredCount = this.filteredStatistics.filtered_total_count
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching filtered statistics:', error)
+        this.filteredStatistics = emptyStatistics
+        this.filteredCount = 0
+      }
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
@@ -238,8 +266,14 @@ export const useSamplesStore = defineStore('samples', {
     },
 
     async updatePropertyOptions() {
+      try{
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-      const metaData = this.filteredStatistics.meta_data_coverage
+      const metaData = this.filteredStatistics?.meta_data_coverage ?? {};
+       if (!res) {
+          console.error('API request failed');
+          return;
+        };
+
       this.propertiesDict = {}
       res.values.forEach((property: { name: string; query_type: string; description: string }) => {
         if (property.query_type === 'value_varchar') {
@@ -265,7 +299,11 @@ export const useSamplesStore = defineStore('samples', {
         ...this.propertyMenuOptions.filter(
           (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
         ),
-      ]
+      ]}
+       catch (error) {
+    console.error('Failed to update property options:', error);
+    // Optionally, you can show a user-friendly message or take other actions
+  }
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
@@ -279,14 +317,14 @@ export const useSamplesStore = defineStore('samples', {
       const res = await API.getInstance().getGeneSymbolOptions()
       this.symbolOptions = res.gene_symbols
     },
-    isDateArray(value: any): value is Date[] {
+    isDateArray(value: unknown): value is Date[] {
       return Array.isArray(value) && value.every((item) => item instanceof Date)
     },
 
     initializeWatchers() {
       watch(
         () => this.filterGroup,
-        (newFilters, oldFilters) => {
+        (newFilters) => {
           if (JSON.stringify(newFilters) !== this.lastSentFilterGroup) {
             this.filtersChanged = true
           } else {
@@ -298,10 +336,10 @@ export const useSamplesStore = defineStore('samples', {
     },
   },
   getters: {
-    filterGroupsFilters(state): FilterGroupRoot {
+    filterGroupsFilters(): FilterGroupRoot {
       return { filters: getFilterGroupFilters(this.filterGroup) }
     },
-    filters(state): FilterGroupRoot {
+    filters(): FilterGroupRoot {
       const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters))
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
@@ -314,7 +352,7 @@ export const useSamplesStore = defineStore('samples', {
 let storeInitialized = false
 
 export function initializeStore() {
-  const store = useSamplesStore()
+  useSamplesStore()
 
   if (!storeInitialized) {
     storeInitialized = true

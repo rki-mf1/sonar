@@ -3,7 +3,7 @@
     <div v-if="selectedData">
       <strong>Sample Details</strong>
       <br />
-      <Dialog
+      <PrimeDialog
         v-model:visible="loading"
         modal
         :closable="false"
@@ -13,7 +13,7 @@
         <div class="flex align-items-center">
           <ProgressSpinner v-if="loading" size="small" style="color: whitesmoke" />
         </div>
-      </Dialog>
+      </PrimeDialog>
 
       <SampleDetails :selected-row="selectedData" :all-columns="allColumns"></SampleDetails>
     </div>

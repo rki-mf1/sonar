@@ -15,6 +15,7 @@ export default {
     annotations: {
       type: Array<string>,
       required: false,
+      default: () => [],
     },
     isLast: {
       type: Boolean,
