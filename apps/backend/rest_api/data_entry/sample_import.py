@@ -199,9 +199,6 @@ class SampleImport:
         # seem the bulk_create with setting the ignore_conflicts will disable returning ID
         # https://docs.djangoproject.com/en/4.2/ref/models/querysets/#bulk-create
 
-        # V.3 ------------------------------
-        # Mutation.objects.get_or_create
-
         # V.2 ------------------------------
         # optimize for performance (be careful about order!!)
         # a single query with OR conditions for all mutations
@@ -239,27 +236,6 @@ class SampleImport:
         #     for nt, var_raw in zip(nt_mutations, nt_vars)
         # }
 
-        # V.1 ------------------------------
-        # # Fetch the inserted rows and map their IDs back
-        # #  a dictionary to map `var_raw` IDs to mutation IDs
-        # nt_id_mapping = {}
-        # # Iterate over nt_mutations and nt_vars to perform exact matching
-        # # order is matter!
-        # for nt, var_raw in zip(nt_mutations, nt_vars):
-        #     # Perform exact match for this specific mutation
-        #     mutation = Mutation.objects.get(
-        #         gene=nt.gene,
-        #         ref=nt.ref,
-        #         alt=nt.alt,
-        #         start=nt.start,
-        #         end=nt.end,
-        #         replicon=nt.replicon,
-        #         type=nt.type,
-        #     )
-        #     # Map the var_raw.id to the mutation ID
-        #     nt_id_mapping[var_raw.id] = mutation.id
-        # ----------------
-
         # for CDS mutations
         # For CDS mutations
         cds_mutations = []
@@ -287,6 +263,20 @@ class SampleImport:
             if var_raw.alt is None:
                 var_raw.ref = ""
 
+            # mutation_data = {
+            #     "gene": gene if gene else None,
+            #     "ref": var_raw.ref,
+            #     "alt": var_raw.alt,
+            #     "start": var_raw.start,
+            #     "end": var_raw.end,
+            #     "replicon": replicon,
+            #     "type": var_raw.type,
+            #     "parent_id": parent_id,
+            # }
+
+            # Check if the mutation exists (this part used to update old dataset 2024_09_12.sql)
+            # this part works and gives us the correct result.
+            # The below-outer Bulk insert CDS mutations didnt work (fail in test)
             mutation_data = {
                 "gene": gene if gene else None,
                 "ref": var_raw.ref,
@@ -295,28 +285,24 @@ class SampleImport:
                 "end": var_raw.end,
                 "replicon": replicon,
                 "type": var_raw.type,
-                # "parent_id": parent_id,  # Updated parent ID
+                # "parent_id": parent_id,  # dont need the parent ID
             }
-
-            # Check if the mutation exists
             try:
                 mutation = Mutation.objects.get(**mutation_data)
-                # If it exists, update the parent_id (or any other field you want to modify)
+                # If it exists, update the parent_id
                 mutation.parent_id = parent_id
                 mutation.save()
             except Mutation.DoesNotExist:
                 # If it does not exist, create a new one
                 mutation = Mutation.objects.create(**mutation_data, parent_id=parent_id)
+            # -------------------------------------------
 
             # Add mutation to list (for further processing if needed)
             cds_mutations.append(mutation)
             self.mutation_query_data.append(mutation_data)
 
         # Bulk insert CDS mutations
-
-        # Mutation.objects.bulk_create(cds_mutations, update_conflicts=True,
-        #     update_fields=["parent_id"],
-        #     unique_fields=["ref", "alt", "start", "end", "type", "gene_id", "replicon_id"],)
+        # Mutation.objects.bulk_create(cds_mutations, ignore_conflicts=True)
 
         # Combine NT and CDS mutations into the result
         # we might dont need sample_mutations because
