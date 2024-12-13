@@ -176,7 +176,7 @@ class SampleImport:
                 )
             gene = gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end]
 
-            # in DEL, we dont keep REF in the database.
+            # In DEL, we don't keep REF in the database.
             if var_raw.alt is None:
                 var_raw.ref = ""
 
@@ -189,54 +189,55 @@ class SampleImport:
                 "replicon": replicon,
                 "type": var_raw.type,
             }
-            mutation = Mutation(**mutation_data)
-            nt_mutations.append(mutation)
-            self.mutation_query_data.append(mutation_data)
 
-        # Bulk insert NT mutations and map their IDs with the original ID (in var file)
-        with transaction.atomic():
-            nt_inserted = Mutation.objects.bulk_create(
-                nt_mutations, ignore_conflicts=True
-            )
+            # Use get_or_create to ensure we have the mutation and its ID
+            mutation, created = Mutation.objects.get_or_create(**mutation_data)
+            nt_mutations.append(mutation)
+            nt_id_mapping[var_raw.id] = mutation.id
+            self.mutation_query_data.append(mutation_data)
 
         # seem the bulk_create with setting the ignore_conflicts will disable returning ID
         # https://docs.djangoproject.com/en/4.2/ref/models/querysets/#bulk-create
 
+        # V.3 ------------------------------
+        # Mutation.objects.get_or_create
+
         # V.2 ------------------------------
-        # optimize for performance
+        # optimize for performance (be careful about order!!)
         # a single query with OR conditions for all mutations
-        query = Q()
-        for nt in nt_mutations:
-            query |= Q(
-                ref=nt.ref,
-                alt=nt.alt,
-                start=nt.start,
-                end=nt.end,
-                replicon=nt.replicon,
-                type=nt.type,
-            )
-        inserted_rows = Mutation.objects.filter(query)
+        # query = Q()
+        # for nt in nt_mutations:
+        #     query |= Q(
+        #         gene=nt.gene,
+        #         ref=nt.ref,
+        #         alt=nt.alt,
+        #         start=nt.start,
+        #         end=nt.end,
+        #         replicon=nt.replicon,
+        #         type=nt.type,
+        #     )
+        # inserted_rows = Mutation.objects.filter(query).order_by('')
 
-        # Create a dictionary mapping (ref, alt, start, end, replicon, type) to mutation IDs
-        inserted_mapping = {
-            (
-                mutation.ref,
-                mutation.alt,
-                mutation.start,
-                mutation.end,
-                mutation.replicon_id,
-                mutation.type,
-            ): mutation.id
-            for mutation in inserted_rows
-        }
+        # # Create a dictionary mapping (ref, alt, start, end, replicon, type) to mutation IDs
+        # inserted_mapping = {
+        #     (
+        #         mutation.ref,
+        #         mutation.alt,
+        #         mutation.start,
+        #         mutation.end,
+        #         mutation.replicon_id,
+        #         mutation.type,
+        #     ): mutation.id
+        #     for mutation in inserted_rows
+        # }
 
-        # Map back to var_raw.id
-        nt_id_mapping = {
-            var_raw.id: inserted_mapping.get(
-                (nt.ref, nt.alt, nt.start, nt.end, nt.replicon.id, nt.type), None
-            )
-            for nt, var_raw in zip(nt_mutations, nt_vars)
-        }
+        # # Map back to var_raw.id
+        # nt_id_mapping = {
+        #     var_raw.id: inserted_mapping.get(
+        #         (nt.ref, nt.alt, nt.start, nt.end, nt.replicon.id, nt.type), None
+        #     )
+        #     for nt, var_raw in zip(nt_mutations, nt_vars)
+        # }
 
         # V.1 ------------------------------
         # # Fetch the inserted rows and map their IDs back
@@ -247,6 +248,7 @@ class SampleImport:
         # for nt, var_raw in zip(nt_mutations, nt_vars):
         #     # Perform exact match for this specific mutation
         #     mutation = Mutation.objects.get(
+        #         gene=nt.gene,
         #         ref=nt.ref,
         #         alt=nt.alt,
         #         start=nt.start,
@@ -259,13 +261,16 @@ class SampleImport:
         # ----------------
 
         # for CDS mutations
+        # For CDS mutations
         cds_mutations = []
         for var_raw in cds_vars:
             # Update parent IDs for CDS mutations
-            parent_id = nt_id_mapping.get(var_raw.parent_id)
+            parent_id = nt_id_mapping.get(var_raw.parent_id, None)
             gene = None
             replicon = None
-            if not var_raw.replicon_or_cds_accession in gene_cache_by_accession:
+
+            # Retrieve or cache the gene and replicon
+            if var_raw.replicon_or_cds_accession not in gene_cache_by_accession:
                 try:
                     gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
                         Gene.objects.get(
@@ -274,10 +279,11 @@ class SampleImport:
                     )
                 except Gene.DoesNotExist:
                     gene_cache_by_accession[var_raw.replicon_or_cds_accession] = None
+
             gene = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
             replicon = gene.replicon if gene else None
 
-            # in DEL, we dont keep REF in the database.
+            # In DEL, we don't keep REF in the database.
             if var_raw.alt is None:
                 var_raw.ref = ""
 
@@ -289,15 +295,28 @@ class SampleImport:
                 "end": var_raw.end,
                 "replicon": replicon,
                 "type": var_raw.type,
-                "parent_id": parent_id,  # Updated parent ID
+                # "parent_id": parent_id,  # Updated parent ID
             }
-            mutation = Mutation(**mutation_data)
+
+            # Check if the mutation exists
+            try:
+                mutation = Mutation.objects.get(**mutation_data)
+                # If it exists, update the parent_id (or any other field you want to modify)
+                mutation.parent_id = parent_id
+                mutation.save()
+            except Mutation.DoesNotExist:
+                # If it does not exist, create a new one
+                mutation = Mutation.objects.create(**mutation_data, parent_id=parent_id)
+
+            # Add mutation to list (for further processing if needed)
             cds_mutations.append(mutation)
             self.mutation_query_data.append(mutation_data)
 
         # Bulk insert CDS mutations
-        with transaction.atomic():
-            Mutation.objects.bulk_create(cds_mutations, ignore_conflicts=True)
+
+        # Mutation.objects.bulk_create(cds_mutations, update_conflicts=True,
+        #     update_fields=["parent_id"],
+        #     unique_fields=["ref", "alt", "start", "end", "type", "gene_id", "replicon_id"],)
 
         # Combine NT and CDS mutations into the result
         # we might dont need sample_mutations because

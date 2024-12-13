@@ -349,11 +349,11 @@ def process_batch_run(
         ]
         # with cache.lock("alignment"):
         #     Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
-
-        for sample_import_obj in sample_import_objs:
-            sample_import_obj.get_mutation_objs_V2(
-                gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos
-            )
+        with cache.lock("mutation"):
+            for sample_import_obj in sample_import_objs:
+                sample_import_obj.get_mutation_objs_V2(
+                    gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos
+                )
 
         # --------------- Old ---------------
         # mutations = []
