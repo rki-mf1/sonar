@@ -29,6 +29,7 @@ from rest_api.data_entry.reference_job import delete_reference
 from rest_api.data_entry.sample_entry_job import check_for_new_data
 from rest_api.management.commands.import_lineage import LineageImport
 from rest_api.utils import generate_job_ID
+from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import parse_default_data
 from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
@@ -185,17 +186,6 @@ class RepliconViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(data=sample_data, status=status.HTTP_200_OK)
-
-
-def get_distinct_gene_symbols(reference=None):
-    """
-    Helper method to get distinct gene symbols.
-    This method can be called from anywhere.
-    """
-    queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
-    if reference:
-        queryset = queryset.filter(replicon__reference__accession=reference)
-    return [item["gene_symbol"] for item in queryset]
 
 
 class GeneViewSet(viewsets.ModelViewSet):
