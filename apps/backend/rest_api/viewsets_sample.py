@@ -25,6 +25,8 @@ from django.db.models import Q
 from django.db.models import QuerySet
 from django.db.models import Subquery
 from django.db.models import When
+from django.db.models import Value
+from django.db.models import CharField
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -686,6 +688,58 @@ class SampleViewSet(
             )
 
         return result
+    
+    def get_weekly_lineage_grouped_percentage_bar_chart(self, queryset):
+
+        present_lineages = {entry['lineage'] for entry in queryset.values("lineage")}
+
+        # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
+        lineage_groups = {'.'.join(lineage.split('.')[:2]) for lineage in present_lineages}
+        lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
+ 
+        # build mapping from sublineage to lineage_group
+        lineage_to_group = {}
+        for lineage_group in lineage_groups_model:
+            for sublineage in lineage_group.get_sublineages():
+                if sublineage.name in present_lineages:
+                    lineage_to_group[sublineage.name] = lineage_group.name
+
+        # map lineages in data to groups using django conditions
+        lineage_cases = [
+            When(lineage=lineage, then=Value(group))
+            for lineage, group in lineage_to_group.items()
+        ]
+        # annotate queryset with lineage_group
+        queryset = queryset.annotate(
+            lineage_group=Case(
+                *lineage_cases,
+                default=Value('Unknown'),
+                output_field=CharField(),
+            )
+        )
+
+        weekly_data = (
+            queryset.values("year", "week", "lineage_group") 
+            .annotate(lineage_count=Count("lineage_group"))
+            .order_by("year", "week", "lineage_group")
+        )
+
+        week_totals = {item["week"]: item["total_count"] for item in queryset.values("week").annotate(total_count=Count("id")).order_by("week")}
+
+        result = []
+        for item in weekly_data:
+            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
+            percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
+            result.append(
+                {
+                    "week": week_str,
+                    "lineage_group": item["lineage_group"],
+                    "count": item["lineage_count"],
+                    "percentage": round(percentage, 2),
+                }
+            )
+
+        return result
 
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
@@ -716,6 +770,9 @@ class SampleViewSet(
         )
         dict["lineage_bar_chart"] = (
             self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
+        )
+        dict["lineage_grouped_bar_chart"] = (
+            self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
         )
         dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
         dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)

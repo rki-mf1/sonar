@@ -31,6 +31,12 @@
             <Chart type="bar" ref="lineageBarPlot" :data="lineage_barData()" :options="lineage_barChartOptions()"
               style="width: 100%; height: 100%" />
           </div>
+          <!-- Grouped lineage bar plot-->
+          <h4>Stacked Bar Plot - Grouped Lineage Distribution by Calendar Week</h4>
+          <div class="h-26rem plot">
+            <Chart type="bar" ref="lineageGroupedBarPlot" :data="lineage_grouped_barData()" :options="lineage_barChartOptions()"
+              style="width: 100%; height: 100%" />
+          </div>
         </Panel>
       </div>
     </div>
@@ -438,6 +444,28 @@ export default {
         responsive: true,
         maintainAspectRatio: false,
       }
+    },
+    lineage_grouped_barData() {
+      const _data = this.samplesStore.filteredStatistics
+        ? this.samplesStore.filteredStatistics['lineage_grouped_bar_chart']
+        : [];
+      if (this.isDataEmpty(_data)) {
+        return this.emptyChartData();
+      }
+      const lineages = [...new Set(_data.map(item => item.lineage_group))];
+      const weeks = [...new Set(_data.map(item => item.week))];
+      const colors = this.generateColorPalette(lineages.length);
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: weeks.map(
+          week =>
+            _data.find(item => item.week === week && item.lineage_group === lineage)?.percentage || 0
+        ),
+        backgroundColor: colors[index],
+        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
+        borderWidth: 2,
+      }));
+      return { labels: weeks, datasets };
     },
     metaDataChart() {
       // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
