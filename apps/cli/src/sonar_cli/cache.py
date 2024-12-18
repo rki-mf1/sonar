@@ -46,7 +46,7 @@ class sonarCache:
         temp: bool = False,
         debug: bool = False,
         disable_progress: bool = False,
-        include_NX: bool = False,
+        include_nx: bool = True,
     ):
         """
         Initialize the sonarCache object.
@@ -131,7 +131,7 @@ class sonarCache:
             self.error_logfile_obj = (
                 open(self.error_logfile_name, "a+") if logfile else None
             )
-        self.include_NX = include_NX
+        self.include_nx = include_nx
 
     def __enter__(self):
         return self
@@ -216,7 +216,7 @@ class sonarCache:
             # Check Alignment if it exists or not (sample and seqhash)
             batch_data[i]["algnid"] = alignemnt_dict.get(data["name"], None)
 
-            batch_data[i]["include_NX"] = self.include_NX
+            batch_data[i]["include_nx"] = self.include_nx
 
             # Create  path for cache file (e.g., .seq, .ref) and write them.
             # Data variable already point to the original batch_data[i], which if we update
@@ -255,7 +255,7 @@ class sonarCache:
         liftfile: pd.DataFrame,
         cdsfile,
         properties,
-        include_NX,
+        include_nx,
     ):
         """
         The function takes in a bunch of arguments and returns a filename.
@@ -285,7 +285,7 @@ class sonarCache:
             "lift_file": liftfile,
             "cds_file": cdsfile,
             "properties": properties,
-            "include_NX": include_NX,
+            "include_nx": include_nx,
         }
         fname = name  # self.get_sample_fname(name)  # return fname with full path
         self.sampleinput_total = self.sampleinput_total + 1

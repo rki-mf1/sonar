@@ -494,8 +494,8 @@ def create_subparser_import(
         action="store_true",
     )
     parser.add_argument(
-        "--include-NX",
-        help="include mutations containing 'N' or 'X' when importing into the database.(default; sonar exclude mutations containing N or X from being imported)",
+        "--skipNX",
+        help="exclude mutations containing N or X from being imported into the database (default; sonar includes mutations containing 'N' or 'X' when importing).",
         action="store_true",
     )
     return subparsers, parser
@@ -715,7 +715,7 @@ def handle_import(args: argparse.Namespace):
     else:
         LOGGER.warn("Invalid --method. Please use 'import -h' to see available methods")
         exit(1)
-    LOGGER.info(f"Include N/X mutation: {args.include_NX}")
+    LOGGER.info(f"Include N/X mutation: {args.skipNX}")
     sonarUtils.import_data(
         db=args.db,
         fasta=args.fasta,
@@ -732,7 +732,7 @@ def handle_import(args: argparse.Namespace):
         reference=args.reference,
         method=args.method,
         no_upload_sample=args.no_upload,
-        include_NX=args.include_NX,
+        include_nx=not args.skipNX,
     )
 
 

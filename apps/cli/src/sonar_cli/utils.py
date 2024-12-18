@@ -84,7 +84,7 @@ class sonarUtils:
         reference: str = None,
         method: int = 1,
         no_upload_sample: bool = False,
-        include_NX: bool = False,
+        include_nx: bool = True,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -151,7 +151,7 @@ class sonarUtils:
             cachedir=cachedir,
             update=update,
             progress=progress,
-            include_NX=include_NX,
+            include_nx=include_nx,
         )
 
         # importing sequences
@@ -205,7 +205,7 @@ class sonarUtils:
         update: bool = True,
         progress: bool = False,
         debug: bool = False,
-        include_NX: bool = False,
+        include_nx: bool = True,
     ) -> sonarCache:
         """Set up a cache for sequence data."""
         # Instantiate a sonarCache object.
@@ -218,7 +218,7 @@ class sonarUtils:
             debug=debug,
             disable_progress=not progress,
             refacc=reference,
-            include_NX=include_NX,
+            include_nx=include_nx,
         )
 
     @staticmethod
