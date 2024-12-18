@@ -37,6 +37,7 @@
     "@playwright/test": "^1.49.0",
     "@tsconfig/node20": "^20.1.2",
     "@types/chroma-js": "^2.4.4",
+    "@types/exceljs": "^1.3.2",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^20.11.28",
     "@types/qs": "^6.9.16",

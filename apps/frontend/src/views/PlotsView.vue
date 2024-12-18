@@ -208,10 +208,11 @@ const percentageLabelPlugin = {
           if (isNaN(value)) return
         }
         if (typeof value !== 'number') return
+        const { height } = bar.getProps(['height'], true);
         const y =
           value < options.threshold
             ? bar.y - 10 // Display above the bar for small values
-            : bar.y + bar.height / 2 // Center inside the bar for larger values
+            : bar.y + height / 2 // Center inside the bar for larger values
 
         ctx.save()
         ctx.font = '12px Arial'
