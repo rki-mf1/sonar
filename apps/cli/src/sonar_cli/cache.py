@@ -46,6 +46,7 @@ class sonarCache:
         temp: bool = False,
         debug: bool = False,
         disable_progress: bool = False,
+        include_NX: bool = False,
     ):
         """
         Initialize the sonarCache object.
@@ -130,6 +131,7 @@ class sonarCache:
             self.error_logfile_obj = (
                 open(self.error_logfile_name, "a+") if logfile else None
             )
+        self.include_NX = include_NX
 
     def __enter__(self):
         return self
@@ -214,6 +216,8 @@ class sonarCache:
             # Check Alignment if it exists or not (sample and seqhash)
             batch_data[i]["algnid"] = alignemnt_dict.get(data["name"], None)
 
+            batch_data[i]["include_NX"] = self.include_NX
+
             # Create  path for cache file (e.g., .seq, .ref) and write them.
             # Data variable already point to the original batch_data[i], which if we update
             # the varaible, they altomatically update the original batch_data[i]
@@ -251,6 +255,7 @@ class sonarCache:
         liftfile: pd.DataFrame,
         cdsfile,
         properties,
+        include_NX,
     ):
         """
         The function takes in a bunch of arguments and returns a filename.
@@ -280,6 +285,7 @@ class sonarCache:
             "lift_file": liftfile,
             "cds_file": cdsfile,
             "properties": properties,
+            "include_NX": include_NX,
         }
         fname = name  # self.get_sample_fname(name)  # return fname with full path
         self.sampleinput_total = self.sampleinput_total + 1
@@ -311,14 +317,17 @@ class sonarCache:
 
         """
         for fname in fnames:
-            with open_file_autodetect(fname) as handle, tqdm(
-                desc="processing " + fname + "...",
-                total=os.path.getsize(fname),
-                unit="bytes",
-                unit_scale=True,
-                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-                disable=self.disable_progress,
-            ) as pbar:
+            with (
+                open_file_autodetect(fname) as handle,
+                tqdm(
+                    desc="processing " + fname + "...",
+                    total=os.path.getsize(fname),
+                    unit="bytes",
+                    unit_scale=True,
+                    bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+                    disable=self.disable_progress,
+                ) as pbar,
+            ):
                 seq = []
                 header = None
                 for line in handle:
