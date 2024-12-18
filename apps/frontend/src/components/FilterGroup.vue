@@ -1,13 +1,24 @@
 <template>
   <div :class="filterGroup.marked ? 'filter-group marked' : 'filter-group'">
     <!-- Lineage Filters -->
-    <div v-if="filterGroup.filters.lineageFilter.isVisible
-      || filterGroup.filters.lineageFilter.lineageList.length > 0" class="single-filter">
+    <div
+      v-if="
+        filterGroup.filters.lineageFilter.isVisible ||
+        filterGroup.filters.lineageFilter.lineageList.length > 0
+      "
+      class="single-filter"
+    >
       <div class="filter-container">
         <span class="filter-label">Lineage</span>
-        <MultiSelect v-model="filterGroup.filters.lineageFilter.lineageList" display="chip" :options="lineageOptions"
-          filter placeholder="Select Lineages" :virtualScrollerOptions="{ itemSize: 30 }"
-          style="flex-grow: 1;  margin-right: 10px;" />
+        <MultiSelect
+          v-model="filterGroup.filters.lineageFilter.lineageList"
+          display="chip"
+          :options="lineageOptions"
+          filter
+          placeholder="Select Lineages"
+          :virtual-scroller-options="{ itemSize: 30 }"
+          style="flex-grow: 1; margin-right: 10px"
+        />
         <div class="switch">
           Include Sublineages?
           <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
@@ -16,57 +27,117 @@
           Exclude?
           <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
         </div>
-        <Button type="button" severity="danger" raised size="small"
-          @click="removeLineageFilter(filterGroup, isSubGroup)" icon="pi pi-trash" />
+        <PrimeButton
+          type="button"
+          severity="danger"
+          raised
+          size="small"
+          icon="pi pi-trash"
+          @click="removeLineageFilter(filterGroup, isSubGroup)"
+        />
       </div>
     </div>
     <!-- Profile Filters -->
     <div v-for="profileFilter in filterGroup.filters?.profileFilters" class="single-filter">
       <div class="filter-container">
         <span style="font-weight: 500">DNA/AA Profile</span>
-        <InputText v-model="profileFilter.value" style="flex: auto"
-          :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'" class="mr-1" />
+        <InputText
+          v-model="profileFilter.value"
+          style="flex: auto"
+          :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
+          class="mr-1"
+        />
         <div class="switch">
           Exclude?
           <InputSwitch v-model="profileFilter.exclude" />
         </div>
         <!-- the button has to stay outside-->
-        <Button type="button" severity="danger" size="small"
-          @click="removeProfileFilter(filterGroup, filterGroup.filters?.profileFilters?.indexOf(profileFilter), isSubGroup)"
-          icon="pi pi-trash" class="ml-2 p-button-sm" />
+        <PrimeButton
+          type="button"
+          severity="danger"
+          size="small"
+          icon="pi pi-trash"
+          class="ml-2 p-button-sm"
+          @click="
+            removeProfileFilter(
+              filterGroup,
+              filterGroup.filters?.profileFilters?.indexOf(profileFilter),
+              isSubGroup,
+            )
+          "
+        />
       </div>
     </div>
     <!-- Property Filters -->
-    <div v-for="(filter, index) in filterGroup.filters?.propertyFilters" :key="index" class="single-filter">
+    <div
+      v-for="(filter, index) in filterGroup.filters?.propertyFilters"
+      :key="index"
+      class="single-filter"
+    >
       <div class="flex align-items-center gap-0">
         <span class="filter-label">Property</span>
-        <Dropdown class="flex mr-2" :options="propertyMenuOptions" v-model="filter.propertyName"
-          style="flex: 1; min-width: 150px;" @change="updatePropertyValueOptions(filter)" />
+        <PrimeDropdown
+          v-model="filter.propertyName"
+          class="flex mr-2"
+          :options="propertyMenuOptions"
+          style="flex: 1; min-width: 150px"
+          @change="updatePropertyValueOptions(filter)"
+        />
 
-        <div v-if="['name', 'length', 'lab'].includes(filter.propertyName)
-          && (typeof filter.value === 'string' || filter.value === null)" class="mr-2">
+        <div
+          v-if="
+            ['name', 'length', 'lab'].includes(filter.propertyName) &&
+            (typeof filter.value === 'string' || filter.value === null)
+          "
+          class="mr-2"
+        >
           <span class="filter-label">Operator</span>
-          <Dropdown :options="localOperators" v-model="filter.filterType" style="flex: 1; min-width: 150px;" />
+          <PrimeDropdown
+            v-model="filter.filterType"
+            :options="localOperators"
+            style="flex: 1; min-width: 150px"
+          />
           <span class="filter-label">Value</span>
           <InputText v-model="filter.value" style="flex: auto" />
         </div>
 
         <div v-if="isDateArray(filter.value)">
           <div class="filter-container">
-            <Calendar v-model="filter.value[0]" style="flex: auto; min-width: 10rem;" showIcon dateFormat="yy-mm-dd">
-            </Calendar>
-            <Calendar v-model="filter.value[1]" style="flex: auto;min-width: 10rem;" showIcon dateFormat="yy-mm-dd">
-            </Calendar>
+            <PrimeCalendar
+              v-model="filter.value[0]"
+              style="flex: auto; min-width: 10rem"
+              show-icon
+              date-format="yy-mm-dd"
+            >
+            </PrimeCalendar>
+            <PrimeCalendar
+              v-model="filter.value[1]"
+              style="flex: auto; min-width: 10rem"
+              show-icon
+              date-format="yy-mm-dd"
+            >
+            </PrimeCalendar>
           </div>
         </div>
         <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
-          <Dropdown :options="propertyValueOptions[filter.propertyName]?.options"
-            :loading="propertyValueOptions[filter.propertyName]?.loading" :virtualScrollerOptions="{ itemSize: 30 }"
-            v-model="filter.value" style="flex: auto" filter />
+          <PrimeDropdown
+            v-model="filter.value"
+            :options="propertyValueOptions[filter.propertyName]?.options"
+            :loading="propertyValueOptions[filter.propertyName]?.loading"
+            :virtual-scroller-options="{ itemSize: 30 }"
+            style="flex: auto"
+            filter
+          />
         </div>
-        <Button type="button" raised size="small"
-          @click="removePropertyFilter(filterGroup.filters.propertyFilters, index, isSubGroup)" icon="pi pi-trash"
-          label="" severity="danger" />
+        <PrimeButton
+          type="button"
+          raised
+          size="small"
+          icon="pi pi-trash"
+          label=""
+          severity="danger"
+          @click="removePropertyFilter(filterGroup.filters.propertyFilters, index, isSubGroup)"
+        />
       </div>
     </div>
 
@@ -75,57 +146,93 @@
       <div class="flex flex-column">
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
-          <Dropdown :options="repliconAccessionOptions" v-model="filter.accession" style="flex: auto" />
+          <PrimeDropdown
+            v-model="filter.accession"
+            :options="repliconAccessionOptions"
+            style="flex: auto"
+          />
           <div class="switch">
             Exclude?
             <InputSwitch v-model="filter.exclude" />
           </div>
-          <Button type="button" size="small" @click="
-            filterGroup.filters?.repliconFilters?.splice(
-              filterGroup.filters?.repliconFilters?.indexOf(filter),
-              1
-            )
-            " icon="pi pi-trash" />
+          <PrimeButton
+            type="button"
+            size="small"
+            icon="pi pi-trash"
+            @click="
+              filterGroup.filters?.repliconFilters?.splice(
+                filterGroup.filters?.repliconFilters?.indexOf(filter),
+                1,
+              )
+            "
+          />
         </div>
       </div>
     </div>
 
     <!-- Button Bar -->
     <div class="button-bar">
-      <Button size="small" icon="pi pi-filter-fill" label="Add AND Filter" @click="toggleFilterTypeMenu" />
-      <Menu ref="filterTypeMenu" :model="filterTypeMethods" appendTo="body" :popup="true" />
+      <PrimeButton
+        size="small"
+        icon="pi pi-filter-fill"
+        label="Add AND Filter"
+        @click="toggleFilterTypeMenu"
+      />
+      <PrimeMenu ref="filterTypeMenu" :model="filterTypeMethods" append-to="body" :popup="true" />
       <!-- OR part -->
-      <Button size="small" icon="pi pi-filter-fill" label="Add OR Group" @click="addOrFilterGroup"
-        :disabled="cantAddOrGroup" />
+      <PrimeButton
+        size="small"
+        icon="pi pi-filter-fill"
+        label="Add OR Group"
+        :disabled="cantAddOrGroup"
+        @click="addOrFilterGroup"
+      />
     </div>
 
     <!-- Sub-Filter Groups -->
     <div v-for="subFilterGroup in filterGroup.filterGroups" style="width: 100%">
-      <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px;">OR</span>
-      <FilterGroup :filterGroup="subFilterGroup" :isSubGroup="true" :propertyMenuOptions="propertyMenuOptions"
-        :symbolOptions="symbolOptions" :operators="operators" :propertyValueOptions="propertyValueOptions"
-        :repliconAccessionOptions="repliconAccessionOptions" :propertiesDict="propertiesDict"
-        :lineageOptions="lineageOptions" v-on:update-property-value-options="updatePropertyValueOptions" />
-      <Button type="button" severity="danger" size="small" style="float: right;"
-        @click="filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)"
-        @mouseenter="markGroup(subFilterGroup, true)" @mouseleave="markGroup(subFilterGroup, false)">
+      <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px"
+        >OR</span
+      >
+      <FilterGroup
+        :filter-group="subFilterGroup"
+        :is-sub-group="true"
+        :property-menu-options="propertyMenuOptions"
+        :symbol-options="symbolOptions"
+        :operators="operators"
+        :property-value-options="propertyValueOptions"
+        :replicon-accession-options="repliconAccessionOptions"
+        :properties-dict="propertiesDict"
+        :lineage-options="lineageOptions"
+        @update-property-value-options="updatePropertyValueOptions"
+      />
+      <PrimeButton
+        type="button"
+        severity="danger"
+        size="small"
+        style="float: right"
+        @click="
+          filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)
+        "
+        @mouseenter="markGroup(subFilterGroup, true)"
+        @mouseleave="markGroup(subFilterGroup, false)"
+      >
         <i class="pi pi-trash"></i>
-      </Button>
+      </PrimeButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-const filterTypeMenu = ref();
+import { ref } from 'vue'
+const filterTypeMenu = ref()
 const toggleFilterTypeMenu = (event: Event) => {
   filterTypeMenu.value.toggle(event)
 }
 </script>
 
 <script lang="ts">
-
-import API from '@/api/API';
+import API from '@/api/API'
 import {
   type FilterGroup,
   type PropertyFilter,
@@ -145,11 +252,11 @@ export default {
   props: {
     filterGroup: {
       type: Object as () => FilterGroup,
-      required: true
+      required: true,
     },
     propertyMenuOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     isSubGroup: {
       type: Boolean,
@@ -157,39 +264,41 @@ export default {
     },
     symbolOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     repliconAccessionOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     lineageOptions: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     operators: {
       type: Array as () => string[],
-      required: true
+      required: true,
     },
     propertyValueOptions: {
       type: Object as () => { [key: string]: { options: string[]; loading: boolean } },
-      required: true
+      required: true,
     },
     propertiesDict: {
       type: Object as () => { [key: string]: string },
-      required: true
+      required: true,
     },
   },
   data() {
     return {
       localOperators: [...this.operators],
-      fetchOptionsProperties: ['genome_completeness',
+      fetchOptionsProperties: [
+        'genome_completeness',
         'sequencing_tech',
         'sequencing_reason',
         'zip_code',
         'country',
         'host',
-        'isolation_source'],
+        'isolation_source',
+      ],
       ProfileFilter: {
         label: 'DNA/AA Profile',
         value: '',
@@ -199,19 +308,19 @@ export default {
         label: 'Property',
         value: '',
         propertyName: '',
-        filterType: null
+        filterType: null,
       } as PropertyFilter,
       RepliconFilter: {
         label: 'Replicon',
         accession: '',
-        exclude: false
+        exclude: false,
       } as RepliconFilter,
       LineageFilter: {
         label: 'Lineages',
         lineageList: [],
         exclude: false,
         includeSublineages: true,
-        isVisible: false
+        isVisible: false,
       } as LineageFilter,
       // to store the earliest and latest dates for each property.
       dateRanges: {} as { [key: string]: { earliest: string; latest: string } },
@@ -219,20 +328,20 @@ export default {
   },
   computed: {
     filterTypeMethods(): MenuItem[] {
-      const menuItems: MenuItem[] = [];
+      const menuItems: MenuItem[] = []
       menuItems.push({
         label: 'DNA/AA Profile',
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
-        }
+        },
       })
       menuItems.push({
         label: 'RepliconFilter',
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
-        }
+        },
       })
       // only one lineage filter per group
       if (!this.filterGroup.filters.lineageFilter.isVisible) {
@@ -242,78 +351,76 @@ export default {
           icon: 'pi pi-plus',
           command: () => {
             this.filterGroup.filters.lineageFilter = { ...this.LineageFilter }
-          }
+          },
         })
       }
-  this.propertyMenuOptions.forEach((propertyName) => {
-    menuItems.push({
-      label: propertyName,
-      icon: 'pi pi-plus',
-      command: async () => {
-        const newFilter = {
-          ...this.PropertyFilter,
-          propertyName: propertyName,
-        };
-        this.filterGroup.filters.propertyFilters.push(newFilter);
-        await this.updatePropertyValueOptions(newFilter);
-      },
-    });
-  });
+      this.propertyMenuOptions.forEach((propertyName) => {
+        menuItems.push({
+          label: propertyName,
+          icon: 'pi pi-plus',
+          command: async () => {
+            const newFilter = {
+              ...this.PropertyFilter,
+              propertyName: propertyName,
+            }
+            this.filterGroup.filters.propertyFilters.push(newFilter)
+            await this.updatePropertyValueOptions(newFilter)
+          },
+        })
+      })
       return menuItems
     },
     cantAddOrGroup(): boolean {
       return (
         // no filters
-        (this.filterGroup.filters.propertyFilters.length +
+        this.filterGroup.filters.propertyFilters.length +
           this.filterGroup.filters.profileFilters.length +
           this.filterGroup.filters.repliconFilters.length +
           this.filterGroup.filters.lineageFilter.lineageList.length ==
-          0)
-        ||
+          0 ||
         // empty standard filters
-        (
-          (
-            (this.filterGroup.filters.profileFilters.length == 1 &&
-              this.filterGroup.filters.profileFilters[0].value == "")
-            || (this.filterGroup.filters.profileFilters.length == 0)
-          )
-          &&
-          (
-            (this.filterGroup.filters.propertyFilters.length == 1 &&
-              Array.isArray(this.filterGroup.filters.propertyFilters[0].value) &&
-              this.filterGroup.filters.propertyFilters[0].value.length == 0)
-            || (this.filterGroup.filters.propertyFilters.length == 0)
-          )
-          &&
-          (this.filterGroup.filters.lineageFilter.lineageList.length == 0) &&
-          (this.filterGroup.filters.repliconFilters.length == 0)
-        )
+        (((this.filterGroup.filters.profileFilters.length == 1 &&
+          this.filterGroup.filters.profileFilters[0].value == '') ||
+          this.filterGroup.filters.profileFilters.length == 0) &&
+          ((this.filterGroup.filters.propertyFilters.length == 1 &&
+            Array.isArray(this.filterGroup.filters.propertyFilters[0].value) &&
+            this.filterGroup.filters.propertyFilters[0].value.length == 0) ||
+            this.filterGroup.filters.propertyFilters.length == 0) &&
+          this.filterGroup.filters.lineageFilter.lineageList.length == 0 &&
+          this.filterGroup.filters.repliconFilters.length == 0)
       )
     },
-
-
+  },
+  watch: {},
+  mounted() {
+    // Initialize the operators array when the component is mounted
+    // also use when the set filter dialog open again to prevent lost of filter type
+    this.filterGroup.filters.propertyFilters.forEach((filter) => {
+      this.initializeOperators(filter)
+    })
   },
   methods: {
-
     async getDefaultsEarliestLatestCollectDate(propertyName: string) {
       // Check if the property already has a stored date range
       if (this.dateRanges[propertyName]) {
-        return this.dateRanges[propertyName]; // Return the cached date range
+        return this.dateRanges[propertyName] // Return the cached date range
       }
 
       // Fetch the date range if not already cached
-      const response = await API.getInstance().getSampleGenomePropertyValueOptions(propertyName);
-      const dateArray = response.values;
+      const response = await API.getInstance().getSampleGenomePropertyValueOptions(propertyName)
+      const dateArray = response.values
 
       // Sort dates and store the earliest and latest dates in the dictionary
       if (dateArray) {
-        const sortedDates = dateArray.sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
+        const sortedDates = dateArray.sort(
+          (a: string, b: string) => new Date(a).getTime() - new Date(b).getTime(),
+        )
         this.dateRanges[propertyName] = {
           earliest: sortedDates[0],
           latest: sortedDates[sortedDates.length - 1],
-        };
+        }
       }
-      return this.dateRanges[propertyName];
+      return this.dateRanges[propertyName]
     },
     addOrFilterGroup() {
       this.filterGroup.filterGroups.push({
@@ -323,13 +430,13 @@ export default {
           profileFilters: [],
           repliconFilters: [],
           lineageFilter: {
-            label: "Lineages",
+            label: 'Lineages',
             lineageList: [],
             exclude: false,
             includeSublineages: true,
             isVisible: false,
-          }
-        }
+          },
+        },
       })
     },
     markGroup(group: FilterGroup, mark: boolean) {
@@ -343,16 +450,16 @@ export default {
       if (this.fetchOptionsProperties.includes(filter.propertyName)) {
         this.$emit('update-property-value-options', filter)
       }
-      this.initializeOperators(filter);
+      this.initializeOperators(filter)
       // If the property is a date, set the default value to the date range
       if (filter.propertyName?.includes('date')) {
-        const dateRange = await this.getDefaultsEarliestLatestCollectDate(filter.propertyName);
+        const dateRange = await this.getDefaultsEarliestLatestCollectDate(filter.propertyName)
         if (dateRange) {
-          filter.value = [new Date(dateRange.earliest), new Date(dateRange.latest)];
+          filter.value = [new Date(dateRange.earliest), new Date(dateRange.latest)]
         }
       } else {
-        // default 
-        filter.value = ""
+        // default
+        filter.value = ''
       }
     },
 
@@ -363,13 +470,12 @@ export default {
             label: 'DNA/AA Profile',
             value: '',
             exclude: false,
-          };
-        }
-        else {
-          filterGroup.filters.profileFilters.splice(index, 1);
+          }
+        } else {
+          filterGroup.filters.profileFilters.splice(index, 1)
         }
       } else {
-        filterGroup.filters.profileFilters.splice(index, 1);
+        filterGroup.filters.profileFilters.splice(index, 1)
       }
     },
 
@@ -381,17 +487,15 @@ export default {
           exclude: false,
           includeSublineages: true,
           isVisible: true,
-        };
-      }
-
-      else {
+        }
+      } else {
         filterGroup.filters.lineageFilter = {
           label: 'Lineages',
           lineageList: [],
           exclude: false,
           includeSublineages: true,
           isVisible: false,
-        };
+        }
       }
     },
 
@@ -403,56 +507,40 @@ export default {
             label: 'Property',
             propertyName: 'collection_date',
             filterType: DateDjangoFilterType.RANGE,
-            value: [] as (Date)[]
-          };
+            value: [] as Date[],
+          }
+        } else {
+          propertyFilters.splice(index, 1)
         }
-        else {
-          propertyFilters.splice(index, 1);
-        }
-      }
-      else {
+      } else {
         propertyFilters.splice(index, 1)
       }
     },
 
     initializeOperators(filter: PropertyFilter) {
-      const propertyType = this.propertiesDict[filter.propertyName];
-      let newOperators = [];
+      const propertyType = this.propertiesDict[filter.propertyName]
+      let newOperators = []
       if (propertyType === 'value_varchar') {
-        newOperators = Object.values(StringDjangoFilterType);
-      }
-      else if (propertyType === 'value_integer') {
-        newOperators = Object.values(IntegerDjangoFilterType);
-      }
-      else if (propertyType === 'value_date') {
-        newOperators = Object.values(DateDjangoFilterType);
+        newOperators = Object.values(StringDjangoFilterType)
+      } else if (propertyType === 'value_integer') {
+        newOperators = Object.values(IntegerDjangoFilterType)
+      } else if (propertyType === 'value_date') {
+        newOperators = Object.values(DateDjangoFilterType)
       } else {
-        newOperators = Object.values(DjangoFilterType);
+        newOperators = Object.values(DjangoFilterType)
       }
-      this.localOperators = newOperators;
+      this.localOperators = newOperators
       filter.filterType = newOperators[0]
     },
-    isDateArray(value: any): value is Date[] {
-      return Array.isArray(value) && value.every(item => item instanceof Date);
+    isDateArray(value: unknown): value is Date[] {
+      return Array.isArray(value) && value.every((item) => item instanceof Date)
     },
-    isStringOrNull(value: any): boolean {
-      return typeof value === 'string' || typeof value === null;
+    isStringOrNull(value: unknown): boolean {
+      return typeof value === 'string' || value === null
     },
-  },
-  watch: {
-
-  },
-  mounted() {
-    // Initialize the operators array when the component is mounted
-    // also use when the set filter dialog open again to prevent lost of filter type
-    this.filterGroup.filters.propertyFilters.forEach((filter) => {
-      this.initializeOperators(filter);
-    });
-
   },
 }
 </script>
-
 
 <style scoped>
 .single-filter {
