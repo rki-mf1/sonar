@@ -175,8 +175,7 @@ class SampleViewSet(
             # fetch genomic and proteomic profiles
             genomic_profiles_qs = (
                 models.NucleotideMutation.objects
-                .only("ref", "alt", "start", "end", "gene")
-                .prefetch_related("gene")
+                .only("ref", "alt", "start", "end")
                 .order_by("start")
             )
             proteomic_profiles_qs = (
@@ -186,7 +185,7 @@ class SampleViewSet(
                 .order_by("gene", "start")
             )
             annotation_qs = models.AnnotationType.objects.prefetch_related(
-                "nucleotide_mutations"
+                "mutations"
             )
 
             if DEBUG:
@@ -201,17 +200,17 @@ class SampleViewSet(
             queryset = queryset.select_related("sequence").prefetch_related(
                 "properties__property",
                 Prefetch(
-                    "sequence__alignments__mutations",
+                    "sequence__alignments__nucleotide_mutations",
                     queryset=genomic_profiles_qs,
                     to_attr="genomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__mutations",
+                    "sequence__alignments__amino_acid_mutations",
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__mutations__annotations",
+                    "sequence__alignments__nucleotide_mutations__annotations",
                     queryset=annotation_qs,
                     to_attr="alignment_annotations",
                 ),
@@ -325,7 +324,7 @@ class SampleViewSet(
         annotations["not_null_count_genomic_profiles"] = Count(
             Subquery(
                 models.Sample.objects.filter(
-                    sequence__alignments__mutations__type="nt", id=OuterRef("id")
+                    sequence__alignments__nucleotide_mutations__isnull=False, id=OuterRef("id")
                 ).values("id")[
                     :1
                 ]  # Return only one to indicate existence
@@ -334,7 +333,7 @@ class SampleViewSet(
         annotations["not_null_count_proteomic_profiles"] = Count(
             Subquery(
                 models.Sample.objects.filter(
-                    sequence__alignments__mutations__type="cds", id=OuterRef("id")
+                    sequence__alignments__amino_acid_mutations__isnull=False, id=OuterRef("id")
                 ).values("id")[
                     :1
                 ]  # Return only one to indicate existence
@@ -901,12 +900,11 @@ class SampleViewSet(
             if alt_nuc == "n":
                 alt_nuc = "N"
 
-            mutation_alt = Q(mutations__alt=alt_nuc)
+            mutation_alt = Q(nucleotide_mutations__alt=alt_nuc)
         mutation_condition = (
-            Q(mutations__end=ref_pos)
-            & Q(mutations__ref=ref_nuc)
+            Q(nucleotide_mutations__end=ref_pos)
+            & Q(nucleotide_mutations__ref=ref_nuc)
             & (mutation_alt)
-            & Q(mutations__type="nt")
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
         filters = {"sequence__alignments__in": alignment_qs}
@@ -930,18 +928,17 @@ class SampleViewSet(
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
-                mutation_alt = mutation_alt | Q(mutations__alt=x)
+                mutation_alt = mutation_alt | Q(aminoacid_mutations__alt=x)
         else:
             if alt_aa == "x":
                 alt_aa = "X"
-            mutation_alt = Q(mutations__alt=alt_aa)
+            mutation_alt = Q(aminoacid_mutations__alt=alt_aa)
 
         mutation_condition = (
-            Q(mutations__end=ref_pos)
-            & Q(mutations__ref=ref_aa)
+            Q(aminoacid_mutations__end=ref_pos)
+            & Q(aminoacid_mutations__ref=ref_aa)
             & (mutation_alt)
-            & Q(mutations__gene__gene_symbol=protein_symbol)
-            & Q(mutations__type="cds")
+            & Q(aminoacid_mutations__gene__gene_symbol=protein_symbol)
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
@@ -967,10 +964,9 @@ class SampleViewSet(
             last_deleted = first_deleted
 
         alignment_qs = models.Alignment.objects.filter(
-            mutations__start=int(first_deleted) - 1,
-            mutations__end=last_deleted,
-            mutations__alt__isnull=True,
-            mutations__type="nt",
+            nucleotide_mutations__start=int(first_deleted) - 1,
+            nucleotide_mutations__end=last_deleted,
+            nucleotide_mutations__alt__isnull=True,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -995,11 +991,10 @@ class SampleViewSet(
 
         alignment_qs = models.Alignment.objects.filter(
             # search with case insensitive ORF1ab = orf1ab
-            mutations__gene__gene_symbol__iexact=protein_symbol,
-            mutations__start=int(first_deleted) - 1,
-            mutations__end=last_deleted,
-            mutations__alt__isnull=True,
-            mutations__type="cds",
+            amino_acid_mutations__gene__gene_symbol__iexact=protein_symbol,
+            amino_acid_mutations__start=int(first_deleted) - 1,
+            amino_acid_mutations__end=last_deleted,
+            amino_acid_mutations__alt__isnull=True,
         )
 
         filters = {"sequence__alignments__in": alignment_qs}
@@ -1019,10 +1014,9 @@ class SampleViewSet(
     ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nucs (e.g. T133102TTT)
         alignment_qs = models.Alignment.objects.filter(
-            mutations__end=ref_pos,
-            mutations__ref=ref_nuc,
-            mutations__alt=alt_nuc,
-            mutations__type="nt",
+            nucleotide_mutations__end=ref_pos,
+            nucleotide_mutations__ref=ref_nuc,
+            nucleotide_mutations__alt=alt_nuc,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -1043,11 +1037,10 @@ class SampleViewSet(
         if protein_symbol not in get_distinct_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
         alignment_qs = models.Alignment.objects.filter(
-            mutations__end=ref_pos,
-            mutations__ref=ref_aa,
-            mutations__alt=alt_aa,
-            mutations__gene__gene_symbol=protein_symbol,
-            mutations__type="cds",
+            aminoacid_mutations__end=ref_pos,
+            aminoacid_mutations__ref=ref_aa,
+            aminoacid_mutations__alt=alt_aa,
+            aminoacid_mutations__gene__gene_symbol=protein_symbol,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:

@@ -31,7 +31,7 @@ from rest_api.models import Alignment
 from rest_api.models import AnnotationType
 from rest_api.models import FileProcessing
 from rest_api.models import ImportLog
-from rest_api.models import Mutation
+from rest_api.models import NucleotideMutation, AminoAcidMutation
 from rest_api.models import ProcessingJob
 from rest_api.models import Sample
 from rest_api.models import Sequence
@@ -342,54 +342,63 @@ def process_batch_run(
                 update_fields=["length", "sequence", "last_update_date"],
             )
         [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
-        alignments = [
+        sample_alignments = [
             sample_import_obj.create_alignment()
             for sample_import_obj in sample_import_objs
         ]
         with cache.lock("alignment"):
-            Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
+            Alignment.objects.bulk_create(
+                sample_alignments,
+                update_conflicts=True,
+                unique_fields=["sequence", "replicon"],
+                update_fields=["sequence", "replicon"],
+            )
 
-        nt_mutations = []
-        cds_mutations = []
+        nt_mutation_set: list[NucleotideMutation] = []
+        cds_mutation_set: list[AminoAcidMutation] = []
         mutation_parent_relations = []
+        nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through] = (
+            []
+        )
+        aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = (
+            []
+        )
         for sample_import_obj in sample_import_objs:
             id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
-                replicon_cache, gene_cache_by_var_pos
+                nt_mutation_set, replicon_cache, gene_cache_by_var_pos, nt_mutation_alignment_relations
             )
-            nt_mutations.extend(id_to_mutation_mapping.values())
-            sample_cds_mutations, parent_relations = (
+            parent_relations = (
                 sample_import_obj.get_mutation_objs_cds_and_parent_relations(
-                    gene_cache_by_accession, id_to_mutation_mapping
+                    cds_mutation_set, gene_cache_by_accession, id_to_mutation_mapping, aa_mutation_alignment_relations
                 )
             )
-            cds_mutations.extend(sample_cds_mutations)
             mutation_parent_relations.extend(parent_relations)
         with cache.lock("mutation"):
-            Mutation.objects.bulk_create(nt_mutations, update_conflicts=True, update_fields=[])
-            Mutation.objects.bulk_create(cds_mutations, update_conflicts=True, update_fields=[])
-            Mutation.parent.through.objects.bulk_create(
-                mutation_parent_relations, ignore_conflicts=True
+            NucleotideMutation.objects.bulk_create(
+                nt_mutation_set,
+                update_conflicts=True,
+                unique_fields=["ref", "alt", "start", "end", "replicon"],
+                update_fields=["ref", "alt", "start", "end", "replicon"],
             )
-
-        mutations2alignments = []
-        alignments2relations = {}
-        for sample_import_obj in sample_import_objs:
-            if sample_import_obj.alignment not in alignments2relations:
-                alignments2relations[sample_import_obj.alignment] = []
-            alignments2relations[sample_import_obj.alignment].extend(
-                sample_import_obj.mutation_query_data
+            AminoAcidMutation.objects.bulk_create(
+                cds_mutation_set,
+                update_conflicts=True,
+                unique_fields=["ref", "alt", "start", "end", "gene", "replicon"],
+                update_fields=["ref", "alt", "start", "end", "gene", "replicon"],
             )
-        for alignment, mutation_query_data in alignments2relations.items():
-            mutations2alignments.extend(
-                get_mutation2alignment_objs(alignment, mutation_query_data)
+            AminoAcidMutation.parent.through.objects.bulk_create(
+                parent_relations,
+                ignore_conflicts=True,
             )
-        with cache.lock("mutation2alignment"):
-            Mutation.alignments.through.objects.bulk_create(
-                mutations2alignments, ignore_conflicts=True
+            NucleotideMutation.alignments.through.objects.bulk_create(
+                nt_mutation_alignment_relations,
+                ignore_conflicts=True,
             )
-
-        # Filter sequences without associated samples
-        # clean_unused_sequences() # why?
+            AminoAcidMutation.alignments.through.objects.bulk_create(
+                aa_mutation_alignment_relations,
+                ignore_conflicts=True,
+            )
+        
         return (True, None, None)
 
     except Exception as e:
@@ -399,54 +408,6 @@ def process_batch_run(
         LOGGER.error("Error happens on this batch")
         return (False, str(e), traceback.format_exc())
 
-
-def get_mutation2alignment_objs(alignment, mutation_query_data) -> list:
-    # self.alignment = Alignment.objects.get(
-    #     sequence=self.sequence, replicon=self.replicon
-    # )
-    # Determine batch size dynamically based on the length of mutation_query_data
-    data_length = len(mutation_query_data)
-
-    # a minimum and maximum batch size
-    MIN_BATCH_SIZE = 100
-    MAX_BATCH_SIZE = 5000
-
-    # Dynamic batch size based on data length
-    if data_length <= MAX_BATCH_SIZE:
-        # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
-        # of the data length as the batch size.
-        # we can adjust 0.40 to other percentages like 0.50
-        batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50))
-    else:
-        # Set batch size to 1% of the total dataset size
-        batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
-
-    mutation_alignment_objs = []
-    for i in range(0, len(mutation_query_data), batch_size):
-        batch_mutation_query_data = mutation_query_data[i : i + batch_size]
-        db_mutations_query = Q()
-        for mutation in batch_mutation_query_data:
-            db_mutations_query |= Q(**mutation)
-
-        db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
-            "id",
-            "start",
-            "ref",
-            "alt",
-            "replicon__accession",
-        )
-        for j in range(0, len(db_sample_mutations), batch_size):
-            batch_mutations = db_sample_mutations[j : j + batch_size]
-            batch_alignment_objs = []
-            for mutation in batch_mutations:
-                batch_alignment_objs.append(
-                    Mutation.alignments.through(
-                        alignment=alignment, mutation_id=mutation["id"]
-                    )
-                )
-            mutation_alignment_objs.extend(batch_alignment_objs)
-
-    return mutation_alignment_objs
 
 
 @shared_task

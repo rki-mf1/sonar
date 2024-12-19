@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from covsonar_backend.settings import LOGGER
 from rest_api.models import AnnotationType
-from rest_api.models import Mutation
+from rest_api.models import NucleotideMutation
 
 
 @dataclass
@@ -160,9 +160,8 @@ class AnnotationImport:
                 ref=mutation_lookup_to_annotations.ref,
                 alt=mutation_lookup_to_annotations.alt,
                 replicon__accession=mutation_lookup_to_annotations.replicon__accession,
-                type="nt",
             )
-        mutations = Mutation.objects.filter(q_obj).prefetch_related("replicon")
+        mutations = NucleotideMutation.objects.filter(q_obj).prefetch_related("replicon")
         annotation_q_obj = Q()
         relation_info = {}
         for mutation in mutations:
@@ -246,7 +245,7 @@ class AnnotationImport:
                 mutation2annotation_objs.append(
                     AnnotationType.mutations.through(
                         annotationtype_id=annotation.id,
-                        mutation_id=mutation.id,
+                        nucleotidemutation_id=mutation.id,
                     )
                 )
         return mutation2annotation_objs

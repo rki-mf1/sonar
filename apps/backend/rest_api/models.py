@@ -35,7 +35,7 @@ class AnnotationType(models.Model):
     seq_ontology = models.CharField(max_length=50)
     region = models.CharField(max_length=50, blank=True, null=True)
     impact = models.CharField(max_length=20)
-    mutations = models.ManyToManyField("Mutation", related_name="annotations")
+    mutations = models.ManyToManyField("NucleotideMutation", related_name="annotations")
 
     def __str__(self) -> str:
         return f"{self.seq_ontology} {self.impact} {self.region if self.region else ''}".strip()
@@ -81,7 +81,6 @@ class Gene(models.Model):
     cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
-
     replicon = models.ForeignKey(Replicon, models.CASCADE)
 
     class Meta:
@@ -228,28 +227,21 @@ class Sample2Property(models.Model):
 
 class NucleotideMutation(models.Model):
     replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
-    ref = models.TextField(blank=True, null=True)
-    alt = models.TextField(blank=True, null=True)
-    start = models.BigIntegerField(blank=True, null=True)
-    end = models.BigIntegerField(blank=True, null=True)
+    ref = models.TextField()
+    alt = models.TextField()
+    start = models.BigIntegerField()
+    end = models.BigIntegerField()
     alignments = models.ManyToManyField(
         Alignment,
-        through="Alignment2NucleotideMutation",
         related_name="nucleotide_mutations",
-    )
-    annotations = models.ManyToManyField(
-        AnnotationType,
-        through="NucleotideMutation2Annotation",
-        related_name="nucleotide_mutations",
-    )
+    )    
 
     def __str__(self) -> str:
         return f"{self.start}-{self.end} {self.ref}>{self.alt}"
 
     class Meta:
-        db_table = "amino_acid_mutation"
+        db_table = "nucleotide_mutation"
         indexes = [
-            models.Index(fields=["gene"]),
             models.Index(fields=["start"]),
             models.Index(fields=["end"]),
             models.Index(fields=["ref"]),
@@ -258,42 +250,21 @@ class NucleotideMutation(models.Model):
         constraints = [
             UniqueConstraint(
                 name="unique_nt_mutation",
-                fields=["ref", "alt", "start", "end", "gene", "replicon"],
-            ),
-            UniqueConstraint(
-                name="unique_nt_mutation_null_gene",
                 fields=["ref", "alt", "start", "end", "replicon"],
-                condition=models.Q(gene__isnull=True),
-            ),
-            UniqueConstraint(
-                name="unique_nt_mutation_null_alt",
-                fields=["ref", "start", "end", "gene", "replicon"],
-                condition=models.Q(alt__isnull=True),
-            ),
-            UniqueConstraint(
-                name="unique_nt_mutation_null_ref",
-                fields=["alt", "start", "end", "gene", "replicon"],
-                condition=models.Q(ref__isnull=True),
-            ),
-            UniqueConstraint(
-                name="unique_nt_mutation_null_alt_null_gene",
-                fields=["ref", "start", "end", "replicon"],
-                condition=models.Q(alt__isnull=True) & models.Q(gene__isnull=True),
-            ),
+            )            
         ]
 
 
 class AminoAcidMutation(models.Model):
-    gene = models.ForeignKey("Gene", models.CASCADE, blank=True, null=True)
-    replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
-    ref = models.TextField(blank=True, null=True)
-    alt = models.TextField(blank=True, null=True)
-    start = models.BigIntegerField(blank=True, null=True)
-    end = models.BigIntegerField(blank=True, null=True)
+    gene = models.ForeignKey("Gene", models.CASCADE)
+    replicon = models.ForeignKey(Replicon, models.CASCADE)
+    ref = models.TextField()
+    alt = models.TextField()
+    start = models.BigIntegerField()
+    end = models.BigIntegerField()
     parent = models.ManyToManyField(NucleotideMutation)
     alignments = models.ManyToManyField(
         Alignment,
-        through="Alignment2AminoAcidMutation",
         related_name="amino_acid_mutations",
     )
 
@@ -313,26 +284,6 @@ class AminoAcidMutation(models.Model):
             UniqueConstraint(
                 name="unique_aa_mutation",
                 fields=["ref", "alt", "start", "end", "gene", "replicon"],
-            ),
-            UniqueConstraint(
-                name="unique_aa_mutation_null_gene",
-                fields=["ref", "alt", "start", "end", "replicon"],
-                condition=models.Q(gene__isnull=True),
-            ),
-            UniqueConstraint(
-                name="unique_aa_mutation_null_alt",
-                fields=["ref", "start", "end", "gene", "replicon"],
-                condition=models.Q(alt__isnull=True),
-            ),
-            UniqueConstraint(
-                name="unique_aa_mutation_null_ref",
-                fields=["alt", "start", "end", "gene", "replicon"],
-                condition=models.Q(ref__isnull=True),
-            ),
-            UniqueConstraint(
-                name="unique_aa_mutation_null_alt_null_gene",
-                fields=["ref", "start", "end", "replicon"],
-                condition=models.Q(alt__isnull=True) & models.Q(gene__isnull=True),
             ),
         ]
 
