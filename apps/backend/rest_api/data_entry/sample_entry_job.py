@@ -16,6 +16,7 @@ from django.utils import timezone
 from line_profiler import LineProfiler
 import pandas as pd
 
+from covsonar_backend.settings import KEEP_IMPORTED_DATA_FILES
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import PROFILE_IMPORT
 from covsonar_backend.settings import PROPERTY_BATCH_SIZE
@@ -240,17 +241,24 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
 
     # TODO: if fail update the ProcessingJob optional
     else:  # no exception occurs
-        completed_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("completed")
-        completed_dir.mkdir(parents=True, exist_ok=True)
-        process_file_path.rename(completed_dir.joinpath(process_file_path.name))
-        if pkl_path and pkl_path.exists():
-            pkl_path.rename(completed_dir.joinpath(pkl_path.name))
+        if KEEP_IMPORTED_DATA_FILES:
+            completed_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("completed")
+            completed_dir.mkdir(parents=True, exist_ok=True)
+            process_file_path.rename(completed_dir.joinpath(process_file_path.name))
+            if pkl_path and pkl_path.exists():
+                pkl_path.rename(completed_dir.joinpath(pkl_path.name))
+            LOGGER.info(f"--- Finish: move to {completed_dir} ---")
+        else:
+            # Delete files after import rather than keeping them in the
+            # archive/completed/ dir
+            process_file_path.unlink()
+            if pkl_path and pkl_path.exists():
+                pkl_path.unlink()
         ImportLog.objects.create(
             type=import_type,
             file=FileProcessing.objects.get(file_name=filename_ID),
             success=True,
         )
-        LOGGER.info(f"--- Finish: move to {completed_dir} ---")
     finally:
         # TODO: need to rethink about how to finalize the job status
         # The  _file_count = total_all_file - total_file is not a great idea
