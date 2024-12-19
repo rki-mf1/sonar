@@ -347,25 +347,31 @@ def process_batch_run(
             sample_import_obj.create_alignment()
             for sample_import_obj in sample_import_objs
         ]
-        # with cache.lock("alignment"):
-        #     Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
-        with cache.lock("mutation"):
-            for sample_import_obj in sample_import_objs:
-                sample_import_obj.get_mutation_objs_V2(
-                    gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos
-                )
+        with cache.lock("alignment"):
+            Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
 
-        # --------------- Old ---------------
-        # mutations = []
-        # for sample_import_obj in sample_import_objs:
-        #     mutations.extend(
-        #         sample_import_obj.get_mutation_objs(
-        #             gene_cache_by_accession, replicon_cache, gene_cache_by_var_pos
-        #         )
-        #     )
-        # with cache.lock("mutation"):
-        #     Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
-        # --------------- end old ---------------
+        nt_mutations = []
+        cds_mutations = []
+        mutation_parent_relations = []
+        for sample_import_obj in sample_import_objs:
+            id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
+                replicon_cache, gene_cache_by_var_pos
+            )
+            nt_mutations.extend(id_to_mutation_mapping.values())
+            sample_cds_mutations, parent_relations = (
+                sample_import_obj.get_mutation_objs_cds_and_parent_relations(
+                    gene_cache_by_accession, id_to_mutation_mapping
+                )
+            )
+            cds_mutations.extend(sample_cds_mutations)
+            mutation_parent_relations.extend(parent_relations)
+        with cache.lock("mutation"):
+            Mutation.objects.bulk_create(nt_mutations, update_conflicts=True, update_fields=[])
+            Mutation.objects.bulk_create(cds_mutations, update_conflicts=True, update_fields=[])
+            Mutation.parent.through.objects.bulk_create(
+                mutation_parent_relations, ignore_conflicts=True
+            )
+
         mutations2alignments = []
         alignments2relations = {}
         for sample_import_obj in sample_import_objs:

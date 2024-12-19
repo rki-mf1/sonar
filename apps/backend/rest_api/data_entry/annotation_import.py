@@ -204,7 +204,7 @@ class AnnotationImport:
                 # Return after finding the first ANN= field. If there are
                 # multiple, all others will be ignored.
                 return annotations
-        return None
+        return []
 
     def get_annotation_objs(
         self,

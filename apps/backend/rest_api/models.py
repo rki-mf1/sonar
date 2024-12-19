@@ -33,25 +33,6 @@ class Alignment(models.Model):
         db_table = "alignment"
 
 
-class Alignment2Mutation(models.Model):
-    alignment = models.ForeignKey(Alignment, models.CASCADE)
-    mutation = models.ForeignKey("Mutation", models.CASCADE, blank=True, null=True)
-
-    class Meta:
-        indexes = [
-            models.Index(
-                fields=["alignment", "mutation"],
-            )
-        ]
-        db_table = "alignment2mutation"
-        constraints = [
-            UniqueConstraint(
-                name="unique_alignment2mutation",
-                fields=["mutation", "alignment"],
-            ),
-        ]
-
-
 class AnnotationType(models.Model):
     seq_ontology = models.CharField(max_length=50, blank=True, null=True)
     region = models.CharField(max_length=50, blank=True, null=True)
@@ -246,78 +227,115 @@ class Sample2Property(models.Model):
         ]
 
 
-class Mutation(models.Model):
-    gene = models.ForeignKey("Gene", models.CASCADE, blank=True, null=True)
+class NucleotideMutation(models.Model):
     replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
-    # ref = models.CharField(max_length=5000, blank=True, null=True)
-    # alt = models.CharField(max_length=5000, blank=True, null=True)
     ref = models.TextField(blank=True, null=True)
     alt = models.TextField(blank=True, null=True)
     start = models.BigIntegerField(blank=True, null=True)
     end = models.BigIntegerField(blank=True, null=True)
-    parent_id = models.BigIntegerField(blank=True, null=True)
     alignments = models.ManyToManyField(
-        Alignment, through="Alignment2Mutation", related_name="mutations"
+        Alignment,
+        through="Alignment2NucleotideMutation",
+        related_name="nucleotide_mutations",
     )
-    type = models.CharField(
-        max_length=50, blank=True, null=True
-    )  # cds / nt / intergenic
+    annotations = models.ManyToManyField(
+        AnnotationType,
+        through="NucleotideMutation2Annotation",
+        related_name="nucleotide_mutations",
+    )
 
     def __str__(self) -> str:
         return f"{self.start}-{self.end} {self.ref}>{self.alt}"
 
     class Meta:
-        db_table = "mutation"
+        db_table = "amino_acid_mutation"
         indexes = [
             models.Index(fields=["gene"]),
             models.Index(fields=["start"]),
             models.Index(fields=["end"]),
             models.Index(fields=["ref"]),
             models.Index(fields=["alt"]),
-            models.Index(fields=["type"]),
         ]
         constraints = [
             UniqueConstraint(
-                name="unique_mutation",
-                fields=["ref", "alt", "start", "end", "type", "gene", "replicon"],
+                name="unique_nt_mutation",
+                fields=["ref", "alt", "start", "end", "gene", "replicon"],
             ),
             UniqueConstraint(
-                name="unique_mutation_null_gene",
-                fields=["ref", "alt", "start", "end", "type", "replicon"],
+                name="unique_nt_mutation_null_gene",
+                fields=["ref", "alt", "start", "end", "replicon"],
                 condition=models.Q(gene__isnull=True),
             ),
             UniqueConstraint(
-                name="unique_mutation_null_alt",
-                fields=["ref", "start", "end", "type", "gene", "replicon"],
+                name="unique_nt_mutation_null_alt",
+                fields=["ref", "start", "end", "gene", "replicon"],
                 condition=models.Q(alt__isnull=True),
             ),
             UniqueConstraint(
-                name="unique_mutation_null_ref",
-                fields=["alt", "start", "end", "type", "gene", "replicon"],
+                name="unique_nt_mutation_null_ref",
+                fields=["alt", "start", "end", "gene", "replicon"],
                 condition=models.Q(ref__isnull=True),
             ),
             UniqueConstraint(
-                name="unique_mutation_null_alt_null_gene",
-                fields=["ref", "start", "end", "type", "replicon"],
+                name="unique_nt_mutation_null_alt_null_gene",
+                fields=["ref", "start", "end", "replicon"],
                 condition=models.Q(alt__isnull=True) & models.Q(gene__isnull=True),
             ),
         ]
 
 
-class Mutation2Annotation(models.Model):
-    mutation = models.ForeignKey(Mutation, models.DO_NOTHING)
-    alignment = models.ForeignKey(Alignment, models.CASCADE)
-    annotation = models.ForeignKey(AnnotationType, models.DO_NOTHING)
+class AminoAcidMutation(models.Model):
+    gene = models.ForeignKey("Gene", models.CASCADE, blank=True, null=True)
+    replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
+    ref = models.TextField(blank=True, null=True)
+    alt = models.TextField(blank=True, null=True)
+    start = models.BigIntegerField(blank=True, null=True)
+    end = models.BigIntegerField(blank=True, null=True)
+    parent = models.ManyToManyField(NucleotideMutation)
+    alignments = models.ManyToManyField(
+        Alignment,
+        through="Alignment2AminoAcidMutation",
+        related_name="amino_acid_mutations",
+    )
+
+    def __str__(self) -> str:
+        return f"{self.start}-{self.end} {self.ref}>{self.alt}"
 
     class Meta:
-        db_table = "mutation2annotation"
+        db_table = "amino_acid_mutation"
+        indexes = [
+            models.Index(fields=["gene"]),
+            models.Index(fields=["start"]),
+            models.Index(fields=["end"]),
+            models.Index(fields=["ref"]),
+            models.Index(fields=["alt"]),
+        ]
         constraints = [
             UniqueConstraint(
-                name="unique_mutation2annotation",
-                fields=["mutation", "alignment", "annotation"],
+                name="unique_aa_mutation",
+                fields=["ref", "alt", "start", "end", "gene", "replicon"],
+            ),
+            UniqueConstraint(
+                name="unique_aa_mutation_null_gene",
+                fields=["ref", "alt", "start", "end", "replicon"],
+                condition=models.Q(gene__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_aa_mutation_null_alt",
+                fields=["ref", "start", "end", "gene", "replicon"],
+                condition=models.Q(alt__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_aa_mutation_null_ref",
+                fields=["alt", "start", "end", "gene", "replicon"],
+                condition=models.Q(ref__isnull=True),
+            ),
+            UniqueConstraint(
+                name="unique_aa_mutation_null_alt_null_gene",
+                fields=["ref", "start", "end", "replicon"],
+                condition=models.Q(alt__isnull=True) & models.Q(gene__isnull=True),
             ),
         ]
-
 
 class ProcessingJob(models.Model):
     class ImportType(models.TextChoices):

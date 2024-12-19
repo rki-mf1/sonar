@@ -27,9 +27,14 @@ class PropertySerializer(serializers.ModelSerializer):
         filter_backends = [DjangoFilterBackend]
 
 
-class MutationSerializer(serializers.ModelSerializer):
+class AminoAcidMutationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Mutation
+        model = models.AminoAcidMutation
+        fields = "__all__"
+
+class NucleotideMutationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.NucleotideMutation
         fields = "__all__"
 
 

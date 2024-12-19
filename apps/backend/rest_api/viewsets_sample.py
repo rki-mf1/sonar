@@ -134,23 +134,6 @@ class SampleViewSet(
         dict = {str(item["collection_date"]): item["count"] for item in queryset}
         return Response(data=dict)
 
-    @action(detail=False, methods=["get"])
-    def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
-        # TODO-smc abklären ob das so richtig ist
-        queryset = (
-            models.Mutation.objects.exclude(
-                element__type="cds",
-                alt="N",
-            )
-            .values("element__molecule__reference__accession")
-            .annotate(count=Count("id"))
-        )
-        dict = {
-            item["element__molecule__reference__accession"]: item["count"]
-            for item in queryset
-        }
-        return Response(data=dict)
-
     def _get_filtered_queryset(self, request: Request):
         queryset = models.Sample.objects.all()
         if filter_params := request.query_params.get("filters"):
@@ -191,19 +174,19 @@ class SampleViewSet(
 
             # fetch genomic and proteomic profiles
             genomic_profiles_qs = (
-                models.Mutation.objects.filter(type="nt")
+                models.NucleotideMutation.objects
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
                 .order_by("start")
             )
             proteomic_profiles_qs = (
-                models.Mutation.objects.filter(type="cds")
+                models.AminoAcidMutation.objects
                 .only("ref", "alt", "start", "end", "gene")
                 .prefetch_related("gene")
                 .order_by("gene", "start")
             )
-            annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
-                "mutation", "annotation"
+            annotation_qs = models.AnnotationType.objects.prefetch_related(
+                "nucleotide_mutations"
             )
 
             if DEBUG:
