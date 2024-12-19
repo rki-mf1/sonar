@@ -84,6 +84,7 @@ class sonarUtils:
         reference: str = None,
         method: int = 1,
         no_upload_sample: bool = False,
+        include_nx: bool = True,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -150,6 +151,7 @@ class sonarUtils:
             cachedir=cachedir,
             update=update,
             progress=progress,
+            include_nx=include_nx,
         )
 
         # importing sequences
@@ -203,6 +205,7 @@ class sonarUtils:
         update: bool = True,
         progress: bool = False,
         debug: bool = False,
+        include_nx: bool = True,
     ) -> sonarCache:
         """Set up a cache for sequence data."""
         # Instantiate a sonarCache object.
@@ -215,6 +218,7 @@ class sonarUtils:
             debug=debug,
             disable_progress=not progress,
             refacc=reference,
+            include_nx=include_nx,
         )
 
     @staticmethod
@@ -425,6 +429,7 @@ class sonarUtils:
 
     @staticmethod
     def zip_import_upload_sample_singlethread(shared_objects: dict, sample_list):
+        """Bundle up the data to be sent to the backend and send it"""
 
         files_to_compress = []
         for kwargs in sample_list:

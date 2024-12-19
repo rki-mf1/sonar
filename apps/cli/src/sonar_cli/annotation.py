@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import subprocess
 from typing import Optional
 
@@ -36,7 +37,9 @@ class Annotator:
         ]
 
         if self.config_path:
-            command.extend(["-nodownload", "-config", f"{self.config_path}"])
+            command.extend(
+                ["-nodownload", "-config", Path(f"{self.config_path}").expanduser()]
+            )
 
         try:
             # Run the SnpEff annotation

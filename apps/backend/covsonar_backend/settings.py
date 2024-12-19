@@ -37,6 +37,7 @@ env = environ.Env(
     SAMPLE_BATCH_SIZE=(int, 10),
     PROPERTY_BATCH_SIZE=(int, 1000),
     PROFILE_IMPORT=(bool, False),
+    KEEP_IMPORTED_DATA_FILES=(bool, False),
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -267,6 +268,11 @@ CACHES = {
         },
     }
 }
+
+# If true, keep the data files that were sent from the CLI in an archive
+# folder, even after that data has been imported into the database.
+# Defaults to false, so the files are immediately deleted to save space.
+KEEP_IMPORTED_DATA_FILES = env("KEEP_IMPORTED_DATA_FILES")
 
 # Celery settings
 CELERY_BROKER_URL = f"{env('REDIS_URL')}0"

@@ -37,6 +37,7 @@ class SampleRaw:
     sample_sequence_length: int
     sourceid: int
     translationid: int
+    include_nx: bool
     tt_file: Optional[str] = None
     var_file: Optional[str] = None
     vcffile: Optional[str] = None
@@ -94,7 +95,12 @@ class SampleImport:
         self.success = False        
 
         if self.sample_raw.var_file:
-            self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
+            self.vars_raw = [
+                var
+                for var in self._import_vars(
+                    self.sample_raw.var_file, self.sample_raw.include_nx
+                )
+            ]
         else:
             raise Exception("No var file found")
 
@@ -257,7 +263,7 @@ class SampleImport:
         with open(path, "rb") as f:
             return pickle.load(f)
 
-    def _import_vars(self, path):
+    def _import_vars(self, path, include_nx: bool):
         file_name = pathlib.Path(path).name
         self.var_file_path = (
             pathlib.Path(self.import_folder)
@@ -270,6 +276,13 @@ class SampleImport:
                 if line == "//":
                     break
                 var_raw = line.strip("\r\n").split("\t")
+                # Extract the mutation (alt)
+                alt = None if var_raw[3] == " " else var_raw[3]
+                # Skip rows with 'N' or 'X' if include_NX is False
+                # handle both INSERTION (A2324NNNN) and SNV
+                if not include_nx and alt is not None and ("N" in alt or "X" in alt):
+                    continue
+
                 yield VarRaw(
                     int(var_raw[0]),  # id
                     var_raw[1],  # ref

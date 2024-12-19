@@ -49,6 +49,7 @@ services:
       - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
       - SECRET_KEY=$SECRET_KEY
+      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     restart: no
     entrypoint: /bin/sh -c
     command: ["python manage.py migrate"]
@@ -86,6 +87,7 @@ services:
       - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
       - SECRET_KEY=$SECRET_KEY
+      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     restart: unless-stopped
     entrypoint: /bin/sh -c
     command: ["${START_DJANGO_SERVER}"]
@@ -132,6 +134,7 @@ services:
       - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
       - SECRET_KEY=$SECRET_KEY
+      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     restart: on-failure
     entrypoint: /bin/sh -c
     command: ["python manage.py runapscheduler"]
@@ -199,6 +202,7 @@ services:
       - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
       - SECRET_KEY=$SECRET_KEY
+      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     depends_on:
       sonar-cache:
         condition: service_started
@@ -230,6 +234,7 @@ services:
       - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
       - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
       - SECRET_KEY=$SECRET_KEY
+      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     depends_on:
       celery-workers:
         condition: service_started

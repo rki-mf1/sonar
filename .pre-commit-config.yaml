@@ -4,9 +4,9 @@ repos:
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
-        types_or: [python, markdown, shell]
+        types_or: [python, markdown, shell, vue, ts]
       - id: trailing-whitespace
-        types_or: [python, markdown, shell]
+        types_or: [python, markdown, shell, vue, ts]
   - repo: https://github.com/sqlalchemyorg/zimports/
     rev: v0.6.1
     hooks:
