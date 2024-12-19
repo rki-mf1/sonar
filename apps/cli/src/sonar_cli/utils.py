@@ -429,6 +429,7 @@ class sonarUtils:
 
     @staticmethod
     def zip_import_upload_sample_singlethread(shared_objects: dict, sample_list):
+        """Bundle up the data to be sent to the backend and send it"""
 
         files_to_compress = []
         for kwargs in sample_list:
