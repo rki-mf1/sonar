@@ -1,6 +1,7 @@
 import os
 import subprocess
 from typing import Optional
+from pathlib import Path
 
 from sonar_cli.cache import sonarCache
 from sonar_cli.logging import LoggingConfigurator
@@ -36,7 +37,7 @@ class Annotator:
         ]
 
         if self.config_path:
-            command.extend(["-nodownload", "-config", f"{self.config_path}"])
+            command.extend(["-nodownload", "-config", Path(f"{self.config_path}").expanduser()])
 
         try:
             # Run the SnpEff annotation
