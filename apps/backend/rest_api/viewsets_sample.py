@@ -211,7 +211,7 @@ class SampleViewSet(
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__mutation2annotation_set",
+                    "sequence__alignments__mutations__annotations",
                     queryset=annotation_qs,
                     to_attr="alignment_annotations",
                 ),
@@ -497,8 +497,8 @@ class SampleViewSet(
             .annotate(count=Count("id"), collection_date=Min("collection_date"))
             .order_by("year", "week")
         )
-        if len(queryset) != 0:
-            filtered_queryset = queryset.filter(collection_date__isnull=False)
+        filtered_queryset = queryset.filter(collection_date__isnull=False)
+        if len(filtered_queryset) != 0:
             start_date = filtered_queryset.first()["collection_date"]
             end_date = filtered_queryset.last()["collection_date"]
             if start_date and end_date:
@@ -830,9 +830,7 @@ class SampleViewSet(
         # elif property_name == "seq_ontology":
         #     mutation_condition = Q(annotations__seq_ontology__{filter_type}"=ref_pos)
         query = {}
-        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = (
-            value
-        )
+        query[f"annotation__{property_name}__{filter_type}"] = value
 
         alignment_qs = models.Alignment.objects.filter(**query)
         filters = {"sequence__alignments__in": alignment_qs}

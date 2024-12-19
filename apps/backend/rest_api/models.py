@@ -13,10 +13,8 @@ class Sequence(models.Model):
 
 
 class Alignment(models.Model):
-    replicon = models.ForeignKey("Replicon", models.CASCADE, blank=True, null=True)
-    sequence = models.ForeignKey(
-        "Sequence", models.CASCADE, blank=True, null=True, related_name="alignments"
-    )
+    replicon = models.ForeignKey("Replicon", models.CASCADE)
+    sequence = models.ForeignKey("Sequence", models.CASCADE, related_name="alignments")
 
     class Meta:
         indexes = [
@@ -34,9 +32,10 @@ class Alignment(models.Model):
 
 
 class AnnotationType(models.Model):
-    seq_ontology = models.CharField(max_length=50, blank=True, null=True)
+    seq_ontology = models.CharField(max_length=50)
     region = models.CharField(max_length=50, blank=True, null=True)
-    impact = models.CharField(max_length=20, blank=True, null=True)
+    impact = models.CharField(max_length=20)
+    mutations = models.ManyToManyField("Mutation", related_name="annotations")
 
     def __str__(self) -> str:
         return f"{self.seq_ontology} {self.impact} {self.region if self.region else ''}".strip()
@@ -58,12 +57,12 @@ class AnnotationType(models.Model):
 
 class Replicon(models.Model):
     length = models.BigIntegerField(blank=True, null=True)
-    sequence = models.TextField(blank=True, null=True)
+    sequence = models.TextField()
     accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     description = models.CharField(max_length=400, blank=True, null=True)
     type = models.CharField(max_length=50, blank=True, null=True)
     segment_number = models.BigIntegerField(blank=True, null=True)
-    reference = models.ForeignKey("Reference", models.CASCADE, blank=True, null=True)
+    reference = models.ForeignKey("Reference", models.CASCADE)
 
     class Meta:
         db_table = "replicon"
@@ -71,9 +70,9 @@ class Replicon(models.Model):
 
 class Gene(models.Model):
     description = models.CharField(max_length=100, blank=True, null=True)
-    start = models.BigIntegerField(blank=True, null=True)
-    end = models.BigIntegerField(blank=True, null=True)
-    strand = models.BigIntegerField(blank=True, null=True)
+    start = models.BigIntegerField()
+    end = models.BigIntegerField()
+    strand = models.BigIntegerField()
     gene_symbol = models.CharField(max_length=50, blank=True, null=True)
     cds_symbol = models.CharField(max_length=50, blank=True, null=True)
     gene_accession = models.CharField(
@@ -83,14 +82,14 @@ class Gene(models.Model):
     gene_sequence = models.TextField(blank=True, null=True)
     cds_sequence = models.TextField(blank=True, null=True)
 
-    replicon = models.ForeignKey(Replicon, models.CASCADE, blank=True, null=True)
+    replicon = models.ForeignKey(Replicon, models.CASCADE)
 
     class Meta:
         db_table = "gene"
 
 
 class GeneSegment(models.Model):
-    gene = models.ForeignKey(Gene, models.CASCADE, blank=True, null=True)
+    gene = models.ForeignKey(Gene, models.CASCADE)
     start = models.BigIntegerField()
     end = models.BigIntegerField()
     strand = models.BigIntegerField()
@@ -169,9 +168,9 @@ class Property(models.Model):
 
 
 class Sample(models.Model):
-    name = models.CharField(max_length=100, unique=True, blank=True, null=True)
-    datahash = models.CharField(max_length=50, blank=True, null=True)
-    sequence = models.ForeignKey(Sequence, models.DO_NOTHING, blank=True, null=True)
+    name = models.CharField(max_length=100, unique=True)
+    datahash = models.CharField(max_length=50)
+    sequence = models.ForeignKey(Sequence, models.DO_NOTHING)
     sequencing_tech = models.CharField(max_length=50, blank=True, null=True)
     country = models.CharField(max_length=50, blank=True, null=True)
     host = models.CharField(max_length=50, blank=True, null=True)

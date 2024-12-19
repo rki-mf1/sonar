@@ -4,11 +4,8 @@ import re
 from django.db.models import Q
 
 from covsonar_backend.settings import LOGGER
-from rest_api.models import Alignment
 from rest_api.models import AnnotationType
 from rest_api.models import Mutation
-from rest_api.models import Mutation2Annotation
-from rest_api.models import Sample
 
 
 @dataclass
@@ -22,7 +19,6 @@ class VCFRaw:
     filter: str
     info: str
     format: str
-    samples: dict[str, str] = None
 
 
 @dataclass
@@ -54,32 +50,20 @@ class MutationLookupToAnnotations:
     alt: str
     replicon__accession: str
     annotations: list[VCFInfoANNRaw]
-    samples: list[str]
 
 
 class AnnotationImport:
     def __init__(self, path: str):
         self.vcf_file_path = path
-        self.sample_to_sequence = {}
-        self.replicon_to_sample_to_alignment = {}
         self.raw_lines = [line for line in self._import_vcf()]
-        self.fetch_sequences()
-        self.fetch_alignments()
         self.mutation_lookups_to_annotations = self.convert_lines()
         self.annotation_q_obj = Q()
 
     def _import_vcf(self):
         with open(self.vcf_file_path, "r") as handle:
             for line in handle:
-                if line.startswith("##"):
+                if line.startswith(("#", "##")):
                     continue
-                if line.startswith("#"):
-                    self.samples = line.strip("\r\n").split("\t")[9:]
-                    continue
-                elif self.samples is None:
-                    raise ValueError(
-                        "Annoation file in unexpected format. Missing header."
-                    )
                 line = line.strip("\r\n").split("\t")
                 vcf_raw = VCFRaw(
                     chrom=line.pop(0),
@@ -92,43 +76,7 @@ class AnnotationImport:
                     info=line.pop(0),
                     format=line.pop(0),
                 )
-                vcf_raw.samples = {self.samples[i]: line[i] for i in range(len(line))}
-                if vcf_raw.chrom not in self.replicon_to_sample_to_alignment:
-                    self.replicon_to_sample_to_alignment[vcf_raw.chrom] = {}
-                for sample in self.samples:
-                    self.replicon_to_sample_to_alignment[vcf_raw.chrom][sample] = None
                 yield vcf_raw
-
-    def fetch_sequences(self):
-        q_obj = Q()
-        for sample in self.samples:
-            q_obj |= Q(name=sample)
-        self.sample_to_sequence = {}
-        for sample in Sample.objects.filter(q_obj).prefetch_related("sequence"):
-            try:
-                self.sample_to_sequence[sample.name] = sample.sequence
-            except KeyError:
-                continue
-
-    def fetch_alignments(self):
-        q_obj = Q()
-        for replicon in self.replicon_to_sample_to_alignment.keys():
-            for sample in self.replicon_to_sample_to_alignment[replicon]:
-                try:
-                    q_obj |= Q(
-                        sequence=self.sample_to_sequence[sample],
-                        replicon__accession=replicon,
-                    )
-                except KeyError:
-                    continue
-        alignments = Alignment.objects.filter(q_obj).prefetch_related(
-            "sequence__sample_set"
-        )
-        for alignment in alignments:
-            for sample in alignment.sequence.sample_set.all():
-                self.replicon_to_sample_to_alignment[alignment.replicon.accession][
-                    sample.name
-                ] = alignment
 
     def convert_lines(self) -> list[MutationLookupToAnnotations]:
         mutation_lookups_to_annotations = []
@@ -139,15 +87,9 @@ class AnnotationImport:
                 if annotation.allele not in allele_to_annotations:
                     allele_to_annotations[annotation.allele] = []
                 allele_to_annotations[annotation.allele].append(annotation)
-            sample_index = 0
             for alt in line.alt.split(","):
-                sample_index += 1
                 if alt not in allele_to_annotations:
                     continue
-                samples = []
-                for sample, occurence in line.samples.items():
-                    if occurence == f"0/{sample_index}":
-                        samples.append(sample)
                 mutation_lookup_to_annotations = MutationLookupToAnnotations(
                     start=line.pos
                     - 1,  # snp (we deduct by one because our database use 0-based)
@@ -156,7 +98,6 @@ class AnnotationImport:
                     alt=alt,
                     replicon__accession=line.chrom,
                     annotations=allele_to_annotations[alt],
-                    samples=samples,
                 )
                 if len(alt) < len(mutation_lookup_to_annotations.ref):
                     # deletion and alt not null
@@ -208,7 +149,7 @@ class AnnotationImport:
 
     def get_annotation_objs(
         self,
-    ) -> tuple[list[AnnotationType], list[Mutation2Annotation]]:
+    ) -> tuple[list[AnnotationType], list[AnnotationType.mutations.through]]:
         annotation_objs = []
         q_obj = Q()
         # self.mutation_lookups_to_annotations read from vcf file.
@@ -284,21 +225,17 @@ class AnnotationImport:
                         relation_info[ontology] = {}
                     if a.annotation_impact not in relation_info[ontology]:
                         relation_info[ontology][a.annotation_impact] = []
-                    for sample in mut_lookup_to_annotation.samples:
-                        relation_info[ontology][a.annotation_impact].append(
-                            {
-                                "mutation": mutation,
-                                "alignment": self.replicon_to_sample_to_alignment[
-                                    mut_lookup_to_annotation.replicon__accession
-                                ][sample],
-                            }
-                        )
+                    relation_info[ontology][a.annotation_impact].append(
+                        {
+                            "mutation": mutation,
+                        }
+                    )
                     annotation_objs.append(annotation_obj)
         self.annotation_q_obj = annotation_q_obj
         self.relation_info = relation_info
         return annotation_objs
 
-    def get_annotation2mutation_objs(self) -> list[Mutation2Annotation]:
+    def get_annotation2mutation_objs(self) -> list[AnnotationType.mutations.through]:
         annotations = AnnotationType.objects.filter(self.annotation_q_obj)
         mutation2annotation_objs = []
         for annotation in annotations:
@@ -306,13 +243,10 @@ class AnnotationImport:
                 annotation.impact
             ]:
                 mutation = relation["mutation"]
-                alignment = relation["alignment"]
-                if alignment:
-                    mutation2annotation_objs.append(
-                        Mutation2Annotation(
-                            annotation=annotation,
-                            mutation=mutation,
-                            alignment=alignment,
-                        )
+                mutation2annotation_objs.append(
+                    AnnotationType.mutations.through(
+                        annotationtype_id=annotation.id,
+                        mutation_id=mutation.id,
                     )
+                )
         return mutation2annotation_objs
