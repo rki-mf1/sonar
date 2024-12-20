@@ -29,10 +29,11 @@ from rest_api import models
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.data_entry.sample_import import SampleImport
 from rest_api.models import Alignment
+from rest_api.models import AminoAcidMutation
 from rest_api.models import AnnotationType
 from rest_api.models import FileProcessing
 from rest_api.models import ImportLog
-from rest_api.models import NucleotideMutation, AminoAcidMutation
+from rest_api.models import NucleotideMutation
 from rest_api.models import ProcessingJob
 from rest_api.models import Sample
 from rest_api.models import Sequence
@@ -368,16 +369,20 @@ def process_batch_run(
         nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through] = (
             []
         )
-        aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = (
-            []
-        )
+        aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = []
         for sample_import_obj in sample_import_objs:
             id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
-                nt_mutation_set, replicon_cache, gene_cache_by_var_pos, nt_mutation_alignment_relations
+                nt_mutation_set,
+                replicon_cache,
+                gene_cache_by_var_pos,
+                nt_mutation_alignment_relations,
             )
             parent_relations = (
                 sample_import_obj.get_mutation_objs_cds_and_parent_relations(
-                    cds_mutation_set, gene_cache_by_accession, id_to_mutation_mapping, aa_mutation_alignment_relations
+                    cds_mutation_set,
+                    gene_cache_by_accession,
+                    id_to_mutation_mapping,
+                    aa_mutation_alignment_relations,
                 )
             )
             mutation_parent_relations.extend(parent_relations)
@@ -406,7 +411,7 @@ def process_batch_run(
                 aa_mutation_alignment_relations,
                 ignore_conflicts=True,
             )
-        
+
         return (True, None, None)
 
     except Exception as e:
@@ -415,7 +420,6 @@ def process_batch_run(
         # Perform additional error handling or logging as needed
         LOGGER.error("Error happens on this batch")
         return (False, str(e), traceback.format_exc())
-
 
 
 @shared_task

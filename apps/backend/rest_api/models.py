@@ -234,7 +234,7 @@ class NucleotideMutation(models.Model):
     alignments = models.ManyToManyField(
         Alignment,
         related_name="nucleotide_mutations",
-    )    
+    )
 
     def __str__(self) -> str:
         return f"{self.start}-{self.end} {self.ref}>{self.alt}"
@@ -251,7 +251,7 @@ class NucleotideMutation(models.Model):
             UniqueConstraint(
                 name="unique_nt_mutation",
                 fields=["ref", "alt", "start", "end", "replicon"],
-            )            
+            )
         ]
 
 
@@ -286,6 +286,7 @@ class AminoAcidMutation(models.Model):
                 fields=["ref", "alt", "start", "end", "gene", "replicon"],
             ),
         ]
+
 
 class ProcessingJob(models.Model):
     class ImportType(models.TextChoices):

@@ -161,7 +161,9 @@ class AnnotationImport:
                 alt=mutation_lookup_to_annotations.alt,
                 replicon__accession=mutation_lookup_to_annotations.replicon__accession,
             )
-        mutations = NucleotideMutation.objects.filter(q_obj).prefetch_related("replicon")
+        mutations = NucleotideMutation.objects.filter(q_obj).prefetch_related(
+            "replicon"
+        )
         annotation_q_obj = Q()
         relation_info = {}
         for mutation in mutations:

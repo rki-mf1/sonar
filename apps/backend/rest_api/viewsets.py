@@ -35,10 +35,11 @@ from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
 from . import models
 from .serializers import AlignmentSerializer
+from .serializers import AminoAcidMutationSerializer
 from .serializers import GeneSerializer
 from .serializers import ImportLogSerializer
 from .serializers import LineagesSerializer
-from .serializers import AminoAcidMutationSerializer, NucleotideMutationSerializer
+from .serializers import NucleotideMutationSerializer
 from .serializers import ProcessingJobSerializer
 from .serializers import PropertySerializer
 from .serializers import ReferenceSerializer
@@ -307,6 +308,7 @@ class ReferenceViewSet(
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
     # multilple get in one.
+
 
 class PropertyViewSet(
     viewsets.GenericViewSet,

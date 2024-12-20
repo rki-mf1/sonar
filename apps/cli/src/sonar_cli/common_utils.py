@@ -183,6 +183,8 @@ def read_var_file(var_file: str, exclude_var_type: str = "", showNX: bool = Fals
         for line in handle:
             if line == "//":
                 break
+            if line.startswith("#"):
+                continue
             vardat = line.strip("\r\n").split("\t")
             if vardat[7] == exclude_var_type:
                 continue

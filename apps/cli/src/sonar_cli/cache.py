@@ -819,6 +819,8 @@ class sonarCache:
                         for line in handle:
                             if line == "//":
                                 break
+                            if line.startswith("#"):
+                                continue
                             vardat = line.strip("\r\n").split("\t")
                             if vardat[7] == "cds":
                                 break

@@ -5,20 +5,19 @@ import typing
 from typing import Any
 from typing import Optional
 
-from covsonar_backend.settings import LOGGER
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.query import ValuesQuerySet
 from django.utils import timezone
 
+from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
+from rest_api.models import AminoAcidMutation
 from rest_api.models import Gene
-from rest_api.models import NucleotideMutation, AminoAcidMutation
+from rest_api.models import NucleotideMutation
 from rest_api.models import Replicon
 from rest_api.models import Sample
 from rest_api.models import Sequence
-
-if typing.TYPE_CHECKING:
-    from django.db.models.query import ValuesQuerySet
 
 
 @dataclass
@@ -60,7 +59,7 @@ class VarRaw:
     replicon_or_cds_accession: str
     # lable: str
     type: str
-    parent_id: int | None
+    parent_id: list[int] | None
 
 
 class VCFInfoLOFRaw:
@@ -92,7 +91,7 @@ class SampleImport:
         self.sample: None | Sample = None
         self.replicon: None | Replicon = None
         self.alignment: None | Alignment = None
-        self.success = False        
+        self.success = False
 
         if self.sample_raw.var_file:
             self.vars_raw = [
@@ -132,9 +131,7 @@ class SampleImport:
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
     def create_alignment(self):
-        self.alignment = Alignment(
-            sequence=self.sequence, replicon=self.replicon
-        )
+        self.alignment = Alignment(sequence=self.sequence, replicon=self.replicon)
         return self.alignment
 
     def get_mutation_objs_nt(
@@ -142,7 +139,7 @@ class SampleImport:
         nt_mutation_set: list[NucleotideMutation],
         replicon_cache: dict[str, Replicon | None],
         gene_cache_by_var_pos: dict[Replicon | None, dict[int, dict[int, Gene | None]]],
-        nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through]
+        nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through],
     ) -> dict[int, NucleotideMutation]:
         import_id_to_sample_mutations: dict[int, NucleotideMutation] = {}
         for var_raw in self.vars_raw:
@@ -181,7 +178,8 @@ class SampleImport:
                 }
                 mutation = next(
                     filter(
-                        lambda x: self.is_same_mutation(mutation_data, x), nt_mutation_set
+                        lambda x: self.is_same_mutation(mutation_data, x),
+                        nt_mutation_set,
                     ),
                     None,
                 )
@@ -190,10 +188,9 @@ class SampleImport:
                     nt_mutation_set.append(mutation)
                 nt_mutation_alignment_relations.append(
                     NucleotideMutation.alignments.through(
-                        nucleotidemutation = mutation,
-                        alignment = self.alignment
+                        nucleotidemutation=mutation, alignment=self.alignment
                     )
-                    )
+                )
                 import_id_to_sample_mutations[var_raw.id] = mutation
         return import_id_to_sample_mutations
 
@@ -207,11 +204,11 @@ class SampleImport:
         cds_mutation_set: list[AminoAcidMutation],
         gene_cache_by_accession: dict[str, Gene | None],
         parent_id_mapping: dict[int, NucleotideMutation],
-        aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through]
+        aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through],
     ) -> list[AminoAcidMutation.parent.through]:
         sample_cds_mutations: list[AminoAcidMutation] = []
         mutation_parent_relations = []
-        for var_raw in self.vars_raw:            
+        for var_raw in self.vars_raw:
             if var_raw.type == "cds":
                 if not var_raw.replicon_or_cds_accession in gene_cache_by_accession:
                     try:
@@ -221,7 +218,9 @@ class SampleImport:
                             )
                         )
                     except Gene.DoesNotExist:
-                        LOGGER.error(f"Gene not found for accession: {var_raw.replicon_or_cds_accession}")
+                        LOGGER.error(
+                            f"Gene not found for accession: {var_raw.replicon_or_cds_accession}"
+                        )
                         continue
                 gene = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
                 if var_raw.alt is None:
@@ -236,7 +235,8 @@ class SampleImport:
                 }
                 mutation = next(
                     filter(
-                        lambda x: self.is_same_mutation(mutation_data, x), cds_mutation_set
+                        lambda x: self.is_same_mutation(mutation_data, x),
+                        cds_mutation_set,
                     ),
                     None,
                 )
@@ -245,16 +245,16 @@ class SampleImport:
                     cds_mutation_set.append(mutation)
                 aa_mutation_alignment_relations.append(
                     AminoAcidMutation.alignments.through(
-                        aminoacidmutation = mutation,
-                        alignment = self.alignment
+                        aminoacidmutation=mutation, alignment=self.alignment
                     )
                 )
                 if var_raw.parent_id:
-                    mutation_parent_relations.append(
+                    mutation_parent_relations.extend(
                         AminoAcidMutation.parent.through(
-                            aminoacidmutation = mutation,
-                            nucleotidemutation = parent_id_mapping[var_raw.parent_id]                        
+                            aminoacidmutation=mutation,
+                            nucleotidemutation=parent_id_mapping[parent_id],
                         )
+                        for parent_id in var_raw.parent_id
                     )
                 sample_cds_mutations.append(mutation)
         return mutation_parent_relations
@@ -273,6 +273,8 @@ class SampleImport:
         )
         with open(self.var_file_path, "r") as handle:
             for line in handle:
+                if line.startswith("#"):
+                    continue
                 if line == "//":
                     break
                 var_raw = line.strip("\r\n").split("\t")
@@ -292,7 +294,11 @@ class SampleImport:
                     var_raw[5],  # replicon_or_cds_accession
                     # var_raw[6],  # label
                     var_raw[7],  # type
-                    int(var_raw[8]) if len(var_raw) > 8 else None,  # parent_id
+                    (
+                        [int(x) for x in var_raw[8].split(",")]
+                        if var_raw[8] != ""
+                        else None
+                    ),  # parent_id
                 )
 
     def _import_seq(self, path):

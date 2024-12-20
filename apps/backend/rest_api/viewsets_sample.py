@@ -173,20 +173,17 @@ class SampleViewSet(
                 queryset = queryset.filter(name=name_filter)
 
             # fetch genomic and proteomic profiles
-            genomic_profiles_qs = (
-                models.NucleotideMutation.objects
-                .only("ref", "alt", "start", "end")
-                .order_by("start")
-            )
+            genomic_profiles_qs = models.NucleotideMutation.objects.only(
+                "ref", "alt", "start", "end"
+            ).order_by("start")
             proteomic_profiles_qs = (
-                models.AminoAcidMutation.objects
-                .only("ref", "alt", "start", "end", "gene")
+                models.AminoAcidMutation.objects.only(
+                    "ref", "alt", "start", "end", "gene"
+                )
                 .prefetch_related("gene")
                 .order_by("gene", "start")
             )
-            annotation_qs = models.AnnotationType.objects.prefetch_related(
-                "mutations"
-            )
+            annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")
 
             if DEBUG:
                 LOGGER.info(queryset.query)
@@ -324,7 +321,8 @@ class SampleViewSet(
         annotations["not_null_count_genomic_profiles"] = Count(
             Subquery(
                 models.Sample.objects.filter(
-                    sequence__alignments__nucleotide_mutations__isnull=False, id=OuterRef("id")
+                    sequence__alignments__nucleotide_mutations__isnull=False,
+                    id=OuterRef("id"),
                 ).values("id")[
                     :1
                 ]  # Return only one to indicate existence
@@ -333,7 +331,8 @@ class SampleViewSet(
         annotations["not_null_count_proteomic_profiles"] = Count(
             Subquery(
                 models.Sample.objects.filter(
-                    sequence__alignments__amino_acid_mutations__isnull=False, id=OuterRef("id")
+                    sequence__alignments__amino_acid_mutations__isnull=False,
+                    id=OuterRef("id"),
                 ).values("id")[
                     :1
                 ]  # Return only one to indicate existence

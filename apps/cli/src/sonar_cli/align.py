@@ -83,8 +83,8 @@ class sonarAligner:
         #        alignment[0], alignment[1], cigar, source_acc, data["cds_file"]
         #    )
         # ]
-
-        vars = "\n".join(["\t".join(x) for x in nuc_vars])
+        # empty string for parent_id row
+        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
         # print(nuc_vars)
         if nuc_vars:
             # create AA mutation
@@ -99,10 +99,44 @@ class sonarAligner:
 
         try:
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         except OSError:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         return
 
@@ -141,8 +175,8 @@ class sonarAligner:
                 qryseq, refseq, cigar, source_acc, data["cds_file"]
             )
         ]
-
-        vars = "\n".join(["\t".join(x) for x in nuc_vars])
+        # empty string for parent_id row
+        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
         if nuc_vars:
             # create AA mutation
             aa_vars = "\n".join(
@@ -154,10 +188,44 @@ class sonarAligner:
             vars += "\n"
         try:
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         except OSError:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         return
 
@@ -401,12 +469,14 @@ class sonarAligner:
                     )
                 ]
                 parent_id = (
-                    matching_nt["parentID"].iloc[0] if not matching_nt.empty else None
+                    ",".join(matching_nt["parentID"].astype(str))
+                    if not matching_nt.empty
+                    else ""
                 )
-
+                # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
                 yield str(next_aa_id), row.aa, str(pos - 1), str(pos), row.altAa, str(
                     row.accession
-                ), label, "cds", str(parent_id)
+                ), label, "cds", parent_id
                 next_aa_id += 1
             # frameshift?
             # for deletions
@@ -442,14 +512,14 @@ class sonarAligner:
                         )
                     ]
                     parent_id = (
-                        matching_nt["parentID"].iloc[0]
+                        ",".join(matching_nt["parentID"].astype(str))
                         if not matching_nt.empty
-                        else None
+                        else ""
                     )
-
+                    # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
                     yield str(next_aa_id), prev_row["aa"], str(start), str(
                         end
-                    ), " ", str(prev_row["accession"]), label, "cds", str(parent_id)
+                    ), " ", str(prev_row["accession"]), label, "cds", parent_id
                     prev_row = row
                     next_aa_id += 1
         if prev_row is not None:
@@ -473,13 +543,16 @@ class sonarAligner:
                     & (nuc_vars_df["end"] > row.nucPos3)
                 )
             ]
+            # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
             parent_id = (
-                matching_nt["parentID"].iloc[0] if not matching_nt.empty else None
+                ",".join(matching_nt["parentID"].astype(str))
+                if not matching_nt.empty
+                else ""
             )
 
             yield str(next_aa_id), prev_row["aa"], str(start), str(end), " ", str(
                 prev_row["accession"]
-            ), label, "cds", str(parent_id)
+            ), label, "cds", parent_id
             next_aa_id += 1
 
     def extract_vars_from_cigar(  # noqa: C901
