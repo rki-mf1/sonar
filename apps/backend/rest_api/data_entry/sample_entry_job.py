@@ -356,6 +356,12 @@ def process_batch_run(
             for sample_import_obj in sample_import_objs
         ]
         with cache.lock("alignment"):
+            sample_alignments = list(
+                {
+                    (align.sequence, align.replicon): align
+                    for align in sample_alignments
+                }.values()
+            )
             Alignment.objects.bulk_create(
                 sample_alignments,
                 update_conflicts=True,
@@ -387,11 +393,23 @@ def process_batch_run(
             )
             mutation_parent_relations.extend(parent_relations)
         with cache.lock("mutation"):
+            nt_mutation_set = list(
+                {
+                    (mut.ref, mut.alt, mut.start, mut.end, mut.replicon): mut
+                    for mut in nt_mutation_set
+                }.values()
+            )
             NucleotideMutation.objects.bulk_create(
                 nt_mutation_set,
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "replicon"],
                 update_fields=["ref", "alt", "start", "end", "replicon"],
+            )
+            cds_mutation_set = list(
+                {
+                    (mut.ref, mut.alt, mut.start, mut.end, mut.gene, mut.replicon): mut
+                    for mut in cds_mutation_set
+                }.values()
             )
             AminoAcidMutation.objects.bulk_create(
                 cds_mutation_set,

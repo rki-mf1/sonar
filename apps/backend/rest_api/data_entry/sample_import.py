@@ -5,9 +5,6 @@ import typing
 from typing import Any
 from typing import Optional
 
-from django.db import transaction
-from django.db.models import Q
-from django.db.models.query import ValuesQuerySet
 from django.utils import timezone
 
 from covsonar_backend.settings import LOGGER
