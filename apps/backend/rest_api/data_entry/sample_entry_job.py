@@ -351,19 +351,12 @@ def process_batch_run(
                 update_fields=["length", "sequence", "last_update_date"],
             )
         [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
-        sample_alignments = [
-            sample_import_obj.create_alignment()
-            for sample_import_obj in sample_import_objs
-        ]
-        with cache.lock("alignment"):
-            sample_alignments = list(
-                {
-                    (align.sequence, align.replicon): align
-                    for align in sample_alignments
-                }.values()
-            )
+        alignments: list[Alignment] = []
+        for sample_import_obj in sample_import_objs:
+            sample_import_obj.create_alignment(alignments)
+        with cache.lock("alignment"):            
             Alignment.objects.bulk_create(
-                sample_alignments,
+                alignments,
                 update_conflicts=True,
                 unique_fields=["sequence", "replicon"],
                 update_fields=["sequence", "replicon"],
@@ -392,25 +385,13 @@ def process_batch_run(
                 )
             )
             mutation_parent_relations.extend(parent_relations)
-        with cache.lock("mutation"):
-            nt_mutation_set = list(
-                {
-                    (mut.ref, mut.alt, mut.start, mut.end, mut.replicon): mut
-                    for mut in nt_mutation_set
-                }.values()
-            )
+        with cache.lock("mutation"):            
             NucleotideMutation.objects.bulk_create(
                 nt_mutation_set,
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "replicon"],
                 update_fields=["ref", "alt", "start", "end", "replicon"],
-            )
-            cds_mutation_set = list(
-                {
-                    (mut.ref, mut.alt, mut.start, mut.end, mut.gene, mut.replicon): mut
-                    for mut in cds_mutation_set
-                }.values()
-            )
+            )            
             AminoAcidMutation.objects.bulk_create(
                 cds_mutation_set,
                 update_conflicts=True,
@@ -422,11 +403,23 @@ def process_batch_run(
                 ignore_conflicts=True,
             )
             NucleotideMutation.alignments.through.objects.bulk_create(
-                nt_mutation_alignment_relations,
+                [
+                    NucleotideMutation.alignments.through(
+                        nucleotidemutation_id=rel.nucleotidemutation.id,
+                        alignment_id=rel.alignment.id,
+                    )
+                    for rel in nt_mutation_alignment_relations
+                ],
                 ignore_conflicts=True,
             )
             AminoAcidMutation.alignments.through.objects.bulk_create(
-                aa_mutation_alignment_relations,
+                [
+                    AminoAcidMutation.alignments.through(
+                        aminoacidmutation_id=rel.aminoacidmutation.id,
+                        alignment_id=rel.alignment.id,
+                    )
+                    for rel in aa_mutation_alignment_relations
+                ],
                 ignore_conflicts=True,
             )
 

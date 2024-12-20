@@ -127,9 +127,17 @@ class SampleImport:
             )
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
-    def create_alignment(self):
-        self.alignment = Alignment(sequence=self.sequence, replicon=self.replicon)
-        return self.alignment
+    def create_alignment(self, alignments_list: list[Alignment]):
+        self.alignment = next(
+            filter(
+                lambda x: x.sequence == self.sequence and x.replicon == self.replicon,
+                alignments_list,
+            ),
+            None,
+        )
+        if not self.alignment:
+            self.alignment = Alignment(sequence=self.sequence, replicon=self.replicon)
+            alignments_list.append(self.alignment)
 
     def get_mutation_objs_nt(
         self,
