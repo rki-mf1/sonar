@@ -17138,7 +17138,7 @@ COPY public.property (id, name, datatype, querytype, description, target, standa
 --
 
 COPY public.reference (id, accession, description, organism, collection_date, country, db_xref, host, isolate, mol_type, name, translation_id) FROM stdin;
-1	MN908947.3	Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome	Severe acute respiratory syndrome coronavirus 2	2019-12-01	China	taxon:2697049	Homo sapiens	Wuhan-Hu-1	genomic RNA	\N	1
+1	MN908947.3	Severe acute respiratory syndrome coronavirus 2 isolate Wuhan-Hu-1, complete genome	Severe acute respiratory syndrome coronavirus 2	2019-12-01	China	taxon:2697049	Homo sapiens	Wuhan-Hu-1	genomic RNA import_data/ref.cov19.gb    1
 \.
 
 
