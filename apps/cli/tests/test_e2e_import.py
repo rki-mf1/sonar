@@ -7,7 +7,7 @@ from .conftest import run_cli
 
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(1)
-def test_add_ref(monkeypatch, capfd, api_url):
+def test_add_cov19_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     # new_ref_file = "mpox/NC_063383.1.gb"
     new_ref_file = "covid19/ref.cov19.gb"
