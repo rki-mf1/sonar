@@ -20,9 +20,10 @@ from rest_api.serializers import RepliconSerializer
 
 
 def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
-    records = list(SeqIO.parse(_temp_save_file(uploaded_file), "genbank"))
+    file_path = _temp_save_file(uploaded_file)
+    records = list(SeqIO.parse(file_path, "genbank"))
     records: list[SeqRecord.SeqRecord]
-    reference = _put_reference_from_record(records[0], translation_id)
+    reference = _put_reference_from_record(records[0], translation_id, file_path)
     with transaction.atomic():
         for record in records:
             source_features = list(
@@ -161,7 +162,7 @@ def _put_gene_from_feature(
 
 
 def _put_reference_from_record(
-    record: SeqRecord.SeqRecord, translation_id: int
+    record: SeqRecord.SeqRecord, translation_id: int, file_path: str
 ) -> Reference:
     source = None
     for feature in record.features:
@@ -180,6 +181,7 @@ def _put_reference_from_record(
         "description": record.description,
         "organism": record.annotations["organism"],
         "translation_id": translation_id,
+        "name": str(file_path),
     }
     for attr_name in [
         "mol_type",

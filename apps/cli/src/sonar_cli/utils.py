@@ -35,7 +35,6 @@ from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import out_autodetect
 from sonar_cli.common_utils import read_var_file
 from sonar_cli.config import ANNO_CHUNK_SIZE
-from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
 from sonar_cli.config import CHUNK_SIZE
@@ -742,7 +741,6 @@ class sonarUtils:
 
             annotator = Annotator(
                 annotator_exe_path=ANNO_TOOL_PATH,
-                config_path=ANNO_CONFIG_FILE,
                 cache=cache,
             )
             merged_vcf = os.path.join(

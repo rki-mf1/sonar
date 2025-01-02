@@ -22,7 +22,7 @@ class APIClient:
     get_gene_endpoint = "genes/get_gene_data"
     get_replicon_endpoint = "replicons/get_molecule_data"
     get_match_endpoint = "samples/genomes"
-
+    get_reference_genbank_endpoint = "references/get_reference_file"
     get_translation_table_endpoint = "resources/get_translation_table"
     get_properties_endpont = "properties/get_all_properties"
 
@@ -55,6 +55,7 @@ class APIClient:
         json: dict | None = {},
         files: dict | None = {},
         headers: dict | None = {},
+        stream: bool = False,  # stream flag for file downloads
     ):
         if headers:
             self.headers.update(headers)
@@ -69,24 +70,30 @@ class APIClient:
                 params=params,
                 files=files,
                 verify=True,
+                stream=stream,
                 # timeout=300,
             )
-            return_json = response.json()
-            #   response.raise_for_status() for HTTP errors (4xx, 5xx)
-            if 400 <= response.status_code < 500:
-                # Handle client-side errors (e.g., bad request)
-                # message = return_json["message"] if "message" in return_json else ""
-                LOGGER.error(
-                    f"{response.status_code} Client Error: {response.reason}: {return_json} "
-                )
-                LOGGER.error("Immediately stop running and exit")
-                sys.exit(1)
-            elif 500 <= response.status_code < 600:
-                LOGGER.error(
-                    f"{response.status_code} Server Error: {response.reason} for url: {url}"
-                )
-                LOGGER.error("Immediately stop running and exit")
-                sys.exit(1)
+            if not stream:
+                return_json = response.json()
+                #   response.raise_for_status() for HTTP errors (4xx, 5xx)
+                if 400 <= response.status_code < 500:
+                    # Handle client-side errors (e.g., bad request)
+                    # message = return_json["message"] if "message" in return_json else ""
+                    LOGGER.error(
+                        f"{response.status_code} Client Error: {response.reason}: {return_json} "
+                    )
+                    LOGGER.error("Immediately stop running and exit")
+                    sys.exit(1)
+                elif 500 <= response.status_code < 600:
+                    LOGGER.error(
+                        f"{response.status_code} Server Error: {response.reason} for url: {url}"
+                    )
+                    LOGGER.error("Immediately stop running and exit")
+                    sys.exit(1)
+
+                return return_json
+            else:
+                return response
         except requests.exceptions.ConnectionError as errc:
             LOGGER.error(f"Error Connecting: {errc}")
             sys.exit(1)
@@ -103,8 +110,6 @@ class APIClient:
             LOGGER.error(response)
             response.raise_for_status()
             sys.exit(1)
-
-        return return_json
 
     def get_all_references(self):
         """
@@ -454,3 +459,12 @@ class APIClient:
             "GET", endpoint=self.get_database_info_endpont, params=params
         )
         return json_response
+
+    def get_reference_genbank(self, params: dict):
+        response = self._make_request(
+            "GET",
+            endpoint=self.get_reference_genbank_endpoint,
+            params=params,
+            stream=True,
+        )
+        return response

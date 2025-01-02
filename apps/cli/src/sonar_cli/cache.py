@@ -3,6 +3,7 @@ from itertools import zip_longest
 import os
 import re
 import shutil
+import subprocess
 import sys
 import traceback
 from typing import Any
@@ -98,7 +99,7 @@ class sonarCache:
         self.ref_dir = os.path.join(self.basedir, "ref")
         self.error_dir = os.path.join(self.basedir, "error")
         self.anno_dir = os.path.join(self.basedir, "anno")
-
+        self.snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
         os.makedirs(self.seq_dir, exist_ok=True)
         os.makedirs(self.ref_dir, exist_ok=True)
         # os.makedirs(self.algn_dir, exist_ok=True)
@@ -132,6 +133,7 @@ class sonarCache:
                 open(self.error_logfile_name, "a+") if logfile else None
             )
         self.include_nx = include_nx
+        self.isBuilt_snpEffcache = self.build_snpeff_cache(reference=self.refacc)
 
     def __enter__(self):
         return self
@@ -947,3 +949,48 @@ class sonarCache:
         LOGGER.info(f"Total passed samples: {count_sample}")
 
         return passed_samples_list
+
+    def build_snpeff_cache(self, reference):
+        """Build snpeff cache for the given reference,
+        1. Request the gbk file from server
+        2. Then save it to the cache directory (self.basedir/snpeff_data/{reference}/genes.gbk).
+        3. Use snpeff to build the cache.
+        snpEff build -nodownload MN908947.3 -genbank -dataDir self.basedir/snpeff_data/snpeffDB/ -v
+        4. Check if the file is built or failed.
+        """
+        params = {
+            "reference": reference,
+        }
+        if os.path.exists(os.path.join(self.snpeff_data_dir, reference, ".done")):
+            LOGGER.info(f"snpeff cache for reference {reference} is already built.")
+            return True
+
+        response = APIClient(base_url=self.base_url).get_reference_genbank(params)
+        if response.status_code == 200:
+            gbk_file = os.path.join(self.snpeff_data_dir, reference, "genes.gbk")
+            os.makedirs(os.path.dirname(gbk_file), exist_ok=True)
+
+            with open(gbk_file, "wb") as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    file.write(chunk)
+            LOGGER.info(f"Genbank downloaded successfully: {gbk_file}")
+            # build snpeff cache
+            snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
+            os.makedirs(snpeff_data_dir, exist_ok=True)
+            cmd = f"snpEff build -nodownload {reference} -genbank -dataDir {self.snpeff_data_dir}"
+            LOGGER.info(f"Building snpeff cache for reference {reference}")
+            try:
+                subprocess.run(cmd, shell=True, check=True)
+                # write .done file for later checking if the cahce is built already
+                # so we dont need to rebuild it again.
+                with open(
+                    os.path.join(self.snpeff_data_dir, reference, ".done"), "w"
+                ) as handle:
+                    handle.write("done")
+            except subprocess.CalledProcessError as e:
+                LOGGER.error(f"An error occurred: {e}")
+                sys.exit(1)
+            return True
+        else:
+            LOGGER.error(f"Cannot get genbank file for reference {reference}")
+            return False

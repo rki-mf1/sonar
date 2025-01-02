@@ -30,11 +30,14 @@ class Annotator:
         # Command to annotate using SnpEff
         command = [
             f"{self.annotator}",
+            "eff",
             f"{database_name}",
             f"{input_vcf}",
             "-noStats",
             "-noLof",
         ]
+        # custom dataDIR
+        command.extend(["-nodownload", "-dataDir", self.sonar_cache.snpeff_data_dir])
 
         if self.config_path:
             command.extend(
