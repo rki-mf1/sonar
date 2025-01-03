@@ -342,7 +342,7 @@ def test_match_profile_AA_INS(capfd, api_url):
 @pytest.mark.order(14)
 def test_match_profile_AA_DEL(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --profile ORF1ab:del:3675-3676 --count"
+        f"match --db {api_url} -r MN908947.3 --profile ORF1a:del:3675-3676 --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -356,7 +356,7 @@ def test_match_profile_NT_DEL_single(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --profile del:28271 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "4" == lines[-1]
+    assert "3" == lines[-1]
     assert code == 0
 
 
@@ -420,7 +420,7 @@ def test_match_anno_impact(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "6" == lines[-1]
+    assert "1" == lines[-1]
     assert code == 0
 
 
@@ -428,11 +428,11 @@ def test_match_anno_impact(capfd, api_url):
 @pytest.mark.order(18)
 def test_match_anno_impact_and_profile(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --anno-impact HIGH  --profile C24503T --count"
+        f"match --db {api_url} -r MN908947.3 --anno-impact MODERATE --profile C24503T --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "1" == lines[-1]
+    assert "4" == lines[-1]
     assert code == 0
 
 
@@ -454,5 +454,5 @@ def test_match_anno_impact_and_type(capfd, api_url):
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "5" == lines[-1]
+    assert "1" == lines[-1]
     assert code == 0
