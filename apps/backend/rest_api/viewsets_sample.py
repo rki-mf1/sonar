@@ -927,17 +927,17 @@ class SampleViewSet(
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
-                mutation_alt = mutation_alt | Q(aminoacid_mutations__alt=x)
+                mutation_alt = mutation_alt | Q(amino_acid_mutations__alt=x)
         else:
             if alt_aa == "x":
                 alt_aa = "X"
-            mutation_alt = Q(aminoacid_mutations__alt=alt_aa)
+            mutation_alt = Q(amino_acid_mutations__alt=alt_aa)
 
         mutation_condition = (
-            Q(aminoacid_mutations__end=ref_pos)
-            & Q(aminoacid_mutations__ref=ref_aa)
+            Q(amino_acid_mutations__end=ref_pos)
+            & Q(amino_acid_mutations__ref=ref_aa)
             & (mutation_alt)
-            & Q(aminoacid_mutations__gene__gene_symbol=protein_symbol)
+            & Q(amino_acid_mutations__gene__gene_symbol=protein_symbol)
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
@@ -1036,10 +1036,10 @@ class SampleViewSet(
         if protein_symbol not in get_distinct_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
         alignment_qs = models.Alignment.objects.filter(
-            aminoacid_mutations__end=ref_pos,
-            aminoacid_mutations__ref=ref_aa,
-            aminoacid_mutations__alt=alt_aa,
-            aminoacid_mutations__gene__gene_symbol=protein_symbol,
+            amino_acid_mutations__end=ref_pos,
+            amino_acid_mutations__ref=ref_aa,
+            amino_acid_mutations__alt=alt_aa,
+            amino_acid_mutations__gene__gene_symbol=protein_symbol,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
