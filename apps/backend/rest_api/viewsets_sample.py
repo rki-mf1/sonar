@@ -1277,8 +1277,10 @@ def aggregate_below_threshold_lineages(lineages, threshold_count):
         # Aggregate each below-threshold lineage recursively
 
         if lineage.parent:
-            above_threshold[lineage.parent] = (
-                above_threshold.get(lineage.parent, 0) + count
+            # band-aid, not perfect fix for not delivering ids instead of names
+            parent_obj = models.Lineage.objects.get(id=lineage.parent)
+            above_threshold[parent_obj.name] = (
+                above_threshold.get(parent_obj.name, 0) + count
             )
         else:
             # If lineage has no parent, keep it as is
