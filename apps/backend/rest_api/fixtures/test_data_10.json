@@ -1,5 +1,3 @@
-Using the default database.
-{'default': {'ENGINE': 'django.db.backends.postgresql', 'OPTIONS': {'options': '-c search_path=public'}, 'NAME': 'covsonar', 'USER': 'postgres', 'PASSWORD': '123456', 'HOST': 'sonar-db', 'PORT': '8432'}}
 [
 {
   "model": "auth.permission",
