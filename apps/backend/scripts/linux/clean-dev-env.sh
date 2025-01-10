@@ -64,7 +64,7 @@ fi
 $SCRIPTPATH/dc-dev.sh up --wait -d $DC_ARGS
 
 if [ $TEST_DATA -eq 0 ]; then
-  $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_sm
+  $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_10
   $SCRIPTPATH/dev-manage.sh import_lineage
 else
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth
