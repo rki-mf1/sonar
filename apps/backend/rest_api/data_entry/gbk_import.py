@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 import pathlib
 
 from Bio import SeqFeature
@@ -8,6 +9,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 from django.db.utils import IntegrityError
 
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.models import Gene
 from rest_api.models import GeneSegment
 from rest_api.models import Reference
@@ -228,8 +230,10 @@ def _create_elemparts(feature: SeqFeature.SeqFeature, gene: Gene):
 
 
 def _temp_save_file(uploaded_file: InMemoryUploadedFile):
-    file_path = pathlib.Path("import_data") / uploaded_file.name
-    pathlib.Path("import_data").mkdir(parents=True, exist_ok=True)
+    # Create the directory path
+    directory_path = pathlib.Path(SONAR_DATA_ENTRY_FOLDER) / "gbks"
+    directory_path.mkdir(exist_ok=True)
+    file_path = directory_path / uploaded_file.name
     with open(file_path, "wb") as f:
         f.write(uploaded_file.read())
     return file_path
