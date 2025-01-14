@@ -183,26 +183,6 @@
           "alignment"
         ],
         [
-          "add_alignment2mutation",
-          "rest_api",
-          "alignment2mutation"
-        ],
-        [
-          "change_alignment2mutation",
-          "rest_api",
-          "alignment2mutation"
-        ],
-        [
-          "delete_alignment2mutation",
-          "rest_api",
-          "alignment2mutation"
-        ],
-        [
-          "view_alignment2mutation",
-          "rest_api",
-          "alignment2mutation"
-        ],
-        [
           "add_annotationtype",
           "rest_api",
           "annotationtype"
