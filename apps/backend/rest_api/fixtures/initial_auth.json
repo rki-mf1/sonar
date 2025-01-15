@@ -1,556 +1,866 @@
 [
-  {
-    "model": "auth.user",
-    "pk": 1,
-    "fields": {
-      "password": "pbkdf2_sha256$600000$Gx0HhjxZV7WEn8oaXBL8TL$CsD/ISsNvtwuqMzHEIjhDz1ZvUQ6GZbwvtOSmmNtyLk=",
-      "last_login": "2024-03-29T03:03:44.355Z",
-      "is_superuser": true,
-      "username": "root",
-      "first_name": "",
-      "last_name": "",
-      "email": "",
-      "is_staff": true,
-      "is_active": true,
-      "date_joined": "2024-03-29T03:03:15.202Z",
-      "groups": [],
-      "user_permissions": []
-    }
-  },
-  {
-    "model": "auth.group",
-    "fields": {
-      "name": "admin",
-      "permissions": [
-        [
-          "add_logentry",
-          "admin",
-          "logentry"
-        ],
-        [
-          "change_logentry",
-          "admin",
-          "logentry"
-        ],
-        [
-          "delete_logentry",
-          "admin",
-          "logentry"
-        ],
-        [
-          "view_logentry",
-          "admin",
-          "logentry"
-        ],
-        [
-          "add_group",
-          "auth",
-          "group"
-        ],
-        [
-          "change_group",
-          "auth",
-          "group"
-        ],
-        [
-          "delete_group",
-          "auth",
-          "group"
-        ],
-        [
-          "view_group",
-          "auth",
-          "group"
-        ],
-        [
-          "add_permission",
-          "auth",
-          "permission"
-        ],
-        [
-          "change_permission",
-          "auth",
-          "permission"
-        ],
-        [
-          "delete_permission",
-          "auth",
-          "permission"
-        ],
-        [
-          "view_permission",
-          "auth",
-          "permission"
-        ],
-        [
-          "add_user",
-          "auth",
-          "user"
-        ],
-        [
-          "change_user",
-          "auth",
-          "user"
-        ],
-        [
-          "delete_user",
-          "auth",
-          "user"
-        ],
-        [
-          "view_user",
-          "auth",
-          "user"
-        ],
-        [
-          "add_contenttype",
-          "contenttypes",
-          "contenttype"
-        ],
-        [
-          "change_contenttype",
-          "contenttypes",
-          "contenttype"
-        ],
-        [
-          "delete_contenttype",
-          "contenttypes",
-          "contenttype"
-        ],
-        [
-          "view_contenttype",
-          "contenttypes",
-          "contenttype"
-        ],
-        [
-          "add_djangojob",
-          "django_apscheduler",
-          "djangojob"
-        ],
-        [
-          "change_djangojob",
-          "django_apscheduler",
-          "djangojob"
-        ],
-        [
-          "delete_djangojob",
-          "django_apscheduler",
-          "djangojob"
-        ],
-        [
-          "view_djangojob",
-          "django_apscheduler",
-          "djangojob"
-        ],
-        [
-          "add_djangojobexecution",
-          "django_apscheduler",
-          "djangojobexecution"
-        ],
-        [
-          "change_djangojobexecution",
-          "django_apscheduler",
-          "djangojobexecution"
-        ],
-        [
-          "delete_djangojobexecution",
-          "django_apscheduler",
-          "djangojobexecution"
-        ],
-        [
-          "view_djangojobexecution",
-          "django_apscheduler",
-          "djangojobexecution"
-        ],
-        [
-          "add_alignment",
-          "rest_api",
-          "alignment"
-        ],
-        [
-          "change_alignment",
-          "rest_api",
-          "alignment"
-        ],
-        [
-          "delete_alignment",
-          "rest_api",
-          "alignment"
-        ],
-        [
-          "view_alignment",
-          "rest_api",
-          "alignment"
-        ],
-        [
-          "add_annotationtype",
-          "rest_api",
-          "annotationtype"
-        ],
-        [
-          "change_annotationtype",
-          "rest_api",
-          "annotationtype"
-        ],
-        [
-          "delete_annotationtype",
-          "rest_api",
-          "annotationtype"
-        ],
-        [
-          "view_annotationtype",
-          "rest_api",
-          "annotationtype"
-        ],
-        [
-          "add_importlog",
-          "rest_api",
-          "importlog"
-        ],
-        [
-          "change_importlog",
-          "rest_api",
-          "importlog"
-        ],
-        [
-          "delete_importlog",
-          "rest_api",
-          "importlog"
-        ],
-        [
-          "view_importlog",
-          "rest_api",
-          "importlog"
-        ],
-        [
-          "add_gene",
-          "rest_api",
-          "gene"
-        ],
-        [
-          "change_gene",
-          "rest_api",
-          "gene"
-        ],
-        [
-          "delete_gene",
-          "rest_api",
-          "gene"
-        ],
-        [
-          "view_gene",
-          "rest_api",
-          "gene"
-        ],
-        [
-          "add_genesegment",
-          "rest_api",
-          "genesegment"
-        ],
-        [
-          "change_genesegment",
-          "rest_api",
-          "genesegment"
-        ],
-        [
-          "delete_genesegment",
-          "rest_api",
-          "genesegment"
-        ],
-        [
-          "view_genesegment",
-          "rest_api",
-          "genesegment"
-        ],
-        [
-          "add_lineage",
-          "rest_api",
-          "lineage"
-        ],
-        [
-          "change_lineage",
-          "rest_api",
-          "lineage"
-        ],
-        [
-          "delete_lineage",
-          "rest_api",
-          "lineage"
-        ],
-        [
-          "view_lineage",
-          "rest_api",
-          "lineage"
-        ],
-        [
-          "add_mutation",
-          "rest_api",
-          "mutation"
-        ],
-        [
-          "change_mutation",
-          "rest_api",
-          "mutation"
-        ],
-        [
-          "delete_mutation",
-          "rest_api",
-          "mutation"
-        ],
-        [
-          "view_mutation",
-          "rest_api",
-          "mutation"
-        ],
-        [
-          "add_mutation2annotation",
-          "rest_api",
-          "mutation2annotation"
-        ],
-        [
-          "change_mutation2annotation",
-          "rest_api",
-          "mutation2annotation"
-        ],
-        [
-          "delete_mutation2annotation",
-          "rest_api",
-          "mutation2annotation"
-        ],
-        [
-          "view_mutation2annotation",
-          "rest_api",
-          "mutation2annotation"
-        ],
-        [
-          "add_property",
-          "rest_api",
-          "property"
-        ],
-        [
-          "change_property",
-          "rest_api",
-          "property"
-        ],
-        [
-          "delete_property",
-          "rest_api",
-          "property"
-        ],
-        [
-          "view_property",
-          "rest_api",
-          "property"
-        ],
-        [
-          "add_reference",
-          "rest_api",
-          "reference"
-        ],
-        [
-          "change_reference",
-          "rest_api",
-          "reference"
-        ],
-        [
-          "delete_reference",
-          "rest_api",
-          "reference"
-        ],
-        [
-          "view_reference",
-          "rest_api",
-          "reference"
-        ],
-        [
-          "add_replicon",
-          "rest_api",
-          "replicon"
-        ],
-        [
-          "change_replicon",
-          "rest_api",
-          "replicon"
-        ],
-        [
-          "delete_replicon",
-          "rest_api",
-          "replicon"
-        ],
-        [
-          "view_replicon",
-          "rest_api",
-          "replicon"
-        ],
-        [
-          "add_sample",
-          "rest_api",
-          "sample"
-        ],
-        [
-          "change_sample",
-          "rest_api",
-          "sample"
-        ],
-        [
-          "delete_sample",
-          "rest_api",
-          "sample"
-        ],
-        [
-          "view_sample",
-          "rest_api",
-          "sample"
-        ],
-        [
-          "add_sample2property",
-          "rest_api",
-          "sample2property"
-        ],
-        [
-          "change_sample2property",
-          "rest_api",
-          "sample2property"
-        ],
-        [
-          "delete_sample2property",
-          "rest_api",
-          "sample2property"
-        ],
-        [
-          "view_sample2property",
-          "rest_api",
-          "sample2property"
-        ],
-        [
-          "add_sequence",
-          "rest_api",
-          "sequence"
-        ],
-        [
-          "change_sequence",
-          "rest_api",
-          "sequence"
-        ],
-        [
-          "delete_sequence",
-          "rest_api",
-          "sequence"
-        ],
-        [
-          "view_sequence",
-          "rest_api",
-          "sequence"
-        ],
-        [
-          "add_session",
-          "sessions",
-          "session"
-        ],
-        [
-          "change_session",
-          "sessions",
-          "session"
-        ],
-        [
-          "delete_session",
-          "sessions",
-          "session"
-        ],
-        [
-          "view_session",
-          "sessions",
-          "session"
-        ]
-      ]
-    }
-  },
-  {
-    "model": "auth.group",
-    "fields": {
-      "name": "read_only",
-      "permissions": [
-        [
-          "view_alignment",
-          "rest_api",
-          "alignment"
-        ],
-        [
-          "view_alignment2mutation",
-          "rest_api",
-          "alignment2mutation"
-        ],
-        [
-          "view_annotationtype",
-          "rest_api",
-          "annotationtype"
-        ],
-        [
-          "view_importlog",
-          "rest_api",
-          "importlog"
-        ],
-        [
-          "view_gene",
-          "rest_api",
-          "gene"
-        ],
-        [
-          "view_genesegment",
-          "rest_api",
-          "genesegment"
-        ],
-        [
-          "view_lineage",
-          "rest_api",
-          "lineage"
-        ],
-        [
-          "view_mutation",
-          "rest_api",
-          "mutation"
-        ],
-        [
-          "view_mutation2annotation",
-          "rest_api",
-          "mutation2annotation"
-        ],
-        [
-          "view_property",
-          "rest_api",
-          "property"
-        ],
-        [
-          "view_reference",
-          "rest_api",
-          "reference"
-        ],
-        [
-          "view_replicon",
-          "rest_api",
-          "replicon"
-        ],
-        [
-          "view_sample",
-          "rest_api",
-          "sample"
-        ],
-        [
-          "view_sample2property",
-          "rest_api",
-          "sample2property"
-        ],
-        [
-          "view_sequence",
-          "rest_api",
-          "sequence"
-        ],
-        [
-          "view_session",
-          "sessions",
-          "session"
-        ]
-      ]
-    }
+{
+  "model": "auth.permission",
+  "pk": 1,
+  "fields": {
+    "name": "Can add log entry",
+    "content_type": 1,
+    "codename": "add_logentry"
   }
+},
+{
+  "model": "auth.permission",
+  "pk": 2,
+  "fields": {
+    "name": "Can change log entry",
+    "content_type": 1,
+    "codename": "change_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 3,
+  "fields": {
+    "name": "Can delete log entry",
+    "content_type": 1,
+    "codename": "delete_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 4,
+  "fields": {
+    "name": "Can view log entry",
+    "content_type": 1,
+    "codename": "view_logentry"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 5,
+  "fields": {
+    "name": "Can add permission",
+    "content_type": 2,
+    "codename": "add_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 6,
+  "fields": {
+    "name": "Can change permission",
+    "content_type": 2,
+    "codename": "change_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 7,
+  "fields": {
+    "name": "Can delete permission",
+    "content_type": 2,
+    "codename": "delete_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 8,
+  "fields": {
+    "name": "Can view permission",
+    "content_type": 2,
+    "codename": "view_permission"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 9,
+  "fields": {
+    "name": "Can add group",
+    "content_type": 3,
+    "codename": "add_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 10,
+  "fields": {
+    "name": "Can change group",
+    "content_type": 3,
+    "codename": "change_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 11,
+  "fields": {
+    "name": "Can delete group",
+    "content_type": 3,
+    "codename": "delete_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 12,
+  "fields": {
+    "name": "Can view group",
+    "content_type": 3,
+    "codename": "view_group"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 13,
+  "fields": {
+    "name": "Can add user",
+    "content_type": 4,
+    "codename": "add_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 14,
+  "fields": {
+    "name": "Can change user",
+    "content_type": 4,
+    "codename": "change_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 15,
+  "fields": {
+    "name": "Can delete user",
+    "content_type": 4,
+    "codename": "delete_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 16,
+  "fields": {
+    "name": "Can view user",
+    "content_type": 4,
+    "codename": "view_user"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 17,
+  "fields": {
+    "name": "Can add content type",
+    "content_type": 5,
+    "codename": "add_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 18,
+  "fields": {
+    "name": "Can change content type",
+    "content_type": 5,
+    "codename": "change_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 19,
+  "fields": {
+    "name": "Can delete content type",
+    "content_type": 5,
+    "codename": "delete_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 20,
+  "fields": {
+    "name": "Can view content type",
+    "content_type": 5,
+    "codename": "view_contenttype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 21,
+  "fields": {
+    "name": "Can add session",
+    "content_type": 6,
+    "codename": "add_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 22,
+  "fields": {
+    "name": "Can change session",
+    "content_type": 6,
+    "codename": "change_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 23,
+  "fields": {
+    "name": "Can delete session",
+    "content_type": 6,
+    "codename": "delete_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 24,
+  "fields": {
+    "name": "Can view session",
+    "content_type": 6,
+    "codename": "view_session"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 25,
+  "fields": {
+    "name": "Can add alignment",
+    "content_type": 7,
+    "codename": "add_alignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 26,
+  "fields": {
+    "name": "Can change alignment",
+    "content_type": 7,
+    "codename": "change_alignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 27,
+  "fields": {
+    "name": "Can delete alignment",
+    "content_type": 7,
+    "codename": "delete_alignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 28,
+  "fields": {
+    "name": "Can view alignment",
+    "content_type": 7,
+    "codename": "view_alignment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 29,
+  "fields": {
+    "name": "Can add annotation type",
+    "content_type": 8,
+    "codename": "add_annotationtype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 30,
+  "fields": {
+    "name": "Can change annotation type",
+    "content_type": 8,
+    "codename": "change_annotationtype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 31,
+  "fields": {
+    "name": "Can delete annotation type",
+    "content_type": 8,
+    "codename": "delete_annotationtype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 32,
+  "fields": {
+    "name": "Can view annotation type",
+    "content_type": 8,
+    "codename": "view_annotationtype"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 33,
+  "fields": {
+    "name": "Can add property",
+    "content_type": 9,
+    "codename": "add_property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 34,
+  "fields": {
+    "name": "Can change property",
+    "content_type": 9,
+    "codename": "change_property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 35,
+  "fields": {
+    "name": "Can delete property",
+    "content_type": 9,
+    "codename": "delete_property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 36,
+  "fields": {
+    "name": "Can view property",
+    "content_type": 9,
+    "codename": "view_property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 37,
+  "fields": {
+    "name": "Can add sequence",
+    "content_type": 10,
+    "codename": "add_sequence"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 38,
+  "fields": {
+    "name": "Can change sequence",
+    "content_type": 10,
+    "codename": "change_sequence"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 39,
+  "fields": {
+    "name": "Can delete sequence",
+    "content_type": 10,
+    "codename": "delete_sequence"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 40,
+  "fields": {
+    "name": "Can view sequence",
+    "content_type": 10,
+    "codename": "view_sequence"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 41,
+  "fields": {
+    "name": "Can add sample",
+    "content_type": 11,
+    "codename": "add_sample"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 42,
+  "fields": {
+    "name": "Can change sample",
+    "content_type": 11,
+    "codename": "change_sample"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 43,
+  "fields": {
+    "name": "Can delete sample",
+    "content_type": 11,
+    "codename": "delete_sample"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 44,
+  "fields": {
+    "name": "Can view sample",
+    "content_type": 11,
+    "codename": "view_sample"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 45,
+  "fields": {
+    "name": "Can add reference",
+    "content_type": 12,
+    "codename": "add_reference"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 46,
+  "fields": {
+    "name": "Can change reference",
+    "content_type": 12,
+    "codename": "change_reference"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 47,
+  "fields": {
+    "name": "Can delete reference",
+    "content_type": 12,
+    "codename": "delete_reference"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 48,
+  "fields": {
+    "name": "Can view reference",
+    "content_type": 12,
+    "codename": "view_reference"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 49,
+  "fields": {
+    "name": "Can add sample2 property",
+    "content_type": 13,
+    "codename": "add_sample2property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 50,
+  "fields": {
+    "name": "Can change sample2 property",
+    "content_type": 13,
+    "codename": "change_sample2property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 51,
+  "fields": {
+    "name": "Can delete sample2 property",
+    "content_type": 13,
+    "codename": "delete_sample2property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 52,
+  "fields": {
+    "name": "Can view sample2 property",
+    "content_type": 13,
+    "codename": "view_sample2property"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 53,
+  "fields": {
+    "name": "Can add gene",
+    "content_type": 14,
+    "codename": "add_gene"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 54,
+  "fields": {
+    "name": "Can change gene",
+    "content_type": 14,
+    "codename": "change_gene"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 55,
+  "fields": {
+    "name": "Can delete gene",
+    "content_type": 14,
+    "codename": "delete_gene"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 56,
+  "fields": {
+    "name": "Can view gene",
+    "content_type": 14,
+    "codename": "view_gene"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 57,
+  "fields": {
+    "name": "Can add replicon",
+    "content_type": 15,
+    "codename": "add_replicon"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 58,
+  "fields": {
+    "name": "Can change replicon",
+    "content_type": 15,
+    "codename": "change_replicon"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 59,
+  "fields": {
+    "name": "Can delete replicon",
+    "content_type": 15,
+    "codename": "delete_replicon"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 60,
+  "fields": {
+    "name": "Can view replicon",
+    "content_type": 15,
+    "codename": "view_replicon"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 61,
+  "fields": {
+    "name": "Can add gene segment",
+    "content_type": 16,
+    "codename": "add_genesegment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 62,
+  "fields": {
+    "name": "Can change gene segment",
+    "content_type": 16,
+    "codename": "change_genesegment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 63,
+  "fields": {
+    "name": "Can delete gene segment",
+    "content_type": 16,
+    "codename": "delete_genesegment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 64,
+  "fields": {
+    "name": "Can view gene segment",
+    "content_type": 16,
+    "codename": "view_genesegment"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 65,
+  "fields": {
+    "name": "Can add lineage",
+    "content_type": 17,
+    "codename": "add_lineage"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 66,
+  "fields": {
+    "name": "Can change lineage",
+    "content_type": 17,
+    "codename": "change_lineage"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 67,
+  "fields": {
+    "name": "Can delete lineage",
+    "content_type": 17,
+    "codename": "delete_lineage"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 68,
+  "fields": {
+    "name": "Can view lineage",
+    "content_type": 17,
+    "codename": "view_lineage"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 69,
+  "fields": {
+    "name": "Can add import log",
+    "content_type": 18,
+    "codename": "add_importlog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 70,
+  "fields": {
+    "name": "Can change import log",
+    "content_type": 18,
+    "codename": "change_importlog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 71,
+  "fields": {
+    "name": "Can delete import log",
+    "content_type": 18,
+    "codename": "delete_importlog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 72,
+  "fields": {
+    "name": "Can view import log",
+    "content_type": 18,
+    "codename": "view_importlog"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 73,
+  "fields": {
+    "name": "Can add file processing",
+    "content_type": 19,
+    "codename": "add_fileprocessing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 74,
+  "fields": {
+    "name": "Can change file processing",
+    "content_type": 19,
+    "codename": "change_fileprocessing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 75,
+  "fields": {
+    "name": "Can delete file processing",
+    "content_type": 19,
+    "codename": "delete_fileprocessing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 76,
+  "fields": {
+    "name": "Can view file processing",
+    "content_type": 19,
+    "codename": "view_fileprocessing"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 77,
+  "fields": {
+    "name": "Can add processing job",
+    "content_type": 20,
+    "codename": "add_processingjob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 78,
+  "fields": {
+    "name": "Can change processing job",
+    "content_type": 20,
+    "codename": "change_processingjob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 79,
+  "fields": {
+    "name": "Can delete processing job",
+    "content_type": 20,
+    "codename": "delete_processingjob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 80,
+  "fields": {
+    "name": "Can view processing job",
+    "content_type": 20,
+    "codename": "view_processingjob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 81,
+  "fields": {
+    "name": "Can add nucleotide mutation",
+    "content_type": 21,
+    "codename": "add_nucleotidemutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 82,
+  "fields": {
+    "name": "Can change nucleotide mutation",
+    "content_type": 21,
+    "codename": "change_nucleotidemutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 83,
+  "fields": {
+    "name": "Can delete nucleotide mutation",
+    "content_type": 21,
+    "codename": "delete_nucleotidemutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 84,
+  "fields": {
+    "name": "Can view nucleotide mutation",
+    "content_type": 21,
+    "codename": "view_nucleotidemutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 85,
+  "fields": {
+    "name": "Can add amino acid mutation",
+    "content_type": 22,
+    "codename": "add_aminoacidmutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 86,
+  "fields": {
+    "name": "Can change amino acid mutation",
+    "content_type": 22,
+    "codename": "change_aminoacidmutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 87,
+  "fields": {
+    "name": "Can delete amino acid mutation",
+    "content_type": 22,
+    "codename": "delete_aminoacidmutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 88,
+  "fields": {
+    "name": "Can view amino acid mutation",
+    "content_type": 22,
+    "codename": "view_aminoacidmutation"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 89,
+  "fields": {
+    "name": "Can add django job",
+    "content_type": 23,
+    "codename": "add_djangojob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 90,
+  "fields": {
+    "name": "Can change django job",
+    "content_type": 23,
+    "codename": "change_djangojob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 91,
+  "fields": {
+    "name": "Can delete django job",
+    "content_type": 23,
+    "codename": "delete_djangojob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 92,
+  "fields": {
+    "name": "Can view django job",
+    "content_type": 23,
+    "codename": "view_djangojob"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 93,
+  "fields": {
+    "name": "Can add django job execution",
+    "content_type": 24,
+    "codename": "add_djangojobexecution"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 94,
+  "fields": {
+    "name": "Can change django job execution",
+    "content_type": 24,
+    "codename": "change_djangojobexecution"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 95,
+  "fields": {
+    "name": "Can delete django job execution",
+    "content_type": 24,
+    "codename": "delete_djangojobexecution"
+  }
+},
+{
+  "model": "auth.permission",
+  "pk": 96,
+  "fields": {
+    "name": "Can view django job execution",
+    "content_type": 24,
+    "codename": "view_djangojobexecution"
+  }
+}
 ]

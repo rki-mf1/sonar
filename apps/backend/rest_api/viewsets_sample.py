@@ -743,9 +743,9 @@ class SampleViewSet(
     ):
         final_query = Q()
 
-        # Split the input value by either commas, whitespace, or both
-        # mutations  = [x.strip() for x in value.split(',')]
-        mutations = re.split(r"[\s,]+", value.strip())
+        # Split the input value by either commas, semicolom, whitespace, or combinations of these,
+        # remove seperators from string end
+        mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
         for mutation in mutations:
             parsed_mutation = define_profile(mutation)
             # check valid protien name
