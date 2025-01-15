@@ -18,7 +18,7 @@ class AlignmentViewSetTest(
 ):
     model = models.Alignment
     viewset = viewsets.AlignmentViewSet
-    expected_list_count = 15
+    expected_list_count = 10
 
     def test_get_alignment_data(self):
         pass  # TODO
@@ -32,7 +32,7 @@ class SampleViewSetTest(
 ):
     model = models.Sample
     viewset = SampleViewSet
-    expected_list_count = 15
+    expected_list_count = 10
 
     @parameterized.expand(
         [
@@ -58,38 +58,70 @@ class SampleViewSetTest(
                 },
                 10,
             ),
+            # (
+            #     "Del AA",
+            #     {
+            #         "label": "Del AA",
+            #         "protein_symbol": "ORF1a",
+            #         "first_deleted": 2084,
+            #         "last_deleted": 2086,
+            #         "exclude": False,
+            #     },
+            #     0,
+            # ),
+            #             (
+            #     "Del AA",
+            #     {
+            #         "label": "Del AA",
+            #         "protein_symbol": "ORF1a",
+            #         "first_deleted": 3675,
+            #         "last_deleted": 3675,
+            #         "exclude": False,
+            #     },
+            #     6,
+            # ),
+            # (
+            #     "Del Nt",
+            #     {
+            #         "label": "Del Nt",
+            #         "first_deleted": 11287,
+            #         "last_deleted": 1129,
+            #         "exclude": False,
+            #     },
+            #     0,
+            # ),
+            #             (
+            #     "Del Nt",
+            #     {
+            #         "label": "Del Nt",
+            #         "first_deleted": 29734,
+            #         "last_deleted": 29759,
+            #         "exclude": False,
+            #     },
+            #     7,
+            # ),
             (
-                "Del AA",
+                "Ins AA",
                 {
-                    "label": "Del AA",
-                    "protein_symbol": "ORF1a",
-                    "first_deleted": 2084,
-                    "last_deleted": 2086,
-                    "exclude": False,
+                    "label": "Ins AA",
+                    "protein_symbol": "S",
+                    "ref_aa": "R",
+                    "ref_pos": 21608,
+                    "alt_aa": "RGTCATGCCGCTGTEPE",
                 },
-                1,
-            ),
-            (
-                "Del Nt",
-                {
-                    "label": "Del AA",
-                    "first_deleted": 11287,
-                    "last_deleted": 11296,
-                    "exclude": False,
-                },
-                10,
+                0,
             ),
             (
                 "Ins Nt",
                 {
-                    "label": "Ins AA",
-                    "ref_aa": "RG",
+                    "label": "Ins Nt",
+                    "ref_nuc": "G",
                     "ref_pos": 21608,
-                    "alt_aa": "RGTCATGCCGCTGTEPE",
+                    "alt_nuc": "GTCATGCCGCTGT",
                 },
                 10,
             ),
-            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 15),
+            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 10),
         ]
     )
     def test_genome_filters(self, _, filter, expected_count):

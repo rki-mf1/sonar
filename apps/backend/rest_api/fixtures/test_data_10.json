@@ -126,6 +126,17 @@
   }
 },
 {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+        "username": "root",
+        "is_superuser": true,
+        "is_staff": true,
+        "is_active": true,
+        "password": "root"
+    }
+},
+{
   "model": "auth.permission",
   "pk": 15,
   "fields": {
