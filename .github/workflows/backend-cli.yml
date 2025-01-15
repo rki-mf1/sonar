@@ -28,7 +28,7 @@ jobs:
         run: |
           conda install poetry snpeff mafft bcftools
           conda info
-          poetry lock --no-update
+          poetry lock --no-root
           poetry install
           poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
       - name: Hello sonar-cli 🐶
