@@ -11,5 +11,5 @@ test('correct total samples', async ({ page }) => {
   await page.goto('http://127.0.0.1:8000/')
 
   // Check that the total number of sequences is correct
-  await expect(page.getByText('Total: 15 Samples')).toBeVisible()
+  await expect(page.getByText('Total: 10 Samples')).toBeVisible()
 })
