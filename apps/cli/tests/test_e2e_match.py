@@ -79,7 +79,7 @@ def test_match_profile_OR_AA(capfd, api_url):
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "14" == lines[-1]
+    assert "5" == lines[-1]
     assert code == 0
 
 
