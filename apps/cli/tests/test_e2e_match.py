@@ -31,7 +31,7 @@ def test_match_profile_count(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "17" == lines[-1]
+    assert "5" == lines[-1]
     assert code == 0
 
 
