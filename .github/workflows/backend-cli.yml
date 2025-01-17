@@ -18,17 +18,18 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: Set up Python 🐶
         uses: conda-incubator/setup-miniconda@v3
+        working-directory: ./apps/cli
         with:
-          miniconda-version: "latest"
-          channels: conda-forge,bioconda
+          miniforge-version: latest
+          channels: conda-forge,bioconda,nodefaults
           activate-environment: "sonar-cli"
+          environment-file: environment.yml
           python-version: 3.11
+          auto-activate-base: false
       - name: Install dependencies 🐶
         working-directory: ./apps/cli
         run: |
-          conda install --file environment.yml
           conda info
-          poetry lock
           poetry install
           poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
       - name: Hello sonar-cli 🐶
