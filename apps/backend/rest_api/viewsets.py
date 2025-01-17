@@ -12,6 +12,7 @@ from django.db.models import F
 from django.db.models import Q
 from django.db.models import Sum
 from django.db.utils import IntegrityError
+from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework import serializers
@@ -323,6 +324,26 @@ class ReferenceViewSet(
         queryset = models.Reference.objects.all()
         sample_data = queryset.values()
         return Response(data=sample_data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"])
+    def get_reference_file(self, request: Request, *args, **kwargs):
+        reference = request.query_params.get("reference")
+        # get Reference and extract name (path)
+        queryset = models.Reference.objects.filter(accession=reference)
+        if queryset.exists():
+            reference_obj = queryset.first()
+            reference_file = reference_obj.name
+            # with open(reference_file, "r") as file:
+            #     data = file.read()
+            return FileResponse(
+                open(reference_file, "rb"),
+                as_attachment=True,
+                filename=os.path.basename(reference_file),
+            )
+        else:
+            return Response(
+                {"detail": "No reference found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
     # multilple get in one.
 

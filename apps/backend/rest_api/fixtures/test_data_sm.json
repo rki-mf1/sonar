@@ -67015,7 +67015,7 @@
     "model": "rest_api.reference",
     "pk": 1,
     "fields": {
-        "name": null,
+        "name": "/sonar/data/import/gbks/MN908947.nextclade.gb",
         "accession": "MN908947.3",
         "description": "(Wuhan-Hu-1/2019)",
         "organism": "Severe acute respiratory syndrome coronavirus 2",
