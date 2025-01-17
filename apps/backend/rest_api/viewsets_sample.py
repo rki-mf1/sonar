@@ -965,7 +965,7 @@ class SampleViewSet(
         alignment_qs = models.Alignment.objects.filter(
             nucleotide_mutations__start=int(first_deleted) - 1,
             nucleotide_mutations__end=last_deleted,
-            nucleotide_mutations__alt__isnull=True,
+            nucleotide_mutations__alt="",
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -993,7 +993,7 @@ class SampleViewSet(
             amino_acid_mutations__gene__gene_symbol__iexact=protein_symbol,
             amino_acid_mutations__start=int(first_deleted) - 1,
             amino_acid_mutations__end=last_deleted,
-            amino_acid_mutations__alt__isnull=True,
+            amino_acid_mutations__alt="",
         )
 
         filters = {"sequence__alignments__in": alignment_qs}
