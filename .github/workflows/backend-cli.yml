@@ -26,9 +26,9 @@ jobs:
       - name: Install dependencies 🐶
         working-directory: ./apps/cli
         run: |
-          conda install poetry snpeff mafft bcftools
+          conda install --file environment.yml
           conda info
-          poetry lock --no-update
+          poetry lock
           poetry install
           poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
       - name: Hello sonar-cli 🐶

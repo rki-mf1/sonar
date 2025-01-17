@@ -27,28 +27,26 @@ sqlparse = "^0.4.4"
 colorlog = "^6.8.0"
 packaging = "^24.0"
 
-[tool.poetry.dev-dependencies]
-pytest = "^8.1.1"
-coverage = {extras = ["toml"], version = "^7.4.3"}
-pytest-cov = "^4.1.0"
+[tool.poetry.group.dev.dependencies]
 black = "^22.6.0"
+coverage = {extras = ["toml"], version = "^7.4.3"}
 flake8 = "^4.0.1"
 flake8-bandit = "^3.0.0"
 flake8-black = "^0.3.3"
 flake8-bugbear = "^22.6.22"
 flake8-import-order = "^0.18.1"
+pre-commit = "^3.4.0"
+pytest = "^8.1.1"
+pytest-cov = "^4.1.0"
+pytest-dependency = "^0.6.0"
+pytest-order = "^1.2.0"
+pytest-sugar = "^1.0.0"
+pytest-xdist = "^3.3.1"
 safety = "^3.0.0"
 zimports = "^0.6.0"
-pytest-sugar = "^1.0.0"
 
 [tool.poetry.scripts]
 sonar-cli = "sonar_cli.sonar:run"
-
-[tool.poetry.group.dev.dependencies]
-pytest-dependency = "^0.6.0"
-pytest-xdist = "^3.3.1"
-pre-commit = "^3.4.0"
-pytest-order = "^1.2.0"
 
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
