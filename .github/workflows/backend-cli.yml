@@ -20,7 +20,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
-          channels: conda-forge,bioconda,nodefaults
+          channels: conda-forge,bioconda
+          conda-remove-defaults: "true"
           activate-environment: "sonar-cli"
           environment-file: apps/cli/environment.yml
           python-version: 3.11
