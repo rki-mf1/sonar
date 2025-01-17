@@ -5,7 +5,6 @@ import pytest
 from sonar_cli import sonar
 from sonar_cli.annotation import Annotator
 from sonar_cli.cache import sonarCache
-from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 
 
@@ -83,6 +82,5 @@ def annotator(accesion_SARSCOV2, tmpfile_name):
     )
     return Annotator(
         annotator_exe_path=ANNO_TOOL_PATH,
-        config_path=ANNO_CONFIG_FILE,
         cache=sonar_cache,
     )
