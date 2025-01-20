@@ -58,8 +58,8 @@
             v-model="profileFilter.value"
             style="flex: auto"
             :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
-            v-on:keyup.enter="updateSamplesInTableAndFilteredStatistics()"
             class="mr-1"
+            @keyup.enter="updateSamplesInTableAndFilteredStatistics()"
           />
           <PrimeButton
             v-if="profileFilter.value"
