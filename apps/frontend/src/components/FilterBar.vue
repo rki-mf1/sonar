@@ -58,6 +58,7 @@
             v-model="profileFilter.value"
             style="flex: auto"
             :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
+            v-on:keyup.enter="updateSamplesInTableAndFilteredStatistics()"
             class="mr-1"
           />
           <PrimeButton
@@ -74,7 +75,7 @@
             label="&nbsp;Set Advanced Filters"
             severity="warning"
             raised
-            :style="{ border: isAdvancedFiltersSet ? '4px solid #cf3004' : '' }"
+            :style="{ border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)' }"
             @click="displayDialogFilter = true"
           />
           <PrimeButton
@@ -82,7 +83,7 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+            :style="{ border: samplesStore.filtersChanged ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)' }"
             @click="updateSamplesInTableAndFilteredStatistics()"
           >
           </PrimeButton>
