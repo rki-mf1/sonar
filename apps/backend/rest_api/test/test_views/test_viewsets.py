@@ -58,48 +58,48 @@ class SampleViewSetTest(
                 },
                 10,
             ),
-            # (
-            #     "Del AA",
-            #     {
-            #         "label": "Del AA",
-            #         "protein_symbol": "ORF1a",
-            #         "first_deleted": 2084,
-            #         "last_deleted": 2086,
-            #         "exclude": False,
-            #     },
-            #     0,
-            # ),
-            #             (
-            #     "Del AA",
-            #     {
-            #         "label": "Del AA",
-            #         "protein_symbol": "ORF1a",
-            #         "first_deleted": 3675,
-            #         "last_deleted": 3675,
-            #         "exclude": False,
-            #     },
-            #     6,
-            # ),
-            # (
-            #     "Del Nt",
-            #     {
-            #         "label": "Del Nt",
-            #         "first_deleted": 11287,
-            #         "last_deleted": 1129,
-            #         "exclude": False,
-            #     },
-            #     0,
-            # ),
-            #             (
-            #     "Del Nt",
-            #     {
-            #         "label": "Del Nt",
-            #         "first_deleted": 29734,
-            #         "last_deleted": 29759,
-            #         "exclude": False,
-            #     },
-            #     7,
-            # ),
+            (
+                "Del AA",
+                {
+                    "label": "Del AA",
+                    "protein_symbol": "ORF1a",
+                    "first_deleted": 2084,
+                    "last_deleted": 2086,
+                    "exclude": False,
+                },
+                0,
+            ),
+            (
+                "Del AA",
+                {
+                    "label": "Del AA",
+                    "protein_symbol": "ORF1a",
+                    "first_deleted": 3675,
+                    "last_deleted": 3676,
+                    "exclude": False,
+                },
+                10,
+            ),
+            (
+                "Del Nt",
+                {
+                    "label": "Del Nt",
+                    "first_deleted": 11287,
+                    "last_deleted": 1129,
+                    "exclude": False,
+                },
+                0,
+            ),
+            (
+                "Del Nt",
+                {
+                    "label": "Del Nt",
+                    "first_deleted": 29734,
+                    "last_deleted": 29759,
+                    "exclude": False,
+                },
+                10,
+            ),
             (
                 "Ins AA",
                 {

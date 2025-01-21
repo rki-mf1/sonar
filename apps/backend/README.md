@@ -208,7 +208,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 | `covid19.180.tsv`        | Input sample containing meta information (tsv).                                                                       |
 | `cache_180_mafft.zip`    | Input sample containing the genomic sequence (fasta) using MAFFT aligner.                                             |
 | `MN908947.3.gbk`         | Reference genome of SARS-CoV-2 in GenBank format.                                                                     |
-| `dump-sonar-test-db.sql` | SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest." |
+| `dump-sonar-test-db-180-2025_01_21.INSERT.sql` | SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest." |
 
 ### Extra docker compose commands
 
