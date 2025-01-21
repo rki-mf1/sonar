@@ -284,7 +284,7 @@ class SampleImport:
                     break
                 var_raw = line.strip("\r\n").split("\t")
                 # Extract the mutation (alt)
-                alt = None if var_raw[3] == " " else var_raw[3]
+                alt = None if var_raw[4] == " " else var_raw[4]
                 # Skip rows with 'N' or 'X' if include_NX is False
                 # handle both INSERTION (A2324NNNN) and SNV
                 if not include_nx and alt is not None and ("N" in alt or "X" in alt):
