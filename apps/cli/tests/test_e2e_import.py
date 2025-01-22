@@ -10,7 +10,7 @@ from .conftest import run_cli
 def test_add_cov19_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     # new_ref_file = "mpox/NC_063383.1.gb"
-    new_ref_file = "covid19/ref.cov19.gb"
+    new_ref_file = "covid19/MN908947.nextclade.gb"
     code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
