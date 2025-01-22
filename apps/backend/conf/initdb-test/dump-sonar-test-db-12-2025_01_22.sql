@@ -19,16 +19,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 4 (class 2615 OID 2200)
--- Name: public; Type: SCHEMA; Schema: -; Owner: pg_database_owner
---
-
-CREATE SCHEMA public;
-
-
-ALTER SCHEMA public OWNER TO pg_database_owner;
-
---
 -- TOC entry 3839 (class 0 OID 0)
 -- Dependencies: 4
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: pg_database_owner
