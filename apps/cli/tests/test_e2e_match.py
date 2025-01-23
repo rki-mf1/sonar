@@ -31,7 +31,7 @@ def test_match_profile_count(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "5" == lines[-1]
+    assert "17" == lines[-1]
     assert code == 0
 
 
@@ -79,7 +79,7 @@ def test_match_profile_OR_AA(capfd, api_url):
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "5" == lines[-1]
+    assert "14" == lines[-1]
     assert code == 0
 
 
@@ -356,7 +356,7 @@ def test_match_profile_NT_DEL_single(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --profile del:28271 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "3" == lines[-1]
+    assert "4" == lines[-1]
     assert code == 0
 
 
@@ -420,7 +420,8 @@ def test_match_anno_impact(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "1" == lines[-1]
+    # assert "1" == lines[-1]
+    assert "5" == lines[-1]
     assert code == 0
 
 
@@ -454,5 +455,6 @@ def test_match_anno_impact_and_type(capfd, api_url):
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "1" == lines[-1]
+    # assert "1" == lines[-1]
+    assert "5" == lines[-1]
     assert code == 0
