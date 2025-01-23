@@ -79,7 +79,9 @@ def parse_args(args=None):
     subparsers, _ = create_subparser_list_prop(subparsers, database_parser)
 
     # lineage
-    subparsers, _ = create_subparser_lineage_import(subparsers, lineage_parser)
+    subparsers, _ = create_subparser_lineage_import(
+        subparsers, lineage_parser, output_parser
+    )
     # match
     subparsers, subparser_match = create_subparser_match(
         subparsers,
@@ -137,12 +139,21 @@ def is_match_selected(namespace: Optional[argparse.Namespace] = None) -> bool:
 def create_parser_lineage() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
+        "-p",
+        "--pathogen",
+        metavar="STR",
+        help="Select a pathogen. Choices are: ['SARS-CoV-2', 'Influenza', 'RSV'], default:'SARS-CoV-2'",
+        type=str,
+        choices=["SARS-CoV-2", "Influenza", "RSV"],
+        default="SARS-CoV-2",
+    )
+    parser.add_argument(
         "-l",
         "--lineage",
         metavar="STR",
-        help="The lineage file that is generated from the sc2_lineages.py script (lineages.tsv)",
+        help="If a lineage file is provided, this given file will be used instead of downloading the latest lineage file.",
         type=str,
-        required=True,
+        required=False,
     )
     return parser
 
@@ -989,7 +1000,9 @@ def handle_delete_sample(args: argparse.Namespace):
 
 
 def handle_lineage(args: argparse.Namespace):
-    sonarUtils1.upload_lineage(lineage_file=args.lineage)
+    sonarUtils1.upload_lineage(
+        pathogen=args.pathogen, lineage_file=args.lineage, output_file=args.out
+    )
 
 
 def handle_info(args: argparse.Namespace):
