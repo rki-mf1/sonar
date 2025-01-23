@@ -113,7 +113,7 @@ class AnnotationImport:
                     # column, however the program frozen once I change to
                     # mutation_lookup_to_annotations.ref = None
                     mutation_lookup_to_annotations.ref = ""
-                    mutation_lookup_to_annotations.alt = None
+                    mutation_lookup_to_annotations.alt = ""
 
                 mutation_lookups_to_annotations.append(mutation_lookup_to_annotations)
         return mutation_lookups_to_annotations
