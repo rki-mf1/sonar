@@ -1285,7 +1285,8 @@ def _write_vcf_header(handle, reference: str, all_samples: List[str]):
     handle.write("##fileformat=VCFv4.2\n")
     handle.write("##poweredby=sonar-cli\n")
     handle.write(f"##reference={reference}\n")
-    handle.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype"\n')
+    handle.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n')
+    handle.write(f"##contig=<ID={reference}>\n")
     handle.write(
         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t"
         + "\t".join(all_samples)
