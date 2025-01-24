@@ -79,7 +79,9 @@ def parse_args(args=None):
     subparsers, _ = create_subparser_list_prop(subparsers, database_parser)
 
     # lineage
-    subparsers, _ = create_subparser_lineage_import(subparsers, lineage_parser)
+    subparsers, _ = create_subparser_lineage_import(
+        subparsers, lineage_parser, output_parser
+    )
     # match
     subparsers, subparser_match = create_subparser_match(
         subparsers,
@@ -137,12 +139,21 @@ def is_match_selected(namespace: Optional[argparse.Namespace] = None) -> bool:
 def create_parser_lineage() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
+        "-p",
+        "--pathogen",
+        metavar="STR",
+        help="Select a pathogen. (choices: %(choices)s. default: %(default)s)",
+        type=str,
+        choices=["SARS-CoV-2", "Influenza", "RSV"],
+        default="SARS-CoV-2",
+    )
+    parser.add_argument(
         "-l",
         "--lineage",
         metavar="STR",
-        help="The lineage file that is generated from the sc2_lineages.py script (lineages.tsv)",
+        help="If a lineage file is provided, this given file will be used instead of downloading the latest lineage file.",
         type=str,
-        required=True,
+        required=False,
     )
     return parser
 
@@ -316,7 +327,7 @@ def create_parser_thread() -> argparse.ArgumentParser:
         "-t",
         "--threads",
         metavar="INT",
-        help="number of threads to use (default: 1)",
+        help="number of threads to use (default: %(default)s)",
         type=int,
         default=1,
     )
@@ -352,7 +363,7 @@ def create_subparser_tasks(
     )
     jobid_background_parser.add_argument(
         "--interval",
-        help="Interval in seconds to check the job status",
+        help="Interval in seconds to check the job status (default: %(default)s)",
         type=int,
         default=60,
     )
@@ -426,7 +437,7 @@ def create_subparser_import(
 
     parser.add_argument(
         "--method",
-        help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default 1)",
+        help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default: %(default)s)",
         type=int,
         default=1,
     )
@@ -572,14 +583,14 @@ def create_subparser_add_prop(
     parser.add_argument(
         "--default",
         metavar="VAR",
-        help="the default value of the property (None by default)",
+        help="the default value of the property (default: None)",
         type=str,
         default=None,
     )
     parser.add_argument(
         "--subject",
         metavar="VAR",
-        help="choose between sample or variant property (by default: sample)",
+        help="choose between sample or variant property (choices: %(choices)s, default: %(default)s)",
         choices=["sample", "variant"],
         default="sample",
     )
@@ -691,7 +702,7 @@ def create_subparser_match(
     )
     mutually_exclusive_group.add_argument(
         "--format",
-        help="output format (default: tsv)",
+        help="output format (choices: %(choices)s. default: %(default)s)",
         choices=["csv", "tsv", "vcf"],
         default="tsv",
     )
@@ -989,7 +1000,9 @@ def handle_delete_sample(args: argparse.Namespace):
 
 
 def handle_lineage(args: argparse.Namespace):
-    sonarUtils1.upload_lineage(lineage_file=args.lineage)
+    sonarUtils1.upload_lineage(
+        pathogen=args.pathogen, lineage_file=args.lineage, output_file=args.out
+    )
 
 
 def handle_info(args: argparse.Namespace):
