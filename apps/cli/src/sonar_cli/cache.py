@@ -955,7 +955,7 @@ class sonarCache:
     def build_snpeff_cache(self, reference):
         """Build snpeff cache for the given reference,
         1. Request the gbk file from server
-        2. Then save it to the cache directory (self.basedir/snpeff_data/{reference}/genes.gbk).
+        2. Then save it to the cache directory (self.basedir/snpeff_data/{reference}/genes.gb).
         3. Use snpeff to build the cache.
         snpEff build -nodownload MN908947.3 -genbank -dataDir self.basedir/snpeff_data/snpeffDB/ -v
         4. Check if the file is built or failed.
@@ -969,7 +969,7 @@ class sonarCache:
 
         response = APIClient(base_url=self.base_url).get_reference_genbank(params)
         if response.status_code == 200:
-            gbk_file = os.path.join(self.snpeff_data_dir, reference, "genes.gbk")
+            gbk_file = os.path.join(self.snpeff_data_dir, reference, "genes.gb")
             os.makedirs(os.path.dirname(gbk_file), exist_ok=True)
 
             with open(gbk_file, "wb") as file:
