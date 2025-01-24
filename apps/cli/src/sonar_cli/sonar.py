@@ -142,7 +142,7 @@ def create_parser_lineage() -> argparse.ArgumentParser:
         "-p",
         "--pathogen",
         metavar="STR",
-        help="Select a pathogen. Choices are: ['SARS-CoV-2', 'Influenza', 'RSV'], default:'SARS-CoV-2'",
+        help="Select a pathogen. (choices: %(choices)s. default: %(default)s)",
         type=str,
         choices=["SARS-CoV-2", "Influenza", "RSV"],
         default="SARS-CoV-2",
@@ -327,7 +327,7 @@ def create_parser_thread() -> argparse.ArgumentParser:
         "-t",
         "--threads",
         metavar="INT",
-        help="number of threads to use (default: 1)",
+        help="number of threads to use (default: %(default)s)",
         type=int,
         default=1,
     )
@@ -363,7 +363,7 @@ def create_subparser_tasks(
     )
     jobid_background_parser.add_argument(
         "--interval",
-        help="Interval in seconds to check the job status",
+        help="Interval in seconds to check the job status (default: %(default)s)",
         type=int,
         default=60,
     )
@@ -437,7 +437,7 @@ def create_subparser_import(
 
     parser.add_argument(
         "--method",
-        help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default 1)",
+        help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default: %(default)s)",
         type=int,
         default=1,
     )
@@ -583,14 +583,14 @@ def create_subparser_add_prop(
     parser.add_argument(
         "--default",
         metavar="VAR",
-        help="the default value of the property (None by default)",
+        help="the default value of the property (default: None)",
         type=str,
         default=None,
     )
     parser.add_argument(
         "--subject",
         metavar="VAR",
-        help="choose between sample or variant property (by default: sample)",
+        help="choose between sample or variant property (choices: %(choices)s, default: %(default)s)",
         choices=["sample", "variant"],
         default="sample",
     )
@@ -702,7 +702,7 @@ def create_subparser_match(
     )
     mutually_exclusive_group.add_argument(
         "--format",
-        help="output format (default: tsv)",
+        help="output format (choices: %(choices)s. default: %(default)s)",
         choices=["csv", "tsv", "vcf"],
         default="tsv",
     )
