@@ -823,12 +823,10 @@ class SampleViewSet(
         *args,
         **kwargs,
     ) -> Q:
-        # if property_name == "impact":
-        #     mutation_condition = Q(annotations__impact__{filter_type}"=ref_pos)
-        # elif property_name == "seq_ontology":
-        #     mutation_condition = Q(annotations__seq_ontology__{filter_type}"=ref_pos)
         query = {}
-        query[f"annotation__{property_name}__{filter_type}"] = value
+        query[f"nucleotide_mutations__annotations__{property_name}__{filter_type}"] = (
+            value
+        )
 
         alignment_qs = models.Alignment.objects.filter(**query)
         filters = {"sequence__alignments__in": alignment_qs}
