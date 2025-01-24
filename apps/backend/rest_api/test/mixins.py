@@ -15,7 +15,7 @@ from rest_framework.test import force_authenticate
 class FixtureModelTestCase(TestCase):
     fixtures = [
         "initial_auth",
-        "test_data_sm",
+        "test_data_10",
     ]
     model = None
     obj = None
@@ -51,7 +51,7 @@ class FixtureApiMixin(object):
 
 
 class FixtureAPITestCase(APITestCase, FixtureApiMixin):
-    fixtures = ["initial_auth", "test_data_sm"]
+    fixtures = ["initial_auth", "test_data_10"]
 
     factory = APIRequestFactory()
     request_user_name = None
@@ -59,7 +59,7 @@ class FixtureAPITestCase(APITestCase, FixtureApiMixin):
 
 
 class FixtureAPITransactionTestCase(APITransactionTestCase, FixtureApiMixin):
-    fixtures = ["initial_auth", "test_data_sm"]
+    fixtures = ["initial_auth", "test_data_10"]
 
     factory = APIRequestFactory()
     request_user_name = None

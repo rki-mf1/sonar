@@ -20,7 +20,6 @@ PROP_CHUNK_SIZE = int(os.getenv("PROP_CHUNK_SIZE") or 10000)
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))
 
 ANNO_TOOL_PATH = os.getenv("ANNO_TOOL_PATH", "snpEff")
-# ANNO_CONFIG_FILE = os.getenv("ANNO_CONFIG_FILE", None)
 # SNPSIFT_TOOL_PATH = os.getenv("SNPSIFT_TOOL_PATH","")
 # VCF_ONEPERLINE_PATH = os.getenv("VCF_ONEPERLINE_PATH","")
 

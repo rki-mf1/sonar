@@ -36,10 +36,11 @@ from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
 from . import models
 from .serializers import AlignmentSerializer
+from .serializers import AminoAcidMutationSerializer
 from .serializers import GeneSerializer
 from .serializers import ImportLogSerializer
 from .serializers import LineagesSerializer
-from .serializers import MutationSerializer
+from .serializers import NucleotideMutationSerializer
 from .serializers import ProcessingJobSerializer
 from .serializers import PropertySerializer
 from .serializers import ReferenceSerializer
@@ -257,24 +258,6 @@ class GeneViewSet(viewsets.ModelViewSet):
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
-class MutationViewSet(
-    viewsets.GenericViewSet,
-    generics.mixins.ListModelMixin,
-    generics.mixins.RetrieveModelMixin,
-):
-    queryset = models.Mutation.objects.all()
-    serializer_class = MutationSerializer
-
-    @action(detail=False, methods=["get"])
-    def distinct_alts(self, request: Request, *args, **kwargs):
-        queryset = models.Mutation.objects.distinct("alt").values("alt")
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(element__replicon__reference__accession=ref)
-        return Response(
-            {"alts": [item["alt"] for item in queryset]}, status=status.HTTP_200_OK
-        )
-
-
 class ReferenceViewSet(
     viewsets.GenericViewSet,
     generics.mixins.ListModelMixin,
@@ -346,93 +329,6 @@ class ReferenceViewSet(
             )
 
     # multilple get in one.
-
-
-class SNP1Serializer(serializers.HyperlinkedModelSerializer):
-    reference_accession = serializers.CharField(
-        source="element.molecule.reference.accession"
-    )
-
-    class Meta:
-        model = models.Mutation
-        fields = [
-            "reference_accession",
-            "ref",
-            "alt",
-            "start",
-            "end",
-        ]
-
-
-class SNP1ViewSet(
-    viewsets.GenericViewSet,
-    generics.mixins.ListModelMixin,
-    generics.mixins.RetrieveModelMixin,
-):
-    queryset = models.Mutation.objects.filter(
-        ref__in=["C", "T", "G", "A"], alt__in=["C", "T", "G", "A"]
-    ).exclude(ref=F("alt"))
-    serializer_class = SNP1Serializer
-
-
-class MutationSignatureSerializer(serializers.HyperlinkedModelSerializer):
-    reference_accession = serializers.CharField(
-        source="element.molecule.reference.accession"
-    )
-    count = serializers.IntegerField()
-
-    class Meta:
-        model = models.Mutation
-        fields = [
-            "reference_accession",
-            "ref",
-            "alt",
-            "start",
-            "end",
-            "count",
-        ]
-
-
-class MutationSignatureRawSerializer(serializers.HyperlinkedModelSerializer):
-    reference_accession = serializers.ReadOnlyField(
-        source="element.molecule.reference.accession"
-    )
-
-    class Meta:
-        model = models.Mutation
-        fields = [
-            "reference_accession",
-            "ref",
-            "alt",
-            "start",
-            "end",
-        ]
-
-
-class MutationSignatureViewSet(
-    viewsets.GenericViewSet,
-    generics.mixins.ListModelMixin,
-    generics.mixins.RetrieveModelMixin,
-):
-    queryset = (
-        models.Mutation.objects.filter(ref__in=["C", "T"], alt__in=["C", "T", "G", "A"])
-        .exclude(ref=F("alt"))
-        .annotate(count=Count("alignments__sequence__sample"))
-    )
-    serializer_class = MutationSignatureSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["element__molecule__reference__accession", "ref", "alt"]
-
-    @action(detail=False, methods=["get"])
-    def raw(self, request: Request, *args, **kwargs):
-        queryset = models.Mutation.objects.filter(
-            ref__in=["C", "T"], alt__in=["C", "T", "G", "A"]
-        ).exclude(ref=F("alt"))
-        page = self.paginate_queryset(queryset)
-        serializer = MutationSignatureRawSerializer(page, many=True)
-        if page is not None:
-            return self.get_paginated_response(serializer.data)
-        return self.get_paginated_response(serializer.data)
 
 
 class PropertyViewSet(
@@ -708,65 +604,55 @@ class PropertyViewSet(
         return property_names
 
 
-class MutationFrequencySerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = models.Mutation
-        fields = [
-            "element_symbol",
-            "mutation_label",
-            "count",
-        ]
+# class AAMutationViewSet(
+#     viewsets.GenericViewSet,
+#     generics.mixins.ListModelMixin,
+# ):
+#     # input sequencing_tech list, country list, gene list, include partial bool,
+#     # reference_value int, min_nb_freq int = 1?
+#     queryset = models.Replicon.objects.all()
 
+#     @action(detail=False, methods=["get"])
+#     def mutation_frequency(self, request: Request, *args, **kwargs):
+#         country_list = request.query_params.getlist("countries")
+#         sequencing_tech_list = request.query_params.getlist("seq_techs")
+#         gene_list = request.query_params.getlist("genes")
+#         include_partial = bool(request.query_params.get("include_partial"))
+#         reference_value = request.query_params.get("reference_value")
+#         min_nb_freq = request.query_params.get("min_nb_freq")
 
-class AAMutationViewSet(
-    viewsets.GenericViewSet,
-    generics.mixins.ListModelMixin,
-):
-    # input sequencing_tech list, country list, gene list, include partial bool,
-    # reference_value int, min_nb_freq int = 1?
-    queryset = models.Replicon.objects.all()
+#         samples_query = models.Sample.objects.filter(
+#             sample2property__property__name="COUNTRY",
+#             sample2property__value_text__in=country_list,
+#         ).filter(
+#             sample2property__property__name="SEQ_TECH",
+#             sample2property__value_text__in=sequencing_tech_list,
+#         )
+#         if not include_partial:
+#             samples_query.filter(
+#                 sample2property__property__name="GENOME_COMPLETENESS",
+#                 sample2property__value_text="complete",
+#             )
+#         mutation_query = (
+#             models.Mutation.objects.filter(
+#                 element__molecule__reference__accession=reference_value
+#             )
+#             .filter(alignments__sequence__sample_set__in=samples_query)
+#             .filter(element__symbol__in=gene_list)
+#             .annotate(mutation_count=Count("alignments__sequence__sample_set"))
+#             .filter(mutation_count__gte=min_nb_freq)
+#             .order_by("-mutation_count")
+#         )
+#         response = [
+#             {
+#                 "symbol": mutation.element.symbol,
+#                 "mutation": mutation.label,
+#                 "count": mutation.mutation_count,
+#             }
+#             for mutation in mutation_query
+#         ]
 
-    @action(detail=False, methods=["get"])
-    def mutation_frequency(self, request: Request, *args, **kwargs):
-        country_list = request.query_params.getlist("countries")
-        sequencing_tech_list = request.query_params.getlist("seq_techs")
-        gene_list = request.query_params.getlist("genes")
-        include_partial = bool(request.query_params.get("include_partial"))
-        reference_value = request.query_params.get("reference_value")
-        min_nb_freq = request.query_params.get("min_nb_freq")
-
-        samples_query = models.Sample.objects.filter(
-            sample2property__property__name="COUNTRY",
-            sample2property__value_text__in=country_list,
-        ).filter(
-            sample2property__property__name="SEQ_TECH",
-            sample2property__value_text__in=sequencing_tech_list,
-        )
-        if not include_partial:
-            samples_query.filter(
-                sample2property__property__name="GENOME_COMPLETENESS",
-                sample2property__value_text="complete",
-            )
-        mutation_query = (
-            models.Mutation.objects.filter(
-                element__molecule__reference__accession=reference_value
-            )
-            .filter(alignments__sequence__sample_set__in=samples_query)
-            .filter(element__symbol__in=gene_list)
-            .annotate(mutation_count=Count("alignments__sequence__sample_set"))
-            .filter(mutation_count__gte=min_nb_freq)
-            .order_by("-mutation_count")
-        )
-        response = [
-            {
-                "symbol": mutation.element.symbol,
-                "mutation": mutation.label,
-                "count": mutation.mutation_count,
-            }
-            for mutation in mutation_query
-        ]
-
-        return Response(data=response, status=status.HTTP_200_OK)
+#         return Response(data=response, status=status.HTTP_200_OK)
 
 
 class ResourceViewSet(viewsets.ViewSet):

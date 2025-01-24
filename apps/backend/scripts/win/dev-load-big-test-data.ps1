@@ -1,6 +1,6 @@
 try {
     scripts\win\dev-manage.ps1 flush --noinput
-    scripts\win\dev-manage.ps1 loaddata initial_auth test_data_big
+    scripts\win\dev-manage.ps1 loaddata initial_auth test_data_1000
     scripts\win\dev-copy-gbk.ps1 -SourceFile "test-data\MN908947.nextclade.gb" -DestinationRepo ".\work\sonar\data\import\gbks\"
 }
 catch {

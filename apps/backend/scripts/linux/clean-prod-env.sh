@@ -58,7 +58,7 @@ fi
 $SCRIPTPATH/dc-prod.sh up -d $DC_ARGS
 
 if [ $TEST_DATA -eq 0 ]; then
-  $SCRIPTPATH/prod-manage.sh loaddata initial_auth test_data_sm
+  $SCRIPTPATH/prod-manage.sh loaddata initial_auth test_data_10
 else
   $SCRIPTPATH/prod-manage.sh loaddata initial_auth
 fi

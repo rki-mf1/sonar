@@ -114,7 +114,7 @@ def test_match_no_tsv(caplog, api_url):
 def test_match_no_gb(caplog, api_url):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         with caplog.at_level(logging.ERROR):
-            run_cli(f"add-ref --db {api_url} --gb where.is.gb.gbk")
-    assert "The file 'where.is.gb.gbk' does not exist" in caplog.text
+            run_cli(f"add-ref --db {api_url} --gb where.is.gb.gb")
+    assert "The file 'where.is.gb.gb' does not exist" in caplog.text
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1

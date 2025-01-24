@@ -183,23 +183,25 @@ def read_var_file(var_file: str, exclude_var_type: str = "", showNX: bool = Fals
         for line in handle:
             if line == "//":
                 break
+            if line.startswith("#"):
+                continue
             vardat = line.strip("\r\n").split("\t")
-            if vardat[6] == exclude_var_type:
+            if vardat[7] == exclude_var_type:
                 continue
             else:
 
-                if not showNX and (vardat[3] == "N" or vardat[3] == "X"):
+                if not showNX and (vardat[4] == "N" or vardat[4] == "X"):
                     continue
 
                 iter_dna_list.append(
                     {
-                        "variant.ref": vardat[0],  # ref
-                        "variant.alt": vardat[3],  # alt
-                        "variant.start": int(vardat[1]),  # start
-                        "variant.end": int(vardat[2]),  # end
-                        "variant.reference": vardat[4],  # ref
-                        "variant.lable": vardat[5],  # lable
-                        "variant.type": vardat[6],  # type
+                        "variant.ref": vardat[1],  # ref
+                        "variant.alt": vardat[4],  # alt
+                        "variant.start": int(vardat[2]),  # start
+                        "variant.end": int(vardat[3]),  # end
+                        "variant.reference": vardat[5],  # ref
+                        "variant.lable": vardat[6],  # lable
+                        "variant.type": vardat[7],  # type
                     }  # frameshift
                 )
     return iter_dna_list

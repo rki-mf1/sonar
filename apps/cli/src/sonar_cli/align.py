@@ -1,3 +1,4 @@
+from itertools import count
 import os
 import re
 import sys
@@ -82,9 +83,9 @@ class sonarAligner:
         #        alignment[0], alignment[1], cigar, source_acc, data["cds_file"]
         #    )
         # ]
-
-        vars = "\n".join(["\t".join(x) for x in nuc_vars])
-
+        # empty string for parent_id row
+        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
+        # print(nuc_vars)
         if nuc_vars:
             # create AA mutation
             aa_vars = "\n".join(
@@ -98,10 +99,44 @@ class sonarAligner:
 
         try:
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         except OSError:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         return
 
@@ -140,8 +175,8 @@ class sonarAligner:
                 qryseq, refseq, cigar, source_acc, data["cds_file"]
             )
         ]
-
-        vars = "\n".join(["\t".join(x) for x in nuc_vars])
+        # empty string for parent_id row
+        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
         if nuc_vars:
             # create AA mutation
             aa_vars = "\n".join(
@@ -153,10 +188,44 @@ class sonarAligner:
             vars += "\n"
         try:
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         except OSError:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
+                handle.write(
+                    "#"
+                    + "\t".join(
+                        [
+                            "id",
+                            "ref",
+                            "start",
+                            "end",
+                            "alt",
+                            "accs",
+                            "label",
+                            "type",
+                            "parent_id",
+                        ]
+                    )
+                    + "\n"
+                )
                 handle.write(vars + "//")
         return
 
@@ -175,6 +244,8 @@ class sonarAligner:
         ref_seq += " "
         i = 0
         offset = 0
+        id_counter = count(1)  # Create an incremental counter starting from 1 (ID)
+
         while i < query_length:
             # match
             if qry_seq[i] == ref_seq[i]:
@@ -190,7 +261,7 @@ class sonarAligner:
                     label = "del:" + str(start + 1)
                 else:
                     label = "del:" + str(start + 1) + "-" + str(end)
-                yield ref_seq[s : i + 1], str(start), str(
+                yield str(next(id_counter)), ref_seq[s : i + 1], str(start), str(
                     end
                 ), " ", elem_acc, label, "nt"
 
@@ -207,18 +278,18 @@ class sonarAligner:
                     ref = ref_seq[s]
                     alt = qry_seq[s : i + 1]
                 pos = s - offset + 1
-                yield ref, str(pos - 1), str(pos), alt, elem_acc, ref + str(
+                yield str(next(id_counter)), ref, str(pos - 1), str(
                     pos
-                ) + alt, "nt"
+                ), alt, elem_acc, ref + str(pos) + alt, "nt"
                 offset += i - s
             # snps
             else:
                 ref = ref_seq[i]
                 alt = qry_seq[i]
                 pos = i - offset + 1
-                yield ref, str(pos - 1), str(pos), alt, elem_acc, ref + str(
+                yield str(next(id_counter)), ref, str(pos - 1), str(
                     pos
-                ) + alt, "nt"
+                ), alt, elem_acc, ref + str(pos) + alt, "nt"
             i += 1
 
     def translate(self, seq):
@@ -253,7 +324,7 @@ class sonarAligner:
         self,
         nuc_vars: List[Tuple],
         df: pd.DataFrame,
-    ) -> Generator[Tuple[str, str, str, str, str, str, str], None, None]:
+    ) -> Generator[Tuple[str, str, str, str, str, str, str, str], None, None]:
         """
         Lift over nucleotide variants to protein (amino acid) variants.
 
@@ -263,9 +334,9 @@ class sonarAligner:
             A list of tuples, where each tuple contains reference base,
                 alternate base, start position, end position,
               frameshift indicator, and mutation label for each variant.
-               exmaple [('G', '28680', '28681', 'K', 'MN908947.3', 'G28681K', 'nt'),
-               ('T', '28692', '28693', 'Y', 'MN908947.3', 'T28693Y', 'nt'),
-               ('G', '28880', '28881', 'A', 'MN908947.3', 'G28881A', 'nt')]
+               exmaple [(1, 'G', '28680', '28681', 'K', 'MN908947.3', 'G28681K', 'nt'),
+               (2, 'T', '28692', '28693', 'Y', 'MN908947.3', 'T28693Y', 'nt'),
+               (3, 'G', '28880', '28881', 'A', 'MN908947.3', 'G28881A', 'nt')]
         df: pandas dataframe
             contain the original CDS position,NT and AA with respect to the reference.
 
@@ -273,8 +344,8 @@ class sonarAligner:
         -------
         Tuple
             A tuple containing
-            AA_ref Start_pos END_pos AA_alt Reference   Label   Mutation_Type
-            H       39      40      X       QHD43422.1      H40X    cds
+            ID AA_ref Start_pos END_pos AA_alt Reference   Label   Mutation_Type parentID
+            4, H       39      40      X       QHD43422.1      H40X    cds  1
         """
         # updating the DF with alternate nucleotides (alt)
         # for positions specified in the nuc_var range.
@@ -304,6 +375,19 @@ class sonarAligner:
         #         mask = np.isin(df["nucPos3"], positions)
         #         df.loc[mask, "alt3"] = alt
 
+        # Convert nuc_vars into a DataFrame to facilitate adding unique IDs
+        nuc_vars_df = pd.DataFrame(
+            nuc_vars,
+            columns=["ID", "ref", "start", "end", "alt", "elem_acc", "label", "type"],
+        )
+        nuc_vars_df[["start", "end"]] = nuc_vars_df[["start", "end"]].astype(int)
+        nuc_vars_df["ID"] = nuc_vars_df["ID"].astype(int)
+        nuc_vars_df["parentID"] = nuc_vars_df[
+            "ID"
+        ]  # range(1, len(nuc_vars_df) + 1)  # Add unique IDs for NT variants
+        # Start amino acid (AA) IDs after the last nucleotide (NT) ID
+        next_aa_id = nuc_vars_df["ID"].max() + 1 if not nuc_vars_df.empty else 1
+
         # newer version
         nucPos1 = df["nucPos1"].to_numpy(dtype=np.int32)
         nucPos2 = df["nucPos2"].to_numpy(dtype=np.int32)
@@ -314,8 +398,8 @@ class sonarAligner:
 
         for nuc_var in nuc_vars:
             if nuc_var[3] != ".":
-                alt = "-" if nuc_var[3] == " " else nuc_var[3]
-                start, end = map(int, (nuc_var[1], nuc_var[2]))
+                alt = "-" if nuc_var[4] == " " else nuc_var[4]
+                start, end = map(int, (nuc_var[2], nuc_var[3]))
 
                 # Boolean indexing directly
                 mask1 = (nucPos1 >= start) & (nucPos1 < end)
@@ -369,11 +453,32 @@ class sonarAligner:
             for row in df.loc[(df["altAa"] != "-") & (df["altAa"] != "")].itertuples():
                 pos = row.aaPos + 1
                 label = row.aa + str(pos) + row.altAa
-
-                yield row.aa, str(pos - 1), str(pos), row.altAa, str(
+                # Match CDS variant to  NT variant
+                matching_nt = nuc_vars_df[
+                    (
+                        (nuc_vars_df["start"] <= row.nucPos1)
+                        & (nuc_vars_df["end"] > row.nucPos1)
+                    )
+                    | (
+                        (nuc_vars_df["start"] <= row.nucPos2)
+                        & (nuc_vars_df["end"] > row.nucPos2)
+                    )
+                    | (
+                        (nuc_vars_df["start"] <= row.nucPos3)
+                        & (nuc_vars_df["end"] > row.nucPos3)
+                    )
+                ]
+                parent_id = (
+                    ",".join(matching_nt["parentID"].astype(str))
+                    if not matching_nt.empty
+                    else ""
+                )
+                # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+                yield str(next_aa_id), row.aa, str(pos - 1), str(pos), row.altAa, str(
                     row.accession
-                ), label, "cds"
-
+                ), label, "cds", parent_id
+                next_aa_id += 1
+            # frameshift?
             # for deletions
             for index, row in (
                 df.loc[(df["altAa"] == "-")].sort_values(["elemid", "aaPos"]).iterrows()
@@ -392,12 +497,31 @@ class sonarAligner:
                         label = "del:" + str(start + 1)
                     else:
                         label = "del:" + str(start + 1) + "-" + str(end)
-
-                    yield prev_row["aa"], str(start), str(end), " ", str(
-                        prev_row["accession"]
-                    ), label, "cds"
+                    matching_nt = nuc_vars_df[
+                        (
+                            (nuc_vars_df["start"] <= row.nucPos1)
+                            & (nuc_vars_df["end"] > row.nucPos1)
+                        )
+                        | (
+                            (nuc_vars_df["start"] <= row.nucPos2)
+                            & (nuc_vars_df["end"] > row.nucPos2)
+                        )
+                        | (
+                            (nuc_vars_df["start"] <= row.nucPos3)
+                            & (nuc_vars_df["end"] > row.nucPos3)
+                        )
+                    ]
+                    parent_id = (
+                        ",".join(matching_nt["parentID"].astype(str))
+                        if not matching_nt.empty
+                        else ""
+                    )
+                    # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+                    yield str(next_aa_id), prev_row["aa"], str(start), str(
+                        end
+                    ), " ", str(prev_row["accession"]), label, "cds", parent_id
                     prev_row = row
-
+                    next_aa_id += 1
         if prev_row is not None:
             start = prev_row["aaPos"]
             end = prev_row["aaPos"] + len(prev_row["aa"])
@@ -405,10 +529,31 @@ class sonarAligner:
                 label = "del:" + str(start + 1)
             else:
                 label = "del:" + str(start + 1) + "-" + str(end)
+            matching_nt = nuc_vars_df[
+                (
+                    (nuc_vars_df["start"] <= row.nucPos1)
+                    & (nuc_vars_df["end"] > row.nucPos1)
+                )
+                | (
+                    (nuc_vars_df["start"] <= row.nucPos2)
+                    & (nuc_vars_df["end"] > row.nucPos2)
+                )
+                | (
+                    (nuc_vars_df["start"] <= row.nucPos3)
+                    & (nuc_vars_df["end"] > row.nucPos3)
+                )
+            ]
+            # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+            parent_id = (
+                ",".join(matching_nt["parentID"].astype(str))
+                if not matching_nt.empty
+                else ""
+            )
 
-            yield prev_row["aa"], str(start), str(end), " ", str(
+            yield str(next_aa_id), prev_row["aa"], str(start), str(end), " ", str(
                 prev_row["accession"]
-            ), label, "cds"
+            ), label, "cds", parent_id
+            next_aa_id += 1
 
     def extract_vars_from_cigar(  # noqa: C901
         self, qryseq, refseq, cigar, elemid, cds_file
@@ -423,6 +568,7 @@ class sonarAligner:
         qrylen = len(qryseq)
         prefix = False
         vars = []
+        id_counter = count(1)  # Create an incremental counter starting from 1 (ID)
 
         for match in self.cigar_pattern.finditer(cigar):
             vartype = match.group(2)
@@ -440,6 +586,7 @@ class sonarAligner:
 
                     vars.append(
                         (
+                            str(next(id_counter)),
                             ref,
                             str(refpos),
                             str(refpos + 1),
@@ -458,6 +605,7 @@ class sonarAligner:
                 ) or qrypos == qrylen:  # deletion at sequence terminus
                     vars.append(
                         (
+                            str(next(id_counter)),
                             refseq[refpos : refpos + varlen],
                             str(refpos),
                             str(refpos + varlen),
@@ -472,6 +620,7 @@ class sonarAligner:
 
                     vars.append(
                         (
+                            str(next(id_counter)),
                             refseq[refpos],
                             str(refpos),
                             str(refpos + 1),
@@ -489,6 +638,7 @@ class sonarAligner:
 
                     vars.append(
                         (
+                            str(next(id_counter)),
                             refseq[refpos : refpos + varlen],
                             str(refpos),
                             str(refpos + varlen),
@@ -518,6 +668,7 @@ class sonarAligner:
                     # )
                 vars.append(
                     (
+                        str(next(id_counter)),
                         ref,
                         str(refpos - 1),
                         str(refpos),

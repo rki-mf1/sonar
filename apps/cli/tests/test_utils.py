@@ -6,7 +6,7 @@ LOGGER = MagicMock()
 
 
 def test_get_job_byID(monkeypatch, api_url):
-    job_id = "cli_fail-job"
+    job_id = "cli_failed-job"
     expected_status = "Failed"
     monkeypatch.setattr("sonar_cli.utils1", sonarUtils1)
 

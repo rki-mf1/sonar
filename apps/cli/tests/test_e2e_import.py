@@ -9,8 +9,7 @@ from .conftest import run_cli
 @pytest.mark.order(1)
 def test_add_cov19_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
-    # new_ref_file = "mpox/NC_063383.1.gb"
-    new_ref_file = "covid19/ref.cov19.gb"
+    new_ref_file = "covid19/MN908947.nextclade.gb"
     code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
@@ -54,7 +53,7 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(4)
 def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
-    """Test import command using parasail method"""
+    """Test import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     # monkeypatch.setattr(
     #     "mpire.WorkerPool.map_unordered",

@@ -27,9 +27,15 @@ class PropertySerializer(serializers.ModelSerializer):
         filter_backends = [DjangoFilterBackend]
 
 
-class MutationSerializer(serializers.ModelSerializer):
+class AminoAcidMutationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Mutation
+        model = models.AminoAcidMutation
+        fields = "__all__"
+
+
+class NucleotideMutationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.NucleotideMutation
         fields = "__all__"
 
 
@@ -176,7 +182,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
     genomic_profiles = serializers.SerializerMethodField()
     proteomic_profiles = serializers.SerializerMethodField()
-    # annotation_profiles = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Sample
@@ -188,7 +193,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
             "properties",
             "genomic_profiles",
             "proteomic_profiles",
-            # "annotation_profiles",
             "init_upload_date",
             "last_update_date",
         ]
@@ -216,13 +220,12 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
         for alignment in obj.sequence.alignments.all():
             for mutation in alignment.genomic_profiles:
-
-                dict[self.create_NT_format(mutation)] = [
-                    str(annotation2mutation.annotation)
-                    for annotation2mutation in alignment.alignment_annotations
-                    if annotation2mutation.mutation == mutation
-                ]
-
+                annotations = []
+                for nucleotide_mutation in alignment.nucleotide_mutations.all():
+                    if nucleotide_mutation == mutation:
+                        for annotation in nucleotide_mutation.alignment_annotations:
+                            annotations.append(str(annotation))
+                dict[self.create_NT_format(mutation)] = annotations
         return dict
 
     def get_proteomic_profiles(self, obj: models.Sample):
@@ -233,7 +236,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                 try:
                     label = ""
                     # SNP and INS
-                    if mutation.alt != None:
+                    if mutation.alt != "":
                         label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
                     else:  # DEL
                         if mutation.end - mutation.start == 1:
@@ -258,10 +261,10 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     continue
         return list
 
-    def create_NT_format(self, mutation: models.Mutation):
+    def create_NT_format(self, mutation: models.NucleotideMutation):
         label = ""
         # SNP and INS
-        if mutation.alt != None:
+        if mutation.alt != "":
             label = f"{mutation.ref}{mutation.end}{mutation.alt}"
 
         else:  # DEL
