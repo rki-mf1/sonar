@@ -6,6 +6,7 @@ from typing import Any
 from typing import Optional
 
 from django.utils import timezone
+import pandas as pd
 
 from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
@@ -276,35 +277,34 @@ class SampleImport:
             .joinpath(file_name[:2])
             .joinpath(file_name)
         )
-        with open(self.var_file_path, "r") as handle:
-            for line in handle:
-                if line.startswith("#"):
-                    continue
-                if line == "//":
-                    break
-                var_raw = line.strip("\r\n").split("\t")
-                # Extract the mutation (alt)
-                alt = None if var_raw[4] == " " else var_raw[4]
-                # Skip rows with 'N' or 'X' if include_NX is False
-                # handle both INSERTION (A2324NNNN) and SNV
-                if not include_nx and alt is not None and ("N" in alt or "X" in alt):
-                    continue
+        var_df = pd.read_csv(self.var_file_path, sep="\t")
+        pd.set_option("display.max_columns", None)
+        var_df[["ref", "alt"]] = var_df[["ref", "alt"]].fillna("").replace({" ": ""})
 
-                yield VarRaw(
-                    int(var_raw[0]),  # id
-                    var_raw[1],  # ref
-                    int(var_raw[2]),  # start
-                    int(var_raw[3]),  # end
-                    None if var_raw[4] == " " else var_raw[4],  # alt
-                    var_raw[5],  # replicon_or_cds_accession
-                    # var_raw[6],  # label
-                    var_raw[7],  # type
-                    (
-                        [int(x) for x in var_raw[8].split(",")]
-                        if var_raw[8] != ""
-                        else None
-                    ),  # parent_id
-                )
+        if not include_nx:
+            # remove all ref containing Ns for nt, or X for cds
+            var_df = var_df[
+                ~((var_df["type"] == "nt") & var_df["alt"].str.contains("N", na=False))
+            ]
+            var_df = var_df[
+                ~((var_df["type"] == "cds") & var_df["alt"].str.contains("X", na=False))
+            ]
+
+        for _, row in var_df.iterrows():
+            yield VarRaw(
+                int(row["#id"]),
+                row["ref"],
+                int(row["start_pos"]),
+                int(row["end_pos"]),
+                row["alt"],
+                row["reference_acc"],
+                row["type"],
+                (
+                    [int(x) for x in row["parent_id"].split(",")]
+                    if pd.notna(row["parent_id"])
+                    else None
+                ),
+            )
 
     def _import_seq(self, path):
         file_name = pathlib.Path(path).name

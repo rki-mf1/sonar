@@ -62,8 +62,7 @@ class sonarAligner:
                 with open(data["var_file"], "r") as handle:
                     for line in handle:
                         pass
-                    if line == "//":
-                        return True
+                    return True
 
         source_acc = str(data["source_acc"])
         # self.log("data:" + str(data))
@@ -105,10 +104,10 @@ class sonarAligner:
                         [
                             "id",
                             "ref",
-                            "start",
-                            "end",
+                            "start_pos",
+                            "end_pos",
                             "alt",
-                            "accs",
+                            "reference_acc",
                             "label",
                             "type",
                             "parent_id",
@@ -116,7 +115,7 @@ class sonarAligner:
                     )
                     + "\n"
                 )
-                handle.write(vars + "//")
+                handle.write(vars)
         except OSError:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
@@ -126,10 +125,10 @@ class sonarAligner:
                         [
                             "id",
                             "ref",
-                            "start",
-                            "end",
+                            "start_pos",
+                            "end_pos",
                             "alt",
-                            "accs",
+                            "reference_acc",
                             "label",
                             "type",
                             "parent_id",
@@ -137,7 +136,7 @@ class sonarAligner:
                     )
                     + "\n"
                 )
-                handle.write(vars + "//")
+                handle.write(vars)
         return
 
     def process_cached_v2(self, data: dict, method: int):  # noqa: C901
@@ -153,8 +152,7 @@ class sonarAligner:
                 with open(data["var_file"], "r") as handle:
                     for line in handle:
                         pass
-                if line == "//":
-                    return True
+                return True
 
         # elemid = str(data["sourceid"])
         source_acc = str(data["source_acc"])
@@ -194,10 +192,10 @@ class sonarAligner:
                         [
                             "id",
                             "ref",
-                            "start",
-                            "end",
+                            "start_pos",
+                            "end_pos",
                             "alt",
-                            "accs",
+                            "reference_acc",
                             "label",
                             "type",
                             "parent_id",
@@ -205,7 +203,7 @@ class sonarAligner:
                     )
                     + "\n"
                 )
-                handle.write(vars + "//")
+                handle.write(vars)
         except OSError:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
             with open(data["var_file"], "w") as handle:
@@ -215,10 +213,10 @@ class sonarAligner:
                         [
                             "id",
                             "ref",
-                            "start",
-                            "end",
+                            "start_pos",
+                            "end_pos",
                             "alt",
-                            "accs",
+                            "reference_acc",
                             "label",
                             "type",
                             "parent_id",
@@ -226,7 +224,7 @@ class sonarAligner:
                     )
                     + "\n"
                 )
-                handle.write(vars + "//")
+                handle.write(vars)
         return
 
     def extract_vars(self, qry_seq, ref_seq, elem_acc):
@@ -344,7 +342,7 @@ class sonarAligner:
         -------
         Tuple
             A tuple containing
-            ID AA_ref Start_pos END_pos AA_alt Reference   Label   Mutation_Type parentID
+            id ref start_pos end_pos alt reference_acc   label   type parent_id
             4, H       39      40      X       QHD43422.1      H40X    cds  1
         """
         # updating the DF with alternate nucleotides (alt)
@@ -378,15 +376,25 @@ class sonarAligner:
         # Convert nuc_vars into a DataFrame to facilitate adding unique IDs
         nuc_vars_df = pd.DataFrame(
             nuc_vars,
-            columns=["ID", "ref", "start", "end", "alt", "elem_acc", "label", "type"],
+            columns=[
+                "id",
+                "ref",
+                "start_pos",
+                "end_pos",
+                "alt",
+                "reference_acc",
+                "label",
+                "type",
+            ],
         )
-        nuc_vars_df[["start", "end"]] = nuc_vars_df[["start", "end"]].astype(int)
-        nuc_vars_df["ID"] = nuc_vars_df["ID"].astype(int)
-        nuc_vars_df["parentID"] = nuc_vars_df[
-            "ID"
-        ]  # range(1, len(nuc_vars_df) + 1)  # Add unique IDs for NT variants
-        # Start amino acid (AA) IDs after the last nucleotide (NT) ID
-        next_aa_id = nuc_vars_df["ID"].max() + 1 if not nuc_vars_df.empty else 1
+        nuc_vars_df[["start_pos", "end_pos"]] = nuc_vars_df[
+            ["start_pos", "end_pos"]
+        ].astype(int)
+        nuc_vars_df["id"] = nuc_vars_df["id"].astype(int)
+        nuc_vars_df["parent_id"] = nuc_vars_df["id"]
+        # range(1, len(nuc_vars_df) + 1)  # Add unique IDs for NT variants
+        # Start amino acid (AA) ids after the last nucleotide (NT) id
+        next_aa_id = nuc_vars_df["id"].max() + 1 if not nuc_vars_df.empty else 1
 
         # newer version
         nucPos1 = df["nucPos1"].to_numpy(dtype=np.int32)
@@ -456,24 +464,24 @@ class sonarAligner:
                 # Match CDS variant to  NT variant
                 matching_nt = nuc_vars_df[
                     (
-                        (nuc_vars_df["start"] <= row.nucPos1)
-                        & (nuc_vars_df["end"] > row.nucPos1)
+                        (nuc_vars_df["start_pos"] <= row.nucPos1)
+                        & (nuc_vars_df["end_pos"] > row.nucPos1)
                     )
                     | (
-                        (nuc_vars_df["start"] <= row.nucPos2)
-                        & (nuc_vars_df["end"] > row.nucPos2)
+                        (nuc_vars_df["start_pos"] <= row.nucPos2)
+                        & (nuc_vars_df["end_pos"] > row.nucPos2)
                     )
                     | (
-                        (nuc_vars_df["start"] <= row.nucPos3)
-                        & (nuc_vars_df["end"] > row.nucPos3)
+                        (nuc_vars_df["start_pos"] <= row.nucPos3)
+                        & (nuc_vars_df["end_pos"] > row.nucPos3)
                     )
                 ]
                 parent_id = (
-                    ",".join(matching_nt["parentID"].astype(str))
+                    ",".join(matching_nt["parent_id"].astype(str))
                     if not matching_nt.empty
                     else ""
                 )
-                # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+                # 'id','ref','start_pos', 'end_pos', 'alt', 'reference_acc', 'label', 'type', 'parent_id'
                 yield str(next_aa_id), row.aa, str(pos - 1), str(pos), row.altAa, str(
                     row.accession
                 ), label, "cds", parent_id
@@ -499,24 +507,24 @@ class sonarAligner:
                         label = "del:" + str(start + 1) + "-" + str(end)
                     matching_nt = nuc_vars_df[
                         (
-                            (nuc_vars_df["start"] <= row.nucPos1)
-                            & (nuc_vars_df["end"] > row.nucPos1)
+                            (nuc_vars_df["start_pos"] <= row.nucPos1)
+                            & (nuc_vars_df["end_pos"] > row.nucPos1)
                         )
                         | (
-                            (nuc_vars_df["start"] <= row.nucPos2)
-                            & (nuc_vars_df["end"] > row.nucPos2)
+                            (nuc_vars_df["start_pos"] <= row.nucPos2)
+                            & (nuc_vars_df["end_pos"] > row.nucPos2)
                         )
                         | (
-                            (nuc_vars_df["start"] <= row.nucPos3)
-                            & (nuc_vars_df["end"] > row.nucPos3)
+                            (nuc_vars_df["start_pos"] <= row.nucPos3)
+                            & (nuc_vars_df["end_pos"] > row.nucPos3)
                         )
                     ]
                     parent_id = (
-                        ",".join(matching_nt["parentID"].astype(str))
+                        ",".join(matching_nt["parent_id"].astype(str))
                         if not matching_nt.empty
                         else ""
                     )
-                    # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+                    # 'id','ref','start_pos', 'end_pos', 'alt', 'reference_acc', 'label', 'type', 'parent_id'
                     yield str(next_aa_id), prev_row["aa"], str(start), str(
                         end
                     ), " ", str(prev_row["accession"]), label, "cds", parent_id
@@ -531,21 +539,21 @@ class sonarAligner:
                 label = "del:" + str(start + 1) + "-" + str(end)
             matching_nt = nuc_vars_df[
                 (
-                    (nuc_vars_df["start"] <= row.nucPos1)
-                    & (nuc_vars_df["end"] > row.nucPos1)
+                    (nuc_vars_df["start_pos"] <= row.nucPos1)
+                    & (nuc_vars_df["end_pos"] > row.nucPos1)
                 )
                 | (
-                    (nuc_vars_df["start"] <= row.nucPos2)
-                    & (nuc_vars_df["end"] > row.nucPos2)
+                    (nuc_vars_df["start_pos"] <= row.nucPos2)
+                    & (nuc_vars_df["end_pos"] > row.nucPos2)
                 )
                 | (
-                    (nuc_vars_df["start"] <= row.nucPos3)
-                    & (nuc_vars_df["end"] > row.nucPos3)
+                    (nuc_vars_df["start_pos"] <= row.nucPos3)
+                    & (nuc_vars_df["end_pos"] > row.nucPos3)
                 )
             ]
-            # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+            # 'id','ref','start_pos', 'end_pos', 'alt', 'reference_acc', 'label', 'type', 'parent_id'
             parent_id = (
-                ",".join(matching_nt["parentID"].astype(str))
+                ",".join(matching_nt["parent_id"].astype(str))
                 if not matching_nt.empty
                 else ""
             )
@@ -568,7 +576,7 @@ class sonarAligner:
         qrylen = len(qryseq)
         prefix = False
         vars = []
-        id_counter = count(1)  # Create an incremental counter starting from 1 (ID)
+        id_counter = count(1)  # Create an incremental counter starting from 1 (id)
 
         for match in self.cigar_pattern.finditer(cigar):
             vartype = match.group(2)
