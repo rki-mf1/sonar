@@ -69,8 +69,6 @@ class sonarAligner:
         # self.log("data:" + str(data))
         # alignment = self.align(data["seq_file"], data["ref_file"])
         alignment = align_MAFFT(data["mafft_seqfile"])
-        # LOGGER.debug(alignment[0][0:20]) qry
-        # priLOGGER.debugnt(alignment[1][0:20]) ref
 
         # NOTE: this line was already performant
         nuc_vars = [x for x in self.extract_vars(*alignment, elem_acc=source_acc)]
