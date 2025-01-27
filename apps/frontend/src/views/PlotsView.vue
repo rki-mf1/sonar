@@ -502,19 +502,19 @@ export default {
     },
     lineage_grouped_barData() {
       const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_grouped_bar_chart']
+        ? this.samplesStore.filteredStatistics["lineage_grouped_bar_chart"]
         : [];
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData();
       }
-      const lineages = [...new Set(_data.map(item => item.lineage_group))];
-      const weeks = [...new Set(_data.map(item => item.week))];
+      const lineages = [...new Set(_data.map((item) => item.lineage_group))];
+      const weeks = [...new Set(_data.map((item) => item.week))];
       const colors = this.generateColorPalette(lineages.length);
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: weeks.map(
           week =>
-            _data.find(item => item.week === week && item.lineage_group === lineage)?.percentage || 0
+            _data.find((item) => item.week === week && item.lineage_group === lineage)?.percentage || 0
         ),
         backgroundColor: colors[index],
         borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border

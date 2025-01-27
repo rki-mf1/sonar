@@ -201,6 +201,7 @@ export const useSamplesStore = defineStore('samples', {
             genomecomplete_chart: {},
             lineage_area_chart: [],
             lineage_bar_chart: [],
+            lineage_grouped_bar_chart: [],
             sequencing_tech: {},
             sequencing_reason: {},
             sample_type: { },
