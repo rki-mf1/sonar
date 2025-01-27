@@ -16,6 +16,7 @@ from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
 from django.db.models import Case
+from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import IntegerField
 from django.db.models import Min
@@ -24,9 +25,8 @@ from django.db.models import Prefetch
 from django.db.models import Q
 from django.db.models import QuerySet
 from django.db.models import Subquery
-from django.db.models import When
 from django.db.models import Value
-from django.db.models import CharField
+from django.db.models import When
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -688,15 +688,17 @@ class SampleViewSet(
             )
 
         return result
-    
+
     def get_weekly_lineage_grouped_percentage_bar_chart(self, queryset):
 
-        present_lineages = {entry['lineage'] for entry in queryset.values("lineage")}
+        present_lineages = {entry["lineage"] for entry in queryset.values("lineage")}
 
         # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
-        lineage_groups = {'.'.join(lineage.split('.')[:2]) for lineage in present_lineages}
+        lineage_groups = {
+            ".".join(lineage.split(".")[:2]) for lineage in present_lineages
+        }
         lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
- 
+
         # build mapping from sublineage to lineage_group
         lineage_to_group = {}
         for lineage_group in lineage_groups_model:
@@ -713,18 +715,23 @@ class SampleViewSet(
         queryset = queryset.annotate(
             lineage_group=Case(
                 *lineage_cases,
-                default=Value('Unknown'),
+                default=Value("Unknown"),
                 output_field=CharField(),
             )
         )
 
         weekly_data = (
-            queryset.values("year", "week", "lineage_group") 
+            queryset.values("year", "week", "lineage_group")
             .annotate(lineage_count=Count("lineage_group"))
             .order_by("year", "week", "lineage_group")
         )
 
-        week_totals = {item["week"]: item["total_count"] for item in queryset.values("week").annotate(total_count=Count("id")).order_by("week")}
+        week_totals = {
+            item["week"]: item["total_count"]
+            for item in queryset.values("week")
+            .annotate(total_count=Count("id"))
+            .order_by("week")
+        }
 
         result = []
         for item in weekly_data:
