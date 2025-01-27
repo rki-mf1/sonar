@@ -1194,21 +1194,21 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
 
     for row in rows:
         try:
-            if row["variant.start"] - 1 < 0:
+            if row["start"] - 1 < 0:
                 pre_ref = ""
             else:
-                pre_ref = selected_ref_seq[row["variant.start"] - 1]
+                pre_ref = selected_ref_seq[row["start"] - 1]
         except Exception as e:
             LOGGER.error(e)
             raise
 
         # Split out the data from each row
         chrom, pos, pre_ref, ref, alt, samples = (
-            row["variant.reference"],
-            row["variant.start"],
+            row["reference_acc"],
+            row["start"],
             pre_ref,
-            row["variant.ref"],
-            row["variant.alt"],
+            row["ref"],
+            row["alt"],
             sample_name,
         )
 
@@ -1250,10 +1250,10 @@ def _get_vcf_data(cursor) -> Dict:
         # Split out the data from each row
         chrom, pos, pre_ref, ref, alt, samples = (
             row["molecule.accession"],
-            row["variant.start"],
-            row["variant.pre_ref"],
-            row["variant.ref"],
-            row["variant.alt"],
+            row["start"],
+            row["pre_ref"],
+            row["ref"],
+            row["alt"],
             row["samples"],
         )
 

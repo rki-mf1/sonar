@@ -817,30 +817,15 @@ class sonarCache:
                 del sample_data["lift_file"]
                 if not sample_data["var_file"] is None:
                     # SECTION:ReadVar
-                    with open(sample_data["var_file"], "r") as handle:
-                        for line in handle:
-                            if line == "//":
-                                break
-                            if line.startswith("#"):
-                                continue
-                            vardat = line.strip("\r\n").split("\t")
-                            if vardat[7] == "cds":
-                                break
-                            iter_dna_list.append(
-                                {
-                                    "variant.ref": vardat[1],  # ref
-                                    "variant.alt": vardat[4],  # alt
-                                    "variant.start": int(vardat[2]),  # start
-                                    "variant.end": int(vardat[3]),  # end
-                                }  # frameshift
-                            )
-                        # NOTE: disable check feature because we stop at "NT"
-                        if line != "//" and False:
-                            sys.exit(
-                                "cache error: corrupted file ("
-                                + sample_data["var_file"]
-                                + ")"
-                            )
+                    var_df = pd.read_csv(
+                        sample_data["var_file"],
+                        sep="\t",
+                        dtype={"start": int, "end": int},
+                    )
+                    nt_df = var_df[(var_df["type"] == "nt")]
+                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                        "records"
+                    )
                     # SECTION: Paranoid
                     if not sample_data["seqhash"] is None:
                         # Get Reference sequence.
@@ -853,20 +838,16 @@ class sonarCache:
                         sample_name = sample_data["name"]
 
                         for vardata in iter_dna_list:
-                            if vardata["variant.alt"] in gaps:
-                                for i in range(
-                                    vardata["variant.start"], vardata["variant.end"]
-                                ):
+                            if vardata["alt"] in gaps:
+                                for i in range(vardata["start"], vardata["end"]):
                                     seq[i] = ""
-                            elif vardata["variant.alt"] == ".":
-                                for i in range(
-                                    vardata["variant.start"], vardata["variant.end"]
-                                ):
+                            elif vardata["alt"] == ".":
+                                for i in range(vardata["start"], vardata["end"]):
                                     seq[i] = ""
-                            elif vardata["variant.start"] >= 0:
-                                seq[vardata["variant.start"]] = vardata["variant.alt"]
+                            elif vardata["start"] >= 0:
+                                seq[vardata["start"]] = vardata["alt"]
                             else:
-                                prefix = vardata["variant.alt"]
+                                prefix = vardata["alt"]
 
                         # seq is now a restored version from variant dict.
                         seq = prefix + "".join(seq)

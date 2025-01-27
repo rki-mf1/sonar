@@ -278,7 +278,6 @@ class SampleImport:
             .joinpath(file_name)
         )
         var_df = pd.read_csv(self.var_file_path, sep="\t")
-        pd.set_option("display.max_columns", None)
         var_df[["ref", "alt"]] = var_df[["ref", "alt"]].fillna("").replace({" ": ""})
 
         if not include_nx:
@@ -292,10 +291,10 @@ class SampleImport:
 
         for _, row in var_df.iterrows():
             yield VarRaw(
-                int(row["#id"]),
+                int(row["id"]),
                 row["ref"],
-                int(row["start_pos"]),
-                int(row["end_pos"]),
+                int(row["start"]),
+                int(row["end"]),
                 row["alt"],
                 row["reference_acc"],
                 row["type"],
