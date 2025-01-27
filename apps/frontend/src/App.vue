@@ -1,19 +1,21 @@
 <template>
-
   <body>
     <main>
       <header>
-        <div class="flex  flex-wrap justify-content-between">
+        <div class="flex flex-wrap justify-content-between">
           <div class="flex align-items-center justify-content-center">
-            <div style="font-size: 2rem; color: var(--text-color);">
-              Sonar
-            </div>
+            <div style="font-size: 2rem; color: var(--text-color)">Sonar</div>
           </div>
           <div class="flex align-items-center justify-content-center">
-            <Menubar :model="menuItems">
+            <PrimeMenubar :model="menuItems">
               <template #item="{ item, props, hasSubmenu }">
                 <router-link v-if="item.route" v-slot="{ href, navigate }" :to="item.route" custom>
-                  <a class="flex align-items-center gap-1" :href="href" v-bind="props.action" @click="navigate">
+                  <a
+                    class="flex align-items-center gap-1"
+                    :href="href"
+                    v-bind="props.action"
+                    @click="navigate"
+                  >
                     <span :class="item.icon" />
                     <span class="ml-1">{{ item.label }}</span>
                   </a>
@@ -24,7 +26,7 @@
                   <span v-if="hasSubmenu" class="pi pi-fw pi-angle-down" />
                 </a>
               </template>
-            </Menubar>
+            </PrimeMenubar>
           </div>
         </div>
       </header>
@@ -34,23 +36,21 @@
         <RouterView />
       </div>
     </main>
-    <Toast ref="toast" />
+    <PrimeToast ref="toast" />
   </body>
-
 </template>
 
 <script lang="ts">
-
 import { RouterView } from 'vue-router'
-import 'primeicons/primeicons.css';
-import Filters from './components/Filters.vue';
-import { useSamplesStore } from '@/stores/samples';
+import 'primeicons/primeicons.css'
+import Filters from './components/FilterBar.vue'
+import { useSamplesStore } from '@/stores/samples'
 
 export default {
   name: 'App',
   components: {
     RouterView,
-    Filters
+    Filters,
   },
   data() {
     return {
@@ -59,48 +59,48 @@ export default {
         {
           label: 'Home',
           icon: 'pi pi-home',
-          route: '/'
+          route: '/',
         },
         {
           label: 'Plots',
           icon: 'pi pi-chart-bar',
-          route: '/plots'
+          route: '/plots',
         },
         {
           label: 'About',
           icon: 'pi pi-star',
-          route: '/about'
-        }
-      ]
+          route: '/about',
+        },
+      ],
     }
   },
   computed: {
     showFilters() {
-      return this.$route.name === 'Home' || this.$route.name === 'Plots';
-    }
-  },
-  mounted() {
-    this.samplesStore.updateSamples()
-    this.samplesStore.updateFilteredStatistics().then(
-      () => this.samplesStore.updatePropertyOptions()).then(
-        () => this.samplesStore.updateSelectedColumns())
-    this.samplesStore.updateLineageOptions()
-    this.samplesStore.updateSymbolOptions()
-    this.samplesStore.updateRepliconAccessionOptions()
-    this.$root.$toastRef = this.$refs.toast ?? null;
+      return this.$route.name === 'Home' || this.$route.name === 'Plots'
+    },
   },
   watch: {
-    "samplesStore.errorMessage"(newValue) {
+    'samplesStore.errorMessage'(newValue) {
       if (newValue) {
-        this.showToastError(newValue);
+        this.showToastError(newValue)
         // Reset the state to prevent multiple calls
         // this.samplesStore.errorMessage = "";
       }
-    }
-  }
-} 
+    },
+  },
+  mounted() {
+    this.samplesStore.updateSamples()
+    this.samplesStore
+      .updateFilteredStatistics()
+      .then(() => this.samplesStore.updatePropertyOptions())
+      .then(() => this.samplesStore.updateSelectedColumns())
+    this.samplesStore.updateLineageOptions()
+    this.samplesStore.updateSymbolOptions()
+    this.samplesStore.updateRepliconAccessionOptions()
+    this.$root.$toastRef = this.$refs.toast ?? null
+  },
+}
 </script>
-
 
 <style>
 body {
@@ -112,7 +112,6 @@ body {
   align-items: center;
   background-color: #adbed3;
 }
-
 
 main {
   flex: 1;
@@ -141,7 +140,7 @@ header {
 }
 
 :deep(.p-menubar) {
-  padding: 0px
+  padding: 0px;
 }
 
 /* .p-menubar {

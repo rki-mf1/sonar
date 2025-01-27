@@ -15,9 +15,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-      - name: Run CI and build
-        run: |
-          npm ci
-          npm run build
-          # npm run lint
-          # npm run format
+      - name: Install
+        run: npm ci
+      - name: Run eslint
+        run: npm run lint
+      - name: Run prettier
+        run: npm run format-check
+      - name: Do type checks
+        run: npm run type-check

@@ -30,8 +30,10 @@ try {
     }
     else {
         Write-Output "######### loading fixtures with test data ############"    
-        scripts\win\dev-manage.ps1 loaddata initial_auth test_data_sm
+        scripts\win\dev-manage.ps1 loaddata initial_auth test_data_10
         scripts\win\dev-manage.ps1 import_lineage
+        scripts\win\dev-copy-gbk.ps1 test-data\MN908947.nextclade.gb .\work\sonar\data\import\gbks\
+
     }
     if ($LASTEXITCODE -ne 0) {
         exit($LASTEXITCODE)

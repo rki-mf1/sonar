@@ -5,18 +5,16 @@ import typing
 from typing import Any
 from typing import Optional
 
-from django.db.models import Q
 from django.utils import timezone
 
+from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
+from rest_api.models import AminoAcidMutation
 from rest_api.models import Gene
-from rest_api.models import Mutation
+from rest_api.models import NucleotideMutation
 from rest_api.models import Replicon
 from rest_api.models import Sample
 from rest_api.models import Sequence
-
-if typing.TYPE_CHECKING:
-    from django.db.models.query import ValuesQuerySet
 
 
 @dataclass
@@ -35,6 +33,7 @@ class SampleRaw:
     sample_sequence_length: int
     sourceid: int
     translationid: int
+    include_nx: bool
     tt_file: Optional[str] = None
     var_file: Optional[str] = None
     vcffile: Optional[str] = None
@@ -49,12 +48,15 @@ class SampleRaw:
 
 @dataclass
 class VarRaw:
+    id: int
     ref: str
     start: int
     end: int
     alt: str | None
     replicon_or_cds_accession: str
+    # lable: str
     type: str
+    parent_id: list[int] | None
 
 
 class VCFInfoLOFRaw:
@@ -86,20 +88,15 @@ class SampleImport:
         self.sample: None | Sample = None
         self.replicon: None | Replicon = None
         self.alignment: None | Alignment = None
-        self.mutation_query_data: list[dict] = []
-        self.annotation_query_data: dict[Mutation, list[dict[str, str]]] = {}
-        self.db_sample_mutations: None | ValuesQuerySet[Mutation, dict[str, Any]] = None
         self.success = False
-        # NOTE: We probably won't need it
-        # if self.sample_raw.seq_file:
-        #    self.seq = "".join(
-        #        [line for line in self._import_seq(self.sample_raw.seq_file)]
-        #    )
-        # else:
-        #    raise Exception("No sequence file found")
 
         if self.sample_raw.var_file:
-            self.vars_raw = [var for var in self._import_vars(self.sample_raw.var_file)]
+            self.vars_raw = [
+                var
+                for var in self._import_vars(
+                    self.sample_raw.var_file, self.sample_raw.include_nx
+                )
+            ]
         else:
             raise Exception("No var file found")
 
@@ -130,22 +127,27 @@ class SampleImport:
             )
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
-    def create_alignment(self):
-        self.alignment = Alignment.objects.get_or_create(
-            sequence=self.sequence, replicon=self.replicon
-        )[0]
-        return self.alignment
+    def create_alignment(self, alignments_list: list[Alignment]):
+        self.alignment = next(
+            filter(
+                lambda x: x.sequence == self.sequence and x.replicon == self.replicon,
+                alignments_list,
+            ),
+            None,
+        )
+        if not self.alignment:
+            self.alignment = Alignment(sequence=self.sequence, replicon=self.replicon)
+            alignments_list.append(self.alignment)
 
-    def get_mutation_objs(
+    def get_mutation_objs_nt(
         self,
-        gene_cache_by_accession: dict[str, Gene | None],
+        nt_mutation_set: list[NucleotideMutation],
         replicon_cache: dict[str, Replicon | None],
         gene_cache_by_var_pos: dict[Replicon | None, dict[int, dict[int, Gene | None]]],
-    ) -> list[Mutation]:
-        sample_mutations = []
-        self.mutation_query_data = []
+        nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through],
+    ) -> dict[int, NucleotideMutation]:
+        import_id_to_sample_mutations: dict[int, NucleotideMutation] = {}
         for var_raw in self.vars_raw:
-            gene = None
             replicon = None
             if var_raw.type == "nt":
                 if not var_raw.replicon_or_cds_accession in replicon_cache:
@@ -168,7 +170,51 @@ class SampleImport:
                         ).first()
                     )
                 gene = gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end]
-            elif var_raw.type == "cds":
+                # in DEL, we dont keep REF in the database.
+                if var_raw.alt is None:
+                    var_raw.ref = ""
+
+                mutation_data = {
+                    "ref": var_raw.ref if var_raw.ref else "",
+                    "alt": var_raw.alt if var_raw.alt else "",
+                    "start": var_raw.start,
+                    "end": var_raw.end,
+                    "replicon": self.replicon,
+                }
+                mutation = next(
+                    filter(
+                        lambda x: self.is_same_mutation(mutation_data, x),
+                        nt_mutation_set,
+                    ),
+                    None,
+                )
+                if not mutation:
+                    mutation = NucleotideMutation(**mutation_data)
+                    nt_mutation_set.append(mutation)
+                nt_mutation_alignment_relations.append(
+                    NucleotideMutation.alignments.through(
+                        nucleotidemutation=mutation, alignment=self.alignment
+                    )
+                )
+                import_id_to_sample_mutations[var_raw.id] = mutation
+        return import_id_to_sample_mutations
+
+    def is_same_mutation(
+        self, mutation_data: dict, mutation: NucleotideMutation | AminoAcidMutation
+    ) -> bool:
+        return all(getattr(mutation, k) == v for k, v in mutation_data.items())
+
+    def get_mutation_objs_cds_and_parent_relations(
+        self,
+        cds_mutation_set: list[AminoAcidMutation],
+        gene_cache_by_accession: dict[str, Gene | None],
+        parent_id_mapping: dict[int, NucleotideMutation],
+        aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through],
+    ) -> list[AminoAcidMutation.parent.through]:
+        sample_cds_mutations: list[AminoAcidMutation] = []
+        mutation_parent_relations = []
+        for var_raw in self.vars_raw:
+            if var_raw.type == "cds":
                 if not var_raw.replicon_or_cds_accession in gene_cache_by_accession:
                     try:
                         gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
@@ -177,164 +223,52 @@ class SampleImport:
                             )
                         )
                     except Gene.DoesNotExist:
-                        gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
-                            None
+                        LOGGER.error(
+                            f"Gene not found for accession: {var_raw.replicon_or_cds_accession}"
                         )
+                        continue
                 gene = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
-                replicon = gene.replicon if gene else None
-            # in DEL, we dont keep REF in the database.
-            if var_raw.alt is None:
-                var_raw.ref = ""
-
-            mutation_data = {
-                "gene": gene if gene else None,
-                "ref": var_raw.ref,
-                "alt": var_raw.alt,
-                "start": var_raw.start,
-                "end": var_raw.end,
-                "replicon": self.replicon,
-                "type": var_raw.type,
-            }
-            # save query data for creating mutation2alignment objects later
-            self.mutation_query_data.append(mutation_data)
-            mutation = Mutation(**mutation_data)
-            sample_mutations.append(mutation)
-        return sample_mutations
-
-    def get_mutation2alignment_objs(self) -> list:
-        # self.alignment = Alignment.objects.get(
-        #     sequence=self.sequence, replicon=self.replicon
-        # )
-        # Determine batch size dynamically based on the length of mutation_query_data
-        data_length = len(self.mutation_query_data)
-
-        # a minimum and maximum batch size
-        MIN_BATCH_SIZE = 100
-        MAX_BATCH_SIZE = 5000
-
-        # Dynamic batch size based on data length
-        if data_length <= MAX_BATCH_SIZE:
-            # If the data length is smaller than MAX_BATCH_SIZE, use 20% - 50% for example,
-            # of the data length as the batch size.
-            # we can adjust 0.40 to other percentages like 0.50
-            batch_size = max(MIN_BATCH_SIZE, int(data_length * 0.50))
-        else:
-            # Set batch size to 1% of the total dataset size
-            batch_size = max(MIN_BATCH_SIZE, min(MAX_BATCH_SIZE, data_length // 100))
-
-        mutation_alignment_objs = []
-        for i in range(0, len(self.mutation_query_data), batch_size):
-            batch_mutation_query_data = self.mutation_query_data[i : i + batch_size]
-            db_mutations_query = Q()
-            for mutation in batch_mutation_query_data:
-                db_mutations_query |= Q(**mutation)
-
-            db_sample_mutations = Mutation.objects.filter(db_mutations_query).values(
-                "id",
-                "start",
-                "ref",
-                "alt",
-                "replicon__accession",
-            )
-            for j in range(0, len(db_sample_mutations), batch_size):
-                batch_mutations = db_sample_mutations[j : j + batch_size]
-                batch_alignment_objs = []
-                for mutation in batch_mutations:
-                    batch_alignment_objs.append(
-                        Mutation.alignments.through(
-                            alignment=self.alignment, mutation_id=mutation["id"]
-                        )
+                if var_raw.alt is None:
+                    var_raw.ref = ""
+                mutation_data = {
+                    "gene": gene,
+                    "ref": var_raw.ref if var_raw.ref else "",
+                    "alt": var_raw.alt if var_raw.alt else "",
+                    "start": var_raw.start if var_raw.start else 0,
+                    "end": var_raw.end if var_raw.end else 0,
+                    "replicon": self.replicon,
+                }
+                mutation = next(
+                    filter(
+                        lambda x: self.is_same_mutation(mutation_data, x),
+                        cds_mutation_set,
+                    ),
+                    None,
+                )
+                if not mutation:
+                    mutation = AminoAcidMutation(**mutation_data)
+                    cds_mutation_set.append(mutation)
+                aa_mutation_alignment_relations.append(
+                    AminoAcidMutation.alignments.through(
+                        aminoacidmutation=mutation, alignment=self.alignment
                     )
-                mutation_alignment_objs.extend(batch_alignment_objs)
-
-        return mutation_alignment_objs
-
-    # deprecated function
-    # def get_annotation_objs(self) -> list[AnnotationType]:
-    #     if self.db_sample_mutations is None:
-    #         LOGGER.error("Mutation objects not created yet")
-    #         raise Exception("Mutation objects not created yet")
-    #     self.annotation_query_data = {}
-    #     for mutation in self.anno_vcf_raw:
-    #         annotations = []
-    #         for annotation in [
-    #             self._parse_vcf_info(info) for info in mutation.info.split(";") if info
-    #         ]:
-    #             if annotation:
-    #                 annotations.extend(annotation)
-    #         for alt in mutation.alt.split(",") if mutation.alt else [None]:
-    #             mut_lookup_data = {
-    #                 "start": mutation.pos - 1,
-    #                 "ref": mutation.ref,
-    #                 "alt": alt,
-    #                 "replicon__accession": mutation.chrom,
-    #             }
-    #             if alt and len(alt) < len(mutation.ref):
-    #                 # deletion and alt not null
-    #                 mut_lookup_data["start"] += 1
-    #                 mut_lookup_data["ref"] = mut_lookup_data["ref"][1:]
-    #                 mut_lookup_data["alt"] = None
-
-    #             try:
-    #                 db_mutation = next(
-    #                     x
-    #                     for x in self.db_sample_mutations
-    #                     if all(x[k] == v for k, v in mut_lookup_data.items())
-    #                 )
-    #             except Mutation.DoesNotExist:
-    #                 print(
-    #                     f"Annotation Mutation not found using lookup: {mut_lookup_data}, varfile: {self.sample_raw.var_file} -skipping-"
-    #                 )
-    #                 continue
-    #             for a in annotations:
-    #                 if a:  # skip None type
-    #                     for ontology in a.annotation.split("&"):
-    #                         if (
-    #                             not db_mutation["id"]
-    #                             in self.annotation_query_data.keys()
-    #                         ):
-    #                             self.annotation_query_data[db_mutation["id"]] = []
-    #                         self.annotation_query_data[db_mutation["id"]].append(
-    #                             {
-    #                                 "seq_ontology": ontology,
-    #                                 "impact": a.annotation_impact,
-    #                             }
-    #                         )
-    #     annotation_types = []
-    #     for annotation in self.annotation_query_data.values():
-    #         annotation_types.extend([AnnotationType(**data) for data in annotation])
-    #     return annotation_types
-
-    # # deprecated function
-    # def get_annotation2mutation_objs(self) -> list[Mutation2Annotation]:
-    #     db_annotations_query = Q()
-    #     for annotation_list in self.annotation_query_data.values():
-    #         for annotation in annotation_list:
-    #             db_annotations_query |= Q(**annotation)
-    #     db_annotations = AnnotationType.objects.filter(db_annotations_query)
-    #     mutation2annotation_objs = []
-    #     for annotation in db_annotations:
-    #         for mutation_id, annotation_data_list in self.annotation_query_data.items():
-    #             for annotation_data in annotation_data_list:
-    #                 if (
-    #                     annotation_data["seq_ontology"] == annotation.seq_ontology
-    #                     and annotation_data["impact"] == annotation.impact
-    #                 ):
-    #                     mutation2annotation_objs.append(
-    #                         Mutation2Annotation(
-    #                             mutation_id=mutation_id,
-    #                             alignment=self.alignment,
-    #                             annotation=annotation,
-    #                         )
-    #                     )
-
-    #     return mutation2annotation_objs
+                )
+                if var_raw.parent_id:
+                    mutation_parent_relations.extend(
+                        AminoAcidMutation.parent.through(
+                            aminoacidmutation=mutation,
+                            nucleotidemutation=parent_id_mapping[parent_id],
+                        )
+                        for parent_id in var_raw.parent_id
+                    )
+                sample_cds_mutations.append(mutation)
+        return mutation_parent_relations
 
     def _import_pickle(self, path: str):
         with open(path, "rb") as f:
             return pickle.load(f)
 
-    def _import_vars(self, path):
+    def _import_vars(self, path, include_nx: bool):
         file_name = pathlib.Path(path).name
         self.var_file_path = (
             pathlib.Path(self.import_folder)
@@ -344,16 +278,32 @@ class SampleImport:
         )
         with open(self.var_file_path, "r") as handle:
             for line in handle:
+                if line.startswith("#"):
+                    continue
                 if line == "//":
                     break
                 var_raw = line.strip("\r\n").split("\t")
+                # Extract the mutation (alt)
+                alt = None if var_raw[4] == " " else var_raw[4]
+                # Skip rows with 'N' or 'X' if include_NX is False
+                # handle both INSERTION (A2324NNNN) and SNV
+                if not include_nx and alt is not None and ("N" in alt or "X" in alt):
+                    continue
+
                 yield VarRaw(
-                    var_raw[0],  # ref
-                    int(var_raw[1]),  # start
-                    int(var_raw[2]),  # end
-                    None if var_raw[3] == " " else var_raw[3],  # alt
-                    var_raw[4],  # replicon_or_cds_accession
-                    var_raw[6],  # type
+                    int(var_raw[0]),  # id
+                    var_raw[1],  # ref
+                    int(var_raw[2]),  # start
+                    int(var_raw[3]),  # end
+                    None if var_raw[4] == " " else var_raw[4],  # alt
+                    var_raw[5],  # replicon_or_cds_accession
+                    # var_raw[6],  # label
+                    var_raw[7],  # type
+                    (
+                        [int(x) for x in var_raw[8].split(",")]
+                        if var_raw[8] != ""
+                        else None
+                    ),  # parent_id
                 )
 
     def _import_seq(self, path):

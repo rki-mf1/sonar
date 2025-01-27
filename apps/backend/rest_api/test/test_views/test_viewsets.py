@@ -18,7 +18,7 @@ class AlignmentViewSetTest(
 ):
     model = models.Alignment
     viewset = viewsets.AlignmentViewSet
-    expected_list_count = 15
+    expected_list_count = 10
 
     def test_get_alignment_data(self):
         pass  # TODO
@@ -32,7 +32,7 @@ class SampleViewSetTest(
 ):
     model = models.Sample
     viewset = SampleViewSet
-    expected_list_count = 15
+    expected_list_count = 10
 
     @parameterized.expand(
         [
@@ -42,10 +42,10 @@ class SampleViewSetTest(
                     "label": "Property",
                     "property_name": "zip_code",
                     "filter_type": "exact",
-                    "value": "51375.0",
+                    "value": "40477",
                     "exclude": False,
                 },
-                2,
+                3,
             ),
             (
                 "SNP Nt",
@@ -56,51 +56,49 @@ class SampleViewSetTest(
                     "alt_nuc": "G",
                     "exclude": False,
                 },
-                6,
-            ),
-            (
-                "SNP AA",
-                {
-                    "label": "SNP AA",
-                    "protein_symbol": "S",
-                    "ref_aa": "T",
-                    "ref_pos": 716,
-                    "alt_aa": "I",
-                    "exclude": False,
-                },
-                3,
-            ),
-            (
-                "Del Nt",
-                {
-                    "label": "Del Nt",
-                    "first_deleted": 1,
-                    "last_deleted": 245,
-                    "exclude": False,
-                },
-                1,
+                10,
             ),
             (
                 "Del AA",
                 {
                     "label": "Del AA",
-                    "protein_symbol": "S",
-                    "first_deleted": 69,
-                    "last_deleted": 69,
+                    "protein_symbol": "ORF1a",
+                    "first_deleted": 2084,
+                    "last_deleted": 2086,
                     "exclude": False,
                 },
-                6,
+                0,
             ),
             (
-                "Ins Nt",
+                "Del AA",
                 {
-                    "label": "Ins Nt",
-                    "ref_nuc": "T",
-                    "ref_pos": 16176,
-                    "alt_nuc": "C",
+                    "label": "Del AA",
+                    "protein_symbol": "ORF1a",
+                    "first_deleted": 3675,
+                    "last_deleted": 3676,
                     "exclude": False,
                 },
-                1,
+                10,
+            ),
+            (
+                "Del Nt",
+                {
+                    "label": "Del Nt",
+                    "first_deleted": 11287,
+                    "last_deleted": 1129,
+                    "exclude": False,
+                },
+                0,
+            ),
+            (
+                "Del Nt",
+                {
+                    "label": "Del Nt",
+                    "first_deleted": 29734,
+                    "last_deleted": 29759,
+                    "exclude": False,
+                },
+                10,
             ),
             (
                 "Ins AA",
@@ -108,12 +106,22 @@ class SampleViewSetTest(
                     "label": "Ins AA",
                     "protein_symbol": "S",
                     "ref_aa": "R",
-                    "ref_pos": 214,
-                    "alt_aa": "REPE",
+                    "ref_pos": 21608,
+                    "alt_aa": "RGTCATGCCGCTGTEPE",
                 },
-                3,
+                0,
             ),
-            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 15),
+            (
+                "Ins Nt",
+                {
+                    "label": "Ins Nt",
+                    "ref_nuc": "G",
+                    "ref_pos": 21608,
+                    "alt_nuc": "GTCATGCCGCTGT",
+                },
+                10,
+            ),
+            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 10),
         ]
     )
     def test_genome_filters(self, _, filter, expected_count):

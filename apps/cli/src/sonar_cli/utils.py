@@ -35,7 +35,6 @@ from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import out_autodetect
 from sonar_cli.common_utils import read_var_file
 from sonar_cli.config import ANNO_CHUNK_SIZE
-from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
 from sonar_cli.config import CHUNK_SIZE
@@ -84,6 +83,7 @@ class sonarUtils:
         reference: str = None,
         method: int = 1,
         no_upload_sample: bool = False,
+        include_nx: bool = True,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -150,6 +150,7 @@ class sonarUtils:
             cachedir=cachedir,
             update=update,
             progress=progress,
+            include_nx=include_nx,
         )
 
         # importing sequences
@@ -203,6 +204,7 @@ class sonarUtils:
         update: bool = True,
         progress: bool = False,
         debug: bool = False,
+        include_nx: bool = True,
     ) -> sonarCache:
         """Set up a cache for sequence data."""
         # Instantiate a sonarCache object.
@@ -215,6 +217,7 @@ class sonarUtils:
             debug=debug,
             disable_progress=not progress,
             refacc=reference,
+            include_nx=include_nx,
         )
 
     @staticmethod
@@ -425,6 +428,7 @@ class sonarUtils:
 
     @staticmethod
     def zip_import_upload_sample_singlethread(shared_objects: dict, sample_list):
+        """Bundle up the data to be sent to the backend and send it"""
 
         files_to_compress = []
         for kwargs in sample_list:
@@ -737,7 +741,6 @@ class sonarUtils:
 
             annotator = Annotator(
                 annotator_exe_path=ANNO_TOOL_PATH,
-                config_path=ANNO_CONFIG_FILE,
                 cache=cache,
             )
             merged_vcf = os.path.join(
@@ -1184,10 +1187,10 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
     records = collections.defaultdict(
         lambda: collections.defaultdict(lambda: collections.defaultdict(dict))
     )
-    all_samples = set()
 
     rows = read_var_file(cursor["var_file"], exclude_var_type="cds", showNX=showNX)
     sample_name = cursor["name"]
+    all_samples = set(sample_name.split("\t"))
 
     for row in rows:
         try:
@@ -1200,28 +1203,22 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
             raise
 
         # Split out the data from each row
-        chrom, pos, pre_ref, ref, alt, samples = (
+        chrom, pos, pre_ref, ref, alt = (
             row["variant.reference"],
             row["variant.start"],
             pre_ref,
             row["variant.ref"],
             row["variant.alt"],
-            sample_name,
         )
 
-        # Convert the samples string into a set
-        sample_set = set(samples.split("\t"))
         # POS position in VCF format: 1-based position
         pos = pos + 1
         # Skip the empty alternate values
 
-        records[chrom][pos][ref][alt] = sample_set
+        records[chrom][pos][ref][alt] = all_samples
 
         if "pre_ref" not in records[chrom][pos]:
             records[chrom][pos]["pre_ref"] = pre_ref
-
-        # Update the list of all unique samples
-        all_samples.update(sample_set)
 
     return records, sorted(all_samples)
 
@@ -1282,7 +1279,8 @@ def _write_vcf_header(handle, reference: str, all_samples: List[str]):
     handle.write("##fileformat=VCFv4.2\n")
     handle.write("##poweredby=sonar-cli\n")
     handle.write(f"##reference={reference}\n")
-    handle.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype"\n')
+    handle.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n')
+    handle.write(f"##contig=<ID={reference}>\n")
     handle.write(
         "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t"
         + "\t".join(all_samples)

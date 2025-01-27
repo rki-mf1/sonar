@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia';
-import API from '@/api/API';
+import { defineStore } from 'pinia'
+import API from '@/api/API'
 import {
   type FilterGroup,
   type FilterGroupRoot,
@@ -10,96 +10,95 @@ import {
   DjangoFilterType,
   StringDjangoFilterType,
   DateDjangoFilterType,
-  type PropertyFilter
+  type PropertyFilter,
 } from '@/util/types'
-import { reactive } from 'vue';
-import { watch} from 'vue';
+import { reactive } from 'vue'
+import { watch } from 'vue'
 
 // called in getters, not allowed in actions
 function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
-      const summary = {
-        andFilter: [] as GenomeFilter[],
-        orFilter: [] as FilterGroupFilters[]
-      } as FilterGroupFilters
-      for (const filter of filterGroup.filters.propertyFilters) {
-        if (filter.propertyName && filter.filterType && filter.value) {
-          var value = filter.value
-          if (Array.isArray(filter.value) && filter.value.every(item => item instanceof Date)) {
-            var date_array = filter.value as Date[] 
-            if (date_array[1]) {
-              filter.filterType = DjangoFilterType.RANGE
-              value = parseDateToDateRangeFilter(date_array)
-            } else {
-              value = []
-              //value = new Date(date_array[0]).toISOString().split('T')[0]
-            }
-          }
-          summary.andFilter.push({
-            label: filter.label,
-            property_name: filter.propertyName,
-            filter_type: filter.filterType,
-            value: value.toString()
-          })
+  const summary = {
+    andFilter: [] as GenomeFilter[],
+    orFilter: [] as FilterGroupFilters[],
+  } as FilterGroupFilters
+  for (const filter of filterGroup.filters.propertyFilters) {
+    if (filter.propertyName && filter.filterType && filter.value) {
+      let value = filter.value
+      if (Array.isArray(filter.value) && filter.value.every((item) => item instanceof Date)) {
+        const date_array = filter.value as Date[]
+        if (date_array[1]) {
+          filter.filterType = DjangoFilterType.RANGE
+          value = parseDateToDateRangeFilter(date_array)
+        } else {
+          value = []
+          //value = new Date(date_array[0]).toISOString().split('T')[0]
         }
       }
-      for (const filter of filterGroup.filters.profileFilters) {
-        var valid = true
-        const translatedFilter = {} as Record<string, string | number | boolean>
-        for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
-          //snake_case conversion
-          var translatedKey = key.replace('AA', '_aa')
-          translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
-          translatedFilter[translatedKey] = filter[key]
-          if (!filter[key] && key != 'exclude') {
-            valid = false
-            break
-          }
-        }
-        if (valid) {
-          summary.andFilter.push(translatedFilter)
-        }
-      }
-      for (const filter of filterGroup.filters.repliconFilters) {
-        if (filter.accession) {
-          summary.andFilter.push({
-            label: filter.label,
-            accession: filter.accession,
-            exclude: filter.exclude
-          })
-        }
-      }
-      if (filterGroup.filters.lineageFilter.lineageList 
-            && filterGroup.filters.lineageFilter.lineageList.length > 0) {
-          summary.andFilter.push(filterGroup.filters.lineageFilter)
-      }
-      for (const subFilterGroup of filterGroup.filterGroups) {
-        summary.orFilter.push(getFilterGroupFilters(subFilterGroup))
-      }
-      return summary
+      summary.andFilter.push({
+        label: filter.label,
+        property_name: filter.propertyName,
+        filter_type: filter.filterType,
+        value: value.toString(),
+      })
     }
+  }
+  for (const filter of filterGroup.filters.profileFilters) {
+    let valid = true
+    const translatedFilter = {} as Record<string, string | number | boolean>
+    for (const key of Object.keys(filter) as (keyof ProfileFilter)[]) {
+      //snake_case conversion
+      let translatedKey = key.replace('AA', '_aa')
+      translatedKey = translatedKey.replace(/([A-Z])/g, '_$1').toLowerCase()
+      translatedFilter[translatedKey] = filter[key]
+      if (!filter[key] && key != 'exclude') {
+        valid = false
+        break
+      }
+    }
+    if (valid) {
+      summary.andFilter.push(translatedFilter)
+    }
+  }
+  for (const filter of filterGroup.filters.repliconFilters) {
+    if (filter.accession) {
+      summary.andFilter.push({
+        label: filter.label,
+        accession: filter.accession,
+        exclude: filter.exclude,
+      })
+    }
+  }
+  if (
+    filterGroup.filters.lineageFilter.lineageList &&
+    filterGroup.filters.lineageFilter.lineageList.length > 0
+  ) {
+    summary.andFilter.push(filterGroup.filters.lineageFilter)
+  }
+  for (const subFilterGroup of filterGroup.filterGroups) {
+    summary.orFilter.push(getFilterGroupFilters(subFilterGroup))
+  }
+  return summary
+}
 
 function parseDateToDateRangeFilter(data: Date[]) {
-      // Parse the first date
-      data[0] = new Date(Date.parse(data[0].toString()))
-      //  format the date according to your local timezone instead of UTC.
-      const formatDateToLocal = (date: Date) => {
-        return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-          .toISOString()
-          .split('T')[0]
-      }
+  // Parse the first date
+  data[0] = new Date(Date.parse(data[0].toString()))
+  //  format the date according to your local timezone instead of UTC.
+  const formatDateToLocal = (date: Date) => {
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0]
+  }
 
-      // Check if there's a second date
-      if (data[1]) {
-        data[1] = new Date(Date.parse(data[1].toString()))
-        const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])]
-        return formatted
-      } else {
-        // If there's no second date, assume a range of one day?
-        const nextDay = new Date(Date.parse(data[0].toString()) + 1000 * 60 * 60 * 24)
-        return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)]
-      }
-    }
-
+  // Check if there's a second date
+  if (data[1]) {
+    data[1] = new Date(Date.parse(data[1].toString()))
+    const formatted = [formatDateToLocal(data[0]), formatDateToLocal(data[1])]
+    return formatted
+  } else {
+    // If there's no second date, assume a range of one day?
+    const nextDay = new Date(Date.parse(data[0].toString()) + 1000 * 60 * 60 * 24)
+    return [formatDateToLocal(data[0]), formatDateToLocal(nextDay)]
+  }
+}
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
@@ -116,7 +115,7 @@ export const useSamplesStore = defineStore('samples', {
     propertyTableOptions: [] as string[],
     propertyMenuOptions: [] as string[],
     metaCoverageOptions: [] as string[],
-    selectedColumns: ["genomic_profiles", "proteomic_profiles"],
+    selectedColumns: ['genomic_profiles', 'proteomic_profiles'],
     propertyValueOptions: {} as {
       [key: string]: {
         options: string[]
@@ -129,40 +128,43 @@ export const useSamplesStore = defineStore('samples', {
     filterGroup: reactive({
       filterGroups: [],
       filters: {
-        propertyFilters: [{
-          fetchOptions: false,
-          label: 'Property',
-          propertyName: 'collection_date',
-          filterType: DateDjangoFilterType.RANGE,
-          value: [] as (Date | null)[]}],
-        profileFilters: [{"label":"DNA/AA Profile","value":"","exclude":false}],
+        propertyFilters: [
+          {
+            fetchOptions: false,
+            label: 'Property',
+            propertyName: 'collection_date',
+            filterType: DateDjangoFilterType.RANGE,
+            value: [] as (Date | null)[],
+          },
+        ],
+        profileFilters: [{ label: 'DNA/AA Profile', value: '', exclude: false }],
         repliconFilters: [],
         lineageFilter: {
-          label: "Lineages",
+          label: 'Lineages',
           lineageList: [],
           exclude: false,
           includeSublineages: true,
-          isVisible: true,} // first lineage filter always shown
-      } 
-  }) as FilterGroup,
-  DjangoFilterType,
-  errorMessage: '',
-  lastSentFilterGroup: JSON.stringify({
-    filterGroups: [],
-    filters: {
-      propertyFilters: [],
-      profileFilters: [],
-      repliconFilters: [],
-      lineageFilter: {
-        label: "Lineages",
-        lineageList: [],
-        exclude: false,
-        includeSublineages: true,
-        isVisible: true
-      }
-    }
-  })
-
+          isVisible: true,
+        }, // first lineage filter always shown
+      },
+    }) as FilterGroup,
+    DjangoFilterType,
+    errorMessage: '',
+    lastSentFilterGroup: JSON.stringify({
+      filterGroups: [],
+      filters: {
+        propertyFilters: [],
+        profileFilters: [],
+        repliconFilters: [],
+        lineageFilter: {
+          label: 'Lineages',
+          lineageList: [],
+          exclude: false,
+          includeSublineages: true,
+          isVisible: true,
+        },
+      },
+    }),
   }),
   actions: {
     async updateSamples() {
@@ -171,35 +173,63 @@ export const useSamplesStore = defineStore('samples', {
       const params = {
         limit: this.perPage,
         offset: this.firstRow,
-        ordering: this.ordering
+        ordering: this.ordering,
       }
-      this.lastSentFilterGroup = JSON.stringify(this.filterGroup);
-      var response = (await API.getInstance().getSampleGenomes(this.filters, params))
+      this.lastSentFilterGroup = JSON.stringify(this.filterGroup)
+      const response = await API.getInstance().getSampleGenomes(this.filters, params)
       // Handle errors
       if (response.response && response.response.status) {
-        const status = response.response.status;
+        const status = response.response.status
         if (status >= 400 && status < 500) {
-          this.errorMessage = 'Client error:\n'+ response.response.data.detail;
+          this.errorMessage = 'Client error:\n' + response.response.data.detail
         } else if (status >= 500) {
-          this.errorMessage = 'Server error occurred. Please try again later.';
+          this.errorMessage = 'Server error occurred. Please try again later.'
         } else {
-          this.errorMessage = 'An unknown error occurred.';
+          this.errorMessage = 'An unknown error occurred.'
         }
-      } else{
-        this.samples = response.results;
+      } else {
+        this.samples = response.results
       }
       this.loading = false
       this.filtersChanged = false
     },
     async updateFilteredStatistics() {
-      this.filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-      this.filteredCount = this.filteredStatistics.filtered_total_count
+      const emptyStatistics = {
+            filtered_total_count: 0,
+            meta_data_coverage: {},
+            samples_per_week: {},
+            genomecomplete_chart: {},
+            lineage_area_chart: [],
+            lineage_bar_chart: [],
+            sequencing_tech: {},
+            sequencing_reason: {},
+            sample_type: { },
+            length: {},
+            lab: {},
+            zip_code: {},
+            host: {},
+          }
+      try {
+        const filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
+        if (!filteredStatistics){
+          this.filteredStatistics = emptyStatistics
+        }
+        else{
+          this.filteredStatistics = filteredStatistics
+        }
+        this.filteredCount = this.filteredStatistics.filtered_total_count
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching filtered statistics:', error)
+        this.filteredStatistics = emptyStatistics
+        this.filteredCount = 0
+      }
     },
     async setDefaultTimeRange() {
       const statistics = await API.getInstance().getSampleStatistics()
       this.timeRange = [
         new Date(statistics.first_sample_date),
-        new Date(statistics.latest_sample_date ?? Date.now())
+        new Date(statistics.latest_sample_date ?? Date.now()),
       ]
       return this.timeRange
     },
@@ -216,46 +246,64 @@ export const useSamplesStore = defineStore('samples', {
     },
 
     async updateSelectedColumns() {
-      const properties = ['lineage', 'collection_date', 'zip_code', 'lab', 'sequencing_tech', 
-        'sequencing_reason', "isolation_source", 'init_upload_date', 'last_update_date'
+      const properties = [
+        'lineage',
+        'collection_date',
+        'zip_code',
+        'lab',
+        'sequencing_tech',
+        'sequencing_reason',
+        'isolation_source',
+        'init_upload_date',
+        'last_update_date',
       ]
       let columns = [
         ...this.selectedColumns,
-        ...properties.filter(prop => this.propertyTableOptions.includes(prop))
+        ...properties.filter((prop) => this.propertyTableOptions.includes(prop)),
       ]
-      columns = [
-        ...columns,
-        ...this.propertyTableOptions.filter(prop => !columns.includes(prop))
-      ]
+      columns = [...columns, ...this.propertyTableOptions.filter((prop) => !columns.includes(prop))]
       this.selectedColumns = columns.slice(0, 6)
     },
 
     async updatePropertyOptions() {
+      try{
       const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-      const metaData = this.filteredStatistics.meta_data_coverage
+      const metaData = this.filteredStatistics?.meta_data_coverage ?? {};
+       if (!res) {
+          console.error('API request failed');
+          return;
+        };
+
       this.propertiesDict = {}
-      res.values.forEach((property: { name: string, query_type: string, description: string }) => {
+      res.values.forEach((property: { name: string; query_type: string; description: string }) => {
         if (property.query_type === 'value_varchar') {
-          this.propertiesDict[property.name] = Object.values(StringDjangoFilterType);
+          this.propertiesDict[property.name] = Object.values(StringDjangoFilterType)
         } else if (property.query_type === 'value_date') {
-          this.propertiesDict[property.name] = Object.values(DateDjangoFilterType);
+          this.propertiesDict[property.name] = Object.values(DateDjangoFilterType)
         } else {
-          this.propertiesDict[property.name] = Object.values(DjangoFilterType);
+          this.propertiesDict[property.name] = Object.values(DjangoFilterType)
         }
-      });
-      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty 
+      })
+      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
       // & drop the 'name' column because the ID column is fixed
-      this.propertyTableOptions = Object.keys(this.propertiesDict).filter( 
-        (key) => key !== 'name' && metaData[key] > 0
-      );
+      this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
+        (key) => key !== 'name' && metaData[key] > 0,
+      )
       this.propertyMenuOptions = [
         'name',
-        ... this.propertyTableOptions.filter(prop => !["genomic_profiles", "proteomic_profiles", "lineage"].includes(prop))
+        ...this.propertyTableOptions.filter(
+          (prop) => !['genomic_profiles', 'proteomic_profiles', 'lineage'].includes(prop),
+        ),
       ]
       this.metaCoverageOptions = [
-        ... this.propertyMenuOptions.filter(prop => !["name", "init_upload_date", "last_update_date"].includes(prop))
-      ]
-
+        ...this.propertyMenuOptions.filter(
+          (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
+        ),
+      ]}
+       catch (error) {
+    console.error('Failed to update property options:', error);
+    // Optionally, you can show a user-friendly message or take other actions
+  }
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
@@ -269,46 +317,44 @@ export const useSamplesStore = defineStore('samples', {
       const res = await API.getInstance().getGeneSymbolOptions()
       this.symbolOptions = res.gene_symbols
     },
-        isDateArray(value: any): value is Date[] {
-      return Array.isArray(value) && value.every(item => item instanceof Date);
+    isDateArray(value: unknown): value is Date[] {
+      return Array.isArray(value) && value.every((item) => item instanceof Date)
     },
 
     initializeWatchers() {
-    watch(
-      () => this.filterGroup,
-      (newFilters, oldFilters) => {
-        if (JSON.stringify(newFilters) !== this.lastSentFilterGroup) {
-          this.filtersChanged = true;  
-        } else {
-          this.filtersChanged = false; 
-        }
-      },
-      { deep: true }
-    );
+      watch(
+        () => this.filterGroup,
+        (newFilters) => {
+          if (JSON.stringify(newFilters) !== this.lastSentFilterGroup) {
+            this.filtersChanged = true
+          } else {
+            this.filtersChanged = false
+          }
+        },
+        { deep: true },
+      )
+    },
   },
-},
   getters: {
-    filterGroupsFilters(state): FilterGroupRoot {
+    filterGroupsFilters(): FilterGroupRoot {
       return { filters: getFilterGroupFilters(this.filterGroup) }
     },
-    filters(state): FilterGroupRoot {
-      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters));
+    filters(): FilterGroupRoot {
+      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters))
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
       return filters as FilterGroupRoot
-    }
-  }
-});
+    },
+  },
+})
 
-let storeInitialized = false;
+let storeInitialized = false
 
 export function initializeStore() {
-  const store = useSamplesStore();
+  useSamplesStore()
 
   if (!storeInitialized) {
-    storeInitialized = true;
-
-
+    storeInitialized = true
   }
 }

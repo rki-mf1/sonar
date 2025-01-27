@@ -7,6 +7,17 @@ from .conftest import run_cli
 
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(1)
+def test_add_cov19_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "covid19/MN908947.nextclade.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(2)
 def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -23,7 +34,7 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(2)
+@pytest.mark.order(3)
 def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -40,9 +51,9 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(3)
+@pytest.mark.order(4)
 def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
-    """Test import command using parasail method"""
+    """Test import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     # monkeypatch.setattr(
     #     "mpire.WorkerPool.map_unordered",
@@ -57,7 +68,7 @@ def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(4)
+@pytest.mark.order(5)
 def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
@@ -73,7 +84,7 @@ def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(5)
+@pytest.mark.order(6)
 def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
@@ -89,7 +100,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(6)
+@pytest.mark.order(7)
 def test_wfa_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using wfa method"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -106,7 +117,7 @@ def test_wfa_anno_no_upload(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(7)
+@pytest.mark.order(8)
 def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
     """Test import command using autolink"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -123,7 +134,7 @@ def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(8)
+@pytest.mark.order(9)
 def test_add_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)

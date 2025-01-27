@@ -136,23 +136,6 @@ class SampleViewSet(
         dict = {str(item["collection_date"]): item["count"] for item in queryset}
         return Response(data=dict)
 
-    @action(detail=False, methods=["get"])
-    def count_unique_nt_mut_ref_view_set(self, request: Request, *args, **kwargs):
-        # TODO-smc abklären ob das so richtig ist
-        queryset = (
-            models.Mutation.objects.exclude(
-                element__type="cds",
-                alt="N",
-            )
-            .values("element__molecule__reference__accession")
-            .annotate(count=Count("id"))
-        )
-        dict = {
-            item["element__molecule__reference__accession"]: item["count"]
-            for item in queryset
-        }
-        return Response(data=dict)
-
     def _get_filtered_queryset(self, request: Request):
         queryset = models.Sample.objects.all()
         if filter_params := request.query_params.get("filters"):
@@ -192,21 +175,17 @@ class SampleViewSet(
                 queryset = queryset.filter(name=name_filter)
 
             # fetch genomic and proteomic profiles
-            genomic_profiles_qs = (
-                models.Mutation.objects.filter(type="nt")
-                .only("ref", "alt", "start", "end", "gene")
-                .prefetch_related("gene")
-                .order_by("start")
-            )
+            genomic_profiles_qs = models.NucleotideMutation.objects.only(
+                "ref", "alt", "start", "end"
+            ).order_by("start")
             proteomic_profiles_qs = (
-                models.Mutation.objects.filter(type="cds")
-                .only("ref", "alt", "start", "end", "gene")
+                models.AminoAcidMutation.objects.only(
+                    "ref", "alt", "start", "end", "gene"
+                )
                 .prefetch_related("gene")
                 .order_by("gene", "start")
             )
-            annotation_qs = models.Mutation2Annotation.objects.prefetch_related(
-                "mutation", "annotation"
-            )
+            annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")
 
             if DEBUG:
                 LOGGER.info(queryset.query)
@@ -220,17 +199,17 @@ class SampleViewSet(
             queryset = queryset.select_related("sequence").prefetch_related(
                 "properties__property",
                 Prefetch(
-                    "sequence__alignments__mutations",
+                    "sequence__alignments__nucleotide_mutations",
                     queryset=genomic_profiles_qs,
                     to_attr="genomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__mutations",
+                    "sequence__alignments__amino_acid_mutations",
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__mutation2annotation_set",
+                    "sequence__alignments__nucleotide_mutations__annotations",
                     queryset=annotation_qs,
                     to_attr="alignment_annotations",
                 ),
@@ -344,7 +323,8 @@ class SampleViewSet(
         annotations["not_null_count_genomic_profiles"] = Count(
             Subquery(
                 models.Sample.objects.filter(
-                    sequence__alignments__mutations__type="nt", id=OuterRef("id")
+                    sequence__alignments__nucleotide_mutations__isnull=False,
+                    id=OuterRef("id"),
                 ).values("id")[
                     :1
                 ]  # Return only one to indicate existence
@@ -353,7 +333,8 @@ class SampleViewSet(
         annotations["not_null_count_proteomic_profiles"] = Count(
             Subquery(
                 models.Sample.objects.filter(
-                    sequence__alignments__mutations__type="cds", id=OuterRef("id")
+                    sequence__alignments__amino_acid_mutations__isnull=False,
+                    id=OuterRef("id"),
                 ).values("id")[
                     :1
                 ]  # Return only one to indicate existence
@@ -516,8 +497,8 @@ class SampleViewSet(
             .annotate(count=Count("id"), collection_date=Min("collection_date"))
             .order_by("year", "week")
         )
-        if len(queryset) != 0:
-            filtered_queryset = queryset.filter(collection_date__isnull=False)
+        filtered_queryset = queryset.filter(collection_date__isnull=False)
+        if len(filtered_queryset) != 0:
             start_date = filtered_queryset.first()["collection_date"]
             end_date = filtered_queryset.last()["collection_date"]
             if start_date and end_date:
@@ -826,9 +807,9 @@ class SampleViewSet(
     ):
         final_query = Q()
 
-        # Split the input value by either commas, whitespace, or both
-        # mutations  = [x.strip() for x in value.split(',')]
-        mutations = re.split(r"[\s,]+", value.strip())
+        # Split the input value by either commas, semicolom, whitespace, or combinations of these,
+        # remove seperators from string end
+        mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
         for mutation in mutations:
             parsed_mutation = define_profile(mutation)
             # check valid protien name
@@ -906,12 +887,8 @@ class SampleViewSet(
         *args,
         **kwargs,
     ) -> Q:
-        # if property_name == "impact":
-        #     mutation_condition = Q(annotations__impact__{filter_type}"=ref_pos)
-        # elif property_name == "seq_ontology":
-        #     mutation_condition = Q(annotations__seq_ontology__{filter_type}"=ref_pos)
         query = {}
-        query[f"mutation2annotation__annotation__{property_name}__{filter_type}"] = (
+        query[f"nucleotide_mutations__annotations__{property_name}__{filter_type}"] = (
             value
         )
 
@@ -984,12 +961,11 @@ class SampleViewSet(
             if alt_nuc == "n":
                 alt_nuc = "N"
 
-            mutation_alt = Q(mutations__alt=alt_nuc)
+            mutation_alt = Q(nucleotide_mutations__alt=alt_nuc)
         mutation_condition = (
-            Q(mutations__end=ref_pos)
-            & Q(mutations__ref=ref_nuc)
+            Q(nucleotide_mutations__end=ref_pos)
+            & Q(nucleotide_mutations__ref=ref_nuc)
             & (mutation_alt)
-            & Q(mutations__type="nt")
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
         filters = {"sequence__alignments__in": alignment_qs}
@@ -1013,18 +989,17 @@ class SampleViewSet(
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
-                mutation_alt = mutation_alt | Q(mutations__alt=x)
+                mutation_alt = mutation_alt | Q(amino_acid_mutations__alt=x)
         else:
             if alt_aa == "x":
                 alt_aa = "X"
-            mutation_alt = Q(mutations__alt=alt_aa)
+            mutation_alt = Q(amino_acid_mutations__alt=alt_aa)
 
         mutation_condition = (
-            Q(mutations__end=ref_pos)
-            & Q(mutations__ref=ref_aa)
+            Q(amino_acid_mutations__end=ref_pos)
+            & Q(amino_acid_mutations__ref=ref_aa)
             & (mutation_alt)
-            & Q(mutations__gene__gene_symbol=protein_symbol)
-            & Q(mutations__type="cds")
+            & Q(amino_acid_mutations__gene__gene_symbol=protein_symbol)
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
@@ -1050,10 +1025,9 @@ class SampleViewSet(
             last_deleted = first_deleted
 
         alignment_qs = models.Alignment.objects.filter(
-            mutations__start=int(first_deleted) - 1,
-            mutations__end=last_deleted,
-            mutations__alt__isnull=True,
-            mutations__type="nt",
+            nucleotide_mutations__start=int(first_deleted) - 1,
+            nucleotide_mutations__end=last_deleted,
+            nucleotide_mutations__alt="",
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -1078,11 +1052,10 @@ class SampleViewSet(
 
         alignment_qs = models.Alignment.objects.filter(
             # search with case insensitive ORF1ab = orf1ab
-            mutations__gene__gene_symbol__iexact=protein_symbol,
-            mutations__start=int(first_deleted) - 1,
-            mutations__end=last_deleted,
-            mutations__alt__isnull=True,
-            mutations__type="cds",
+            amino_acid_mutations__gene__gene_symbol__iexact=protein_symbol,
+            amino_acid_mutations__start=int(first_deleted) - 1,
+            amino_acid_mutations__end=last_deleted,
+            amino_acid_mutations__alt="",
         )
 
         filters = {"sequence__alignments__in": alignment_qs}
@@ -1102,10 +1075,9 @@ class SampleViewSet(
     ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nucs (e.g. T133102TTT)
         alignment_qs = models.Alignment.objects.filter(
-            mutations__end=ref_pos,
-            mutations__ref=ref_nuc,
-            mutations__alt=alt_nuc,
-            mutations__type="nt",
+            nucleotide_mutations__end=ref_pos,
+            nucleotide_mutations__ref=ref_nuc,
+            nucleotide_mutations__alt=alt_nuc,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -1126,11 +1098,10 @@ class SampleViewSet(
         if protein_symbol not in get_distinct_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
         alignment_qs = models.Alignment.objects.filter(
-            mutations__end=ref_pos,
-            mutations__ref=ref_aa,
-            mutations__alt=alt_aa,
-            mutations__gene__gene_symbol=protein_symbol,
-            mutations__type="cds",
+            amino_acid_mutations__end=ref_pos,
+            amino_acid_mutations__ref=ref_aa,
+            amino_acid_mutations__alt=alt_aa,
+            amino_acid_mutations__gene__gene_symbol=protein_symbol,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
@@ -1368,8 +1339,10 @@ def aggregate_below_threshold_lineages(lineages, threshold_count):
         # Aggregate each below-threshold lineage recursively
 
         if lineage.parent:
-            above_threshold[lineage.parent] = (
-                above_threshold.get(lineage.parent, 0) + count
+            # band-aid, not perfect fix for not delivering ids instead of names
+            parent_obj = models.Lineage.objects.get(id=lineage.parent)
+            above_threshold[parent_obj.name] = (
+                above_threshold.get(parent_obj.name, 0) + count
             )
         else:
             # If lineage has no parent, keep it as is

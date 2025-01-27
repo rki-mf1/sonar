@@ -142,7 +142,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 | File              | Usage                                                                            |
 | ----------------- | -------------------------------------------------------------------------------- |
 | `180.covid19.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
-| `MN908947.3.gbk`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
+| `MN908947.3`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
 
 # Usage 🚀
 
@@ -163,14 +163,14 @@ The table below shows the several commands that can be used.
 > [!TIP]
 > You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
 >
-> for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb MN908947.3.gbk`
+> for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb MN908947.3.gb`
 
 ## Adding Reference
 
 The `add-ref` subcommand is used to add reference genome sequences to the database.
 
 ```sh
-sonar-cli add-ref --gb MN908947.3.gbk
+sonar-cli add-ref --gb MN908947.3.gb
 ```
 
 ## Importing Genomes
