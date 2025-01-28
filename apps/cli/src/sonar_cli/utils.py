@@ -364,11 +364,36 @@ class sonarUtils:
             # NOTE: reuse the chunk size from anno
             # n = 500
             cache_dict = {"job_id": job_id}
-            for sample_chunk in passed_samples_chunk_list:
-                LOGGER.info("Uploading and importing chunk.")
-                sonarUtils.zip_import_upload_sample_singlethread(
-                    cache_dict, sample_chunk
+            for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+                LOGGER.info(
+                    f"Uploading and importing sequence mutation profiles, chunk {chunk_number}."
                 )
+                sonarUtils.zip_import_upload_sample_singlethread(
+                    cache_dict, sample_chunk, chunk_number
+                )
+            # Wait for all chunk to be processed
+            incomplete_chunks = set(range(1, len(passed_samples_chunk_list)))
+            while len(incomplete_chunks) > 0:
+                chunks_tmp = incomplete_chunks.copy()
+                for chunk_number in chunks_tmp:
+                    job_with_chunk = f"{job_id}_chunk{chunk_number}"
+                    resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                    job_status = resp["status"]
+                    if job_status in ["Q", "IP"]:
+                        next
+                    if job_status == "F":
+                        LOGGER.error(
+                            f"Job {job_with_chunk} failed (status={job_status}): {time_diff}. Aborting."
+                        )
+                        sys.exit(1)
+                    if job_status == "C":
+                        incomplete_chunks.remove(chunk_number)
+                if len(incomplete_chunks) > 0:
+                    LOGGER.info(
+                        f"Waiting for {len(incomplete_chunks)} chunks to finish being processed."
+                    )
+                    sleep_time = 3
+                    time.sleep(sleep_time)
 
             if auto_anno:
 
@@ -427,7 +452,9 @@ class sonarUtils:
             LOGGER.error(msg)
 
     @staticmethod
-    def zip_import_upload_sample_singlethread(shared_objects: dict, sample_list):
+    def zip_import_upload_sample_singlethread(
+        shared_objects: dict, sample_list, chunk_number: int
+    ):
         """Bundle up the data to be sent to the backend and send it"""
 
         files_to_compress = []
@@ -471,27 +498,16 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
         start_time = get_current_time()
+        job_id = shared_objects["job_id"]
+        job_with_chunk = f"{job_id}_chunk{chunk_number}"
+        LOGGER.info(f"Uploading job_id: {job_with_chunk}")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
-            files, job_id=shared_objects["job_id"]
+            files, job_id=job_with_chunk
         )
+        LOGGER.info(f"Uploading job_id: {job_with_chunk} -- post returned")
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
-        job_status = None
-        sleep_time = 3
-        while job_status not in ["C", "F"]:
-            resp = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])
-            job_status = resp["status"]
-            if job_status in ["Q", "IP"]:
-                LOGGER.info(f"Job {shared_objects['job_id']} is {job_status}.")
-                time.sleep(sleep_time)
-        time_diff = calculate_time_difference(start_time, get_current_time())
-        if job_status == "F":
-            LOGGER.error(f"Job {shared_objects['job_id']} is {job_status}: {time_diff}")
-        else:
-            LOGGER.info(
-                f"[runtime] Job {shared_objects['job_id']} is {job_status}: {time_diff}"
-            )
 
     @staticmethod
     def _import_properties(
