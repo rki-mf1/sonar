@@ -7,7 +7,7 @@ dependencies:
   - bcftools=1.20
   - mafft=7.526
   - nox=2023.4.22
-  - poetry=1.6.1
+  - poetry=2.0.1
   - python=3.11
   - snpeff=5.2
   - pre-commit
