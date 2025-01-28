@@ -761,13 +761,13 @@ class FileUploadViewSet(viewsets.ViewSet):
         # to view list of files and file details in ZIP
         # for file_info in zip_ref.infolist():
         #    print(file_info)
-        LOGGER.info(f"jobID: {jobID}")
+        LOGGER.debug(f"jobID: {jobID}")
         try:
             proJobID_obj = models.ProcessingJob.objects.get(job_name=jobID)
-            LOGGER.info(f"ProcessingJob object: {proJobID_obj}")
+            LOGGER.debug(f"ProcessingJob object: {proJobID_obj}")
         except:
-            LOGGER.info(f"object with job id={jobID} does not exist yet")
-        LOGGER.info("Continuing processing...")
+            LOGGER.debug(f"object with job id={jobID} does not exist yet")
+        LOGGER.debug("Continuing processing...")
 
         # Step 4: Register job in database
         try:
