@@ -364,7 +364,7 @@ class sonarUtils:
             # NOTE: reuse the chunk size from anno
             # n = 500
             LOGGER.info(
-                f"Uploading and importing sequence mutation profiles into backend..."
+                "Uploading and importing sequence mutation profiles into backend..."
             )
             cache_dict = {"job_id": job_id}
             for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
