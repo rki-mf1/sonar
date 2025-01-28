@@ -356,18 +356,19 @@ class sonarUtils:
             )
 
         else:
-            LOGGER.info("Disable annotation step.")
+            LOGGER.info("Skipping annotation step.")
 
         # Send Result over network.
         if not no_upload_sample:
             start_upload_time = get_current_time()
             # NOTE: reuse the chunk size from anno
             # n = 500
+            LOGGER.info(
+                f"Uploading and importing sequence mutation profiles into backend..."
+            )
             cache_dict = {"job_id": job_id}
             for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
-                LOGGER.info(
-                    f"Uploading and importing sequence mutation profiles, chunk {chunk_number}."
-                )
+                LOGGER.debug(f"Uploading chunk {chunk_number}.")
                 sonarUtils.zip_import_upload_sample_singlethread(
                     cache_dict, sample_chunk, chunk_number
                 )
@@ -389,7 +390,7 @@ class sonarUtils:
                     if job_status == "C":
                         incomplete_chunks.remove(chunk_number)
                 if len(incomplete_chunks) > 0:
-                    LOGGER.info(
+                    LOGGER.debug(
                         f"Waiting for {len(incomplete_chunks)} chunks to finish being processed."
                     )
                     sleep_time = 3
@@ -405,7 +406,6 @@ class sonarUtils:
                     position=0,
                     disable=not progress,
                 ):
-                    # LOGGER.info("Uploading and importing chunk.")
                     sonarUtils.zip_import_upload_annotation_singlethread(
                         cache_dict, each_file
                     )
@@ -416,13 +416,13 @@ class sonarUtils:
             cache.logfile_obj.write(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}\n"
             )
-            LOGGER.info("Job ID: %s", job_id)
+            LOGGER.debug("Job ID: %s", job_id)
         else:
             LOGGER.info("Disable sending samples.")
         start_clean_time = get_current_time()
         clear_unnecessary_cache(passed_samples_list, threads)
         LOGGER.info(
-            f"Clear unnecessary cache: {calculate_time_difference(start_clean_time, get_current_time())}"
+            f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
 
     @staticmethod
@@ -499,11 +499,11 @@ class sonarUtils:
         }
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
-        LOGGER.info(f"Uploading job_id: {job_with_chunk}")
+        LOGGER.debug(f"Uploading job_id: {job_with_chunk}")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
         )
-        LOGGER.info(f"Uploading job_id: {job_with_chunk} -- post returned")
+        LOGGER.debug(f"Uploading job_id: {job_with_chunk} -- done")
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
