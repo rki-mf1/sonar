@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shutil
 import subprocess
 from typing import Optional
 
@@ -78,6 +79,29 @@ class Annotator:
             raise
 
     def bcftools_filter(self, input_vcf, output_vcf):
+        """Only retain variants with ANN="""
+
+        # The bcftools view command will fail if the input vcf has zero
+        # variants, so we check for this explicity and just return the input
+        # vcf if that is the case
+        stats_command = f"bcftools stats {input_vcf}"
+        stats_process = subprocess.run(
+            stats_command, shell=True, stdout=subprocess.PIPE
+        )
+        stat_text = stats_process.stdout
+        for line in stat_text.decode("utf-8").splitlines():
+            fields = line.split("\t")
+            if (
+                fields[0] == "SN"
+                and fields[1] == "0"
+                and fields[2] == "number of records:"
+                and fields[3] == "0"
+            ):
+                # the vcf contains zero records (SNPs + indels). Do not filter.
+                shutil.copyfile(input_vcf, output_vcf)
+                return
+
+        # The vcf has at least one record, so the view command should not fail
         filter_command = f"bcftools view -e 'INFO/ANN=\".\"' {input_vcf} > {output_vcf}"
 
         # Execute the filter command

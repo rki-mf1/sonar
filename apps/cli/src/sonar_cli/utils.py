@@ -1187,10 +1187,10 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
     records = collections.defaultdict(
         lambda: collections.defaultdict(lambda: collections.defaultdict(dict))
     )
-    all_samples = set()
 
     rows = read_var_file(cursor["var_file"], exclude_var_type="cds", showNX=showNX)
     sample_name = cursor["name"]
+    all_samples = set(sample_name.split("\t"))
 
     for row in rows:
         try:
@@ -1212,19 +1212,14 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
             sample_name,
         )
 
-        # Convert the samples string into a set
-        sample_set = set(samples.split("\t"))
         # POS position in VCF format: 1-based position
         pos = pos + 1
         # Skip the empty alternate values
 
-        records[chrom][pos][ref][alt] = sample_set
+        records[chrom][pos][ref][alt] = all_samples
 
         if "pre_ref" not in records[chrom][pos]:
             records[chrom][pos]["pre_ref"] = pre_ref
-
-        # Update the list of all unique samples
-        all_samples.update(sample_set)
 
     return records, sorted(all_samples)
 

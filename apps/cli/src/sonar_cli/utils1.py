@@ -4,6 +4,7 @@ import time
 from sonar_cli.api_interface import APIClient
 from sonar_cli.common_utils import _files_exist
 from sonar_cli.config import BASE_URL
+from sonar_cli.lineages.sc2_lineages import main as sc2_main
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger
@@ -135,10 +136,29 @@ class sonarUtils1:
             return sonarUtils1.fetch_job_status(API_URL, job_id)
 
     @staticmethod
-    def upload_lineage(lineage_file):
-        if lineage_file:
+    def upload_lineage(pathogen: str, lineage_file: str, output_file: str):
 
+        LOGGER.info("Using Pathogen: %s", pathogen)
+
+        if not lineage_file:
+            LOGGER.info("No lineage file provided. Generating lineage file...")
+            if output_file is None:
+                output_file = "lineages.tsv"
+                LOGGER.info(
+                    "Output file not provided. Using default file name: %s", output_file
+                )
+            if pathogen == "SARS-CoV-2":
+                lineage_file = sc2_main(output_file=output_file)
+            else:
+                pass
+        else:
             _files_exist(lineage_file)
+            LOGGER.info("Lineage file provided: %s", lineage_file)
+            LOGGER.info("No download is required, lineage file generation is skipped.")
+
+        if lineage_file:
+            LOGGER.info("Uploading lineage file to the server...")
+
             lineage_obj = open(lineage_file, "rb")
             try:
                 json_response = APIClient(base_url=BASE_URL).put_lineage_import(
