@@ -497,7 +497,6 @@ class sonarUtils:
         files = {
             "zip_file": compressed_data,
         }
-        start_time = get_current_time()
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
         LOGGER.info(f"Uploading job_id: {job_with_chunk}")
