@@ -22,6 +22,7 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.gbk_import import import_gbk_file
 from rest_api.data_entry.property_job import delete_property
@@ -760,6 +761,13 @@ class FileUploadViewSet(viewsets.ViewSet):
         # to view list of files and file details in ZIP
         # for file_info in zip_ref.infolist():
         #    print(file_info)
+        LOGGER.debug(f"jobID: {jobID}")
+        try:
+            proJobID_obj = models.ProcessingJob.objects.get(job_name=jobID)
+            LOGGER.debug(f"ProcessingJob object: {proJobID_obj}")
+        except:
+            LOGGER.debug(f"object with job id={jobID} does not exist yet")
+        LOGGER.debug("Continuing processing...")
 
         # Step 4: Register job in database
         try:
