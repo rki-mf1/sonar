@@ -383,7 +383,7 @@ class sonarUtils:
                         next
                     if job_status == "F":
                         LOGGER.error(
-                            f"Job {job_with_chunk} failed (status={job_status}): {time_diff}. Aborting."
+                            f"Job {job_with_chunk} failed (status={job_status}). Aborting."
                         )
                         sys.exit(1)
                     if job_status == "C":
