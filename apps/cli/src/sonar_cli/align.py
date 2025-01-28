@@ -53,7 +53,6 @@ class sonarAligner:
         # SKIP aligning sequences and call var_file again (i.e., skipping existing files in the cache).
         # else: overwrite.
         # NOTE: If the file contents change, the hash file name will also change.
-
         if not self.allow_updates:
 
             if data["var_file"] is None:
@@ -424,7 +423,7 @@ class sonarAligner:
             ].index,
             inplace=True,
         )
-        prev_row = None
+
         if not df.empty:
 
             # translates the updated nucleotide positions
@@ -479,36 +478,43 @@ class sonarAligner:
                 ), label, "cds", parent_id
                 next_aa_id += 1
             # frameshift?
+
             # for deletions
+            # the prev_row will be used to calculate the deletion label larger
+            prev_row = None
             for index, row in (
                 df.loc[(df["altAa"] == "-")].sort_values(["elemid", "aaPos"]).iterrows()
             ):
                 if prev_row is None:
+                    # Initialize a new deletion block
                     prev_row = row
-                elif (
-                    prev_row["elemid"] == row["elemid"]
-                    and abs(prev_row["aaPos"] - row["aaPos"]) == 1
-                ):
+                elif prev_row["elemid"] == row["elemid"] and row["aaPos"] == prev_row[
+                    "aaPos"
+                ] + len(prev_row["aa"]):
+                    # Extend the current deletion block
                     prev_row["aa"] += row["aa"]
+
                 else:
+                    # Finalize the previous deletion block
                     start = prev_row["aaPos"]
                     end = prev_row["aaPos"] + len(prev_row["aa"])
                     if end - start == 1:
                         label = "del:" + str(start + 1)
                     else:
                         label = "del:" + str(start + 1) + "-" + str(end)
+                    # Match CDS variant to NT variant
                     matching_nt = nuc_vars_df[
                         (
-                            (nuc_vars_df["start"] <= row.nucPos1)
-                            & (nuc_vars_df["end"] > row.nucPos1)
+                            (nuc_vars_df["start"] <= prev_row.nucPos1)
+                            & (nuc_vars_df["end"] > prev_row.nucPos1)
                         )
                         | (
-                            (nuc_vars_df["start"] <= row.nucPos2)
-                            & (nuc_vars_df["end"] > row.nucPos2)
+                            (nuc_vars_df["start"] <= prev_row.nucPos2)
+                            & (nuc_vars_df["end"] > prev_row.nucPos2)
                         )
                         | (
-                            (nuc_vars_df["start"] <= row.nucPos3)
-                            & (nuc_vars_df["end"] > row.nucPos3)
+                            (nuc_vars_df["start"] <= prev_row.nucPos3)
+                            & (nuc_vars_df["end"] > prev_row.nucPos3)
                         )
                     ]
                     parent_id = (
@@ -520,40 +526,44 @@ class sonarAligner:
                     yield str(next_aa_id), prev_row["aa"], str(start), str(
                         end
                     ), " ", str(prev_row["accession"]), label, "cds", parent_id
+
+                    # Start a new deletion block
                     prev_row = row
                     next_aa_id += 1
-        if prev_row is not None:
-            start = prev_row["aaPos"]
-            end = prev_row["aaPos"] + len(prev_row["aa"])
-            if end - start == 1:
-                label = "del:" + str(start + 1)
-            else:
-                label = "del:" + str(start + 1) + "-" + str(end)
-            matching_nt = nuc_vars_df[
-                (
-                    (nuc_vars_df["start"] <= row.nucPos1)
-                    & (nuc_vars_df["end"] > row.nucPos1)
-                )
-                | (
-                    (nuc_vars_df["start"] <= row.nucPos2)
-                    & (nuc_vars_df["end"] > row.nucPos2)
-                )
-                | (
-                    (nuc_vars_df["start"] <= row.nucPos3)
-                    & (nuc_vars_df["end"] > row.nucPos3)
-                )
-            ]
-            # 'id','ref','start', 'end', 'alt', 'reference_acc', 'label', 'type', 'parent_id'
-            parent_id = (
-                ",".join(matching_nt["parent_id"].astype(str))
-                if not matching_nt.empty
-                else ""
-            )
 
-            yield str(next_aa_id), prev_row["aa"], str(start), str(end), " ", str(
-                prev_row["accession"]
-            ), label, "cds", parent_id
-            next_aa_id += 1
+            # Yield the last aggregated deletion if it exists
+            if prev_row is not None:
+                start = prev_row["aaPos"]
+                end = prev_row["aaPos"] + len(prev_row["aa"])
+                if end - start == 1:
+                    label = "del:" + str(start + 1)
+                else:
+                    label = "del:" + str(start + 1) + "-" + str(end)
+                matching_nt = nuc_vars_df[
+                    (
+                        (nuc_vars_df["start"] <= prev_row.nucPos1)
+                        & (nuc_vars_df["end"] > prev_row.nucPos1)
+                    )
+                    | (
+                        (nuc_vars_df["start"] <= prev_row.nucPos2)
+                        & (nuc_vars_df["end"] > prev_row.nucPos2)
+                    )
+                    | (
+                        (nuc_vars_df["start"] <= prev_row.nucPos3)
+                        & (nuc_vars_df["end"] > prev_row.nucPos3)
+                    )
+                ]
+                # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+                parent_id = (
+                    ",".join(matching_nt["parentID"].astype(str))
+                    if not matching_nt.empty
+                    else ""
+                )
+
+                yield str(next_aa_id), prev_row["aa"], str(start), str(end), " ", str(
+                    prev_row["accession"]
+                ), label, "cds", parent_id
+                next_aa_id += 1
 
     def extract_vars_from_cigar(  # noqa: C901
         self, qryseq, refseq, cigar, elemid, cds_file
