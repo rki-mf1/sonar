@@ -504,7 +504,7 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
         job_id = shared_objects["job_id"]
-        job_with_chunk = f"{job_id}_chunk{chunk_num}"
+        job_with_chunk = f"{job_id}_chunk{chunk_number}"
         LOGGER.debug(f"Uploading annotation (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
