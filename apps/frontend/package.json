@@ -1,5 +1,5 @@
 {
-  "name": "sonar-frontend-new",
+  "name": "sonar-frontend",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -33,6 +33,7 @@
   "devDependencies": {
     "@eslint/compat": "^1.2.4",
     "@eslint/js": "^9.16.0",
+    "@jinixx/vite-plugin-git-revision": "^0.1.15",
     "@playwright/test": "^1.49.0",
     "@tsconfig/node20": "^20.1.2",
     "@types/chroma-js": "^2.4.4",

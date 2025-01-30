@@ -5,6 +5,7 @@
         <div class="flex flex-wrap justify-content-between">
           <div class="flex align-items-center justify-content-center">
             <div style="font-size: 2rem; color: var(--text-color)">Sonar</div>
+            <div style="font-size: 0.5rem; color: var(--text-color)">{{ sonar_version }}</div>
           </div>
           <div class="flex align-items-center justify-content-center">
             <PrimeMenubar :model="menuItems">
@@ -54,6 +55,7 @@ export default {
   },
   data() {
     return {
+      sonar_version: 'version goes here I think',
       samplesStore: useSamplesStore(),
       menuItems: [
         {
