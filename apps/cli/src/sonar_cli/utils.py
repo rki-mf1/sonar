@@ -429,7 +429,7 @@ class sonarUtils:
 
     @staticmethod
     def zip_import_upload_annotation_singlethread(
-        shared_objects: dict, file_path, chunk_num: int
+        shared_objects: dict, file_path, chunk_number: int
     ):
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
@@ -449,7 +449,7 @@ class sonarUtils:
         }
 
         job_id = shared_objects["job_id"]
-        job_with_chunk = f"{job_id}_chunk{chunk_num}"
+        job_with_chunk = f"{job_id}_chunk{chunk_number}"
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
         )
