@@ -134,6 +134,11 @@ class sonarCache:
             )
         self.include_nx = include_nx
         self.isBuilt_snpEffcache = self.build_snpeff_cache(reference=self.refacc)
+        if not self.isBuilt_snpEffcache:
+            LOGGER.error(
+                "Could not retrieve the snpEff reference annotation from the sonar server. Aborting."
+            )
+            sys.exit(1)
 
     def __enter__(self):
         return self
