@@ -255,13 +255,21 @@ class SampleImport:
                     )
                 )
                 if var_raw.parent_id:
-                    mutation_parent_relations.extend(
-                        AminoAcidMutation.parent.through(
-                            aminoacidmutation=mutation,
-                            nucleotidemutation=parent_id_mapping[parent_id],
-                        )
-                        for parent_id in var_raw.parent_id
-                    )
+                    # This KeyError occurs due to the skip-nx flag.
+                    # If the third nucleotide of a codon is 'N', the corresponding nucleotide mutation is not read in.
+                    # However, if the first or second nucleotide is also mutated, an amino acid mutation can still be inferred
+                    # due to the ambiguity of the genetic code.
+                    # For this mutations we cannot store the relation to the nt parent
+                    for parent_id in var_raw.parent_id:
+                        try:
+                            mutation_parent_relations.append(
+                                AminoAcidMutation.parent.through(
+                                    aminoacidmutation=mutation,
+                                    nucleotidemutation=parent_id_mapping[parent_id],
+                                )
+                            )
+                        except KeyError:
+                            pass
                 sample_cds_mutations.append(mutation)
         return mutation_parent_relations
 
