@@ -178,9 +178,18 @@ def write_to_log(logfile, msg, die=False, errtype="error"):
         exit(errtype + ": " + msg)
 
 
-def read_var_file(var_file: str, exclude_var_type: str = "", showNX: bool = False):
-    var_df = pd.read_csv(var_file, sep="\t", dtype={"start": int, "end": int})
+def read_var_parquet_file(
+    var_parquet_file: str, exclude_var_type: str = "", showNX: bool = False
+):
+    var_df = pd.read_parquet(var_parquet_file)
     var_df = var_df[~(var_df["type"] == exclude_var_type)]
+    if not showNX:
+        var_df = var_df[
+            ~((var_df["type"] == "nt") & var_df["alt"].str.contains("N", na=False))
+        ]
+        var_df = var_df[
+            ~((var_df["type"] == "cds") & var_df["alt"].str.contains("X", na=False))
+        ]
     var_df = var_df[["ref", "alt", "start", "end", "reference_acc", "label", "type"]]
     return var_df.to_dict("records")
 

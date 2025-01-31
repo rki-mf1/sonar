@@ -281,11 +281,11 @@ class SampleImport:
         file_name = pathlib.Path(path).name
         self.var_file_path = (
             pathlib.Path(self.import_folder)
-            .joinpath("var")
+            .joinpath("var.parquet")
             .joinpath(file_name[:2])
             .joinpath(file_name)
         )
-        var_df = pd.read_csv(self.var_file_path, sep="\t")
+        var_df = pd.read_parquet(self.var_file_path)
         var_df[["ref", "alt"]] = var_df[["ref", "alt"]].fillna("").replace({" ": ""})
 
         if not include_nx:

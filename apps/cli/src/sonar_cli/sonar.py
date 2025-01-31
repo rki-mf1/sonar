@@ -744,6 +744,7 @@ def handle_import(args: argparse.Namespace):
         method=args.method,
         no_upload_sample=args.no_upload,
         include_nx=not args.skip_nx,
+        debug=args.debug,
     )
 
 

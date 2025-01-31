@@ -258,6 +258,7 @@ class sonarCache:
         vcffile,
         anno_vcf_file,
         reffile,
+        varparquetfile,
         varfile,
         liftfile: pd.DataFrame,
         cdsfile,
@@ -288,6 +289,7 @@ class sonarCache:
             "vcffile": vcffile,
             "anno_vcf_file": anno_vcf_file,
             "ref_file": reffile,
+            "var_parquet_file": varparquetfile,
             "var_file": varfile,
             "lift_file": liftfile,
             "cds_file": cdsfile,
@@ -465,6 +467,9 @@ class sonarCache:
             # cache_cds is used for frameshift detection
             # but this will be removed soon, since we use snpEff.
             data["cdsfile"] = None  # self.cache_cds(refseq_acc, data["refmol"])
+            data["varparquetfile"] = self.get_var_parquet_fname(
+                data["seqhash"] + "@" + self.get_refhash(data["refmol"])
+            )
             data["varfile"] = self.get_var_fname(
                 data["seqhash"] + "@" + self.get_refhash(data["refmol"])
             )
@@ -490,6 +495,7 @@ class sonarCache:
             # data["ttfile"] = None
             data["liftfile"] = None
             data["cdsfile"] = None
+            data["varparquetfile"] = None
             data["varfile"] = None
 
         # annotation.
@@ -709,6 +715,10 @@ class sonarCache:
         fn = slugify(seqhash)
         return os.path.join(self.algn_dir, fn[:2], fn + ".algn")
 
+    def get_var_parquet_fname(self, seqhash):
+        fn = slugify(seqhash)
+        return os.path.join(self.var_dir, fn[:2], fn + ".var.parquet")
+
     def get_var_fname(self, seqhash):
         fn = slugify(seqhash)
         return os.path.join(self.var_dir, fn[:2], fn + ".var")
@@ -820,13 +830,9 @@ class sonarCache:
                 iter_dna_list = []
 
                 del sample_data["lift_file"]
-                if not sample_data["var_file"] is None:
+                if not sample_data["var_parquet_file"] is None:
                     # SECTION:ReadVar
-                    var_df = pd.read_csv(
-                        sample_data["var_file"],
-                        sep="\t",
-                        dtype={"start": int, "end": int},
-                    )
+                    var_df = pd.read_parquet(sample_data["var_parquet_file"])
                     nt_df = var_df[(var_df["type"] == "nt")]
                     iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
                         "records"

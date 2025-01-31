@@ -33,7 +33,7 @@ from sonar_cli.common_utils import flatten_json_output
 from sonar_cli.common_utils import get_current_time
 from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import out_autodetect
-from sonar_cli.common_utils import read_var_file
+from sonar_cli.common_utils import read_var_parquet_file
 from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
@@ -84,6 +84,7 @@ class sonarUtils:
         method: int = 1,
         no_upload_sample: bool = False,
         include_nx: bool = True,
+        debug: bool = False,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -150,6 +151,7 @@ class sonarUtils:
             cachedir=cachedir,
             update=update,
             progress=progress,
+            debug=debug,
             include_nx=include_nx,
         )
 
@@ -261,7 +263,10 @@ class sonarUtils:
 
         # Align sequences and process
         aligner = sonarAligner(
-            cache_outdir=cache.basedir, method=method, allow_updates=cache.allow_updates
+            cache_outdir=cache.basedir,
+            method=method,
+            allow_updates=cache.allow_updates,
+            debug=cache.debug,
         )
         l = len(cache._samplefiles_to_profile)
         LOGGER.info(f"Total samples that need to be processed: {l}")
@@ -459,7 +464,7 @@ class sonarUtils:
 
         files_to_compress = []
         for kwargs in sample_list:
-            var_file = kwargs["var_file"]
+            var_parquet_file = kwargs["var_parquet_file"]
             sample_dict = kwargs
 
             # Serialize the sample dictionary to bytes
@@ -472,7 +477,7 @@ class sonarUtils:
                     sample_bytes,
                 )
             )
-            files_to_compress.append(var_file)
+            files_to_compress.append(var_parquet_file)
 
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
@@ -1035,7 +1040,7 @@ class sonarUtils:
         cursor: object
             if from_var_file is False
                 The rows object which already has been fetched data.
-            eles if from_var_file is True
+            else if from_var_file is True
 
 
         reference: The reference genome name.
@@ -1051,7 +1056,7 @@ class sonarUtils:
             refernce_sequence = _dict["sequence"]
 
             if from_var_file:
-                records, all_samples = _get_vcf_data_form_var_file(
+                records, all_samples = _get_vcf_data_form_var_parquet_file(
                     cursor, refernce_sequence, showNX
                 )
             else:
@@ -1187,7 +1192,7 @@ class sonarUtils:
         LOGGER.info(json_response["detail"])
 
 
-def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
+def _get_vcf_data_form_var_parquet_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
     """
     Creates a data structure with records from a database cursor.
 
@@ -1203,7 +1208,9 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
         lambda: collections.defaultdict(lambda: collections.defaultdict(dict))
     )
 
-    rows = read_var_file(cursor["var_file"], exclude_var_type="cds", showNX=showNX)
+    rows = read_var_parquet_file(
+        cursor["var_parquet_file"], exclude_var_type="cds", showNX=showNX
+    )
     sample_name = cursor["name"]
     all_samples = set(sample_name.split("\t"))
 
