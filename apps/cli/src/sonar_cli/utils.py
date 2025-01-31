@@ -364,11 +364,10 @@ class sonarUtils:
             # NOTE: reuse the chunk size from anno
             # n = 500
             LOGGER.info(
-                "Uploading and importing sequence mutation profiles into backend..."
+                "Uploading and importing sequence mutation profiles into the sonar server..."
             )
             cache_dict = {"job_id": job_id}
             for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
-                LOGGER.debug(f"Uploading chunk {chunk_number}.")
                 sonarUtils.zip_import_upload_sample_singlethread(
                     cache_dict, sample_chunk, chunk_number
                 )
@@ -450,6 +449,7 @@ class sonarUtils:
 
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
+        LOGGER.debug(f"Uploading mutation annotations (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
         )
@@ -505,11 +505,10 @@ class sonarUtils:
         }
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
-        LOGGER.debug(f"Uploading annotation (job_id: {job_with_chunk})")
+        LOGGER.debug(f"Uploading mutation profiles (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
         )
-        LOGGER.debug(f"Uploading annotation (job_id: {job_with_chunk}) -- done")
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
@@ -591,7 +590,6 @@ class sonarUtils:
                 }
 
                 # Send the chunk to the backend
-                # LOGGER.info("Uploading chunk...")
                 json_response = APIClient(base_url=BASE_URL).post_import_upload(
                     data=data, files=file
                 )
