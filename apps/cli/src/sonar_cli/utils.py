@@ -403,16 +403,18 @@ class sonarUtils:
 
             if auto_anno:
 
-                for each_file in tqdm(
-                    anno_result_list,
-                    desc="Uploading and importing annotations",
-                    unit="file",
-                    bar_format=bar_format,
-                    position=0,
-                    disable=not progress,
+                for chunk_number, each_file in enumerate(
+                    tqdm(
+                        anno_result_list,
+                        desc="Uploading and importing annotations",
+                        unit="file",
+                        bar_format=bar_format,
+                        position=0,
+                        disable=not progress,
+                    )
                 ):
                     sonarUtils.zip_import_upload_annotation_singlethread(
-                        cache_dict, each_file
+                        cache_dict, each_file, chunk_number
                     )
 
             LOGGER.info(
@@ -431,7 +433,9 @@ class sonarUtils:
         )
 
     @staticmethod
-    def zip_import_upload_annotation_singlethread(shared_objects: dict, file_path):
+    def zip_import_upload_annotation_singlethread(
+        shared_objects: dict, file_path, chunk_number: int
+    ):
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
@@ -449,8 +453,11 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
 
+        job_id = shared_objects["job_id"]
+        job_with_chunk = f"{job_id}_chunk{chunk_number}"
+        LOGGER.debug(f"Uploading mutation annotations (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
-            files, job_id=shared_objects["job_id"]
+            files, job_id=job_with_chunk
         )
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
@@ -504,7 +511,7 @@ class sonarUtils:
         }
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
-        LOGGER.debug(f"Uploading job_id: {job_with_chunk}")
+        LOGGER.debug(f"Uploading mutation profiles (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
         )
@@ -590,7 +597,6 @@ class sonarUtils:
                 }
 
                 # Send the chunk to the backend
-                # LOGGER.info("Uploading chunk...")
                 json_response = APIClient(base_url=BASE_URL).post_import_upload(
                     data=data, files=file
                 )

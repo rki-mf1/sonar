@@ -75,7 +75,9 @@
             label="&nbsp;Set Advanced Filters"
             severity="warning"
             raised
-            :style="{ border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)' }"
+            :style="{
+              border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
+            }"
             @click="displayDialogFilter = true"
           />
           <PrimeButton
@@ -83,7 +85,9 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{ border: samplesStore.filtersChanged ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)' }"
+            :style="{
+              border: samplesStore.filtersChanged ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
+            }"
             @click="updateSamplesInTableAndFilteredStatistics()"
           >
           </PrimeButton>
@@ -167,8 +171,8 @@
                 <p class="m-0">
                   gte = "greater than or equal" <br />
                   Example:
-                  <PrimeChip label="15" /> will filter records where the value is greater than or equal
-                  to 15.
+                  <PrimeChip label="15" /> will filter records where the value is greater than or
+                  equal to 15.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: lt">
@@ -182,8 +186,8 @@
                 <p class="m-0">
                   lte = "less than or equal" <br />
                   Example:
-                  <PrimeChip label="25" /> will filter records where the value is less than or equal to
-                  25.
+                  <PrimeChip label="25" /> will filter records where the value is less than or equal
+                  to 25.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: range">

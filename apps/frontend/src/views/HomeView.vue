@@ -128,7 +128,12 @@
       />
     </PrimeDialog>
 
-    <PrimeDialog v-model:visible="displayDialogRow" modal dismissable-mask :style="{ width: '60vw' }">
+    <PrimeDialog
+      v-model:visible="displayDialogRow"
+      modal
+      dismissable-mask
+      :style="{ width: '60vw' }"
+    >
       <template #header>
         <div style="display: flex; align-items: center">
           <strong>Sample Details</strong>
@@ -283,7 +288,7 @@ export default {
         this.samplesStore.propertyTableOptions.includes(v),
       )
     },
-    onColReorder(event:  {dragIndex: number; dropIndex: number; originalEvent: Event }) {
+    onColReorder(event: { dragIndex: number; dropIndex: number; originalEvent: Event }) {
       const { dragIndex, dropIndex } = event as { dragIndex: number; dropIndex: number }
       // Rearrange columns based on dragIndex and dropIndex
       const reorderedColumns = ['name', ...this.samplesStore.selectedColumns] // note: 'name' is fixed and cant be reordered
