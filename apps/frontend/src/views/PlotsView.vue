@@ -45,6 +45,17 @@
               style="width: 100%; height: 100%"
             />
           </div>
+          <!-- Grouped lineage bar plot-->
+          <h4>Stacked Bar Plot - Grouped Lineage Distribution by Calendar Week</h4>
+          <div class="h-26rem plot">
+            <PrimeChart
+              ref="lineageGroupedBarPlot"
+              type="bar"
+              :data="lineage_grouped_barData()"
+              :options="lineage_barChartOptions()"
+              style="width: 100%; height: 100%"
+            />
+          </div>
         </PrimePanel>
       </div>
     </div>
@@ -129,7 +140,11 @@
         <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <PrimePanel v-else header="Sample Type" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <PrimeChart type="pie" :data="sampleTypeChartData()" :options="sampleTypeChartOptions()" />
+            <PrimeChart
+              type="pie"
+              :data="sampleTypeChartData()"
+              :options="sampleTypeChartOptions()"
+            />
           </div>
         </PrimePanel>
       </div>
@@ -197,8 +212,7 @@ const percentageLabelPlugin = {
     const datasets = chart.data.datasets
 
     datasets.forEach((dataset: ChartDataset, datasetIndex: number) => {
-      (chart.getDatasetMeta(datasetIndex).data as BarElement[]).forEach((bar, index) => {
-
+      ;(chart.getDatasetMeta(datasetIndex).data as BarElement[]).forEach((bar, index) => {
         let value = dataset.data[index]
         const percentage = `${value}%`
 
@@ -208,7 +222,7 @@ const percentageLabelPlugin = {
           if (isNaN(value)) return
         }
         if (typeof value !== 'number') return
-        const { height } = bar.getProps(['height'], true);
+        const { height } = bar.getProps(['height'], true)
         const y =
           value < options.threshold
             ? bar.y - 10 // Display above the bar for small values
@@ -493,6 +507,29 @@ export default {
         responsive: true,
         maintainAspectRatio: false,
       }
+    },
+    lineage_grouped_barData() {
+      const _data = this.samplesStore.filteredStatistics
+        ? this.samplesStore.filteredStatistics['lineage_grouped_bar_chart']
+        : []
+      if (this.isDataEmpty(_data)) {
+        return this.emptyChartData()
+      }
+      const lineages = [...new Set(_data.map((item) => item.lineage_group))]
+      const weeks = [...new Set(_data.map((item) => item.week))]
+      const colors = this.generateColorPalette(lineages.length)
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: weeks.map(
+          (week) =>
+            _data.find((item) => item.week === week && item.lineage_group === lineage)
+              ?.percentage || 0,
+        ),
+        backgroundColor: colors[index],
+        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
+        borderWidth: 2,
+      }))
+      return { labels: weeks, datasets }
     },
     metaDataChart() {
       // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
@@ -886,7 +923,9 @@ export default {
         ],
       }
     },
-    isDataEmpty(data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>): boolean {
+    isDataEmpty(
+      data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>,
+    ): boolean {
       return (
         !data ||
         Object.keys(data).length === 0 ||

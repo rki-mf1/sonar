@@ -26,11 +26,11 @@
         <strong>{{ key }}: </strong>
         <div style="white-space: normal; word-wrap: break-word">
           <GenomicProfileLabel
-              v-for="(variant, index) in Object.keys(value as GenomicProfile)"
-              :key="variant"
-              :variant-string="variant"
-              :annotations="genomicProfileValue(value)[variant]"
-              :is-last="index === Object.keys(value).length - 1"
+            v-for="(variant, index) in Object.keys(value as GenomicProfile)"
+            :key="variant"
+            :variant-string="variant"
+            :annotations="genomicProfileValue(value)[variant]"
+            :is-last="index === Object.keys(value).length - 1"
           />
         </div>
       </template>
@@ -51,8 +51,8 @@
 </template>
 
 <script lang="ts">
-import type {PropType} from 'vue';
-import type {GenomicProfile, Property, SampleDetails} from '@/util/types'
+import type { PropType } from 'vue'
+import type { GenomicProfile, Property, SampleDetails } from '@/util/types'
 
 export default {
   name: 'SampleDetails',
@@ -68,10 +68,10 @@ export default {
   },
   methods: {
     isProperty(item: unknown): item is Property {
-      return typeof item === 'object' && item != null  && 'name' in item && 'value' in item
+      return typeof item === 'object' && item != null && 'name' in item && 'value' in item
     },
     genomicProfileValue(value: string | string[] | GenomicProfile | Property[]): GenomicProfile {
-      return value as GenomicProfile;
+      return value as GenomicProfile
     },
   },
 }
