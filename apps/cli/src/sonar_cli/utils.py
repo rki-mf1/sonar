@@ -356,33 +356,60 @@ class sonarUtils:
             )
 
         else:
-            LOGGER.info("Disable annotation step.")
+            LOGGER.info("Skipping annotation step.")
 
         # Send Result over network.
         if not no_upload_sample:
             start_upload_time = get_current_time()
             # NOTE: reuse the chunk size from anno
             # n = 500
+            LOGGER.info(
+                "Uploading and importing sequence mutation profiles into backend..."
+            )
             cache_dict = {"job_id": job_id}
-            for sample_chunk in passed_samples_chunk_list:
-                LOGGER.info("Uploading and importing chunk.")
+            for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+                LOGGER.debug(f"Uploading chunk {chunk_number}.")
                 sonarUtils.zip_import_upload_sample_singlethread(
-                    cache_dict, sample_chunk
+                    cache_dict, sample_chunk, chunk_number
                 )
+            # Wait for all chunk to be processed
+            incomplete_chunks = set(range(1, len(passed_samples_chunk_list)))
+            while len(incomplete_chunks) > 0:
+                chunks_tmp = incomplete_chunks.copy()
+                for chunk_number in chunks_tmp:
+                    job_with_chunk = f"{job_id}_chunk{chunk_number}"
+                    resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                    job_status = resp["status"]
+                    if job_status in ["Q", "IP"]:
+                        next
+                    if job_status == "F":
+                        LOGGER.error(
+                            f"Job {job_with_chunk} failed (status={job_status}). Aborting."
+                        )
+                        sys.exit(1)
+                    if job_status == "C":
+                        incomplete_chunks.remove(chunk_number)
+                if len(incomplete_chunks) > 0:
+                    LOGGER.debug(
+                        f"Waiting for {len(incomplete_chunks)} chunks to finish being processed."
+                    )
+                    sleep_time = 3
+                    time.sleep(sleep_time)
 
             if auto_anno:
 
-                for each_file in tqdm(
-                    anno_result_list,
-                    desc="Uploading and importing annotations",
-                    unit="file",
-                    bar_format=bar_format,
-                    position=0,
-                    disable=not progress,
+                for chunk_number, each_file in enumerate(
+                    tqdm(
+                        anno_result_list,
+                        desc="Uploading and importing annotations",
+                        unit="file",
+                        bar_format=bar_format,
+                        position=0,
+                        disable=not progress,
+                    )
                 ):
-                    # LOGGER.info("Uploading and importing chunk.")
                     sonarUtils.zip_import_upload_annotation_singlethread(
-                        cache_dict, each_file
+                        cache_dict, each_file, chunk_number
                     )
 
             LOGGER.info(
@@ -391,17 +418,19 @@ class sonarUtils:
             cache.logfile_obj.write(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}\n"
             )
-            LOGGER.info("Job ID: %s", job_id)
+            LOGGER.debug("Job ID: %s", job_id)
         else:
             LOGGER.info("Disable sending samples.")
         start_clean_time = get_current_time()
         clear_unnecessary_cache(passed_samples_list, threads)
         LOGGER.info(
-            f"Clear unnecessary cache: {calculate_time_difference(start_clean_time, get_current_time())}"
+            f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
 
     @staticmethod
-    def zip_import_upload_annotation_singlethread(shared_objects: dict, file_path):
+    def zip_import_upload_annotation_singlethread(
+        shared_objects: dict, file_path, chunk_number: int
+    ):
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
@@ -419,15 +448,19 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
 
+        job_id = shared_objects["job_id"]
+        job_with_chunk = f"{job_id}_chunk{chunk_number}"
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
-            files, job_id=shared_objects["job_id"]
+            files, job_id=job_with_chunk
         )
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
 
     @staticmethod
-    def zip_import_upload_sample_singlethread(shared_objects: dict, sample_list):
+    def zip_import_upload_sample_singlethread(
+        shared_objects: dict, sample_list, chunk_number: int
+    ):
         """Bundle up the data to be sent to the backend and send it"""
 
         files_to_compress = []
@@ -470,28 +503,16 @@ class sonarUtils:
         files = {
             "zip_file": compressed_data,
         }
-        start_time = get_current_time()
+        job_id = shared_objects["job_id"]
+        job_with_chunk = f"{job_id}_chunk{chunk_number}"
+        LOGGER.debug(f"Uploading annotation (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
-            files, job_id=shared_objects["job_id"]
+            files, job_id=job_with_chunk
         )
+        LOGGER.debug(f"Uploading annotation (job_id: {job_with_chunk}) -- done")
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
-        job_status = None
-        sleep_time = 3
-        while job_status not in ["C", "F"]:
-            resp = APIClient(base_url=BASE_URL).get_job_byID(shared_objects["job_id"])
-            job_status = resp["status"]
-            if job_status in ["Q", "IP"]:
-                LOGGER.info(f"Job {shared_objects['job_id']} is {job_status}.")
-                time.sleep(sleep_time)
-        time_diff = calculate_time_difference(start_time, get_current_time())
-        if job_status == "F":
-            LOGGER.error(f"Job {shared_objects['job_id']} is {job_status}: {time_diff}")
-        else:
-            LOGGER.info(
-                f"[runtime] Job {shared_objects['job_id']} is {job_status}: {time_diff}"
-            )
 
     @staticmethod
     def _import_properties(

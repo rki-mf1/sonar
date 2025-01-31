@@ -342,7 +342,7 @@ def test_match_profile_AA_INS(capfd, api_url):
 @pytest.mark.order(14)
 def test_match_profile_AA_DEL(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --profile ORF1a:del:3675-3676 --count"
+        f"match --db {api_url} -r MN908947.3 --profile ORF1a:del:3675-3677 --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()

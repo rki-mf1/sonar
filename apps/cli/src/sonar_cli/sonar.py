@@ -70,7 +70,7 @@ def parse_args(args=None):
 
     # import parser
     subparsers, _ = create_subparser_import(
-        subparsers, database_parser, thread_parser, reference_parser
+        subparsers, database_parser, thread_parser, reference_parser, general_parser
     )
 
     subparsers, _ = create_subparser_delete(subparsers, database_parser, sample_parser)
