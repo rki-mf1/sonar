@@ -195,27 +195,26 @@ export const useSamplesStore = defineStore('samples', {
     },
     async updateFilteredStatistics() {
       const emptyStatistics = {
-            filtered_total_count: 0,
-            meta_data_coverage: {},
-            samples_per_week: {},
-            genomecomplete_chart: {},
-            lineage_area_chart: [],
-            lineage_bar_chart: [],
-            lineage_grouped_bar_chart: [],
-            sequencing_tech: {},
-            sequencing_reason: {},
-            sample_type: { },
-            length: {},
-            lab: {},
-            zip_code: {},
-            host: {},
-          }
+        filtered_total_count: 0,
+        meta_data_coverage: {},
+        samples_per_week: {},
+        genomecomplete_chart: {},
+        lineage_area_chart: [],
+        lineage_bar_chart: [],
+        lineage_grouped_bar_chart: [],
+        sequencing_tech: {},
+        sequencing_reason: {},
+        sample_type: {},
+        length: {},
+        lab: {},
+        zip_code: {},
+        host: {},
+      }
       try {
         const filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
-        if (!filteredStatistics){
+        if (!filteredStatistics) {
           this.filteredStatistics = emptyStatistics
-        }
-        else{
+        } else {
           this.filteredStatistics = filteredStatistics
         }
         this.filteredCount = this.filteredStatistics.filtered_total_count
@@ -267,44 +266,46 @@ export const useSamplesStore = defineStore('samples', {
     },
 
     async updatePropertyOptions() {
-      try{
-      const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-      const metaData = this.filteredStatistics?.meta_data_coverage ?? {};
-       if (!res) {
-          console.error('API request failed');
-          return;
-        };
-
-      this.propertiesDict = {}
-      res.values.forEach((property: { name: string; query_type: string; description: string }) => {
-        if (property.query_type === 'value_varchar') {
-          this.propertiesDict[property.name] = Object.values(StringDjangoFilterType)
-        } else if (property.query_type === 'value_date') {
-          this.propertiesDict[property.name] = Object.values(DateDjangoFilterType)
-        } else {
-          this.propertiesDict[property.name] = Object.values(DjangoFilterType)
+      try {
+        const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+        const metaData = this.filteredStatistics?.meta_data_coverage ?? {}
+        if (!res) {
+          console.error('API request failed')
+          return
         }
-      })
-      // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
-      // & drop the 'name' column because the ID column is fixed
-      this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-        (key) => key !== 'name' && metaData[key] > 0,
-      )
-      this.propertyMenuOptions = [
-        'name',
-        ...this.propertyTableOptions.filter(
-          (prop) => !['genomic_profiles', 'proteomic_profiles', 'lineage'].includes(prop),
-        ),
-      ]
-      this.metaCoverageOptions = [
-        ...this.propertyMenuOptions.filter(
-          (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
-        ),
-      ]}
-       catch (error) {
-    console.error('Failed to update property options:', error);
-    // Optionally, you can show a user-friendly message or take other actions
-  }
+
+        this.propertiesDict = {}
+        res.values.forEach(
+          (property: { name: string; query_type: string; description: string }) => {
+            if (property.query_type === 'value_varchar') {
+              this.propertiesDict[property.name] = Object.values(StringDjangoFilterType)
+            } else if (property.query_type === 'value_date') {
+              this.propertiesDict[property.name] = Object.values(DateDjangoFilterType)
+            } else {
+              this.propertiesDict[property.name] = Object.values(DjangoFilterType)
+            }
+          },
+        )
+        // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
+        // & drop the 'name' column because the ID column is fixed
+        this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
+          (key) => key !== 'name' && metaData[key] > 0,
+        )
+        this.propertyMenuOptions = [
+          'name',
+          ...this.propertyTableOptions.filter(
+            (prop) => !['genomic_profiles', 'proteomic_profiles', 'lineage'].includes(prop),
+          ),
+        ]
+        this.metaCoverageOptions = [
+          ...this.propertyMenuOptions.filter(
+            (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
+          ),
+        ]
+      } catch (error) {
+        console.error('Failed to update property options:', error)
+        // Optionally, you can show a user-friendly message or take other actions
+      }
     },
     async updateRepliconAccessionOptions() {
       const res = await API.getInstance().getRepliconAccessionOptions()
