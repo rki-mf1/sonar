@@ -321,11 +321,6 @@ def chunk(arr_range, arr_size):
 
 def clear_sample_cache(sample):
     try:
-        if sample["mafft_seqfile"] is not None:
-            try:
-                os.remove(sample["mafft_seqfile"])
-            except FileNotFoundError:
-                pass  # File was already deleted
         try:
             os.remove(sample["vcffile"] + ".gz")
         except FileNotFoundError:
@@ -334,12 +329,6 @@ def clear_sample_cache(sample):
             os.remove(sample["vcffile"] + ".gz.tbi")
         except FileNotFoundError:
             pass
-        # if os.path.exists(sample["vcffile"]):
-        #     os.remove(sample["vcffile"])
-        # if sample["anno_vcf_file"]:
-        #    os.remove(sample["anno_vcf_file"])
-        # if sample["anno_tsv_file"]:
-        #    os.remove(sample["anno_tsv_file"])
     except (TypeError, OSError) as e:
         LOGGER.error(traceback.format_exc())
         LOGGER.error("\nDebugging Information:")

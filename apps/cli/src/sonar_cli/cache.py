@@ -254,7 +254,6 @@ class sonarCache:
         translation_id,
         algnid,
         seqfile,
-        mafft_seqfile,
         vcffile,
         anno_vcf_file,
         reffile,
@@ -284,7 +283,6 @@ class sonarCache:
             "sample_sequence_length": len(sequence),
             # "sample_sequence": sequence,
             "seq_file": seqfile,
-            "mafft_seqfile": mafft_seqfile,
             "vcffile": vcffile,
             "anno_vcf_file": anno_vcf_file,
             "ref_file": reffile,
@@ -468,15 +466,6 @@ class sonarCache:
             data["varfile"] = self.get_var_fname(
                 data["seqhash"] + "@" + self.get_refhash(data["refmol"])
             )
-            if method == 1:
-                data["mafft_seqfile"] = self.cache_seq_mafftinput(
-                    refseq_acc,
-                    self.get_refseq(data["refmol"]),
-                    data["seqhash"],
-                    data["sequence"],
-                )
-            else:
-                data["mafft_seqfile"] = None
 
         else:
             # In cases:
@@ -484,10 +473,7 @@ class sonarCache:
             # 3. if different samples but have similar sequence/varaint, use exiting alignID and map back to sample
             data["seqhash"] = None
             data["seqfile"] = None
-            data["mafft_seqfile"] = None
-
             data["reffile"] = None
-            # data["ttfile"] = None
             data["liftfile"] = None
             data["cdsfile"] = None
             data["varfile"] = None
@@ -519,100 +505,29 @@ class sonarCache:
     def cache_sequence(self, seqhash, sequence):
 
         fname = self.get_seq_fname(seqhash)
-        if os.path.isfile(fname):
-            if file_collision(fname, sequence):
-                sys.exit(
-                    "seqhash collision: sequences differ for seqhash " + seqhash + "."
-                )
-        else:
-            try:
-                with open(fname, "w") as handle:
-                    handle.write(sequence)
-            except OSError:
-                os.makedirs(os.path.dirname(fname), exist_ok=True)
-                with open(fname, "w") as handle:
-                    handle.write(sequence)
+        # if os.path.isfile(fname):
+        #    pass
+        #    #if file_collision(fname, sequence):
+        #    #    sys.exit(
+        #    #        "seqhash collision: sequences differ for seqhash " + seqhash + "."
+        #    #    )
+        # else:
+        try:
+            with open(fname, "w") as handle:
+                handle.write(">" + seqhash + "\n" + sequence + "\n")
+        except OSError:
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
+            with open(fname, "w") as handle:
+                handle.write(">" + seqhash + "\n" + sequence + "\n")
         return fname
 
     def cache_reference(self, refid, sequence):
         fname = self.get_ref_fname(refid)
         if refid not in self._refs:
             with open(fname, "w") as handle:
-                handle.write(sequence)
+                handle.write(">" + refid + "\n" + sequence + "\n")
             self._refs.add(refid)
         return fname
-
-    def cache_seq_mafftinput(self, refid, ref_sequence, seqhash, qry_sequence):
-        """
-        This function create fasta file which contains
-        only ref and query seq. The file will be used for MAFFT input.
-        """
-        # TODO: 1. Check the file exists or not: if not -> create a new one, else skip
-        # Get fname (.seq)
-        fname = self.get_seq_fname(seqhash)
-        fname = fname + ".fasta"  # (.seq.fasta)
-
-        try:
-            os.makedirs(os.path.dirname(fname), exist_ok=True)
-            with open(fname, "w") as handle:
-                handle.write(">" + refid + "\n")
-                handle.write(ref_sequence + "\n")
-                handle.write(">" + seqhash + "\n")
-                handle.write(qry_sequence + "\n")
-        except OSError as e:
-            LOGGER.error(f"An error occurred: {e}")
-            sys.exit(1)
-        return fname
-
-    # def cache_translation_table(self, translation_id):
-    #     """
-    #     If the translation table
-    #     is not in the cache, it is retrieved from the database and written to a file
-
-    #     :param translation_id: The id of the translation table
-    #     :param dbm: the database manager
-    #     :return: A file name.
-    #     """
-    #     fname = self.get_tt_fname(translation_id)  # write under /cache/ref/
-    #     if translation_id not in self._tt:
-    #         self.write_pickle(
-    #             fname,
-    #             APIClient(base_url=self.base_url).get_translation_dict(translation_id),
-    #         )
-    #         # self.write_pickle(fname, dbm.get_translation_dict(translation_id))
-    #         self._tt.add(translation_id)
-    #     return fname
-
-    # def cache_cds(self, refid, refmol_acc):
-    #     """
-    #     The function takes in a reference id, a reference molecule accession number,
-    #     and a reference sequence. It then checks to see if the reference molecule accession number is in the set of molecules that
-    #     have been cached. If it is not, it iterates through all of the coding sequences for that molecule and creates a
-    #     dataframe for each one.
-
-    #     It then saves the dataframe to a pickle file and adds the reference molecule accession number to
-    #     the set of molecules that have been cached.
-    #     It then returns the name of the pickle file
-    #     """
-    #     fname = self.get_cds_fname(refid)
-    #     if refmol_acc not in self._cds:
-    #         rows = []
-    #         cols = ["elemid", "pos", "end"]
-    #         for cds in self.iter_cds_v2(refmol_acc):
-    #             elemid = cds["id"]
-    #             coords = []
-    #             for rng in cds["ranges"]:
-    #                 coords.extend(list(rng))
-    #             for coord in coords:
-    #                 rows.append([elemid, coord, 0])
-    #             # rows[-1][2] = 1
-    #
-    #             df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
-    #             df.to_pickle(fname)
-    #             if self.debug:
-    #                 df.to_csv(fname + ".csv")
-    #         self._cds.add(refmol_acc)
-    #     return fname
 
     def cache_lift(self, refid, refmol_acc, sequence):
         """
@@ -878,6 +793,7 @@ class sonarCache:
                         with open(sample_data["seq_file"], "r") as handle:
                             orig_seq = handle.read()
 
+                        seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
                         if seq != orig_seq:
 
                             # NOTE: comment this part, for now, we need to discuss which
@@ -926,6 +842,8 @@ class sonarCache:
                             list_fail_samples.append(paranoid_dict)
                         elif not paranoid_dict:
                             passed_samples_list.append(sample_data)
+                    # sample_name = sample_data["name"]
+                    # passed_samples_list.append(sample_data)
 
             except Exception as e:
                 LOGGER.error("\n------- Fatal Error ---------")

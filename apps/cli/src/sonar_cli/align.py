@@ -65,9 +65,7 @@ class sonarAligner:
                         return True
 
         source_acc = str(data["source_acc"])
-        # self.log("data:" + str(data))
-        # alignment = self.align(data["seq_file"], data["ref_file"])
-        alignment = align_MAFFT(data["mafft_seqfile"])
+        alignment = align_MAFFT(data["seq_file"], data["ref_file"])
 
         # NOTE: this line was already performant
         nuc_vars = [x for x in self.extract_vars(*alignment, elem_acc=source_acc)]
