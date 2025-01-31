@@ -27,7 +27,6 @@ from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
 
-
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
 

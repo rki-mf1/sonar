@@ -1231,7 +1231,7 @@ def _get_vcf_data_form_var_parquet_file(cursor: dict, selected_ref_seq, showNX) 
             raise
 
         # Split out the data from each row
-        chrom, pos, pre_ref, ref, alt, samples = (
+        chrom, pos, pre_ref, ref, alt, _ = (
             row["reference_acc"],
             row["start"],
             pre_ref,

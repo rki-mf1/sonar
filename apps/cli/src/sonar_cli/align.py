@@ -3,7 +3,6 @@ import os
 import re
 import sys
 from typing import Generator
-from typing import List
 from typing import Tuple
 import warnings
 
@@ -190,7 +189,7 @@ class sonarAligner:
                 compression_level=10,
                 index=False,
             )
-            if selfdebug:
+            if self.debug:
                 os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
                 vars_df.to_csv(data["var_file"], sep="\t", index=False)
         return
