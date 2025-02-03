@@ -309,7 +309,10 @@ def slugify(string):
 
 def file_collision(fname, data):
     with open(fname, "r") as handle:
-        if handle.read() != data:
+        file_contents = handle.read()
+        if file_contents != data:
+            LOGGER.debug(f"existing file: {file_contents}")
+            LOGGER.debug(f"new data: {data}")
             return True
     return False
 
