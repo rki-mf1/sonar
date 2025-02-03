@@ -2,7 +2,6 @@ import re
 import subprocess
 import sys
 
-from Bio.Align.Applications import MafftCommandline
 import parasail
 from pywfa import cigartuples_to_str
 from pywfa import WavefrontAligner
