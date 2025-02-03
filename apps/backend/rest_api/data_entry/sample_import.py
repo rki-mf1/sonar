@@ -23,7 +23,6 @@ class SampleRaw:
     anno_vcf_file: str
     cds_file: str
     header: str
-    mafft_seqfile: str
     name: str
     properties: dict
     ref_file: str
