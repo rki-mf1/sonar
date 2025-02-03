@@ -131,7 +131,7 @@ def align_Parasail(qryseq, refseq, gapopen=16, gapextend=4):
 
 
 def align_MAFFT(query_file, ref_file):
-    mafft_cmd = ["mafft", "--auto", "--addfragments", query_file, ref_file]
+    mafft_cmd = ["mafft", "--auto", "--add", query_file, ref_file]
     ret = subprocess.run(mafft_cmd, capture_output=True, text=True)
     try:
         ret.check_returncode()
