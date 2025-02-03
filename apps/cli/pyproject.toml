@@ -27,7 +27,6 @@ sqlparse = "^0.4.4"
 colorlog = "^6.8.0"
 packaging = "^24.0"
 pango-aliasor = "^0.3.0"
-fastparquet = "^2024.11.0"
 pyarrow = "^19.0.0"
 
 [tool.poetry.group.dev.dependencies]
