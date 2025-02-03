@@ -512,7 +512,7 @@ class sonarCache:
         fname = self.get_seq_fname(seqhash)
         seqfasta = f">{seqhash}\n{sequence}\n"
         if os.path.isfile(fname):
-            if file_collision(fname, sequence):
+            if file_collision(fname, seqfasta):
                 LOGGER.error("seqhash collision: file name:" + fname + ".")
                 sys.exit(
                     "seqhash collision: sequences differ for seqhash " + seqhash + "."
