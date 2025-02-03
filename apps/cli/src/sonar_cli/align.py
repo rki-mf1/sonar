@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from typing import Generator
+from typing import List
 from typing import Tuple
 import warnings
 
@@ -66,22 +67,8 @@ class sonarAligner:
 
         # NOTE: this line was already performant
         nuc_vars = [x for x in self.extract_vars(*alignment, elem_acc=source_acc)]
-        vars_df = pd.DataFrame(
-            nuc_vars,
-            columns=[
-                "id",
-                "ref",
-                "start",
-                "end",
-                "alt",
-                "reference_acc",
-                "label",
-                "type",
-            ],
-        )
-        vars_df[["id", "start", "end"]] = vars_df[["id", "start", "end"]].astype(int)
-        vars_df["parent_id"] = ""
-
+        # empty string for parent_id row
+        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
         # NOTE: uncomment the code below to change the variant extraction to the Cigar stlye
         # cigar = self.gen_cigar(alignment[0], alignment[1])
         # nuc_vars = [
@@ -91,11 +78,33 @@ class sonarAligner:
         #    )
         # ]
 
-        if not vars_df.empty:
+        if nuc_vars:
             # create AA mutation
-            for aa_row in self.lift_vars(vars_df, data["lift_file"]):
-                vars_df.loc[len(vars_df)] = aa_row
-            vars_df["parent_id"] = vars_df["parent_id"].astype(str)
+            aa_vars = "\n".join(
+                # NOTE: this line is actually cause the the slow performance
+                ["\t".join(x) for x in self.lift_vars(nuc_vars, data["lift_file"])]
+            )
+            if aa_vars:
+                # concatinate to the same file of NT variants
+                vars += "\n" + aa_vars
+        # NOTE: It seems we have inefficient steps here: join first and then split later.
+        vars_list = [row.split("\t") for row in vars.split("\n") if row]
+        vars_df = pd.DataFrame(
+            vars_list,
+            columns=[
+                "id",
+                "ref",
+                "start",
+                "end",
+                "alt",
+                "reference_acc",
+                "label",
+                "type",
+                "parent_id",
+            ],
+        )
+        vars_df[["id", "start", "end"]] = vars_df[["id", "start", "end"]].astype(int)
+
         try:
             if self.debug:
                 vars_df.to_csv(data["var_file"], sep="\t", index=False)
@@ -151,8 +160,21 @@ class sonarAligner:
                 qryseq, refseq, cigar, source_acc, data["cds_file"]
             )
         ]
+        # empty string for parent_id row
+        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
+        if nuc_vars:
+            # create AA mutation
+            aa_vars = "\n".join(
+                ["\t".join(x) for x in self.lift_vars(nuc_vars, data["lift_file"])]
+            )
+            if aa_vars:
+                # concatenate to the same file of NT variants
+                vars += "\n" + aa_vars
+            vars += "\n"
+
+        vars_list = [row.split("\t") for row in vars.split("\n") if row]
         vars_df = pd.DataFrame(
-            nuc_vars,
+            vars_list,
             columns=[
                 "id",
                 "ref",
@@ -162,15 +184,10 @@ class sonarAligner:
                 "reference_acc",
                 "label",
                 "type",
+                "parent_id",
             ],
         )
         vars_df[["id", "start", "end"]] = vars_df[["id", "start", "end"]].astype(int)
-        vars_df["parent_id"] = ""
-        if not vars_df.empty:
-            # create AA mutation
-            for aa_row in self.lift_vars(vars_df, data["lift_file"]):
-                vars_df.loc[len(vars_df)] = aa_row
-            vars_df["parent_id"] = vars_df["parent_id"].astype(str)
         try:
             if self.debug:
                 vars_df.to_csv(data["var_file"], sep="\t", index=False)
@@ -287,7 +304,7 @@ class sonarAligner:
 
     def lift_vars(  # noqa: C901
         self,
-        nuc_vars_df: pd.DataFrame,
+        nuc_vars: List[Tuple],
         df: pd.DataFrame,
     ) -> Generator[Tuple[str, str, str, str, str, str, str, str], None, None]:
         """
@@ -327,23 +344,17 @@ class sonarAligner:
         #             col_name = f"alt{j}"
         #             df.loc[df[f"nucPos{j}"] == i, col_name] = alt
 
-        # V.1.5 a little bit of improvement of code explainability (no performance improved)
-        # for nuc_var in nuc_vars:
-        #     if nuc_var[3] != ".":
-        #         alt = "-" if nuc_var[3] == " " else nuc_var[3]
-        #         start, end = map(int, (nuc_var[1], nuc_var[2]))
-        #         positions = np.arange(start, end)
-        #         mask = np.isin(df["nucPos1"], positions)
-        #         df.loc[mask, "alt1"] = alt
-        #         mask = np.isin(df["nucPos2"], positions)
-        #         df.loc[mask, "alt2"] = alt
-        #         mask = np.isin(df["nucPos3"], positions)
-        #         df.loc[mask, "alt3"] = alt
-
-        # range(1, len(nuc_vars_df) + 1)  # Add unique IDs for NT variants
-        # Start amino acid (AA) ids after the last nucleotide (NT) id
-        nuc_vars_df["parent_id"] = nuc_vars_df["id"]
-
+        # Convert nuc_vars into a DataFrame to facilitate adding unique IDs
+        nuc_vars_df = pd.DataFrame(
+            nuc_vars,
+            columns=["id", "ref", "start", "end", "alt", "elem_acc", "label", "type"],
+        )
+        nuc_vars_df[["start", "end"]] = nuc_vars_df[["start", "end"]].astype(int)
+        nuc_vars_df["id"] = nuc_vars_df["id"].astype(int)
+        nuc_vars_df["parent_id"] = nuc_vars_df[
+            "id"
+        ]  # range(1, len(nuc_vars_df) + 1)  # Add unique IDs for NT variants
+        # Start amino acid (AA) IDs after the last nucleotide (NT) ID
         next_aa_id = nuc_vars_df["id"].max() + 1 if not nuc_vars_df.empty else 1
 
         # newer version
@@ -353,10 +364,11 @@ class sonarAligner:
         alt1 = df["alt1"].to_numpy()
         alt2 = df["alt2"].to_numpy()
         alt3 = df["alt3"].to_numpy()
-        for index, nuc_var in nuc_vars_df.iterrows():
-            if nuc_var["end"] != ".":
-                alt = "-" if nuc_var["alt"] == " " else nuc_var["alt"]
-                start, end = nuc_var["start"], nuc_var["end"]
+
+        for nuc_var in nuc_vars:
+            if nuc_var[3] != ".":
+                alt = "-" if nuc_var[4] == " " else nuc_var[4]
+                start, end = map(int, (nuc_var[2], nuc_var[3]))
 
                 # Boolean indexing directly
                 mask1 = (nucPos1 >= start) & (nucPos1 < end)
@@ -405,6 +417,7 @@ class sonarAligner:
             # get only rows where there is a change in amino acid.
             # by dropping rows that dont get changed
             df.drop(df[df["aa"] == df["altAa"]].index, inplace=True)
+
             # for snps or inserts
             for row in df.loc[(df["altAa"] != "-") & (df["altAa"] != "")].itertuples():
                 pos = row.aaPos + 1
@@ -429,9 +442,8 @@ class sonarAligner:
                     if not matching_nt.empty
                     else ""
                 )
-
-                # 'id','ref','start', 'end', 'alt', 'reference_acc', 'label', 'type', 'parent_id'
-                yield next_aa_id, row.aa, pos - 1, pos, row.altAa, str(
+                # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+                yield str(next_aa_id), row.aa, str(pos - 1), str(pos), row.altAa, str(
                     row.accession
                 ), label, "cds", parent_id
                 next_aa_id += 1
@@ -480,10 +492,10 @@ class sonarAligner:
                         if not matching_nt.empty
                         else ""
                     )
-                    # 'id','ref','start', 'end', 'alt', 'reference_acc', 'label', 'type', 'parent_id'
-                    yield next_aa_id, prev_row["aa"], start, end, " ", str(
-                        prev_row["accession"]
-                    ), label, "cds", parent_id
+                    # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
+                    yield str(next_aa_id), prev_row["aa"], str(start), str(
+                        end
+                    ), " ", str(prev_row["accession"]), label, "cds", parent_id
 
                     # Start a new deletion block
                     prev_row = row
@@ -518,7 +530,7 @@ class sonarAligner:
                     else ""
                 )
 
-                yield next_aa_id, prev_row["aa"], start, end, " ", str(
+                yield str(next_aa_id), prev_row["aa"], str(start), str(end), " ", str(
                     prev_row["accession"]
                 ), label, "cds", parent_id
                 next_aa_id += 1
