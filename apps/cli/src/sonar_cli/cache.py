@@ -505,20 +505,19 @@ class sonarCache:
     def cache_sequence(self, seqhash, sequence):
 
         fname = self.get_seq_fname(seqhash)
-        # if os.path.isfile(fname):
-        #    pass
-        #    #if file_collision(fname, sequence):
-        #    #    sys.exit(
-        #    #        "seqhash collision: sequences differ for seqhash " + seqhash + "."
-        #    #    )
-        # else:
-        try:
-            with open(fname, "w") as handle:
-                handle.write(">" + seqhash + "\n" + sequence + "\n")
-        except OSError:
-            os.makedirs(os.path.dirname(fname), exist_ok=True)
-            with open(fname, "w") as handle:
-                handle.write(">" + seqhash + "\n" + sequence + "\n")
+        if os.path.isfile(fname):
+            if file_collision(fname, sequence):
+                sys.exit(
+                    "seqhash collision: sequences differ for seqhash " + seqhash + "."
+                )
+        else:
+            try:
+                with open(fname, "w") as handle:
+                    handle.write(">" + seqhash + "\n" + sequence + "\n")
+            except OSError:
+                os.makedirs(os.path.dirname(fname), exist_ok=True)
+                with open(fname, "w") as handle:
+                    handle.write(">" + seqhash + "\n" + sequence + "\n")
         return fname
 
     def cache_reference(self, refid, sequence):
