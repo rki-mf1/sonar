@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 from sonar_cli.common_aligns import align_MAFFT
 from sonar_cli.common_aligns import align_Parasail
-from sonar_cli.common_aligns import align_WFA
 from sonar_cli.common_utils import read_seqcache
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
