@@ -474,7 +474,7 @@ class sonarUtils:
             # Append the serialized sample dictionary to the files to compress
             files_to_compress.append(
                 (
-                    f"samples/{get_fname(kwargs['name'], extension='.sample',enable_parent_dir=True)}",
+                    f"samples/{get_fname(kwargs['name'], extension='.sample', enable_parent_dir=True)}",
                     sample_bytes,
                 )
             )

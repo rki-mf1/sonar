@@ -950,7 +950,7 @@ class sonarCache:
             # currently, we report only failed sample IDs.
             self.error_logfile_obj.write("Fail sample during alignment:----\n")
             for fail_sample in list_fail_samples:
-                self.error_logfile_obj.write(f"{ fail_sample['sample_name'] }\n")
+                self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
 
         count_sample = total_samples - len(list_fail_samples)
         LOGGER.info(f"Total passed samples: {count_sample}")
