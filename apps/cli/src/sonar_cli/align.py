@@ -158,8 +158,11 @@ class sonarAligner:
 
         if method == 2:
             _, __, cigar = align_Parasail(qryseq, refseq)
-        elif method == 3:
-            _, __, cigar = align_WFA(qryseq, refseq)
+        # TODO: WFA is disabled for now. It has problems with crashing and also
+        # needs to be updated now that qryseq and refseq are fasta files
+        # (previously they were pure sequences)
+        # elif method == 3:
+        #    _, __, cigar = align_WFA(qryseq, refseq)
         else:
             LOGGER.error(f"Alignment method not recognized (method = {method})")
             sys.exit(1)

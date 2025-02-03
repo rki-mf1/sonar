@@ -435,9 +435,11 @@ def create_subparser_import(
         parents=parent_parsers,
     )
 
+    # help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default: %(default)s)",
     parser.add_argument(
         "--method",
-        help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default: %(default)s)",
+        help="Select alignment tools: 1=MAFFT (default: %(default)s)",
+        choices=[1],
         type=int,
         default=1,
     )
