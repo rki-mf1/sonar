@@ -439,7 +439,7 @@ def create_subparser_import(
     parser.add_argument(
         "--method",
         help="Select alignment tools: 1=MAFFT (default: %(default)s)",
-        choices=[1],
+        choices=[1, 2],
         type=int,
         default=1,
     )
