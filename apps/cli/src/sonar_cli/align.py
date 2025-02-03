@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 from sonar_cli.common_aligns import align_MAFFT
 from sonar_cli.common_aligns import align_Parasail
-from sonar_cli.common_aligns import align_WFA
 from sonar_cli.common_utils import read_seqcache
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
@@ -65,9 +64,7 @@ class sonarAligner:
                         return True
 
         source_acc = str(data["source_acc"])
-        # self.log("data:" + str(data))
-        # alignment = self.align(data["seq_file"], data["ref_file"])
-        alignment = align_MAFFT(data["mafft_seqfile"])
+        alignment = align_MAFFT(data["seq_file"], data["ref_file"])
 
         # NOTE: this line was already performant
         nuc_vars = [x for x in self.extract_vars(*alignment, elem_acc=source_acc)]
@@ -160,8 +157,11 @@ class sonarAligner:
 
         if method == 2:
             _, __, cigar = align_Parasail(qryseq, refseq)
-        elif method == 3:
-            _, __, cigar = align_WFA(qryseq, refseq)
+        # TODO: WFA is disabled for now. It has problems with crashing and also
+        # needs to be updated now that qryseq and refseq are fasta files
+        # (previously they were pure sequences)
+        # elif method == 3:
+        #    _, __, cigar = align_WFA(qryseq, refseq)
         else:
             LOGGER.error(f"Alignment method not recognized (method = {method})")
             sys.exit(1)

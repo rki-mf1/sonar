@@ -1,7 +1,7 @@
 import re
+import subprocess
 import sys
 
-from Bio.Align.Applications import MafftCommandline
 import parasail
 from pywfa import cigartuples_to_str
 from pywfa import WavefrontAligner
@@ -129,26 +129,24 @@ def align_Parasail(qryseq, refseq, gapopen=16, gapextend=4):
     )
 
 
-def align_MAFFT(input_fasta):
-
+def align_MAFFT(query_file, ref_file):
+    mafft_cmd = ["mafft", "--auto", "--add", query_file, ref_file]
+    ret = subprocess.run(mafft_cmd, capture_output=True, text=True)
     try:
-        mafft_exe = "mafft"
-        mafft_cline = MafftCommandline(
-            mafft_exe, input=input_fasta, inputorder=True, auto=True
-        )
-        stdout, stderr = mafft_cline()
-        # find the fist position of '\n' to get seq1
-        s1 = stdout.find("\n") + 1
-        # find the start of second sequence position
-        e = stdout[1:].find(">") + 1
-        # find the '\n' of the second sequence to get seq2
-        s2 = stdout[e:].find("\n") + e
-        ref = stdout[s1:e].replace("\n", "").upper()
-        qry = stdout[s2:].replace("\n", "").upper()
-    except Exception as e:
+        ret.check_returncode()
+    except subprocess.CalledProcessError as e:
         LOGGER.error(f"An error occurred in align_MAFFT: {e}")
-        LOGGER.error(f"Input filename: {input_fasta}")
+        LOGGER.error(f"Input files: query={query_file} reference={ref_file}")
         sys.exit("--stop--")
+
+    stdout = ret.stdout
+    s1 = stdout.find("\n") + 1
+    # find the start of second sequence position
+    e = stdout[1:].find(">") + 1
+    # find the '\n' of the second sequence to get seq2
+    s2 = stdout[e:].find("\n") + e
+    ref = stdout[s1:e].replace("\n", "").upper()
+    qry = stdout[s2:].replace("\n", "").upper()
     return qry, ref
 
 
