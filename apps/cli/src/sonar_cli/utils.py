@@ -151,6 +151,7 @@ class sonarUtils:
             update=update,
             progress=progress,
             include_nx=include_nx,
+            auto_anno=auto_anno,
         )
 
         # importing sequences
@@ -162,7 +163,6 @@ class sonarUtils:
                 threads,
                 progress,
                 method,
-                auto_anno,
                 no_upload_sample,
             )
 
@@ -205,6 +205,7 @@ class sonarUtils:
         progress: bool = False,
         debug: bool = False,
         include_nx: bool = True,
+        auto_anno: bool = False,
     ) -> sonarCache:
         """Set up a cache for sequence data."""
         # Instantiate a sonarCache object.
@@ -218,6 +219,7 @@ class sonarUtils:
             disable_progress=not progress,
             refacc=reference,
             include_nx=include_nx,
+            auto_anno=auto_anno,
         )
 
     @staticmethod
@@ -228,7 +230,6 @@ class sonarUtils:
         threads: int = 1,
         progress: bool = False,
         method: int = 1,
-        auto_anno: bool = False,
         no_upload_sample: bool = False,
     ) -> None:
         """
@@ -317,7 +318,7 @@ class sonarUtils:
             )
             for i in range(0, len(passed_samples_list), n)
         ]
-        if auto_anno:
+        if cache.auto_anno:
             anno_result_list = []
             start_anno_time = get_current_time()
             try:
@@ -395,7 +396,7 @@ class sonarUtils:
                     sleep_time = 3
                     time.sleep(sleep_time)
 
-            if auto_anno:
+            if cache.auto_anno:
 
                 for chunk_number, each_file in enumerate(
                     tqdm(

@@ -729,6 +729,7 @@ def handle_import(args: argparse.Namespace):
         LOGGER.warn("Invalid --method. Please use 'import -h' to see available methods")
         exit(1)
     LOGGER.info(f"Skip N/X mutation: {args.skip_nx}")
+    LOGGER.info(f"Variant Annotation: {args.auto_anno}")
     sonarUtils.import_data(
         db=args.db,
         fasta=args.fasta,
