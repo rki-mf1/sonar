@@ -737,6 +737,8 @@ class sonarUtils:
         worker_id, shared_objects: sonarCache, *sample_list
     ):  # **kwargs):
         """
+        NOTE: The _unique_name will be changed if the sample_list size changed or
+        sample's name changed, so the exist checking will be fail.
 
         kwargs are sample dict object
         """
@@ -776,7 +778,8 @@ class sonarUtils:
                 cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
             )
             filtered_vcf = os.path.join(
-                cache.anno_dir, get_fname(_unique_name, extension=".filtered.anno.vcf")
+                cache.anno_dir,
+                get_fname(_unique_name, extension=".filtered.anno.vcf.gz"),
             )
             if cache.allow_updates is False:
                 if os.path.exists(filtered_vcf):

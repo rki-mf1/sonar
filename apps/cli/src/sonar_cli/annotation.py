@@ -102,7 +102,9 @@ class Annotator:
                 return
 
         # The vcf has at least one record, so the view command should not fail
-        filter_command = f"bcftools view -e 'INFO/ANN=\".\"' {input_vcf} > {output_vcf}"
+        filter_command = (
+            f"bcftools view -O z9 -e 'INFO/ANN=\".\"' {input_vcf} > {output_vcf}"
+        )
 
         # Execute the filter command
         filter_process = subprocess.run(
@@ -172,7 +174,7 @@ class Annotator:
             # Compose the commands with the current VCF path
             compressed_vcf = vcf_path + ".gz"
             bgzip_cmd = f"bgzip {vcf_path} -k -f  > {compressed_vcf} "
-            tabix_cmd = f"tabix -p vcf {compressed_vcf} "
+            tabix_cmd = f"tabix -f -p vcf {compressed_vcf} "
             compressed_vcf_list.append(compressed_vcf)
             # Execute bgzip command
             result = subprocess.run(bgzip_cmd, shell=True, stderr=subprocess.PIPE)

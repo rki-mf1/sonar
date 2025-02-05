@@ -144,7 +144,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
             print("Batch size:", batch_size)
             # var and vcf
             sample_files = list(temp_dir.joinpath("samples").glob("**/*.sample"))
-            anno_files = list(temp_dir.joinpath("anno").glob("**/*.vcf"))
+            anno_files = list(temp_dir.joinpath("anno").glob("**/*.vcf.*"))
             print(f"Sample: {len(sample_files)} files found")
             print(f"Annotation (vcfs): {len(anno_files)} files found")
             if len(sample_files) > 0:

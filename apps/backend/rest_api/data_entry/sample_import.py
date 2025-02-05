@@ -34,8 +34,6 @@ class SampleRaw:
     sourceid: int
     translationid: int
     include_nx: bool
-    tt_file: Optional[str] = None
-    var_file: Optional[str] = None
     var_parquet_file: Optional[str] = None
     vcffile: Optional[str] = None
     algnid: Optional[int] = None

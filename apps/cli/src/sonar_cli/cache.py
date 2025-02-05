@@ -743,7 +743,8 @@ class sonarCache:
         ):
             try:
                 iter_dna_list = []
-
+                # NOTE: right now, we no longer need var_file.
+                del sample_data["var_file"]
                 del sample_data["lift_file"]
                 if not sample_data["var_parquet_file"] is None:
                     # SECTION:ReadVar
