@@ -676,7 +676,9 @@ class SampleViewSet(
 
         # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
         lineage_groups = {
-            ".".join(lineage.split(".")[:2]) for lineage in present_lineages
+            ".".join(lineage.split(".")[:2])
+            for lineage in present_lineages
+            if lineage is not None
         }
         lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
 
