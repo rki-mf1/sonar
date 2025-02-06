@@ -297,10 +297,10 @@ class SampleImport:
         for _, row in var_df.iterrows():
             try:
                 yield VarRaw(
-                    int(row["id"]),
+                    row["id"],
                     row["ref"],
-                    int(row["start"]),
-                    int(row["end"]),
+                    row["start"],
+                    row["end"],
                     row["alt"],
                     row["reference_acc"],
                     row["type"],
