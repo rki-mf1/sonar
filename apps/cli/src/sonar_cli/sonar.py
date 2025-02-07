@@ -54,18 +54,22 @@ def parse_args(args=None):
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Reference parser
-    subparsers, _ = create_subparser_list_reference(subparsers, database_parser)
+    subparsers, _ = create_subparser_list_reference(
+        subparsers, database_parser, general_parser
+    )
 
     subparsers, _ = create_subparser_add_prop(
-        subparsers, database_parser, property_parser
+        subparsers, database_parser, property_parser, general_parser
     )
     subparsers, _ = create_subparser_delete_prop(
-        subparsers, database_parser, property_parser
+        subparsers, database_parser, property_parser, general_parser
     )
 
-    subparsers, _ = create_subparser_add_reference(subparsers, database_parser)
+    subparsers, _ = create_subparser_add_reference(
+        subparsers, database_parser, general_parser
+    )
     subparsers, _ = create_subparser_delete_reference(
-        subparsers, database_parser, reference_parser
+        subparsers, database_parser, reference_parser, general_parser
     )
 
     # import parser
@@ -73,14 +77,18 @@ def parse_args(args=None):
         subparsers, database_parser, thread_parser, reference_parser, general_parser
     )
 
-    subparsers, _ = create_subparser_delete(subparsers, database_parser, sample_parser)
+    subparsers, _ = create_subparser_delete(
+        subparsers, database_parser, sample_parser, general_parser
+    )
 
     # property
-    subparsers, _ = create_subparser_list_prop(subparsers, database_parser)
+    subparsers, _ = create_subparser_list_prop(
+        subparsers, database_parser, general_parser
+    )
 
     # lineage
     subparsers, _ = create_subparser_lineage_import(
-        subparsers, lineage_parser, output_parser
+        subparsers, lineage_parser, output_parser, general_parser
     )
     # match
     subparsers, subparser_match = create_subparser_match(
@@ -92,9 +100,9 @@ def parse_args(args=None):
         general_parser,
     )
     # admin
-    subparsers, _ = create_subparser_tasks(subparsers, database_parser)
+    subparsers, _ = create_subparser_tasks(subparsers, database_parser, general_parser)
 
-    subparsers, _ = create_subparser_info(subparsers, database_parser)
+    subparsers, _ = create_subparser_info(subparsers, database_parser, general_parser)
     # version parser
     parser.add_argument(
         "-v",
@@ -161,8 +169,8 @@ def create_parser_lineage() -> argparse.ArgumentParser:
 def create_parser_general() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
-        "--debug",
-        help="activate debugging mode showing all queries and debug info on screen",
+        "--verbose",
+        help="Increase the amount of logging messages show in the console",
         action="store_true",
     )
     return parser
@@ -509,6 +517,11 @@ def create_subparser_import(
     parser.add_argument(
         "--skip-nx",
         help="exclude mutations containing N or X from being imported into the database (default; sonar includes mutations containing 'N' or 'X' when importing).",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--debug",
+        help="Save additional files to the cache dir that can be useful when debugging errors",
         action="store_true",
     )
     return subparsers, parser
@@ -1071,16 +1084,14 @@ def main(args: Optional[argparse.Namespace] = None) -> int:
         int: Returns 0 if finished successfully.
     """
 
-    # process arguments
     if not args:
         args = parse_args(sys.argv[1:])
 
     # Set debugging mode
-    if hasattr(args, "debug") and args.debug:
+    if hasattr(args, "verbose") and args.verbose:
         config.DEBUG = True
     else:
         config.DEBUG = False
-        args.debug = False
 
     LoggingConfigurator(debug=config.DEBUG)
 
