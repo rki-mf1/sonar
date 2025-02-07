@@ -77,8 +77,7 @@ class sonarCache:
         if not self.refmols:
             LOGGER.info(f"Cannot find reference: {self.refacc}")
             sys.exit()
-        if self.debug:
-            LOGGER.info(f"Init refmols: {self.refmols}")
+        LOGGER.debug(f"Init refmols: {self.refmols}")
         self.default_refmol_acc = [x for x in self.refmols][0]
 
         self._molregex = re.compile(r"\[molecule=([^\[\]=]+)\]")
