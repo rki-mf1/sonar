@@ -893,10 +893,18 @@ class sonarCache:
             # build snpeff cache
             snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
             os.makedirs(snpeff_data_dir, exist_ok=True)
-            cmd = f"snpEff build -nodownload {reference} -genbank -dataDir {self.snpeff_data_dir}"
+            cmd = [
+                "snpEff",
+                "build",
+                "-nodownload",
+                reference,
+                "-genbank",
+                "-dataDir",
+                self.snpeff_data_dir,
+            ]
             LOGGER.info(f"Building snpeff cache for reference {reference}")
             try:
-                subprocess.run(cmd, shell=True, check=True)
+                subprocess.run(cmd, capture_output=True, check=True)
                 # write .done file for later checking if the cahce is built already
                 # so we dont need to rebuild it again.
                 with open(
