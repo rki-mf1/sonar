@@ -48,7 +48,6 @@ from sonar_cli.config import BASE_URL
 
 from .logging import LoggingConfigurator
 
-
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
 

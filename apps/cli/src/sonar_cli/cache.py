@@ -27,7 +27,6 @@ from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
 
-
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
 
@@ -261,6 +260,7 @@ class sonarCache:
         vcffile,
         anno_vcf_file,
         reffile,
+        varparquetfile,
         varfile,
         liftfile: pd.DataFrame,
         cdsfile,
@@ -290,6 +290,7 @@ class sonarCache:
             "vcffile": vcffile,
             "anno_vcf_file": anno_vcf_file,
             "ref_file": reffile,
+            "var_parquet_file": varparquetfile,
             "var_file": varfile,
             "lift_file": liftfile,
             "cds_file": cdsfile,
@@ -467,6 +468,9 @@ class sonarCache:
             # cache_cds is used for frameshift detection
             # but this will be removed soon, since we use snpEff.
             data["cdsfile"] = None  # self.cache_cds(refseq_acc, data["refmol"])
+            data["varparquetfile"] = self.get_var_parquet_fname(
+                data["seqhash"] + "@" + self.get_refhash(data["refmol"])
+            )
             data["varfile"] = self.get_var_fname(
                 data["seqhash"] + "@" + self.get_refhash(data["refmol"])
             )
@@ -480,6 +484,7 @@ class sonarCache:
             data["reffile"] = None
             data["liftfile"] = None
             data["cdsfile"] = None
+            data["varparquetfile"] = None
             data["varfile"] = None
 
         # annotation.
@@ -512,6 +517,7 @@ class sonarCache:
         seqfasta = f">{seqhash}\n{sequence}\n"
         if os.path.isfile(fname):
             if file_collision(fname, seqfasta):
+                LOGGER.error("seqhash collision: file name:" + fname + ".")
                 sys.exit(
                     "seqhash collision: sequences differ for seqhash " + seqhash + "."
                 )
@@ -628,6 +634,10 @@ class sonarCache:
         fn = slugify(seqhash)
         return os.path.join(self.algn_dir, fn[:2], fn + ".algn")
 
+    def get_var_parquet_fname(self, seqhash):
+        fn = slugify(seqhash)
+        return os.path.join(self.var_dir, fn[:2], fn + ".var.parquet")
+
     def get_var_fname(self, seqhash):
         fn = slugify(seqhash)
         return os.path.join(self.var_dir, fn[:2], fn + ".var")
@@ -737,34 +747,16 @@ class sonarCache:
         ):
             try:
                 iter_dna_list = []
-
+                # NOTE: right now, we no longer need var_file.
+                del sample_data["var_file"]
                 del sample_data["lift_file"]
-                if not sample_data["var_file"] is None:
+                if not sample_data["var_parquet_file"] is None:
                     # SECTION:ReadVar
-                    with open(sample_data["var_file"], "r") as handle:
-                        for line in handle:
-                            if line == "//":
-                                break
-                            if line.startswith("#"):
-                                continue
-                            vardat = line.strip("\r\n").split("\t")
-                            if vardat[7] == "cds":
-                                break
-                            iter_dna_list.append(
-                                {
-                                    "variant.ref": vardat[1],  # ref
-                                    "variant.alt": vardat[4],  # alt
-                                    "variant.start": int(vardat[2]),  # start
-                                    "variant.end": int(vardat[3]),  # end
-                                }  # frameshift
-                            )
-                        # NOTE: disable check feature because we stop at "NT"
-                        if line != "//" and False:
-                            sys.exit(
-                                "cache error: corrupted file ("
-                                + sample_data["var_file"]
-                                + ")"
-                            )
+                    var_df = pd.read_parquet(sample_data["var_parquet_file"])
+                    nt_df = var_df[(var_df["type"] == "nt")]
+                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                        "records"
+                    )
                     # SECTION: Paranoid
                     if not sample_data["seqhash"] is None:
                         # Get Reference sequence.
@@ -777,20 +769,16 @@ class sonarCache:
                         sample_name = sample_data["name"]
 
                         for vardata in iter_dna_list:
-                            if vardata["variant.alt"] in gaps:
-                                for i in range(
-                                    vardata["variant.start"], vardata["variant.end"]
-                                ):
+                            if vardata["alt"] in gaps:
+                                for i in range(vardata["start"], vardata["end"]):
                                     seq[i] = ""
-                            elif vardata["variant.alt"] == ".":
-                                for i in range(
-                                    vardata["variant.start"], vardata["variant.end"]
-                                ):
+                            elif vardata["alt"] == ".":
+                                for i in range(vardata["start"], vardata["end"]):
                                     seq[i] = ""
-                            elif vardata["variant.start"] >= 0:
-                                seq[vardata["variant.start"]] = vardata["variant.alt"]
+                            elif vardata["start"] >= 0:
+                                seq[vardata["start"]] = vardata["alt"]
                             else:
-                                prefix = vardata["variant.alt"]
+                                prefix = vardata["alt"]
 
                         # seq is now a restored version from variant dict.
                         seq = prefix + "".join(seq)

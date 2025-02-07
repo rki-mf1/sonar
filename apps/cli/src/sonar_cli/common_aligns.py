@@ -7,7 +7,6 @@ from pywfa import cigartuples_to_str
 from pywfa import WavefrontAligner
 from sonar_cli.logging import LoggingConfigurator
 
-
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
 cigar_pattern = re.compile(r"(\d+)(\D)")

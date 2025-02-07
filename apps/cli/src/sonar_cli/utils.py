@@ -33,7 +33,7 @@ from sonar_cli.common_utils import flatten_json_output
 from sonar_cli.common_utils import get_current_time
 from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import out_autodetect
-from sonar_cli.common_utils import read_var_file
+from sonar_cli.common_utils import read_var_parquet_file
 from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
@@ -84,6 +84,7 @@ class sonarUtils:
         method: int = 1,
         no_upload_sample: bool = False,
         include_nx: bool = True,
+        debug: bool = False,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -150,6 +151,7 @@ class sonarUtils:
             cachedir=cachedir,
             update=update,
             progress=progress,
+            debug=debug,
             include_nx=include_nx,
             auto_anno=auto_anno,
         )
@@ -262,7 +264,10 @@ class sonarUtils:
 
         # Align sequences and process
         aligner = sonarAligner(
-            cache_outdir=cache.basedir, method=method, allow_updates=cache.allow_updates
+            cache_outdir=cache.basedir,
+            method=method,
+            allow_updates=cache.allow_updates,
+            debug=cache.debug,
         )
         l = len(cache._samplefiles_to_profile)
         LOGGER.info(f"Total samples that need to be processed: {l}")
@@ -365,10 +370,11 @@ class sonarUtils:
             # NOTE: reuse the chunk size from anno
             # n = 500
             LOGGER.info(
-                "Uploading and importing sequence mutation profiles into the sonar server..."
+                "Uploading and importing sequence mutation profiles into backend..."
             )
             cache_dict = {"job_id": job_id}
             for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+                LOGGER.debug(f"Uploading chunk {chunk_number}.")
                 sonarUtils.zip_import_upload_sample_singlethread(
                     cache_dict, sample_chunk, chunk_number
                 )
@@ -466,7 +472,7 @@ class sonarUtils:
 
         files_to_compress = []
         for kwargs in sample_list:
-            var_file = kwargs["var_file"]
+            var_parquet_file = kwargs["var_parquet_file"]
             sample_dict = kwargs
 
             # Serialize the sample dictionary to bytes
@@ -479,7 +485,7 @@ class sonarUtils:
                     sample_bytes,
                 )
             )
-            files_to_compress.append(var_file)
+            files_to_compress.append(var_parquet_file)
 
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
@@ -510,6 +516,7 @@ class sonarUtils:
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
         )
+        LOGGER.debug(f"Uploading job_id: {job_with_chunk} -- done")
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
             LOGGER.error(msg)
@@ -731,6 +738,8 @@ class sonarUtils:
         worker_id, shared_objects: sonarCache, *sample_list
     ):  # **kwargs):
         """
+        NOTE: The _unique_name will be changed if the sample_list size changed or
+        sample's name changed, so the exist checking will be fail.
 
         kwargs are sample dict object
         """
@@ -770,7 +779,8 @@ class sonarUtils:
                 cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
             )
             filtered_vcf = os.path.join(
-                cache.anno_dir, get_fname(_unique_name, extension=".filtered.anno.vcf")
+                cache.anno_dir,
+                get_fname(_unique_name, extension=".filtered.anno.vcf.gz"),
             )
             if cache.allow_updates is False:
                 if os.path.exists(filtered_vcf):
@@ -1040,7 +1050,7 @@ class sonarUtils:
         cursor: object
             if from_var_file is False
                 The rows object which already has been fetched data.
-            eles if from_var_file is True
+            else if from_var_file is True
 
 
         reference: The reference genome name.
@@ -1056,7 +1066,7 @@ class sonarUtils:
             refernce_sequence = _dict["sequence"]
 
             if from_var_file:
-                records, all_samples = _get_vcf_data_form_var_file(
+                records, all_samples = _get_vcf_data_form_var_parquet_file(
                     cursor, refernce_sequence, showNX
                 )
             else:
@@ -1192,7 +1202,7 @@ class sonarUtils:
         LOGGER.info(json_response["detail"])
 
 
-def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
+def _get_vcf_data_form_var_parquet_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
     """
     Creates a data structure with records from a database cursor.
 
@@ -1208,27 +1218,30 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
         lambda: collections.defaultdict(lambda: collections.defaultdict(dict))
     )
 
-    rows = read_var_file(cursor["var_file"], exclude_var_type="cds", showNX=showNX)
+    rows = read_var_parquet_file(
+        cursor["var_parquet_file"], exclude_var_type="cds", showNX=showNX
+    )
     sample_name = cursor["name"]
     all_samples = set(sample_name.split("\t"))
 
     for row in rows:
         try:
-            if row["variant.start"] - 1 < 0:
+            if row["start"] - 1 < 0:
                 pre_ref = ""
             else:
-                pre_ref = selected_ref_seq[row["variant.start"] - 1]
+                pre_ref = selected_ref_seq[row["start"] - 1]
         except Exception as e:
             LOGGER.error(e)
             raise
 
         # Split out the data from each row
-        chrom, pos, pre_ref, ref, alt = (
-            row["variant.reference"],
-            row["variant.start"],
+        chrom, pos, pre_ref, ref, alt, _ = (
+            row["reference_acc"],
+            row["start"],
             pre_ref,
-            row["variant.ref"],
-            row["variant.alt"],
+            row["ref"],
+            row["alt"],
+            sample_name,
         )
 
         # POS position in VCF format: 1-based position
@@ -1264,10 +1277,10 @@ def _get_vcf_data(cursor) -> Dict:
         # Split out the data from each row
         chrom, pos, pre_ref, ref, alt, samples = (
             row["molecule.accession"],
-            row["variant.start"],
-            row["variant.pre_ref"],
-            row["variant.ref"],
-            row["variant.alt"],
+            row["start"],
+            row["pre_ref"],
+            row["ref"],
+            row["alt"],
             row["samples"],
         )
 

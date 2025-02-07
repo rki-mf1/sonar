@@ -6,6 +6,7 @@ from typing import Any
 from typing import Optional
 
 from django.utils import timezone
+import pandas as pd
 
 from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
@@ -33,8 +34,7 @@ class SampleRaw:
     sourceid: int
     translationid: int
     include_nx: bool
-    tt_file: Optional[str] = None
-    var_file: Optional[str] = None
+    var_parquet_file: Optional[str] = None
     vcffile: Optional[str] = None
     algnid: Optional[int] = None
     sampleid: Optional[int] = None
@@ -89,11 +89,11 @@ class SampleImport:
         self.alignment: None | Alignment = None
         self.success = False
 
-        if self.sample_raw.var_file:
+        if self.sample_raw.var_parquet_file:
             self.vars_raw = [
                 var
                 for var in self._import_vars(
-                    self.sample_raw.var_file, self.sample_raw.include_nx
+                    self.sample_raw.var_parquet_file, self.sample_raw.include_nx
                 )
             ]
         else:
@@ -283,35 +283,37 @@ class SampleImport:
             .joinpath(file_name[:2])
             .joinpath(file_name)
         )
-        with open(self.var_file_path, "r") as handle:
-            for line in handle:
-                if line.startswith("#"):
-                    continue
-                if line == "//":
-                    break
-                var_raw = line.strip("\r\n").split("\t")
-                # Extract the mutation (alt)
-                alt = None if var_raw[4] == " " else var_raw[4]
-                # Skip rows with 'N' or 'X' if include_NX is False
-                # handle both INSERTION (A2324NNNN) and SNV
-                if not include_nx and alt is not None and ("N" in alt or "X" in alt):
-                    continue
+        var_df = pd.read_parquet(self.var_file_path)
+        var_df[["ref", "alt"]] = var_df[["ref", "alt"]].fillna("").replace({" ": ""})
 
+        if not include_nx:
+            # remove all ref containing Ns for nt, or X for cds
+            var_df = var_df[
+                ~((var_df["type"] == "nt") & var_df["alt"].str.contains("N", na=False))
+            ]
+            var_df = var_df[
+                ~((var_df["type"] == "cds") & var_df["alt"].str.contains("X", na=False))
+            ]
+        for _, row in var_df.iterrows():
+            try:
                 yield VarRaw(
-                    int(var_raw[0]),  # id
-                    var_raw[1],  # ref
-                    int(var_raw[2]),  # start
-                    int(var_raw[3]),  # end
-                    None if var_raw[4] == " " else var_raw[4],  # alt
-                    var_raw[5],  # replicon_or_cds_accession
-                    # var_raw[6],  # label
-                    var_raw[7],  # type
+                    row["id"],
+                    row["ref"],
+                    row["start"],
+                    row["end"],
+                    row["alt"],
+                    row["reference_acc"],
+                    row["type"],
                     (
-                        [int(x) for x in var_raw[8].split(",")]
-                        if var_raw[8] != ""
+                        [int(x) for x in row["parent_id"].split(",")]
+                        if pd.notna(row["parent_id"]) and row["parent_id"].strip() != ""
                         else None
-                    ),  # parent_id
+                    ),
                 )
+            except Exception as e:
+                print(f"Error processing row: {row}")
+                print(f"Error file: {self.var_file_path}")
+                raise e
 
     def _import_seq(self, path):
         file_name = pathlib.Path(path).name
