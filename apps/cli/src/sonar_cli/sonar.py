@@ -755,7 +755,7 @@ def handle_import(args: argparse.Namespace):
         progress=not args.no_progress,
         update=args.no_skip,
         threads=args.threads,
-        quiet=args.debug,
+        quiet=not args.verbose,
         reference=args.reference,
         method=args.method,
         no_upload_sample=args.no_upload,
@@ -823,7 +823,7 @@ def handle_list_ref(args: argparse.Namespace):
 
 
 def handle_add_ref(args: argparse.Namespace):
-    sonarUtils.add_ref_by_genebank_file(reference_gb=args.gb, debug=args.debug)
+    sonarUtils.add_ref_by_genebank_file(reference_gb=args.gb)
 
 
 def handle_delete_ref(args: argparse.Namespace):
@@ -846,7 +846,7 @@ def handle_delete_ref(args: argparse.Namespace):
             decision = decision.upper()
 
     if decision == "YES" or force_enabled:
-        sonarUtils.delete_reference(args.reference, args.debug)
+        sonarUtils.delete_reference(args.reference)
         LOGGER.info("Reference deleted.")
     else:
         LOGGER.info("Reference not deleted.")

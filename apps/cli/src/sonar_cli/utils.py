@@ -1105,7 +1105,7 @@ class sonarUtils:
         return modified_data
 
     @staticmethod
-    def add_ref_by_genebank_file(reference_gb, debug=False, default_reference=False):
+    def add_ref_by_genebank_file(reference_gb, default_reference=False):
         """
         add reference
         """
@@ -1126,20 +1126,19 @@ class sonarUtils:
             raise
 
     @staticmethod
-    def delete_reference(reference, debug):
+    def delete_reference(reference):
         LOGGER.info("Start to delete....the process is not reversible.")
 
         # delete only reference will also delete the whole linked data.
-        """
-        if samples_ids:
-            if debug:
-                logging.info(f"Delete: {samples_ids}")
-            for sample in samples_ids:
-                # dbm.delete_seqhash(sample["seqhash"])
-                dbm.delete_alignment(
-                    seqhash=sample["seqhash"], element_id=_ref_element_id
-                )
-        """
+        # if samples_ids:
+        #    if debug:
+        #        logging.info(f"Delete: {samples_ids}")
+        #    for sample in samples_ids:
+        #        # dbm.delete_seqhash(sample["seqhash"])
+        #        dbm.delete_alignment(
+        #            seqhash=sample["seqhash"], element_id=_ref_element_id
+        #        )
+
         json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
 
         LOGGER.info(
