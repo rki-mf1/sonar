@@ -38,7 +38,11 @@
       </div>
     </div>
     <!-- Profile Filters -->
-    <div v-for="(profileFilter, index) in filterGroup.filters?.profileFilters" :key="index" class="single-filter">
+    <div
+      v-for="(profileFilter, index) in filterGroup.filters?.profileFilters"
+      :key="index"
+      class="single-filter"
+    >
       <div class="filter-container">
         <span style="font-weight: 500">DNA/AA Profile</span>
         <InputText
@@ -142,7 +146,11 @@
     </div>
 
     <!-- Replicon Filters -->
-    <div v-for="(filter,index) in filterGroup.filters?.repliconFilters" :key="index" class="single-filter">
+    <div
+      v-for="(filter, index) in filterGroup.filters?.repliconFilters"
+      :key="index"
+      class="single-filter"
+    >
       <div class="flex flex-column">
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
@@ -190,7 +198,11 @@
     </div>
 
     <!-- Sub-Filter Groups -->
-    <div v-for="(subFilterGroup, index) in filterGroup.filterGroups" :key="index" style="width: 100%">
+    <div
+      v-for="(subFilterGroup, index) in filterGroup.filterGroups"
+      :key="index"
+      style="width: 100%"
+    >
       <span style="display: block; text-align: center; font-weight: bold; margin-top: 15px"
         >OR</span
       >
