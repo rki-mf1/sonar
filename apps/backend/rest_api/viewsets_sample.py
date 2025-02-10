@@ -734,6 +734,16 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
+
+        dict = {}
+        dict["filtered_total_count"] = queryset.count()
+        dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
+
+        return Response(data=dict)
+
+    @action(detail=False, methods=["get"])
+    def filtered_statistics_plots(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
         queryset = queryset.annotate(
             lineage_parent=Subquery(
                 models.Lineage.objects.filter(name=OuterRef("lineage")).values(
@@ -749,8 +759,6 @@ class SampleViewSet(
             }
         )
         dict = {}
-        dict["filtered_total_count"] = queryset.count()
-        dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
         dict["samples_per_week"] = self._get_samples_per_week(queryset)
         dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
 
@@ -771,6 +779,7 @@ class SampleViewSet(
         dict["length"] = self._get_length_chart(queryset)
         dict["lab"] = self._get_lab_chart(queryset)
         dict["zip_code"] = self._get_zip_code_chart(queryset)
+
         return Response(data=dict)
 
     def resolve_genome_filter(self, filters) -> Q:

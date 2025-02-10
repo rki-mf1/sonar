@@ -117,10 +117,14 @@ export type LineageBarChartData = {
   week: string
   percentage: number
 }
-// TODO: too unflexibel, change to more flexible structure allowing different properties
+
 export type FilteredStatistics = {
   filtered_total_count: number
   meta_data_coverage: { [key: string]: number }
+}
+
+// TODO: too unflexibel, change to more flexible structure allowing different properties
+export type FilteredStatisticsPlots = {
   samples_per_week: { [key: string]: number }
   genomecomplete_chart: { [key: string]: number }
   lineage_area_chart: Array<{ date: string; lineage: string; percentage: number }>

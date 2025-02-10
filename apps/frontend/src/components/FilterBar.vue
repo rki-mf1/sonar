@@ -334,10 +334,16 @@ export default {
       if (this.samplesStore.filtersChanged) {
         this.samplesStore.updateSamples()
         this.samplesStore.updateFilteredStatistics()
+        if (this.$route.name === 'Plots') {
+          this.samplesStore.updateFilteredStatisticsPlots()
+        }
       }
       this.displayDialogFilter = false
       this.samplesStore.updateSamples()
       this.samplesStore.updateFilteredStatistics()
+      if (this.$route.name === 'Plots') {
+        this.samplesStore.updateFilteredStatisticsPlots()
+      }
     },
     toggleHelp(event: Event) {
       const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as {
@@ -352,6 +358,9 @@ export default {
     },
     updateSamplesInTableAndFilteredStatistics() {
       this.samplesStore.updateFilteredStatistics()
+      if (this.$route.name === 'Plots') {
+        this.samplesStore.updateFilteredStatisticsPlots()
+      }
       return this.samplesStore.updateSamples()
     },
     async setDefaultTimeRange() {
