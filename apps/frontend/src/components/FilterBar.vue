@@ -332,17 +332,12 @@ export default {
     },
     closeAdvancedFilterDialogAndUpdate() {
       if (this.samplesStore.filtersChanged) {
+        this.displayDialogFilter = false
         this.samplesStore.updateSamples()
         this.samplesStore.updateFilteredStatistics()
         if (this.$route.name === 'Plots') {
           this.samplesStore.updateFilteredStatisticsPlots()
         }
-      }
-      this.displayDialogFilter = false
-      this.samplesStore.updateSamples()
-      this.samplesStore.updateFilteredStatistics()
-      if (this.$route.name === 'Plots') {
-        this.samplesStore.updateFilteredStatisticsPlots()
       }
     },
     toggleHelp(event: Event) {
