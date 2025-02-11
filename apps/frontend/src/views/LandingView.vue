@@ -1,0 +1,88 @@
+<template>
+  <div class="landing-container">
+    <span style="color: white; font-weight: bold; font-size: 100px">SONAR</span>
+    <v-icon
+      name="gi-radar-sweep"
+      scale="5"
+      fill="white"
+      animation="spin"
+      style="margin-bottom: 50px"
+    />
+
+    <div
+      v-animateonscroll="{ enterClass: 'fadein', leaveClass: 'fadeout' }"
+      class="shadow-4 align-center animation-duration-1000 animation-ease-in-out mb-4"
+    >
+      <PrimeCard>
+        <template #title>
+          <h3 class="text-primary mt-4" style="text-align: center">Data Selection</h3>
+        </template>
+        <template #content>
+          <div class="content-container">
+            <PrimeDropdown
+              v-model="selectedPathogen"
+              :options="pathogens"
+              placeholder="Select a Pathogen"
+              filter
+            />
+            <PrimeDropdown
+              v-model="selectedDataset"
+              :options="datasets"
+              placeholder="Select a Dataset"
+              filter
+            />
+            <PrimeButton label="Proceed" severity="warning" raised @click="proceed" />
+          </div>
+        </template>
+      </PrimeCard>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+import { useSamplesStore } from '@/stores/samples'
+
+export default {
+  name: 'LandingView',
+  data() {
+    return {
+      samplesStore: useSamplesStore(),
+      pathogens: ['SARS-CoV-2', 'Influenza', 'RSV'],
+      datasets: ['RKI Dataset', 'Gisaid Dataset'],
+      selectedPathogen: null,
+      selectedDataset: null,
+    }
+  },
+  methods: {
+    proceed() {
+      if (this.selectedPathogen && this.selectedDataset) {
+        this.samplesStore.setDataset(this.selectedPathogen, this.selectedDataset)
+        this.$router.push({ name: 'Home' })
+      } else {
+        alert('Please select both a pathogen and a dataset.')
+      }
+    },
+  },
+}
+</script>
+
+<style scoped>
+.landing-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--primary-color);
+}
+
+.content-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2rem;
+  width: 25vw;
+  height: 25vh;
+}
+</style>

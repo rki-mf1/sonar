@@ -1,10 +1,10 @@
 <template>
   <body>
     <main>
-      <header>
+      <header v-if="$route.name !== 'Landing'">
         <div class="flex flex-wrap justify-content-between">
           <div class="flex align-items-center justify-content-center">
-            <div style="font-size: 2rem; color: var(--text-color)">Sonar</div>
+            <div style="font-size: 2rem; color: var(--text-color)">{{ appTitle }}</div>
           </div>
           <div class="flex align-items-center justify-content-center">
             <PrimeMenubar :model="menuItems">
@@ -59,7 +59,7 @@ export default {
         {
           label: 'Home',
           icon: 'pi pi-home',
-          route: '/',
+          route: '/home',
         },
         {
           label: 'Plots',
@@ -78,6 +78,11 @@ export default {
     showFilters() {
       return this.$route.name === 'Home' || this.$route.name === 'Plots'
     },
+    appTitle() {
+      return this.samplesStore.pathogen && this.samplesStore.dataset
+        ? `Sonar: ${this.samplesStore.pathogen} - ${this.samplesStore.dataset}`
+        : 'Sonar'
+    },
   },
   watch: {
     'samplesStore.errorMessage'(newValue) {
@@ -89,6 +94,7 @@ export default {
     },
   },
   mounted() {
+    this.samplesStore.setDataset(null, null)
     this.samplesStore.updateSamples()
     this.samplesStore
       .updateFilteredStatistics()
