@@ -77,6 +77,13 @@ def check_for_new_data():
         for job in jobs:
             LOGGER.info(f"## New processing job: {job.job_name} ---")
             files = FileProcessing.objects.filter(processing_job=job)
+            if not files.exists():
+                LOGGER.warning(
+                    f"No associated files found, in {job.job_name}, mark as Fail, continue the proces.."
+                )
+                job.status = ProcessingJob.ImportType.FAILED
+                job.save()
+                continue
             for file in files:
                 file_path = pathlib.Path(SONAR_DATA_ENTRY_FOLDER).joinpath(
                     file.file_name
@@ -110,6 +117,7 @@ def check_for_new_data():
         # job.status = ProcessingJob.ImportType.IN_PROGRESS
         # job.save()
     # Recursively check for new data after processing current batch
+    return
     check_for_new_data()
 
 
