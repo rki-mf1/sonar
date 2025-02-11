@@ -41,12 +41,14 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'LandingView',
   data() {
     return {
       samplesStore: useSamplesStore(),
+      router: useRouter(),
       pathogens: ['SARS-CoV-2', 'Influenza', 'RSV'],
       datasets: ['RKI Dataset', 'Gisaid Dataset'],
       selectedPathogen: null,
@@ -57,7 +59,7 @@ export default {
     proceed() {
       if (this.selectedPathogen && this.selectedDataset) {
         this.samplesStore.setDataset(this.selectedPathogen, this.selectedDataset)
-        this.$router.push({ name: 'Home' })
+        this.router.push({ name: 'Home' })
       } else {
         alert('Please select both a pathogen and a dataset.')
       }
