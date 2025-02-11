@@ -169,7 +169,7 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
-    setDataset(pathogen: string | null, dataset: string | null) {
+    setDataset(pathogen, dataset) {
       this.pathogen = pathogen
       this.dataset = dataset
     },
