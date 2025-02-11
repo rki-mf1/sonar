@@ -172,7 +172,7 @@ export const useSamplesStore = defineStore('samples', {
     setDataset(pathogen: string | null, dataset: string | null) {
       this.pathogen = pathogen;
       this.dataset = dataset;
-    }
+    },
     async updateSamples() {
       this.errorMessage = ''
       this.loading = true
