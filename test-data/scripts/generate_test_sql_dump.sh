@@ -12,7 +12,7 @@ conda activate ./env
 
 sonar-cli add-ref --gb ../../test-data/covid19//MN908947.nextclade.gb
 # import sequences
-sonar-cli import -r MN908947.3 --fasta ../../test-data/covid19/SARS-COV2_12.fasta --cache /sonar/data/import -t 7 --method 1  --auto-anno --no-skip
+sonar-cli import -r MN908947.3 --fasta ../../test-data/covid19/SARS-COV2_12.fasta -t 7 --method 1  --auto-anno --no-skip
 # add properties to db
 sonar-cli add-prop --name age --descr "Age" --dtype value_integer
 sonar-cli add-prop --name sequencing_reason --descr "Sampling reason" --dtype value_varchar
