@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 from sonar_cli.common_aligns import align_MAFFT
 from sonar_cli.common_aligns import align_Parasail
-from sonar_cli.common_aligns import align_WFA
 from sonar_cli.common_utils import read_seqcache
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
@@ -25,7 +24,7 @@ LOGGER = LoggingConfigurator.get_logger()
 
 
 class sonarAligner:
-    def __init__(self, cache_outdir=None, method=1, allow_updates=False):
+    def __init__(self, cache_outdir=None, method=1, allow_updates=False, debug=False):
         self.nuc_profile = []
         self.nuc_n_profile = []
         self.aa_profile = []
@@ -34,6 +33,7 @@ class sonarAligner:
         self.outdir = TMP_CACHE if not cache_outdir else os.path.abspath(cache_outdir)
         self.method = method
         self.allow_updates = allow_updates
+        self.debug = debug
 
     def process_cached_sample(self, **sample_data: dict):
         if self.method == 1:  # MAFFT
@@ -54,25 +54,19 @@ class sonarAligner:
         # else: overwrite.
         # NOTE: If the file contents change, the hash file name will also change.
         if not self.allow_updates:
-
-            if data["var_file"] is None:
+            if not data["var_parquet_file"]:
                 return True
-            elif os.path.isfile(data["var_file"]):
-                with open(data["var_file"], "r") as handle:
-                    for line in handle:
-                        pass
-                    if line == "//":
-                        return True
-
+            elif os.path.isfile(data["var_parquet_file"]):
+                pd.read_parquet(data["var_parquet_file"])
+                return True
         source_acc = str(data["source_acc"])
-        # self.log("data:" + str(data))
-        # alignment = self.align(data["seq_file"], data["ref_file"])
-        alignment = align_MAFFT(data["mafft_seqfile"])
+        alignment = align_MAFFT(data["seq_file"], data["ref_file"])
 
         # NOTE: this line was already performant
         nuc_vars = [x for x in self.extract_vars(*alignment, elem_acc=source_acc)]
-
-        # NOTE: uncomment the code below to change the varaint extraction to the Cigar stlye
+        # empty string for parent_id row
+        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
+        # NOTE: uncomment the code below to change the variant extraction to the Cigar stlye
         # cigar = self.gen_cigar(alignment[0], alignment[1])
         # nuc_vars = [
         #    x
@@ -80,9 +74,7 @@ class sonarAligner:
         #        alignment[0], alignment[1], cigar, source_acc, data["cds_file"]
         #    )
         # ]
-        # empty string for parent_id row
-        vars = "\n".join(["\t".join(x + ("",)) for x in nuc_vars])
-        # print(nuc_vars)
+
         if nuc_vars:
             # create AA mutation
             aa_vars = "\n".join(
@@ -92,49 +84,45 @@ class sonarAligner:
             if aa_vars:
                 # concatinate to the same file of NT variants
                 vars += "\n" + aa_vars
-            vars += "\n"
+        # NOTE: It seems we have inefficient steps here: join first and then split later.
+        vars_list = [row.split("\t") for row in vars.split("\n") if row]
+        vars_df = pd.DataFrame(
+            vars_list,
+            columns=[
+                "id",
+                "ref",
+                "start",
+                "end",
+                "alt",
+                "reference_acc",
+                "label",
+                "type",
+                "parent_id",
+            ],
+        )
+        vars_df[["id", "start", "end"]] = vars_df[["id", "start", "end"]].astype(int)
 
         try:
-            with open(data["var_file"], "w") as handle:
-                handle.write(
-                    "#"
-                    + "\t".join(
-                        [
-                            "id",
-                            "ref",
-                            "start",
-                            "end",
-                            "alt",
-                            "accs",
-                            "label",
-                            "type",
-                            "parent_id",
-                        ]
-                    )
-                    + "\n"
-                )
-                handle.write(vars + "//")
+            if self.debug:
+                vars_df.to_csv(data["var_file"], sep="\t", index=False)
+
+            vars_df.to_parquet(
+                data["var_parquet_file"],
+                compression="zstd",
+                compression_level=10,
+                index=False,
+            )
+
         except OSError:
             os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
-            with open(data["var_file"], "w") as handle:
-                handle.write(
-                    "#"
-                    + "\t".join(
-                        [
-                            "id",
-                            "ref",
-                            "start",
-                            "end",
-                            "alt",
-                            "accs",
-                            "label",
-                            "type",
-                            "parent_id",
-                        ]
-                    )
-                    + "\n"
-                )
-                handle.write(vars + "//")
+            if self.debug:
+                vars_df.to_csv(data["var_file"], sep="\t", index=False)
+            vars_df.to_parquet(
+                data["var_parquet_file"],
+                compression="zstd",
+                compression_level=10,
+                index=False,
+            )
         return
 
     def process_cached_v2(self, data: dict, method: int):  # noqa: C901
@@ -144,14 +132,11 @@ class sonarAligner:
         create var file with NT and AA mutations
         """
         if not self.allow_updates:
-            if data["var_file"] is None:
+            if data["var_parquet_file"] is None:
                 return True
-            elif os.path.isfile(data["var_file"]):
-                with open(data["var_file"], "r") as handle:
-                    for line in handle:
-                        pass
-                if line == "//":
-                    return True
+            elif os.path.isfile(data["var_parquet_file"]):
+                pd.read_parquet(data["var_parquet_file"])
+                return True
 
         # elemid = str(data["sourceid"])
         source_acc = str(data["source_acc"])
@@ -160,8 +145,11 @@ class sonarAligner:
 
         if method == 2:
             _, __, cigar = align_Parasail(qryseq, refseq)
-        elif method == 3:
-            _, __, cigar = align_WFA(qryseq, refseq)
+        # TODO: WFA is disabled for now. It has problems with crashing and also
+        # needs to be updated now that qryseq and refseq are fasta files
+        # (previously they were pure sequences)
+        # elif method == 3:
+        #    _, __, cigar = align_WFA(qryseq, refseq)
         else:
             LOGGER.error(f"Alignment method not recognized (method = {method})")
             sys.exit(1)
@@ -183,47 +171,44 @@ class sonarAligner:
                 # concatenate to the same file of NT variants
                 vars += "\n" + aa_vars
             vars += "\n"
+
+        vars_list = [row.split("\t") for row in vars.split("\n") if row]
+        vars_df = pd.DataFrame(
+            vars_list,
+            columns=[
+                "id",
+                "ref",
+                "start",
+                "end",
+                "alt",
+                "reference_acc",
+                "label",
+                "type",
+                "parent_id",
+            ],
+        )
+        vars_df[["id", "start", "end"]] = vars_df[["id", "start", "end"]].astype(int)
         try:
-            with open(data["var_file"], "w") as handle:
-                handle.write(
-                    "#"
-                    + "\t".join(
-                        [
-                            "id",
-                            "ref",
-                            "start",
-                            "end",
-                            "alt",
-                            "accs",
-                            "label",
-                            "type",
-                            "parent_id",
-                        ]
-                    )
-                    + "\n"
-                )
-                handle.write(vars + "//")
+            if self.debug:
+                vars_df.to_csv(data["var_file"], sep="\t", index=False)
+            vars_df.to_parquet(
+                data["var_parquet_file"],
+                compression="zstd",
+                compression_level=10,
+                index=False,
+            )
+
         except OSError:
-            os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
-            with open(data["var_file"], "w") as handle:
-                handle.write(
-                    "#"
-                    + "\t".join(
-                        [
-                            "id",
-                            "ref",
-                            "start",
-                            "end",
-                            "alt",
-                            "accs",
-                            "label",
-                            "type",
-                            "parent_id",
-                        ]
-                    )
-                    + "\n"
-                )
-                handle.write(vars + "//")
+            os.makedirs(os.path.dirname(data["var_parquet_file"]), exist_ok=True)
+            vars_df.to_parquet(
+                data["var_parquet_file"],
+                compression="zstd",
+                compression_level=10,
+                index=False,
+            )
+            if self.debug:
+                os.makedirs(os.path.dirname(data["var_file"]), exist_ok=True)
+                vars_df.to_csv(data["var_file"], sep="\t", index=False)
         return
 
     def extract_vars(self, qry_seq, ref_seq, elem_acc):
@@ -341,7 +326,7 @@ class sonarAligner:
         -------
         Tuple
             A tuple containing
-            ID AA_ref Start_pos END_pos AA_alt Reference   Label   Mutation_Type parentID
+            id ref start end alt reference_acc   label   type parent_id
             4, H       39      40      X       QHD43422.1      H40X    cds  1
         """
         # updating the DF with alternate nucleotides (alt)
@@ -359,31 +344,18 @@ class sonarAligner:
         #             col_name = f"alt{j}"
         #             df.loc[df[f"nucPos{j}"] == i, col_name] = alt
 
-        # V.1.5 a little bit of improvement of code explainability (no performance improved)
-        # for nuc_var in nuc_vars:
-        #     if nuc_var[3] != ".":
-        #         alt = "-" if nuc_var[3] == " " else nuc_var[3]
-        #         start, end = map(int, (nuc_var[1], nuc_var[2]))
-        #         positions = np.arange(start, end)
-        #         mask = np.isin(df["nucPos1"], positions)
-        #         df.loc[mask, "alt1"] = alt
-        #         mask = np.isin(df["nucPos2"], positions)
-        #         df.loc[mask, "alt2"] = alt
-        #         mask = np.isin(df["nucPos3"], positions)
-        #         df.loc[mask, "alt3"] = alt
-
         # Convert nuc_vars into a DataFrame to facilitate adding unique IDs
         nuc_vars_df = pd.DataFrame(
             nuc_vars,
-            columns=["ID", "ref", "start", "end", "alt", "elem_acc", "label", "type"],
+            columns=["id", "ref", "start", "end", "alt", "elem_acc", "label", "type"],
         )
         nuc_vars_df[["start", "end"]] = nuc_vars_df[["start", "end"]].astype(int)
-        nuc_vars_df["ID"] = nuc_vars_df["ID"].astype(int)
-        nuc_vars_df["parentID"] = nuc_vars_df[
-            "ID"
+        nuc_vars_df["id"] = nuc_vars_df["id"].astype(int)
+        nuc_vars_df["parent_id"] = nuc_vars_df[
+            "id"
         ]  # range(1, len(nuc_vars_df) + 1)  # Add unique IDs for NT variants
         # Start amino acid (AA) IDs after the last nucleotide (NT) ID
-        next_aa_id = nuc_vars_df["ID"].max() + 1 if not nuc_vars_df.empty else 1
+        next_aa_id = nuc_vars_df["id"].max() + 1 if not nuc_vars_df.empty else 1
 
         # newer version
         nucPos1 = df["nucPos1"].to_numpy(dtype=np.int32)
@@ -466,7 +438,7 @@ class sonarAligner:
                     )
                 ]
                 parent_id = (
-                    ",".join(matching_nt["parentID"].astype(str))
+                    ",".join(matching_nt["parent_id"].astype(str))
                     if not matching_nt.empty
                     else ""
                 )
@@ -516,7 +488,7 @@ class sonarAligner:
                         )
                     ]
                     parent_id = (
-                        ",".join(matching_nt["parentID"].astype(str))
+                        ",".join(matching_nt["parent_id"].astype(str))
                         if not matching_nt.empty
                         else ""
                     )
@@ -553,7 +525,7 @@ class sonarAligner:
                 ]
                 # 'id','ref','start', 'end', 'alt', 'accs', 'label', 'type', 'parent_id'
                 parent_id = (
-                    ",".join(matching_nt["parentID"].astype(str))
+                    ",".join(matching_nt["parent_id"].astype(str))
                     if not matching_nt.empty
                     else ""
                 )
@@ -567,7 +539,7 @@ class sonarAligner:
         self, qryseq, refseq, cigar, elemid, cds_file
     ):
         # get annotation for frameshift detection
-        # cds_df = pd.read_pickle(cds_file)
+        # cds_df = pd.read_pickle(cds_file)y
         # cds_set = set(cds_df[cds_df["end"] == 0])
 
         # extract
@@ -576,7 +548,7 @@ class sonarAligner:
         qrylen = len(qryseq)
         prefix = False
         vars = []
-        id_counter = count(1)  # Create an incremental counter starting from 1 (ID)
+        id_counter = count(1)  # Create an incremental counter starting from 1 (id)
 
         for match in self.cigar_pattern.finditer(cigar):
             vartype = match.group(2)

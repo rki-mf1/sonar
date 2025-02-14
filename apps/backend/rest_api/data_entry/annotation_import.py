@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import gzip
 import re
 
 from django.db.models import Q
@@ -60,7 +61,9 @@ class AnnotationImport:
         self.annotation_q_obj = Q()
 
     def _import_vcf(self):
-        with open(self.vcf_file_path, "r") as handle:
+        # Open compressed or uncompressed VCF based on file extension
+        open_func = gzip.open if self.vcf_file_path.endswith(".gz") else open
+        with open_func(self.vcf_file_path, "rt") as handle:  # 'rt' for text mode
             for line in handle:
                 if line.startswith(("#", "##")):
                     continue
