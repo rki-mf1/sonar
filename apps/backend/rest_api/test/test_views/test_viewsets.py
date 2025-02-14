@@ -75,7 +75,7 @@ class SampleViewSetTest(
                     "label": "Del AA",
                     "protein_symbol": "ORF1a",
                     "first_deleted": 3675,
-                    "last_deleted": 3676,
+                    "last_deleted": 3677,
                     "exclude": False,
                 },
                 10,

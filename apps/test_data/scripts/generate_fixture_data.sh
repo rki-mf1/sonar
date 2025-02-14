@@ -32,6 +32,14 @@ rm "../test_data/covid19/SARS-COV2_${SUFFIX}.tsv"
 rm "../test_data/covid19/SARS-COV2_${SUFFIX}.fasta"
 
 cd ../backend
-./scripts/linux/dev-manage.sh dumpdata --indent=4 rest_api django_apscheduler -o "rest_api/fixtures/test_data_${SUFFIX}.json"
+# superuser
+export $(grep -v '^\s*#' conf/docker/common.env | xargs)
+export $(grep -v '^\s*#' conf/docker/dev-secrets.env | xargs)
+PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -p 8432 -v ON_ERROR_STOP=1 --username $POSTGRES_USER --dbname $POSTGRES_DB <<EOSQL
+    INSERT INTO auth_user (username, email, first_name, last_name, password, is_superuser, is_staff, is_active, date_joined)
+    VALUES ('root', 'admin@example.com', 'admin', 'root', 'hashed_password', true, true, true, NOW());
+EOSQL
+
+./scripts/linux/dev-manage.sh dumpdata --indent=4 auth rest_api django_apscheduler -o "rest_api/fixtures/test_data_${SUFFIX}.json"
 
 xz -f rest_api/fixtures/test_data_${SUFFIX}.json

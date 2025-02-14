@@ -32,7 +32,7 @@ echo "Insert jobs to processing_job table ..."
 export $(grep -v '^\s*#' conf/docker/common.env | xargs)
 export $(grep -v '^\s*#' conf/docker/dev-secrets.env | xargs)
 
-PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -p 8432 -v ON_ERROR_STOP=1 --username $POSTGRES_USER --dbname $POSTGRES_DB <<EOSQL
+PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -p 8432 -v ON_ERROR_STOP=1 --username $POSTGRES_USER --dbname $POSTGRES_DB <<EOSQL
     INSERT INTO processing_job (job_name, status, entry_time) VALUES ('cli_failed-job', 'F', CURRENT_TIMESTAMP);
     INSERT INTO processing_job (job_name, status, entry_time) VALUES ('cli_queue-job', 'Q', CURRENT_TIMESTAMP);
 EOSQL
