@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# usage: ./generate_fixture_data.sh 10 OR ./generate_fixture_data.sh 1000
+
 if [[ "$1" != "10" && "$1" != "1000" ]]; then
   echo "Error: Parameter must be either 10 or 1000."
   exit 1
