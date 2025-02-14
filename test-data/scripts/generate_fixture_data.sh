@@ -14,7 +14,7 @@ xz -d -k "../covid19/SARS-COV2_${SUFFIX}.tsv.xz"
 xz -d -k "../covid19/SARS-COV2_${SUFFIX}.fasta.xz"
 cd ../../apps/backend
 
-./scripts/linux/clean-dev-env.sh -r -d -t
+./scripts/linux/clean-dev-env.sh -d -t
 
 
 cd ../cli

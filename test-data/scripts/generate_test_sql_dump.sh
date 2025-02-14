@@ -4,7 +4,7 @@ xz -d -k "../covid19/SARS-COV2_12.tsv.xz"
 xz -d -k "../covid19/SARS-COV2_12.fasta.xz"
 cd ../../apps/backend
 
-./scripts/linux/clean-dev-env.sh -r -d -t
+./scripts/linux/clean-dev-env.sh -d -t
 
 cd ../cli
 source "$(conda info --base)/etc/profile.d/conda.sh"
