@@ -66,7 +66,7 @@ $SCRIPTPATH/dc-dev.sh up --wait -d $DC_ARGS
 if [ $TEST_DATA -eq 0 ]; then
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth test_data_10
   $SCRIPTPATH/dev-manage.sh import_lineage
-  $SCRIPTPATH/dev-copy-gbk.sh ../test-data/covid19/MN908947.nextclade.gb ./work/sonar/data/import/gbks/
+  $SCRIPTPATH/dev-copy-gbk.sh ../../../test-data/covid19/MN908947.nextclade.gb ./work/sonar/data/import/gbks/
 else
   $SCRIPTPATH/dev-manage.sh loaddata initial_auth
 fi

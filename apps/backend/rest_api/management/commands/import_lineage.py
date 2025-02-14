@@ -46,7 +46,7 @@ class LineageImport:
         if file:
             self.lineage_file = file
             return
-        self.lineage_file = "test-data/lineages_test.tsv"
+        self.lineage_file = "../../test-data/covid19/lineages_test.tsv"
 
     def process_lineage_data(self):
         """
