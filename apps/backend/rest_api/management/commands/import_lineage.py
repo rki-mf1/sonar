@@ -40,13 +40,11 @@ class LineageImport:
         shutil.rmtree(self._tmpdir)
 
     def set_file(self, file: str | None = None) -> None:
-        """
-        Download lineage and alias data.
-        """
         if file:
             self.lineage_file = file
             return
-        self.lineage_file = "../../test-data/covid19/lineages_test.tsv"
+        # Can we remove this? playwright-e2e is failing without
+        self.lineage_file = "lineage-test-data/lineages_test.tsv"
 
     def process_lineage_data(self):
         """
