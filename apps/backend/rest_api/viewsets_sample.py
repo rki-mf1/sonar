@@ -744,6 +744,24 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def filtered_statistics_plots(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
+
+        result_dict = {}
+        # check if the queryset has any objects with a collection_date -> if not, return empty object
+        if not queryset.filter(collection_date__isnull=False).exists():
+            result_dict["samples_per_week"] = {}
+            result_dict["lineage_area_chart"] = {}
+            result_dict["lineage_bar_chart"] = {}
+            result_dict["lineage_grouped_bar_chart"] = {}
+            result_dict["genomecomplete_chart"] = {}
+            result_dict["sequencing_tech"] = {}
+            result_dict["sequencing_reason"] = {}
+            result_dict["sample_type"] = {}
+            result_dict["host"] = {}
+            result_dict["length"] = {}
+            result_dict["lab"] = {}
+            result_dict["zip_code"] = {}
+            return Response(data=result_dict, status=200)
+
         queryset = queryset.annotate(
             lineage_parent=Subquery(
                 models.Lineage.objects.filter(name=OuterRef("lineage")).values(
@@ -758,7 +776,7 @@ class SampleViewSet(
                 "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
             }
         )
-        result_dict = {}
+
         result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
         result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
 
