@@ -7,6 +7,7 @@ import {
   type GenomeFilter,
   type ProfileFilter,
   type FilteredStatistics,
+  type FilteredStatisticsPlots,
   DjangoFilterType,
   StringDjangoFilterType,
   DateDjangoFilterType,
@@ -104,6 +105,7 @@ export const useSamplesStore = defineStore('samples', {
   state: () => ({
     samples: [],
     filteredStatistics: {} as FilteredStatistics,
+    filteredStatisticsPlots: {} as FilteredStatisticsPlots,
     filteredCount: 0,
     loading: false,
     perPage: 10,
@@ -197,18 +199,6 @@ export const useSamplesStore = defineStore('samples', {
       const emptyStatistics = {
         filtered_total_count: 0,
         meta_data_coverage: {},
-        samples_per_week: {},
-        genomecomplete_chart: {},
-        lineage_area_chart: [],
-        lineage_bar_chart: [],
-        lineage_grouped_bar_chart: [],
-        sequencing_tech: {},
-        sequencing_reason: {},
-        sample_type: {},
-        length: {},
-        lab: {},
-        zip_code: {},
-        host: {},
       }
       try {
         const filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
@@ -223,6 +213,36 @@ export const useSamplesStore = defineStore('samples', {
         console.error('Error fetching filtered statistics:', error)
         this.filteredStatistics = emptyStatistics
         this.filteredCount = 0
+      }
+    },
+    async updateFilteredStatisticsPlots() {
+      const emptyStatistics = {
+        samples_per_week: {},
+        genomecomplete_chart: {},
+        lineage_area_chart: [],
+        lineage_bar_chart: [],
+        lineage_grouped_bar_chart: [],
+        sequencing_tech: {},
+        sequencing_reason: {},
+        sample_type: {},
+        length: {},
+        lab: {},
+        zip_code: {},
+        host: {},
+      }
+      try {
+        const filteredStatisticsPlots = await API.getInstance().getFilteredStatisticsPlots(
+          this.filters,
+        )
+        if (!filteredStatisticsPlots) {
+          this.filteredStatisticsPlots = emptyStatistics
+        } else {
+          this.filteredStatisticsPlots = filteredStatisticsPlots
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching filtered statistics plots:', error)
+        this.filteredStatisticsPlots = emptyStatistics
       }
     },
     async setDefaultTimeRange() {

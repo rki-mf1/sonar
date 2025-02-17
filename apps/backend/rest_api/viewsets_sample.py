@@ -734,6 +734,16 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
+
+        result_dict = {}
+        result_dict["filtered_total_count"] = queryset.count()
+        result_dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
+
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def filtered_statistics_plots(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
         queryset = queryset.annotate(
             lineage_parent=Subquery(
                 models.Lineage.objects.filter(name=OuterRef("lineage")).values(
@@ -748,30 +758,29 @@ class SampleViewSet(
                 "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
             }
         )
-        dict = {}
-        dict["filtered_total_count"] = queryset.count()
-        dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
-        dict["samples_per_week"] = self._get_samples_per_week(queryset)
-        dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
+        result_dict = {}
+        result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
+        result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
 
         # dict["lineage_area_chart"] = self.get_monthly_lineage_percentage_area_chart(queryset)
-        dict["lineage_area_chart"] = (
+        result_dict["lineage_area_chart"] = (
             self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
         )
-        dict["lineage_bar_chart"] = (
+        result_dict["lineage_bar_chart"] = (
             self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
         )
-        dict["lineage_grouped_bar_chart"] = (
+        result_dict["lineage_grouped_bar_chart"] = (
             self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
         )
-        dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
-        dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
-        dict["sample_type"] = self._get_sampleType_chart(queryset)
-        dict["host"] = self._get_host_chart(queryset)
-        dict["length"] = self._get_length_chart(queryset)
-        dict["lab"] = self._get_lab_chart(queryset)
-        dict["zip_code"] = self._get_zip_code_chart(queryset)
-        return Response(data=dict)
+        result_dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
+        result_dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
+        result_dict["sample_type"] = self._get_sampleType_chart(queryset)
+        result_dict["host"] = self._get_host_chart(queryset)
+        result_dict["length"] = self._get_length_chart(queryset)
+        result_dict["lab"] = self._get_lab_chart(queryset)
+        result_dict["zip_code"] = self._get_zip_code_chart(queryset)
+
+        return Response(data=result_dict)
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()

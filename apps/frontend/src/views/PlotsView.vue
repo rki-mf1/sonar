@@ -250,11 +250,13 @@ export default {
     }
   },
   watch: {
-    // "samplesStore.filteredStatistics"(newValue) {
+    // "samplesStore.filteredStatisticsPlot"(newValue) {
     //   this.updateCharts(); // Update charts when data changes
     // }
   },
-  mounted() {},
+  mounted() {
+    this.samplesStore.updateFilteredStatisticsPlots()
+  },
   beforeUnmount() {},
   methods: {
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
@@ -283,8 +285,8 @@ export default {
         .colors(itemCount) // number of colors
     },
     samplesPerWeekChart() {
-      const samples_per_week = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['samples_per_week']
+      const samples_per_week = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['samples_per_week']
         : {}
       const labels: string[] = []
       const data: number[] = []
@@ -358,8 +360,8 @@ export default {
       }
     },
     lineage_areaData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_area_chart']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lineage_area_chart']
         : []
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData()
@@ -444,8 +446,8 @@ export default {
       }
     },
     lineage_barData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_bar_chart']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lineage_bar_chart']
         : []
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -509,8 +511,8 @@ export default {
       }
     },
     lineage_grouped_barData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_grouped_bar_chart']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lineage_grouped_bar_chart']
         : []
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -586,8 +588,8 @@ export default {
       }
     },
     genomeCompleteChart() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['genomecomplete_chart']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['genomecomplete_chart']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -621,8 +623,8 @@ export default {
       }
     },
     sequencingTechChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['sequencing_tech']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['sequencing_tech']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -655,8 +657,8 @@ export default {
       }
     },
     sequencingReasonChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['sequencing_reason']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['sequencing_reason']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -689,8 +691,8 @@ export default {
       }
     },
     lengthChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['length']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['length']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -727,8 +729,8 @@ export default {
       }
     },
     hostChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['host']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['host']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -768,8 +770,8 @@ export default {
       }
     },
     labChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lab']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lab']
         : {}
       const { labels, data } = this.cleanDataAndAddNullSamples(_data)
       return {
@@ -817,8 +819,8 @@ export default {
       }
     },
     zipCodeChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['zip_code']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['zip_code']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -879,8 +881,8 @@ export default {
       }
     },
     sampleTypeChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['sample_type']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['sample_type']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
