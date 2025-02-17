@@ -744,34 +744,41 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def filtered_statistics_plots(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-        queryset = queryset.annotate(
-            lineage_parent=Subquery(
-                models.Lineage.objects.filter(name=OuterRef("lineage")).values(
-                    "parent"
-                )[:1]
-            )
-        )
-        queryset = queryset.extra(
-            select={
-                "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                "month": 'EXTRACT(\'month\' FROM "sample"."collection_date")',
-                "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-            }
-        )
-        result_dict = {}
-        result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
-        result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
 
-        # dict["lineage_area_chart"] = self.get_monthly_lineage_percentage_area_chart(queryset)
-        result_dict["lineage_area_chart"] = (
-            self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
-        )
-        result_dict["lineage_bar_chart"] = (
-            self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
-        )
-        result_dict["lineage_grouped_bar_chart"] = (
-            self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
-        )
+        result_dict = {}
+        # check if queryset has any records with a collection_date -> if not, return empty object
+        if not queryset.filter(collection_date__isnull=False).exists():
+            result_dict["samples_per_week"] = {}
+            result_dict["lineage_area_chart"] = {}
+            result_dict["lineage_bar_chart"] = {}
+            result_dict["lineage_grouped_bar_chart"] = {}
+        else:
+            queryset = queryset.annotate(
+                lineage_parent=Subquery(
+                    models.Lineage.objects.filter(name=OuterRef("lineage")).values(
+                        "parent"
+                    )[:1]
+                )
+            )
+            queryset = queryset.extra(
+                select={
+                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
+                    "month": 'EXTRACT(\'month\' FROM "sample"."collection_date")',
+                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
+                }
+            )
+            result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
+            result_dict["lineage_area_chart"] = (
+                self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
+            )
+            result_dict["lineage_bar_chart"] = (
+                self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
+            )
+            result_dict["lineage_grouped_bar_chart"] = (
+                self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
+            )
+
+        result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
         result_dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
         result_dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
         result_dict["sample_type"] = self._get_sampleType_chart(queryset)
