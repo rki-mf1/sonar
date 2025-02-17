@@ -85,9 +85,7 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{
-              border: samplesStore.filtersChanged ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
-            }"
+            :disabled="samplesStore.filtersChanged ? false : true"
             @click="updateSamplesInTableAndFilteredStatistics()"
           >
           </PrimeButton>
@@ -120,7 +118,7 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+            :disabled="samplesStore.filtersChanged ? false : true"
             @click="closeAdvancedFilterDialogAndUpdate"
           >
           </PrimeButton>
