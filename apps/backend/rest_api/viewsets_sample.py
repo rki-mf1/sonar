@@ -747,7 +747,7 @@ class SampleViewSet(
 
         result_dict = {}
         # check if queryset has any records with a collection_date -> if not, return empty object
-        if queryset.filter(collection_date__isnull=True).count() == queryset.count():
+        if not queryset.filter(collection_date__isnull=False).exists():
             result_dict["samples_per_week"] = {}
             result_dict["lineage_area_chart"] = {}
             result_dict["lineage_bar_chart"] = {}
