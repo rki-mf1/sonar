@@ -4,6 +4,9 @@ services:
     container_name: sonar-db
     restart: unless-stopped
     command: -c config_file=/etc/postgresql/conf/${POSTGRES_CONFIG_FILE} -c port=$POSTGRES_PORT
+    # This works around an error "could not resize shared memory segment /PostgreSQL.<num>"
+    # The docker default is 64MB so it might be possible to reduce this a bit
+    shm_size: 512MB
     volumes:
       # All config files are in this volume because we use includes, so we
       # can't just link in a single config file
