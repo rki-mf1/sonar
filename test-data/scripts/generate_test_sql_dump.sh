@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-xz -d -k "../covid19/SARS-COV2_12.tsv.xz"
-xz -d -k "../covid19/SARS-COV2_12.fasta.xz"
+xz -d -k "../sars-cov-2/SARS-COV-2_12.tsv.xz"
+xz -d -k "../sars-cov-2/SARS-COV-2_12.fasta.xz"
 cd ../../apps/backend
 
 ./scripts/linux/clean-dev-env.sh -d -t
@@ -10,9 +10,9 @@ cd ../cli
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate ./env
 
-sonar-cli add-ref --gb ../../test-data/covid19//MN908947.nextclade.gb
+sonar-cli add-ref --gb ../../test-data/sars-cov-2/MN908947.nextclade.gb
 # import sequences
-sonar-cli import -r MN908947.3 --fasta ../../test-data/covid19/SARS-COV2_12.fasta -t 7 --method 1  --auto-anno --no-skip
+sonar-cli import -r MN908947.3 --fasta ../../test-data/sars-cov-2/SARS-COV-2_12.fasta -t 7 --method 1  --auto-anno --no-skip
 # add properties to db
 sonar-cli add-prop --name age --descr "Age" --dtype value_integer
 sonar-cli add-prop --name sequencing_reason --descr "Sampling reason" --dtype value_varchar
@@ -20,9 +20,9 @@ sonar-cli add-prop --name euro --descr "Price" --dtype value_float
 sonar-cli add-prop --name sample_type --descr "Sample Type" --dtype value_varchar
 sonar-cli add-prop --name comments --descr "Comments" --dtype value_varchar
 # import sample properties
-sonar-cli import -r MN908947.3 -t 7 --tsv ../../test-data/covid19/SARS-COV2_12.tsv --cols name=name  collection_date=collection_date sequencing_tech=sequencing_tech lab=lab zip_code=zip_code lineage=lineage sample_type=sample_type comments=comments age=age euro=euro sequencing_reason=sequencing_reason
+sonar-cli import -r MN908947.3 -t 7 --tsv ../../test-data/sars-cov-2/SARS-COV-2_12.tsv --cols name=name  collection_date=collection_date sequencing_tech=sequencing_tech lab=lab zip_code=zip_code lineage=lineage sample_type=sample_type comments=comments age=age euro=euro sequencing_reason=sequencing_reason
 # import lineages
-sonar-cli import-lineage -l ../../test-data/covid19/lineages_test.tsv
+sonar-cli import-lineage -l ../../test-data/sars-cov-2/lineages_test.tsv
 
 cd ../backend
 # add to processing_job table: (job_name, status):
@@ -43,5 +43,5 @@ echo "Dump database to $DUMP_FILE"
 PGPASSWORD=$POSTGRES_PASSWORD pg_dump -h localhost -p 8432 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB"  --no-owner --no-acl --format=plain --file=$DUMP_FILE
 
 # # remove unzipped tsv and fasta
-rm "../../test-data/covid19/SARS-COV2_12.tsv"
-rm "../../test-data/covid19/SARS-COV2_12.fasta"
+rm "../../test-data/sars-cov-2/SARS-COV-2_12.tsv"
+rm "../../test-data/sars-cov-2/SARS-COV-2_12.fasta"

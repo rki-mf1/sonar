@@ -32,7 +32,7 @@ try {
         Write-Output "######### loading fixtures with test data ############"    
         scripts\win\dev-manage.ps1 loaddata initial_auth test_data_10
         scripts\win\dev-manage.ps1 import_lineage
-        scripts\win\dev-copy-gbk.ps1 ..\..\..\test-data\covid19\MN908947.nextclade.gb .\work\sonar\data\import\gbks\
+        scripts\win\dev-copy-gbk.ps1 ..\..\..\test-data\sars-cov-2\MN908947.nextclade.gb .\work\sonar\data\import\gbks\
 
     }
     if ($LASTEXITCODE -ne 0) {

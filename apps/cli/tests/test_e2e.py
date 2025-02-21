@@ -154,7 +154,7 @@ def test_delete_ref(monkeypatch, capfd, api_url):
 def test_delete_sample_fromfile(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     code = run_cli(
-        f"delete-sample --db {api_url} --sample-file covid19/sample_list.2.txt --force"
+        f"delete-sample --db {api_url} --sample-file sars-cov-2/sample_list.2.txt --force"
     )
     out, err = capfd.readouterr()
     assert "0 of 2 samples found and deleted." in err
