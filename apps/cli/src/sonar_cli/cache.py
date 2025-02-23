@@ -145,7 +145,7 @@ class sonarCache:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(self):
         if os.path.isdir(self.basedir) and self.temp:
             shutil.rmtree(self.basedir)
         if self.logfile_obj:

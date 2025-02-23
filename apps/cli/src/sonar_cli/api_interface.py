@@ -220,7 +220,7 @@ class APIClient:
             return None
 
     def get_molecule_data(
-        self, *fields, reference_accession: Optional[str] = None
+        self, reference_accession: Optional[str] = None
     ) -> Dict[str, Dict[str, Any]]:
         """
         Returns a dictionary with molecule accessions as keys and sub-dicts as values for all molecules
@@ -228,7 +228,6 @@ class APIClient:
         (or, alternatively, the given table field names only) as keys and the stored data as values.
 
         Args:
-            *fields: Fields to be included in the sub-dicts.
             reference_accession (str, optional): The reference accession. Defaults to None, which means the default reference.
 
         Returns:
@@ -312,25 +311,6 @@ class APIClient:
             return json_response
         else:
             return None
-
-    # def get_translation_dict(self, translation_id):
-    #     NOTE: no longer use, will be removed
-    #     """
-    #     Returns all elements based on given molecule id
-
-    #     Returns:
-    #         Optional[list]: The list of element if it exists, None otherwise.
-    #     """
-    #     params = {}
-    #     params["translation_id"] = translation_id
-    #     json_response = self._make_request(
-    #         "GET", endpoint=self.get_translation_table_endpoint, params=params
-    #     )
-    #     if json_response["data"]:
-    #         data = json_response["data"]
-    #         return data
-    #     else:
-    #         return None
 
     def post_import_upload(self, files, job_id=None, data={}):
         """
