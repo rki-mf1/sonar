@@ -134,7 +134,6 @@ class sonarUtils:
                 )
                 sys.exit(1)
             sample_id_column = properties["name"]
-
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
@@ -142,7 +141,6 @@ class sonarUtils:
                     "Cannot link ID. Please provide a mapping ID in the meta file, add --cols name=(column ID/sample name) to the command line."
                 )
                 sys.exit(1)
-
         # setup cache
         cache = sonarUtils._setup_cache(
             db=db,
@@ -522,9 +520,8 @@ class sonarUtils:
     def _import_properties(
         sample_id_column: str,
         properties: Dict[str, Dict[str, str] | str],
-        # db: str,
-        csv_files: str,
-        tsv_files: str,
+        csv_files: List[str],
+        tsv_files: List[str],
         progress: bool,
     ):
         """
@@ -664,30 +661,26 @@ class sonarUtils:
         col_names_fromfile = {}
         for fname, delim in file_tuples:
             col_names_fromfile[fname] = _get_csv_colnames(fname, delim)
-
         if autolink:
             LOGGER.info(
                 "Auto-link is enabled, automatically linking columns in the file to existing properties in the database."
             )
-
             # Case insensitive linking (SAMPLE_TYPE = sample_type)
-            col_names_fromfile = list(set(col_names_fromfile))
-            for col_name in col_names_fromfile:
-                _row_df = prop_df[
-                    prop_df["name"].str.contains(
-                        col_name, na=False, case=False, regex=False
-                    )
-                ]
+            for fname, col_names in col_names_fromfile.items():
+                for col_name in col_names:
+                    _row_df = prop_df[
+                        prop_df["name"].str.fullmatch(col_name, na=False, case=False)
+                    ]
 
-                if not _row_df.empty:
-                    query_type = _row_df["query_type"].values[0]
-                    name = _row_df["name"].values[0]
-                    default = _row_df["default"].values[0]
-                    propnames[col_name] = {
-                        "db_property_name": name,
-                        "data_type": query_type,
-                        "default": default,
-                    }
+                    if not _row_df.empty:
+                        query_type = _row_df["query_type"].values[0]
+                        name = _row_df["name"].values[0]
+                        default = _row_df["default"].values[0]
+                        propnames[col_name] = {
+                            "db_property_name": name,
+                            "data_type": query_type,
+                            "default": default,
+                        }
 
             # Handle sample ID linking
             for link in prop_links:
@@ -724,42 +717,41 @@ class sonarUtils:
                     LOGGER.warning(
                         f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
                     )
-            # Check if columns exist in the provided CSV/TSV files
-            # only existing columns shall pass
-            valid_propnames = {}
+        # Check if columns exist in the provided CSV/TSV files
+        # only existing columns shall pass
+        valid_propnames = {}
 
-            for col, prop_info in propnames.items():
-                print(col, prop_info)
-                if col == "name":
-                    # Check if 'ID' exists in the provided CSV/TSV files
+        for col, prop_info in propnames.items():
+            if col == "name":
+                # Check if 'ID' exists in the provided CSV/TSV files
+                valid_propnames[col] = prop_info
+                id_column = prop_info
+                missing_in_files = [
+                    fname
+                    for fname, cols in col_names_fromfile.items()
+                    if id_column not in cols
+                ]
+                if missing_in_files:
+                    LOGGER.error(
+                        f"Mapping ID column '{id_column}' does not exist in the provided files: {', '.join(missing_in_files)}."
+                    )
+                    sys.exit(
+                        1
+                    )  # this will stop the whole prop-import process or just continue??
+            else:
+                missing_in_files = [
+                    fname
+                    for fname, cols in col_names_fromfile.items()
+                    if col not in cols
+                ]
+                if not missing_in_files:
                     valid_propnames[col] = prop_info
-                    id_column = prop_info
-                    missing_in_files = [
-                        fname
-                        for fname, cols in col_names_fromfile.items()
-                        if id_column not in cols
-                    ]
-                    if missing_in_files:
-                        LOGGER.error(
-                            f"Mapping ID column '{id_column}' does not exist in the provided files: {', '.join(missing_in_files)}."
-                        )
-                        sys.exit(
-                            1
-                        )  # this will stop the whole prop-import process or just continue??
                 else:
-                    missing_in_files = [
-                        fname
-                        for fname, cols in col_names_fromfile.items()
-                        if col not in cols
-                    ]
-                    if not missing_in_files:
-                        valid_propnames[col] = prop_info
-                    else:
-                        LOGGER.warning(
-                            f"Column '{col}' does not exist in the provided files: {', '.join(missing_in_files)}."
-                        )
+                    LOGGER.warning(
+                        f"Column '{col}' does not exist in the provided files: {', '.join(missing_in_files)}."
+                    )
 
-            propnames = valid_propnames
+        propnames = valid_propnames
 
         LOGGER.info("Displaying property mappings:")
         LOGGER.info("(Input table column name -> Sonar database property name)")
