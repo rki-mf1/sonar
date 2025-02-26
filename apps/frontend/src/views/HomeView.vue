@@ -48,7 +48,7 @@
       </template>
       <PrimeColumn field="name" sortable :reorderable-column="false">
         <template #header>
-          <span v-tooltip="metaDataCoverage('name')">Sample Name</span>
+          <span>Sample Name</span>
         </template>
         <template #body="slotProps">
           <div class="cell-content-sample-id" :title="slotProps.data.name">
@@ -63,7 +63,7 @@
         :field="column"
       >
         <template #header>
-          <span v-tooltip="metaDataCoverage(column)">{{ column }}</span>
+          <span>{{ column }}</span>
         </template>
         <template #body="slotProps">
           <div v-if="column === 'genomic_profiles'" class="cell-content">
@@ -323,21 +323,6 @@ export default {
     formatDate(dateStr: string): string {
       if (!dateStr) return '' // Handle case where dateStr is undefined or null
       return dateStr.split('T')[0]
-    },
-    metaDataCoverage(column: string) {
-      if (
-        this.samplesStore.filteredCount != 0 &&
-        this.samplesStore.filteredStatistics['meta_data_coverage'] != undefined
-      ) {
-        const coverage = (
-          (this.samplesStore.filteredStatistics['meta_data_coverage'][column] /
-            this.samplesStore.filteredCount) *
-          100
-        ).toFixed(0)
-        return 'Coverage: ' + coverage.toString() + ' %'
-      } else {
-        return ''
-      }
     },
   },
 }

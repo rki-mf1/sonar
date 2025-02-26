@@ -119,6 +119,10 @@ class SampleViewSet(
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
+        response_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
+            queryset=models.Sample.objects.all()
+        )
+
         return response_dict
 
     @action(detail=False, methods=["get"])
@@ -316,7 +320,8 @@ class SampleViewSet(
             ).data:
                 yield writer.writerow(serialized["row"])
 
-    def _get_meta_data_coverage(self, queryset):
+    @staticmethod
+    def get_meta_data_coverage(queryset):
         dict = {}
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
@@ -737,7 +742,6 @@ class SampleViewSet(
 
         result_dict = {}
         result_dict["filtered_total_count"] = queryset.count()
-        result_dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
 
         return Response(data=result_dict)
 
@@ -778,6 +782,9 @@ class SampleViewSet(
                 self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
             )
 
+        result_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
+            queryset
+        )
         result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
         result_dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
         result_dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
