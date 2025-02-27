@@ -126,18 +126,6 @@ class sonarAligner:
         i = 0
         offset = 0
         id_counter = count(1)
-
-        # Collect our nucleotide variants here. Each element should be a
-        # dictionary with the following keys:
-        # - id
-        # - ref
-        # - start
-        # - end
-        # - alt
-        # - reference_acc
-        # - label
-        # - type
-        # - parent_id (= id for nucleotides)
         nuc_vars = []
 
         while i < query_length:
@@ -241,6 +229,8 @@ class sonarAligner:
         """
 
         aa_vars = []
+        if nuc_vars.empty:
+            return pd.DataFrame(aa_vars)
         next_aa_id = nuc_vars["id"].max() + 1 if not nuc_vars.empty else 1
 
         # ------------------------------------------------------------
