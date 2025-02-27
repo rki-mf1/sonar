@@ -751,10 +751,11 @@ class sonarCache:
                 if sample_data["var_parquet_file"] is not None:
                     # SECTION:ReadVar
                     var_df = pd.read_parquet(sample_data["var_parquet_file"])
-                    nt_df = var_df[(var_df["type"] == "nt")]
-                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
-                        "records"
-                    )
+                    if not var_df.empty:
+                        nt_df = var_df[(var_df["type"] == "nt")]
+                        iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                            "records"
+                        )
                     # SECTION: Paranoid
                     if sample_data["seqhash"] is not None:
                         # Get Reference sequence.
