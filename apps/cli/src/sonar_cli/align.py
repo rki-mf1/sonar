@@ -68,10 +68,10 @@ class sonarAligner:
     def process_cached_alignment(self, data: dict):
         if not self.allow_updates:
             if not data["var_parquet_file"]:
-                return True
+                return pd.DataFrame()
             elif os.path.isfile(data["var_parquet_file"]):
                 pd.read_parquet(data["var_parquet_file"])
-                return True
+                return pd.DataFrame()
         source_acc = str(data["source_acc"])
 
         # Do alignment
@@ -88,10 +88,10 @@ class sonarAligner:
         """
         if not self.allow_updates:
             if data["var_parquet_file"] is None:
-                return True
+                return pd.DataFrame()
             elif os.path.isfile(data["var_parquet_file"]):
                 pd.read_parquet(data["var_parquet_file"])
-                return True
+                return pd.DataFrame()
 
         # elemid = str(data["sourceid"])
         source_acc = str(data["source_acc"])
