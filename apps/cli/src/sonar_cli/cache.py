@@ -77,7 +77,6 @@ class sonarCache:
         if not self.refmols:
             LOGGER.info(f"Cannot find reference: {self.refacc}")
             sys.exit()
-        LOGGER.debug(f"Init refmols: {self.refmols}")
         self.default_refmol_acc = [x for x in self.refmols][0]
 
         self._molregex = re.compile(r"\[molecule=([^\[\]=]+)\]")
@@ -749,7 +748,7 @@ class sonarCache:
                 # NOTE: right now, we no longer need var_file.
                 del sample_data["var_file"]
                 del sample_data["lift_file"]
-                if not sample_data["var_parquet_file"] is None:
+                if sample_data["var_parquet_file"] is not None:
                     # SECTION:ReadVar
                     var_df = pd.read_parquet(sample_data["var_parquet_file"])
                     nt_df = var_df[(var_df["type"] == "nt")]
@@ -757,7 +756,7 @@ class sonarCache:
                         "records"
                     )
                     # SECTION: Paranoid
-                    if not sample_data["seqhash"] is None:
+                    if sample_data["seqhash"] is not None:
                         # Get Reference sequence.
                         seq = list(
                             self.get_refseq(refmol_acc=sample_data["source_acc"])
