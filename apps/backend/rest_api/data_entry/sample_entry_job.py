@@ -44,44 +44,89 @@ from rest_api.utils import PropertyColumnMapping
 property_cache = {}
 
 
-# Beginning of import process
 def check_for_new_data():
-    processing_dir = pathlib.Path(SONAR_DATA_PROCESSING_FOLDER)
-    # processing_dir.mkdir(parents=True, exist_ok=True)
-    # NOTE: Order is matter!!
-    zip_files = sorted(list(pathlib.Path(SONAR_DATA_ENTRY_FOLDER).glob("*.zip")))
+    """Checks for new processing jobs in the database queue and processes them sequentially.
+    Steps:
+    - Fetches jobs with `QUEUED` status from the 'ProcessingJob' table, ordered by 'entry_time'.
+    - For each job:
+        - Retrieves associated files from 'FileProcessing'.
+        - If an error occurs (files not found), updates job status to 'FAILED'.
+        - Moves valid files to the processing directory.
+        - Calls 'import_archive' to handle import logic.
+    - Recursively calls itself to process subsequent jobs.
 
+    """
+    processing_dir = pathlib.Path(SONAR_DATA_PROCESSING_FOLDER)
     if REDIS_URL is None:
         print("--------------- WARNING -----------------")
         print("REDIS_URL not set, running without celery.")
         print("This will take a long time.")
         print("--------------- ------- -----------------")
+    # only one worker (Master) can take a job at a time
+    with transaction.atomic():
+        # Fetch and lock a single job with QUEUED status NOTE: Order of entrytime is matter!!
+        job = (
+            ProcessingJob.objects.select_for_update()
+            .filter(status=ProcessingJob.ImportType.QUEUED)
+            .order_by("entry_time")
+            .first()
+        )
+        if job is None:
+            return
+        # Update job status to IN_PROGRESS
+        job.status = ProcessingJob.ImportType.IN_PROGRESS
+        job.save()
 
-    if zip_files:
-        print("# New data found")
-        for zip_file in zip_files:
-            LOGGER.info(f"## Processing: {zip_file} ---")
-            if "_prop" in str(zip_file):
-                # Handle corresponding .pkl file for property imports
-                # Check a .pkl file (column_mapping) with the same name
-                pkl_file = zip_file.with_suffix(".pkl")
-                new_zip_path = zip_file.rename(processing_dir.joinpath(zip_file.name))
-                new_pkl_path = pkl_file.rename(processing_dir.joinpath(pkl_file.name))
-                import_archive(
-                    new_zip_path, pkl_path=new_pkl_path
-                )  # Pass the .pkl path to import_archive
+    LOGGER.info(f"## New processing job: {job.job_name} ---")
+    files = FileProcessing.objects.filter(processing_job=job)
+    if not files.exists():
+        LOGGER.warning(
+            f"No associated files found, in {job.job_name}, marking as FAILED, continue the proces.."
+        )
+        job.status = ProcessingJob.ImportType.FAILED
+        job.save()
+        return
 
-            else:
-                # process as normal sample or annotation import
-                new_zip_path = zip_file.rename(processing_dir.joinpath(zip_file.name))
-                import_archive(new_zip_path)
-        # Recursively check for new data after processing current batch
-        check_for_new_data()
+    for file in files:
+        file_path = pathlib.Path(SONAR_DATA_ENTRY_FOLDER).joinpath(file.file_name)
+        if not file_path.exists():
+            LOGGER.error(f"File {file_path} does not exist, marking job as FAILED!")
+            job.status = ProcessingJob.ImportType.FAILED
+            job.save()
+            return
+
+        # move files to SONAR_DATA_PROCESSING_FOLDER
+        if "_prop" in str(file_path):
+            # Handle corresponding .pkl file for property imports
+            pkl_file = file_path.with_suffix(".pkl")
+            new_zip_path = file_path.rename(processing_dir.joinpath(file_path.name))
+            new_pkl_path = pkl_file.rename(processing_dir.joinpath(pkl_file.name))
+            import_archive(
+                new_zip_path, pkl_path=new_pkl_path
+            )  # Pass the .pkl path to import_archive
+        else:
+            # process as normal sample or annotation import
+            new_zip_path = file_path.rename(processing_dir.joinpath(file_path.name))
+            import_archive(new_zip_path)
+
+    # Recursively check for new data after processing current batch
+    check_for_new_data()
+    print("---- No new jobs found. ----")
 
 
 def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = None):
-    """
-    TODO: if it just start update the ProcessingJob (IP) optional
+    """Processes an archive file by extracting and importing its contents.
+    Steps:
+    - Determines the corresponding `ProcessingJob` based on the file.
+    - Updates the job status to `IN_PROGRESS`.
+    - Extracts the archive into a temporary directory.
+    - Differentiates between property imports (requires `.pkl` mapping) and sample/annotation imports.
+    - Uses Celery (if available) to process batches; otherwise, processes sequentially.
+    - On success, moves files to `completed` directory or deletes them.
+    - On failure, moves files to `error` directory and logs the error.
+    - Updates the job status based on the completion of the processed file.
+
+    NOTE: [optional] if it just starts, we update the ProcessingJob (to IP)
     """
     temp_dir = (
         pathlib.Path(SONAR_DATA_ARCHIVE)
@@ -91,7 +136,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
     try:
 
         filename_ID = process_file_path.name
-        # get JOB ID
+        # get JOB ID based on the given files
         proJob_obj = ProcessingJob.objects.filter(files__file_name=filename_ID).first()
         if not proJob_obj:
             LOGGER.warning(
@@ -99,15 +144,16 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
             )
             return
         job_ID = proJob_obj.job_name
-        LOGGER.info(f"jobID : {job_ID}")
+        LOGGER.info(f"Process job: {job_ID}")
         print(f"Unzip to {temp_dir}")
-        ProcessingJob.objects.filter(job_name=job_ID).update(
-            status=ProcessingJob.ImportType.IN_PROGRESS
-        )
+        # ProcessingJob.objects.filter(job_name=job_ID).update(
+        #     status=ProcessingJob.ImportType.IN_PROGRESS
+        # )
         # unzip the zip file to SONAR_DATA_ARCHIVE
         with zipfile.ZipFile(process_file_path, "r") as zip_ref:
             zip_ref.extractall(temp_dir)
 
+        # Files are distributed and processed
         print(f"Running data entry for {temp_dir}")
         if pkl_path and pkl_path.exists():
             # property import
@@ -224,6 +270,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
 
             LOGGER.info(f"import done in {datetime.now() - timer}")
     except Exception as e:
+        # TODO: [optional] if fail, we update the ProcessingJob right now.
         LOGGER.error(f"Error : {e}")
         error_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("error")
         error_dir.mkdir(parents=True, exist_ok=True)
@@ -239,7 +286,6 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
         )
         LOGGER.error(f"--- Exception: move to {error_dir} ---")
 
-    # TODO: if fail update the ProcessingJob optional
     else:  # no exception occurs
         if KEEP_IMPORTED_DATA_FILES:
             completed_dir = pathlib.Path(SONAR_DATA_ARCHIVE).joinpath("completed")
