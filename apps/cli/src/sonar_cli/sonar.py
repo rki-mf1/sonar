@@ -739,7 +739,9 @@ def handle_import(args: argparse.Namespace):
     elif args.method == 3:
         LOGGER.info("Alignment Tool: WFA2-lib")
     else:
-        LOGGER.warn("Invalid --method. Please use 'import -h' to see available methods")
+        LOGGER.warning(
+            "Invalid --method. Please use 'import -h' to see available methods"
+        )
         exit(1)
     LOGGER.info(f"Skip N/X mutation: {args.skip_nx}")
     LOGGER.info(f"Variant Annotation: {args.auto_anno}")

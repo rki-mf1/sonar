@@ -167,7 +167,7 @@ class sonarUtils:
         # importing properties
         if csv_files or tsv_files:
             if len(properties) == 0:
-                LOGGER.warn(
+                LOGGER.warning(
                     "Skip sending properties: no column in the file is mapped to the corresponding variables in the database."
                 )
             else:

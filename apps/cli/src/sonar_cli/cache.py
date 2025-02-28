@@ -847,7 +847,7 @@ class sonarCache:
                 sys.exit("Unknown import error")
 
         if list_fail_samples:
-            LOGGER.warn(
+            LOGGER.warning(
                 "Some samples fail in sanity check; please check import.log under the cache directory."
             )
             # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
