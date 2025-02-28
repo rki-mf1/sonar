@@ -135,11 +135,15 @@ class RepliconViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
-        queryset = models.Replicon.objects.distinct("accession").values("accession")
+        queryset = models.Replicon.objects.only("accession").values_list(
+            "accession", flat=True
+        )
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(molecule__reference__accession=ref)
+        distinct_accessions = queryset.distinct()
+
         return Response(
-            {"accessions": [item["accession"] for item in queryset]},
+            {"accessions": distinct_accessions},
             status=status.HTTP_200_OK,
         )
 
@@ -299,9 +303,10 @@ class ReferenceViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
-        queryset = models.Reference.objects.all()
-        accession = [item.accession for item in queryset]
-        return Response(data=accession, status=status.HTTP_200_OK)
+        accession_list = models.Reference.objects.values_list(
+            "accession", flat=True
+        ).distinct()
+        return Response(data=accession_list, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def get_all_references(self, request: Request, *args, **kwargs):
@@ -816,10 +821,9 @@ class LineageViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
-
-        distinct_lineages = [
-            item.name for item in models.Lineage.objects.distinct("name")
-        ]
+        distinct_lineages = models.Lineage.objects.values_list(
+            "name", flat=True
+        ).distinct()
         return Response(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
