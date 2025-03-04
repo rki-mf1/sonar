@@ -272,11 +272,9 @@ class sonarAligner:
             df["altAa"] = df["alt1"] + df["alt2"] + df["alt3"]
             df["altAa"] = df["altAa"].apply(
                 lambda seq: (
-                    "-"
-                    if seq == "---"
-                    else str(
+                    str(
                         Seq(seq.replace("-", "")).translate(
-                            table="Standard", to_stop=True
+                            table="Standard", to_stop=True, gap="-"
                         )
                     )
                 )
