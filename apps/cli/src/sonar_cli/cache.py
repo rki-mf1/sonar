@@ -787,6 +787,19 @@ class sonarCache:
                         seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
                         if seq != orig_seq:
 
+                            min_len = min(len(orig_seq), len(seq))
+                            mismatches = []
+                            for a, b in zip(
+                                list(orig_seq[:min_len]), list(seq[:min_len])
+                            ):
+                                mismatches.append("|" if a == b else "X")
+                            LOGGER.warning(
+                                f"Failed paranoid test for sample '{sample_name}'. Printing sequences:"
+                            )
+                            LOGGER.warning(f"Original: {orig_seq}")
+                            LOGGER.warning(f"        : {''.join(mismatches)}")
+                            LOGGER.warning(f"Rebuilt : {seq}")
+
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.
                             with open(
