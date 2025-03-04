@@ -27,7 +27,7 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload"
+    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
     code = run_cli(command)
 
     assert code == 0
@@ -44,7 +44,7 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload --must-pass-paranoid"
     code = run_cli(command)
 
     assert code == 0
@@ -61,7 +61,7 @@ def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
     #         func(** arg) for arg in args
     #     ),
     # )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --auto-anno --tsv covid19/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE "
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --auto-anno --tsv covid19/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE --must-pass-paranoid"
     code = run_cli(command)
 
     assert code == 0
@@ -78,7 +78,7 @@ def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
         ),
     )
     code = run_cli(
-        f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz  --cache {tmpfile_name}/mafft  --no-skip --no-upload"
+        f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz  --cache {tmpfile_name}/mafft  --no-skip --no-upload --must-pass-paranoid"
     )
     assert code == 0
 
@@ -94,7 +94,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
         ),
     )
     code = run_cli(
-        f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 1 --no-upload"
+        f"import --db {api_url} -r MN908947.3 --method 1 --fasta covid19/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 1 --no-upload --must-pass-paranoid"
     )
     assert code == 0
 
@@ -144,7 +144,7 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
             func(arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2  --tsv covid19/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2 --tsv covid19/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE"
     code = run_cli(command)
 
     assert code == 0

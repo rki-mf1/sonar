@@ -720,7 +720,7 @@ class sonarCache:
             return None
 
     def perform_paranoid_cached_samples(  # noqa: C901
-        self, sample_data_dict_list
+        self, sample_data_dict_list, must_pass_paranoid
     ) -> list:
         """
         This function performs the paranoid test without fetching variants from the database.
@@ -858,8 +858,11 @@ class sonarCache:
 
             # currently, we report only failed sample IDs.
             self.error_logfile_obj.write("Fail sample during alignment:----\n")
+            LOGGER.error("Failed sample IDs:")
             for fail_sample in list_fail_samples:
                 self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
+                LOGGER.error(fail_sample["sample_name"])
+            sys.exit("Some sequences failed the paranoid test, aborting.")
 
         count_sample = total_samples - len(list_fail_samples)
         LOGGER.info(f"Total passed samples: {count_sample}")

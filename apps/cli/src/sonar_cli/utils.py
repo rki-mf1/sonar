@@ -85,6 +85,7 @@ class sonarUtils:
         no_upload_sample: bool = False,
         include_nx: bool = True,
         debug: bool = False,
+        must_pass_paranoid: bool = False,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -162,6 +163,7 @@ class sonarUtils:
                 progress,
                 method,
                 no_upload_sample,
+                must_pass_paranoid,
             )
 
         # importing properties
@@ -228,6 +230,7 @@ class sonarUtils:
         progress: bool = False,
         method: int = 1,
         no_upload_sample: bool = False,
+        must_pass_paranoid: bool = False,
     ) -> None:
         """
         Process and import sequences from fasta files.
@@ -303,7 +306,7 @@ class sonarUtils:
 
         start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples(
-            sample_data_dict_list
+            sample_data_dict_list, must_pass_paranoid
         )
         LOGGER.info(
             f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}"
