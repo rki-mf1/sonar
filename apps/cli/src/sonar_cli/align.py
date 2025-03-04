@@ -37,6 +37,15 @@ class sonarAligner:
         self.debug = debug
 
     def process_cached_sample(self, **sample_data: dict):
+        # If we do not want to allow updates, and there is an existing var
+        # file, skip re-doing everything.
+        if (
+            not self.allow_updates
+            and "var_parquet_file" in sample_data
+            and os.path.isfile(sample_data["var_parquet_file"])
+        ):
+            return
+
         if self.method == 1:
             # For alignment methods that return the reference and query
             # sequence strings as they would align to each other
@@ -66,12 +75,6 @@ class sonarAligner:
         )
 
     def process_cached_alignment(self, data: dict):
-        if not self.allow_updates:
-            if not data["var_parquet_file"]:
-                return pd.DataFrame()
-            elif os.path.isfile(data["var_parquet_file"]):
-                pd.read_parquet(data["var_parquet_file"])
-                return pd.DataFrame()
         source_acc = str(data["source_acc"])
 
         # Do alignment
@@ -86,14 +89,6 @@ class sonarAligner:
         This function takes a sample file and processes it.
         create var file with NT and AA mutations
         """
-        if not self.allow_updates:
-            if data["var_parquet_file"] is None:
-                return pd.DataFrame()
-            elif os.path.isfile(data["var_parquet_file"]):
-                pd.read_parquet(data["var_parquet_file"])
-                return pd.DataFrame()
-
-        # elemid = str(data["sourceid"])
         source_acc = str(data["source_acc"])
         qryseq = read_seqcache(data["seq_file"])
         refseq = read_seqcache(data["ref_file"])

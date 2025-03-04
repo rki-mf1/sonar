@@ -751,10 +751,16 @@ class sonarCache:
                 if sample_data["var_parquet_file"] is not None:
                     # SECTION:ReadVar
                     var_df = pd.read_parquet(sample_data["var_parquet_file"])
+                    # Currently var_df might be empty if the imported sequence
+                    # is identical to the reference
                     if not var_df.empty:
                         nt_df = var_df[(var_df["type"] == "nt")]
                         iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
                             "records"
+                        )
+                    else:
+                        LOGGER.warning(
+                            f"Paranoid test: var file ({sample_data['var_parquet_file']}) is missing for sample {sample_data['name']}"
                         )
                     # SECTION: Paranoid
                     if sample_data["seqhash"] is not None:
@@ -785,20 +791,23 @@ class sonarCache:
                             orig_seq = handle.read()
 
                         seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
-                        if seq != orig_seq:
 
+                        if seq != orig_seq:
+                            LOGGER.warning(
+                                f"Failed paranoid test for sample '{sample_name}'"
+                            )
+
+                            # Only for printing the sequences with some indication
+                            # of mismatches between the original and target sequence
                             min_len = min(len(orig_seq), len(seq))
                             mismatches = []
                             for a, b in zip(
                                 list(orig_seq[:min_len]), list(seq[:min_len])
                             ):
                                 mismatches.append("|" if a == b else "X")
-                            LOGGER.warning(
-                                f"Failed paranoid test for sample '{sample_name}'. Printing sequences:"
-                            )
-                            LOGGER.warning(f"Original: {orig_seq}")
-                            LOGGER.warning(f"        : {''.join(mismatches)}")
-                            LOGGER.warning(f"Rebuilt : {seq}")
+                            LOGGER.debug(f"Original: {orig_seq}")
+                            LOGGER.debug(f"        : {''.join(mismatches)}")
+                            LOGGER.debug(f"Rebuilt : {seq}")
 
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.
