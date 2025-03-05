@@ -270,15 +270,18 @@ class sonarAligner:
         # Actually calculate the aa mutations:
         if not df.empty:
             df["altAa"] = df["alt1"] + df["alt2"] + df["alt3"]
+
+            # Translate, taking care of gaps as follows:
+            # 1. "---" -> "-"
+            # 2. Anything containing a "-" but not "---" -> ""
+            # 3. Everything else is translated using Seq.translate()
+            deletions = df["altAa"] == "---"
+            df.loc[df["altAa"].str.contains("-"), "altAa"] = ""
             df["altAa"] = df["altAa"].apply(
-                lambda seq: (
-                    str(
-                        Seq(seq.replace("-", "")).translate(
-                            table="Standard", to_stop=True, gap="-"
-                        )
-                    )
-                )
+                lambda seq: (str(Seq(seq).translate(table="Standard", to_stop=True)))
             )
+            df.loc[deletions, "altAa"] = "-"
+
             # get only rows where there is a change in amino acid.
             # by dropping rows that dont get changed
             df.drop(df[df["aa"] == df["altAa"]].index, inplace=True)
@@ -313,12 +316,12 @@ class sonarAligner:
                 if prev_row is None:
                     # Initialize a new deletion block
                     prev_row = row
+                    parent_id = prev_row.parent_ids
                 elif prev_row["elemid"] == row["elemid"] and row["aaPos"] == prev_row[
                     "aaPos"
                 ] + len(prev_row["aa"]):
                     # Extend the current deletion block
                     prev_row["aa"] += row["aa"]
-
                 else:
                     # Finalize the previous deletion block
                     start = prev_row["aaPos"]
@@ -338,7 +341,7 @@ class sonarAligner:
                             "reference_acc": prev_row.accession,
                             "label": label,
                             "type": "cds",
-                            "parent_id": prev_row.parent_id,
+                            "parent_id": parent_id,
                         }
                     )
 
