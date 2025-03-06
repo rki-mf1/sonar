@@ -24,7 +24,7 @@
         <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <PrimePanel v-else header="Lineage Plot" class="w-full shadow-2">
           <!-- lineage area plot-->
-          <h4>Area Plot - SARS-COV-2 - Lineages Over Time</h4>
+          <h4>Area Plot - SARS-CoV-2 - Lineages Over Time</h4>
           <div class="h-30rem plot">
             <PrimeChart
               ref="lineageAreaPlot"

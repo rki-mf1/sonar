@@ -10,8 +10,8 @@ fi
 SUFFIX="$1"
 
 
-xz -d -k "../sars-cov-2/SARS-COV-2_${SUFFIX}.tsv.xz"
-xz -d -k "../sars-cov-2/SARS-COV-2_${SUFFIX}.fasta.xz"
+xz -d -k "../sars-cov-2/SARS-CoV-2_${SUFFIX}.tsv.xz"
+xz -d -k "../sars-cov-2/SARS-CoV-2_${SUFFIX}.fasta.xz"
 cd ../../apps/backend
 
 ./scripts/linux/clean-dev-env.sh -d -t
@@ -22,14 +22,14 @@ source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate ./env
 
 sonar-cli add-ref --gb ../../test-data/sars-cov-2/MN908947.nextclade.gb
-sonar-cli import -r MN908947.3 --fasta "../../test-data/sars-cov-2/SARS-COV-2_${SUFFIX}.fasta" --cache /sonar/data/import -t 7 --method 1  --auto-anno --no-skip --skip-nx
+sonar-cli import -r MN908947.3 --fasta "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.fasta" --cache /sonar/data/import -t 7 --method 1  --auto-anno --no-skip --skip-nx
 sonar-cli add-prop --name sequencing_reason --descr "Sampling reason" --dtype value_varchar
 sonar-cli add-prop --name isolation_source --descr "Isolation Source" --dtype value_varchar
-sonar-cli import -r MN908947.3 -t 7 --tsv "../../test-data/sars-cov-2/SARS-COV-2_${SUFFIX}.tsv" --cols name=igs_id sequencing_reason=sequencing_reason isolation_source=isolation_source collection_date=date_of_sampling sequencing_tech=sequencing_platform lab=sequencing_lab.demis_lab_id zip_code=prime_diagnostic_lab.postal_code lineage=lineages
+sonar-cli import -r MN908947.3 -t 7 --tsv "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.tsv" --cols name=igs_id sequencing_reason=sequencing_reason isolation_source=isolation_source collection_date=date_of_sampling sequencing_tech=sequencing_platform lab=sequencing_lab.demis_lab_id zip_code=prime_diagnostic_lab.postal_code lineage=lineages
 sonar-cli import-lineage -l ../../test-data/sars-cov-2/lineages_test.tsv
 
-rm "../../test-data/sars-cov-2/SARS-COV-2_${SUFFIX}.tsv"
-rm "../../test-data/sars-cov-2/SARS-COV-2_${SUFFIX}.fasta"
+rm "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.tsv"
+rm "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.fasta"
 
 cd ../backend
 # superuser
