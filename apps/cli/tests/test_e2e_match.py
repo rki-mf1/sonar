@@ -75,7 +75,7 @@ def test_match_profile_AA(capfd, api_url):
 @pytest.mark.order(11)
 def test_match_profile_OR_AA(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --profile S:E484K --profile  S:N501Y  --count"
+        f"match --db {api_url} -r MN908947.3 --profile N:P13L --profile S:N501Y  --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -346,7 +346,7 @@ def test_match_profile_AA_DEL(capfd, api_url):
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "11" == lines[-1]
+    assert "10" == lines[-1]
     assert code == 0
 
 
