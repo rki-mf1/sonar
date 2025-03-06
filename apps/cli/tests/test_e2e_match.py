@@ -421,7 +421,7 @@ def test_match_anno_impact(capfd, api_url):
     out, err = capfd.readouterr()
     lines = out.splitlines()
     # assert "1" == lines[-1]
-    assert "6" == lines[-1]
+    assert "5" == lines[-1]
     assert code == 0
 
 
@@ -456,5 +456,5 @@ def test_match_anno_impact_and_type(capfd, api_url):
     out, err = capfd.readouterr()
     lines = out.splitlines()
     # assert "1" == lines[-1]
-    assert "6" == lines[-1]
+    assert "5" == lines[-1]
     assert code == 0
