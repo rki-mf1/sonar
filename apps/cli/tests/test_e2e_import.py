@@ -44,7 +44,7 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft-no-anno-no-upload -t 2 --no-upload"
     code = run_cli(command)
 
     assert code == 0
