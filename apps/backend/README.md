@@ -205,7 +205,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 | `alias_key.json`         | Used in the `python manage.py import_lineage` command.                                                                |
 | `lineages.zip`           | Used in the `python manage.py import_lineage` command.                                                                |
 | `lineages.ready.tsv`     | Example output from the `import_lineage` command.                                                                     |
-| `covid19.180.tsv`        | Input sample containing meta information (tsv).                                                                       |
+| `sars-cov-2.180.tsv`        | Input sample containing meta information (tsv).                                                                       |
 | `cache_180_mafft.zip`    | Input sample containing the genomic sequence (fasta) using MAFFT aligner.                                             |
 | `MN908947.3.gb`         | Reference genome of SARS-CoV-2 in GenBank format.                                                                     |
 | `dump-sonar-test-db-180-2025_01_21.INSERT.sql` | SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest." |

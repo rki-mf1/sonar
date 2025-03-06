@@ -136,7 +136,7 @@ def test_delete_prop_varchar(capfd, api_url):
 
 def test_add_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
-    new_ref_file = "influenza/InfluA_H7N9_seg6.gb"
+    new_ref_file = "../../../test-data/influenza/InfluA_H7N9_seg6.gb"
     code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
@@ -154,7 +154,7 @@ def test_delete_ref(monkeypatch, capfd, api_url):
 def test_delete_sample_fromfile(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     code = run_cli(
-        f"delete-sample --db {api_url} --sample-file covid19/sample_list.2.txt --force"
+        f"delete-sample --db {api_url} --sample-file sars-cov-2/sample_list.2.txt --force"
     )
     out, err = capfd.readouterr()
     assert "0 of 2 samples found and deleted." in err

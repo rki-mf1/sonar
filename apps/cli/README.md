@@ -141,7 +141,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 
 | File              | Usage                                                                            |
 | ----------------- | -------------------------------------------------------------------------------- |
-| `180.covid19.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
+| `180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
 | `MN908947.3`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
 
 # Usage 🚀
@@ -180,19 +180,19 @@ The `import` subcommand is used to import genome sequences and sample informatio
 Basic command:
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta covid19.fasta --cache cache_folder/ -t 2 --method 1
+sonar-cli import -r MN908947.3 --fasta sars-cov-2.fasta --cache cache_folder/ -t 2 --method 1
 ```
 
 Example command: Including properties during import
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta covid19.fasta --tsv covid19.meta.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
+sonar-cli import -r MN908947.3 --fasta sars-cov-2.fasta --tsv sars-cov-2/meta.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
 ```
 
 Example command: Including annotation step(`--auto-anno`)
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta covid19.fasta --tsv covid19.meta.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
+sonar-cli import -r MN908947.3 --fasta sars-cov-2.fasta --tsv sars-cov-2/meta.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
 ```
 
 To view all available options:
