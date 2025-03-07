@@ -267,111 +267,114 @@ class sonarAligner:
         ]
         df = df.drop(df.index[~is_modified])
 
+        # Skip everything if there are no AAs that were modified
+        if df.empty:
+            return pd.DataFrame(aa_vars)
+
         # Actually calculate the aa mutations:
-        if not df.empty:
-            df["altAa"] = df["alt1"] + df["alt2"] + df["alt3"]
+        df["altAa"] = df["alt1"] + df["alt2"] + df["alt3"]
 
-            # Translate, taking care of gaps as follows:
-            # 1. "---" -> "-"
-            # 2. Anything containing a "-" but not "---" -> ""
-            # 3. Everything else is translated using Seq.translate()
-            deletions = df["altAa"] == "---"
-            df.loc[df["altAa"].str.contains("-"), "altAa"] = ""
-            df["altAa"] = df["altAa"].apply(
-                lambda seq: (str(Seq(seq).translate(table="Standard", to_stop=True)))
+        # Translate, taking care of gaps as follows:
+        # 1. "---" -> "-"
+        # 2. Anything containing a "-" but not "---" -> ""
+        # 3. Everything else is translated using Seq.translate()
+        deletions = df["altAa"] == "---"
+        df.loc[df["altAa"].str.contains("-"), "altAa"] = ""
+        df["altAa"] = df["altAa"].apply(
+            lambda seq: (str(Seq(seq).translate(table="Standard", to_stop=True)))
+        )
+        df.loc[deletions, "altAa"] = "-"
+
+        # get only rows where there is a change in amino acid.
+        # by dropping rows that dont get changed
+        df.drop(df[df["aa"] == df["altAa"]].index, inplace=True)
+
+        # for snps or inserts
+        for row in df.loc[(df["altAa"] != "-") & (df["altAa"] != "")].itertuples():
+            pos = row.aaPos + 1
+            label = row.aa + str(pos) + row.altAa
+            parent_id = row.parent_ids
+            aa_vars.append(
+                {
+                    "id": int(next_aa_id),
+                    "ref": row.aa,
+                    "start": pos - 1,
+                    "end": pos,
+                    "alt": row.altAa,
+                    "reference_acc": row.accession,
+                    "label": label,
+                    "type": "cds",
+                    "parent_id": parent_id,
+                }
             )
-            df.loc[deletions, "altAa"] = "-"
+            next_aa_id += 1
 
-            # get only rows where there is a change in amino acid.
-            # by dropping rows that dont get changed
-            df.drop(df[df["aa"] == df["altAa"]].index, inplace=True)
+        # frameshift?
 
-            # for snps or inserts
-            for row in df.loc[(df["altAa"] != "-") & (df["altAa"] != "")].itertuples():
-                pos = row.aaPos + 1
-                label = row.aa + str(pos) + row.altAa
-                parent_id = row.parent_ids
-                aa_vars.append(
-                    {
-                        "id": int(next_aa_id),
-                        "ref": row.aa,
-                        "start": pos - 1,
-                        "end": pos,
-                        "alt": row.altAa,
-                        "reference_acc": row.accession,
-                        "label": label,
-                        "type": "cds",
-                        "parent_id": parent_id,
-                    }
-                )
-                next_aa_id += 1
-            # frameshift?
-
-            # for deletions
-            # the prev_row will be used to calculate the deletion label larger
-            prev_row = None
-            for index, row in (
-                df.loc[(df["altAa"] == "-")].sort_values(["elemid", "aaPos"]).iterrows()
-            ):
-                if prev_row is None:
-                    # Initialize a new deletion block
-                    prev_row = row
-                    parent_id = prev_row.parent_ids
-                elif prev_row["elemid"] == row["elemid"] and row["aaPos"] == prev_row[
-                    "aaPos"
-                ] + len(prev_row["aa"]):
-                    # Extend the current deletion block
-                    prev_row["aa"] += row["aa"]
-                else:
-                    # Finalize the previous deletion block
-                    start = prev_row["aaPos"]
-                    end = prev_row["aaPos"] + len(prev_row["aa"])
-                    if end - start == 1:
-                        label = "del:" + str(start + 1)
-                    else:
-                        label = "del:" + str(start + 1) + "-" + str(end)
-                    # Match CDS variant to NT variant
-                    aa_vars.append(
-                        {
-                            "id": int(next_aa_id),
-                            "ref": prev_row.aa,
-                            "start": start,
-                            "end": end,
-                            "alt": " ",
-                            "reference_acc": prev_row.accession,
-                            "label": label,
-                            "type": "cds",
-                            "parent_id": parent_id,
-                        }
-                    )
-
-                    # Start a new deletion block
-                    prev_row = row
-                    next_aa_id += 1
-
-            # Yield the last aggregated deletion if it exists
-            if prev_row is not None:
-                start = prev_row["aaPos"]
-                end = prev_row["aaPos"] + len(prev_row["aa"])
+        # for deletions
+        # the first_row will be used to calculate the deletion label larger
+        first_row = None
+        for index, row in (
+            df.loc[(df["altAa"] == "-")].sort_values(["elemid", "aaPos"]).iterrows()
+        ):
+            if first_row is None:
+                # Initialize a new deletion block
+                first_row = row
+            elif first_row["elemid"] == row["elemid"] and row["aaPos"] == first_row[
+                "aaPos"
+            ] + len(first_row["aa"]):
+                # Extend the current deletion block
+                first_row["aa"] += row["aa"]
+            else:
+                # Finalize the previous deletion block
+                start = first_row["aaPos"]
+                end = start + len(first_row["aa"])
                 if end - start == 1:
-                    label = "del:" + str(start + 1)
+                    label = f"del:{start + 1}"
                 else:
-                    label = "del:" + str(start + 1) + "-" + str(end)
-
+                    label = f"del:{start + 1}-{end}"
+                # Match CDS variant to NT variant
                 aa_vars.append(
                     {
                         "id": int(next_aa_id),
-                        "ref": prev_row.aa,
+                        "ref": first_row.aa,
                         "start": start,
                         "end": end,
                         "alt": " ",
-                        "reference_acc": prev_row.accession,
+                        "reference_acc": first_row.accession,
                         "label": label,
                         "type": "cds",
-                        "parent_id": parent_id,
+                        "parent_id": first_row.parent_ids,
                     }
                 )
+
+                # Start a new deletion block
+                first_row = row
                 next_aa_id += 1
+
+        # Close out the last aggregated deletion if it exists
+        if first_row is not None:
+            start = first_row["aaPos"]
+            end = start + len(first_row["aa"])
+            if end - start == 1:
+                label = f"del:{start + 1}"
+            else:
+                label = f"del:{start + 1}-{end}"
+
+            aa_vars.append(
+                {
+                    "id": int(next_aa_id),
+                    "ref": first_row.aa,
+                    "start": start,
+                    "end": end,
+                    "alt": " ",
+                    "reference_acc": first_row.accession,
+                    "label": label,
+                    "type": "cds",
+                    "parent_id": first_row.parent_ids,
+                }
+            )
+            next_aa_id += 1
 
         return pd.DataFrame(aa_vars)
 
