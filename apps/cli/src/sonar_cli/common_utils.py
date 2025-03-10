@@ -304,6 +304,24 @@ def file_collision(fname, data):
     return False
 
 
+# def file_collision(fname, data):
+#     """Check if the file content matches the given data using hashes."""
+#     hasher = hashlib.sha256()
+
+#     with open(fname, "rb") as handle:
+#         while chunk := handle.read(2024 * 2024):  # Read in 8KB chunks
+#             hasher.update(chunk)
+
+#     file_hash = hasher.hexdigest()
+#     data_hash = hashlib.sha256(data.encode()).hexdigest()
+
+#     if file_hash != data_hash:
+#         LOGGER.debug(f"seqhash collision detected for file: {fname}")
+#         return True
+
+#     return False
+
+
 def chunk(arr_range, arr_size):
     arr_range = iter(arr_range)
     return iter(lambda: tuple(islice(arr_range, arr_size)), ())

@@ -247,8 +247,8 @@ class sonarUtils:
         if not fasta_files:
             return
         start_seqcheck_time = get_current_time()
-        sample_data_dict_list = cache.add_fasta_v2(
-            *fasta_files, method=method, chunk_size=CHUNK_SIZE
+        sample_data_dict_list = cache.add_fasta_v5(
+            *fasta_files, method=method, chunk_size=CHUNK_SIZE, max_workers=threads
         )
         prepare_seq_time = calculate_time_difference(
             start_seqcheck_time, get_current_time()
@@ -256,7 +256,7 @@ class sonarUtils:
         LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
         cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
         LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
-
+        return
         # Align sequences and process
         aligner = sonarAligner(
             cache_outdir=cache.basedir,

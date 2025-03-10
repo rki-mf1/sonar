@@ -1,10 +1,13 @@
+import concurrent
 import hashlib
 from itertools import zip_longest
 import os
+from queue import Queue
 import re
 import shutil
 import subprocess
 import sys
+import threading
 import traceback
 from typing import Any
 from typing import Dict
@@ -62,6 +65,7 @@ class sonarCache:
             temp (bool): Whether to set cache dir temporary or not.
             disable_progress (bool): Whether to disable progress display or not.
         """
+        self.result_queue = Queue()
         self.base_url = db if db else BASE_URL
         self.allow_updates = allow_updates
         self.debug = debug
@@ -168,9 +172,38 @@ class sonarCache:
 
         return sample_data
 
+    def add_fasta_v5(
+        self, *fnames, method=1, chunk_size=1000, max_workers=4
+    ):  # noqa: C901
+        """ """
+        sample_data: List[Dict[str, Union[str, int]]] = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for fname in fnames:
+                batch_data = []
+                for data in self.iter_fasta(fname):
+                    batch_data.append(data)
+                    if len(batch_data) == chunk_size:
+                        executor.submit(self.process_data_batch, batch_data, method)
+                        batch_data = []
+                # Process any remaining data in the last batch
+                if batch_data:
+                    executor.submit(self.process_data_batch, batch_data, method)
+            # Block until all tasks are done
+            executor.shutdown(wait=True)
+
+        # merge all queue results
+        while not self.result_queue.empty():
+            sample_data.extend(self.result_queue.get())
+
+        return sample_data
+
     def process_data_batch(
         self, batch_data: List[Dict[str, Union[str, int]]], method: str
     ):
+        current_thread = threading.current_thread()
+        LOGGER.debug(
+            f"Thread {current_thread.name} started processing batch of size {len(batch_data)} , method {method} "
+        )
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
 
@@ -178,7 +211,6 @@ class sonarCache:
         json_response = api_client.get_bulk_sample_data(
             [data["name"] for data in batch_data]
         )
-
         sample_dict = {
             sample_info["name"]: {
                 "sample_id": sample_info["sample_id"],
@@ -239,7 +271,10 @@ class sonarCache:
             # TODO: if empty remove batch_data[i] or skip
             batch_data[i] = _return_data
 
-        return batch_data
+        # add result to queue
+        self.result_queue.put(batch_data)
+        # LOGGER.info(f"Thread {current_thread.name} finish")
+        # return batch_data
 
     def cache_sample(
         self,
@@ -329,7 +364,7 @@ class sonarCache:
             with (
                 open_file_autodetect(fname) as handle,
                 tqdm(
-                    desc="processing " + fname + "...",
+                    desc="Read " + fname + "...",
                     total=os.path.getsize(fname),
                     unit="bytes",
                     unit_scale=True,
@@ -511,10 +546,10 @@ class sonarCache:
             yield self.read_pickle(fname)
 
     def cache_sequence(self, seqhash, sequence):
-
         fname = self.get_seq_fname(seqhash)
         seqfasta = f">{seqhash}\n{sequence}\n"
-        if os.path.isfile(fname):
+        # checks if a file with the generated name (fname) already exist
+        if os.path.exists(fname):
             if file_collision(fname, seqfasta):
                 LOGGER.error("seqhash collision: file name:" + fname + ".")
                 sys.exit(
@@ -523,11 +558,11 @@ class sonarCache:
         else:
             try:
                 with open(fname, "w") as handle:
-                    handle.write(">" + seqhash + "\n" + sequence + "\n")
+                    handle.write(seqfasta)
             except OSError:
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
                 with open(fname, "w") as handle:
-                    handle.write(">" + seqhash + "\n" + sequence + "\n")
+                    handle.write(seqfasta)
         return fname
 
     def cache_reference(self, refid, sequence):
