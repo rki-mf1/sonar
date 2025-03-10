@@ -155,25 +155,8 @@ class sonarCache:
         if self.logfile_obj:
             self.logfile_obj.close()
 
-    def add_fasta_v2(self, *fnames, method=1, chunk_size=1000):  # noqa: C901
-        sample_data: List[Dict[str, Union[str, int]]] = []
-        for fname in fnames:
-            batch_data = []  # Collect data in batches before making API calls
-            for data in self.iter_fasta(fname):
-                batch_data.append(data)
-
-                if len(batch_data) == chunk_size:
-                    sample_data.extend(self.process_data_batch(batch_data, method))
-                    batch_data = []
-
-            # Process any remaining data in the last batch
-            if batch_data:
-                sample_data.extend(self.process_data_batch(batch_data, method))
-
-        return sample_data
-
-    def add_fasta_v5(
-        self, *fnames, method=1, chunk_size=1000, max_workers=4
+    def add_fasta_v2(
+        self, *fnames, method=1, chunk_size=1000, max_workers=8
     ):  # noqa: C901
         """ """
         sample_data: List[Dict[str, Union[str, int]]] = []
@@ -273,8 +256,6 @@ class sonarCache:
 
         # add result to queue
         self.result_queue.put(batch_data)
-        # LOGGER.info(f"Thread {current_thread.name} finish")
-        # return batch_data
 
     def cache_sample(
         self,
@@ -485,7 +466,7 @@ class sonarCache:
         # 1. force update?
 
         # In cases:
-        # 1. sample is reuploaded under the same name but changes in  sequence (fasta)
+        # 1. sample is reuploaded under the same name but changes in sequence (fasta)
         # 2. New Sample (no algnid found in database)
         if self.allow_updates or data["algnid"] is None or data["seqhash"] != seqhash:
             data["seqfile"] = self.cache_sequence(data["seqhash"], data["sequence"])
