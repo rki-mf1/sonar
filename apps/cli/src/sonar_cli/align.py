@@ -83,7 +83,7 @@ class sonarAligner:
         nuc_vars = self.extract_nuc_vars_from_alignment(*alignment, elem_acc=source_acc)
         return nuc_vars
 
-    def process_cached_cigar(self, data: dict, method: int):  # noqa: C901
+    def process_cached_cigar(self, data: dict, method: int):
         """
         Work with: Cigar format
         This function takes a sample file and processes it.
@@ -109,7 +109,7 @@ class sonarAligner:
         )
         return nuc_vars
 
-    def extract_nuc_vars_from_alignment(
+    def extract_nuc_vars_from_alignment(  # noqa: C901
         self, qry_seq, ref_seq, elem_acc
     ) -> pd.DataFrame:
         """Given two aligned sequences, return a table with nt variants (snps and indels)"""
@@ -183,8 +183,23 @@ class sonarAligner:
             )
             i += 1
 
-        nuc_df = pd.DataFrame(nuc_vars)
-        # FIXME: doesn't handle the case when there are zero mutations
+        if not nuc_vars:
+            # Zero mutations
+            nuc_df = pd.DataFrame(
+                columns=[
+                    "id",
+                    "ref",
+                    "start",
+                    "end",
+                    "alt",
+                    "reference_acc",
+                    "label",
+                    "type",
+                    "parent_id",
+                ]
+            )
+        else:
+            nuc_df = pd.DataFrame(nuc_vars)
         return nuc_df
 
     def nuc_to_aa_vars(  # noqa: C901
@@ -225,7 +240,20 @@ class sonarAligner:
 
         aa_vars = []
         if nuc_vars.empty:
-            return pd.DataFrame(aa_vars)
+            # Zero mutations
+            return pd.DataFrame(
+                columns=[
+                    "id",
+                    "ref",
+                    "start",
+                    "end",
+                    "alt",
+                    "reference_acc",
+                    "label",
+                    "type",
+                    "parent_id",
+                ]
+            )
         next_aa_id = nuc_vars["id"].max() + 1 if not nuc_vars.empty else 1
 
         # ------------------------------------------------------------
@@ -475,6 +503,21 @@ class sonarAligner:
                 sys.exit(
                     "error: Sonar cannot interpret '" + vartype + "' in cigar string."
                 )
-        nuc_df = pd.DataFrame(nuc_vars)
-        # FIXME: doesn't handle the case when there are zero mutations
+        if not nuc_vars:
+            # Zero mutations
+            nuc_df = pd.DataFrame(
+                columns=[
+                    "id",
+                    "ref",
+                    "start",
+                    "end",
+                    "alt",
+                    "reference_acc",
+                    "label",
+                    "type",
+                    "parent_id",
+                ]
+            )
+        else:
+            nuc_df = pd.DataFrame(nuc_vars)
         return nuc_df
