@@ -6,6 +6,7 @@ import os
 import pickle
 import sys
 import time
+import traceback
 from typing import Any
 from typing import Dict
 from typing import Iterator
@@ -345,8 +346,9 @@ class sonarUtils:
                         },
                     )
             except Exception as e:
+                tb = traceback.format_exc()
                 LOGGER.error(
-                    f"Annotation process failed with error: {e}, abort all workers"
+                    f"Annotation process failed with error: {e}, abort all workers. Traceback:\n{tb}"
                 )
                 # Abort all pool workers
                 pool.terminate()  # Or pool.close()
@@ -853,7 +855,8 @@ class sonarUtils:
             if os.path.exists(merged_anno_vcf):
                 os.remove(merged_anno_vcf)
         except Exception as e:
-            LOGGER.error(f"Worker {worker_id} stopped: {e}")
+            tb = traceback.format_exc()
+            LOGGER.error(f"Worker {worker_id} stopped: {e}. Traceback: {tb}")
             raise  # Raise to ensure the failure is propagated back to the worker pool
         return filtered_vcf
 
