@@ -268,7 +268,7 @@ class sonarUtils:
             allow_updates=cache.allow_updates,
             debug=cache.debug,
         )
-        l = len(cache._samplefiles_to_profile)
+        l = cache._samplefiles_to_profile
         LOGGER.info(f"Total samples that need to be processed: {l}")
         if l == 0:
             return

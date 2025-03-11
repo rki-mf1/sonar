@@ -108,7 +108,7 @@ class sonarCache:
 
         self._samplefiles = set()
         self.sampleinput_total = 0
-        self._samplefiles_to_profile = set()
+        self._samplefiles_to_profile = 0
         self._samples_dict = dict()
 
         self._refs = set()
@@ -235,9 +235,10 @@ class sonarCache:
             # del batch_data[i]["sequence"]
             # reformat data and only neccessay keys are kept.
             _return_data = self.cache_sample(**batch_data[i])
-            # TODO: if empty remove batch_data[i] or skip
             batch_data[i] = _return_data
 
+        # Note: remove batch_data[i] with empty dict
+        batch_data = list(filter(None, batch_data))
         return batch_data
 
     def cache_sample(
@@ -295,7 +296,7 @@ class sonarCache:
             "properties": properties,
             "include_nx": include_nx,
         }
-        fname = name  # self.get_sample_fname(name)  # return fname with full path
+        # fname = name  # self.get_sample_fname(name)  # return fname with full path
         self.sampleinput_total = self.sampleinput_total + 1
         # NOTE: write files only need to be processed
         if self.allow_updates or algnid is None:
@@ -304,15 +305,16 @@ class sonarCache:
             # except OSError:
             #     os.makedirs(os.path.dirname(fname), exist_ok=True)
             #     self.write_pickle(fname, data)
-
-            self._samplefiles_to_profile.add(fname)
-
+            self._samplefiles_to_profile += 1
             # NOTE: IF previous_seqhash != current_seqhash, we have realign and update the variant?
             # uncomment below to enable this
+            return data
         elif seqhash is not None:  # changes in seq content
-            self._samplefiles_to_profile.add(fname)
+            self._samplefiles_to_profile += 1
+            return data
 
-        return data
+        # we skip the existing one
+        return {}
 
     def get_sample_fname(self, sample_name):
         fn = slugify(hashlib.sha1(sample_name.encode("utf-8")).hexdigest())
@@ -733,7 +735,7 @@ class sonarCache:
         """
         list_fail_samples = []
         passed_samples_list = []
-        total_samples = len(self._samplefiles_to_profile)
+        total_samples = self._samplefiles_to_profile
 
         for sample_data in tqdm(
             sample_data_dict_list,
