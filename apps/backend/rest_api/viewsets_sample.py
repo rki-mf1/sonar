@@ -663,6 +663,8 @@ class SampleViewSet(
         # Construct the final result with percentages
         result = []
         for item in weekly_data:
+            if item["week"] is None:
+                continue
             week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
             percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
             result.append(
@@ -723,6 +725,8 @@ class SampleViewSet(
 
         result = []
         for item in weekly_data:
+            if item["week"] is None:
+                continue
             week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
             percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
             result.append(
