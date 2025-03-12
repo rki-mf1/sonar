@@ -285,6 +285,16 @@ class ReferenceViewSet(
             {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
 
+    @action(detail=False, methods=["get"])
+    def distinct_pathogen_names(self, request, *args, **kwargs):
+        distinct_pathogens = [
+            item.organism for item in models.Reference.objects.distinct("organism")
+        ]
+        return Response(
+            {"pathogens": distinct_pathogens},
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["post"])
     def delete_reference(self, request: Request, *args, **kwargs):
         if "accession" not in request.data:

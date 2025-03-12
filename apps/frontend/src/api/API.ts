@@ -70,6 +70,10 @@ export default class API {
     return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
   }
 
+  getPathogenOptions() {
+    return this.getRequest(`references/distinct_pathogen_names/`, {} as JSON, false)
+  }
+
   getSampleGenomes(filters: FilterGroupRoot, params: Record<string, string | number | boolean>) {
     let url = `samples/genomes/?`
     for (const key of Object.keys(params)) {

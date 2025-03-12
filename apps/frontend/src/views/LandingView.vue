@@ -40,6 +40,7 @@
 </template>
 
 <script lang="ts">
+import API from '@/api/API'
 import { useSamplesStore } from '@/stores/samples'
 import { useRouter } from 'vue-router'
 
@@ -49,13 +50,21 @@ export default {
     return {
       samplesStore: useSamplesStore(),
       router: useRouter(),
-      pathogens: ['SARS-CoV-2', 'Influenza', 'RSV'],
-      datasets: ['RKI Dataset', 'Gisaid Dataset'],
+      pathogens: [],
+      datasets: [],
       selectedPathogen: null,
       selectedDataset: null,
     }
   },
+  mounted() {
+    this.updateDatasetOptions()
+  },
   methods: {
+    async updateDatasetOptions() {
+      const pathogens = await API.getInstance().getPathogenOptions()
+      this.pathogens = pathogens['pathogens']
+      this.datasets = ['RKI Dataset', 'Gisaid Dataset']
+    },
     proceed() {
       if (this.selectedPathogen && this.selectedDataset) {
         this.samplesStore.setDataset(this.selectedPathogen, this.selectedDataset)
