@@ -273,6 +273,7 @@ class sonarUtils:
         if l == 0:
             return
         start_align_time = get_current_time()
+        passed_align_samples = []
         with (
             WorkerPool(n_jobs=threads, start_method="fork") as pool,
             tqdm(
@@ -288,6 +289,8 @@ class sonarUtils:
                     aligner.process_cached_sample, sample_data_dict_list
                 ):
                     try:
+                        if sample_data:  # Ignore None results
+                            passed_align_samples.append(sample_data)
                         pbar.update(1)
                     except Exception as e:
                         LOGGER.error(
@@ -297,7 +300,9 @@ class sonarUtils:
             except Exception as outer_exception:
                 LOGGER.error(f"Error in multiprocessing pool: {outer_exception}")
                 sys.exit(1)
-
+        LOGGER.info(
+            f"Number of samples that passed alignment: {len(passed_align_samples)}"
+        )
         LOGGER.info(
             f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}"
         )
@@ -307,7 +312,7 @@ class sonarUtils:
 
         start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples(
-            sample_data_dict_list, must_pass_paranoid
+            passed_align_samples, must_pass_paranoid
         )
         LOGGER.info(
             f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}"

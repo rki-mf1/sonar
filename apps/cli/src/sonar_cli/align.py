@@ -12,6 +12,7 @@ import pandas as pd
 from sonar_cli.common_aligns import align_MAFFT
 from sonar_cli.common_aligns import align_Parasail
 from sonar_cli.common_utils import read_seqcache
+from sonar_cli.config import FILTER_DELETE_SIZE
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
 
@@ -36,6 +37,8 @@ class sonarAligner:
         self.allow_updates = allow_updates
         self.debug = debug
 
+        self.error_logfile_name = os.path.join(self.outdir, "failed_filter.import.log")
+
     def process_cached_sample(self, **sample_data: dict):
         # If we do not want to allow updates, and there is an existing var
         # file, skip re-doing everything.
@@ -44,8 +47,7 @@ class sonarAligner:
             and "var_parquet_file" in sample_data
             and os.path.isfile(sample_data["var_parquet_file"])
         ):
-            return
-
+            return sample_data
         if self.method == 1:
             # For alignment methods that return the reference and query
             # sequence strings as they would align to each other
@@ -53,6 +55,16 @@ class sonarAligner:
         elif self.method == 2 or self.method == 3:
             # For alignment methods that return a cigar string
             nuc_vars = self.process_cached_cigar(sample_data, self.method)
+
+        # filter step
+        # Check if the "ref" column has text or string size more than XXXX
+        if np.any(nuc_vars["ref"].str.len().values > FILTER_DELETE_SIZE):
+            LOGGER.warning(
+                f"Sample {sample_data[ 'name']} has a deletion size more than {FILTER_DELETE_SIZE}."
+            )
+            with open(self.error_logfile_name, "a+") as writer:
+                writer.write(f"{sample_data[ 'name']}\n")
+            return None  # Return None to discard it
 
         # Convert nucleotide mutations to amino acid mutations
         aa_vars = self.nuc_to_aa_vars(nuc_vars, sample_data["lift_file"])
@@ -73,6 +85,7 @@ class sonarAligner:
             compression_level=10,
             index=False,
         )
+        return sample_data
 
     def process_cached_alignment(self, data: dict):
         source_acc = str(data["source_acc"])

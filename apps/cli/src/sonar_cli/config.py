@@ -17,6 +17,8 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 10000)
 ANNO_CHUNK_SIZE = int(os.getenv("ANNO_CHUNK_SIZE") or 500)
 PROP_CHUNK_SIZE = int(os.getenv("PROP_CHUNK_SIZE") or 10000)
 
+FILTER_DELETE_SIZE = int(os.getenv("FILTER_DELETE_SIZE") or 500)
+
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))
 
 ANNO_TOOL_PATH = os.getenv("ANNO_TOOL_PATH", "snpEff")
