@@ -60,10 +60,10 @@ class sonarAligner:
         # Check if the "ref" column has text or string size more than XXXX
         if np.any(nuc_vars["ref"].str.len().values > FILTER_DELETE_SIZE):
             LOGGER.warning(
-                f"Sample {sample_data[ 'name']} has a deletion size more than {FILTER_DELETE_SIZE}."
+                f"Sample {sample_data['name']} has a deletion size more than {FILTER_DELETE_SIZE}."
             )
             with open(self.error_logfile_name, "a+") as writer:
-                writer.write(f"{sample_data[ 'name']}\n")
+                writer.write(f"{sample_data['name']}\n")
             return None  # Return None to discard it
 
         # Convert nucleotide mutations to amino acid mutations
