@@ -735,8 +735,7 @@ class sonarCache:
         """
         list_fail_samples = []
         passed_samples_list = []
-        total_samples = self._samplefiles_to_profile
-
+        total_samples = len(sample_data_dict_list)
         for sample_data in tqdm(
             sample_data_dict_list,
             total=total_samples,
