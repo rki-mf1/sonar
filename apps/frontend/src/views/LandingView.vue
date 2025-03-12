@@ -50,8 +50,8 @@ export default {
     return {
       samplesStore: useSamplesStore(),
       router: useRouter(),
-      pathogens: [],
-      datasets: [],
+      pathogens: [] as string[],
+      datasets: [] as string[],
       selectedPathogen: null,
       selectedDataset: null,
     }
