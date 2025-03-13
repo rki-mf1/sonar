@@ -49,7 +49,7 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
         zip_file = zipfile.ZipFile(file_path, mode)  # zip
         # Assumes there's one file in the ZIP, adjust as necessary
         file_obj = zip_file.open(zip_file.namelist()[0], mode)
-    elif file_type == "text/plain" or file_type == "application/csv":  # plain
+    elif file_type in ["text/plain", "application/csv", "text/csv"]:  # plain
         file_obj = open(file_path, mode)
     else:
         raise ValueError(f"Unsupported file type: {file_type}")
