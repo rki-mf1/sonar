@@ -527,7 +527,7 @@ class sonarUtils:
             LOGGER.error(msg)
 
     @staticmethod
-    def _import_properties(
+    def _import_properties(  # noqa: C901
         sample_id_column: str,
         properties: Dict[str, Dict[str, str] | str],
         csv_files: List[str],
@@ -546,9 +546,8 @@ class sonarUtils:
         """
         start_time = get_current_time()
 
-        json_resp = APIClient(base_url=BASE_URL).get_jobID(is_prop_job=True)
-        job_id = json_resp["job_id"]
         all_files = tsv_files + csv_files
+        job_ids = []
 
         filtered_properties = {k: v for k, v in properties.items() if k != "name"}
         columns_to_use = list(filtered_properties.keys()) + [sample_id_column]
@@ -597,6 +596,9 @@ class sonarUtils:
                 zip_buffer.seek(0)
 
                 # Prepare data for the API call
+                job_id = APIClient(base_url=BASE_URL).get_jobID(is_prop_job=True)[
+                    "job_id"
+                ]
                 file = {"zip_file": ("properties.zip", zip_buffer, "application/zip")}
                 data = {
                     "sample_id_column": sample_id_column,
@@ -614,6 +616,7 @@ class sonarUtils:
                     LOGGER.error(msg)
                     return
                 else:
+                    job_ids.extend(job_id)
                     continue
                     # LOGGER.info(f"Chunk {chunk_num} from {_file} uploaded successfully.")
         # Final status checking
@@ -621,11 +624,26 @@ class sonarUtils:
         job_status = None
         sleep_time = 2
 
-        while job_status not in ["C", "F"]:
-            resp = APIClient(base_url=BASE_URL).get_job_byID(job_id)
-            job_status = resp["status"]
-            if job_status in ["Q", "IP"]:
-                LOGGER.info(f"Job {job_id} is {job_status}.")
+        # Wait for all chunk to be processed
+        incomplete_jobs = set(job_ids)
+        while len(incomplete_jobs) > 0:
+            # We make a copy because we can't modify a set that is being
+            # iterated through
+            jobs_tmp = incomplete_jobs.copy()
+            for job in jobs_tmp:
+                resp = APIClient(base_url=BASE_URL).get_job_byID(job)
+                job_status = resp["status"]
+                if job_status in ["Q", "IP"]:
+                    next
+                if job_status == "F":
+                    LOGGER.error(f"Job {job} failed (status={job_status}). Aborting.")
+                    sys.exit(1)
+                if job_status == "C":
+                    incomplete_jobs.remove(job)
+            if len(incomplete_jobs) > 0:
+                LOGGER.debug(
+                    f"Waiting for {len(incomplete_jobs)} chunks to finish being processed."
+                )
                 time.sleep(sleep_time)
 
         time_diff = calculate_time_difference(start_time, get_current_time())
