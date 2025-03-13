@@ -60,7 +60,7 @@ class sonarAligner:
         # Check if the "ref" column has text or string size more than XXXX
         if np.any(nuc_vars["ref"].str.len().values > FILTER_DELETE_SIZE):
             LOGGER.warning(
-                f"Sample {sample_data['name']} has a deletion size more than {FILTER_DELETE_SIZE}."
+                f"Sample {sample_data['name']} skipped. It has a deletion longer than {FILTER_DELETE_SIZE}bp."
             )
             with open(self.error_logfile_name, "a+") as writer:
                 writer.write(f"{sample_data['name']}\n")
