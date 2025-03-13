@@ -6,6 +6,7 @@ import os
 import pickle
 import sys
 import time
+import traceback
 from typing import Any
 from typing import Dict
 from typing import Iterator
@@ -85,6 +86,7 @@ class sonarUtils:
         no_upload_sample: bool = False,
         include_nx: bool = True,
         debug: bool = False,
+        must_pass_paranoid: bool = False,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -162,12 +164,13 @@ class sonarUtils:
                 progress,
                 method,
                 no_upload_sample,
+                must_pass_paranoid,
             )
 
         # importing properties
         if csv_files or tsv_files:
             if len(properties) == 0:
-                LOGGER.warn(
+                LOGGER.warning(
                     "Skip sending properties: no column in the file is mapped to the corresponding variables in the database."
                 )
             else:
@@ -228,6 +231,7 @@ class sonarUtils:
         progress: bool = False,
         method: int = 1,
         no_upload_sample: bool = False,
+        must_pass_paranoid: bool = False,
     ) -> None:
         """
         Process and import sequences from fasta files.
@@ -264,11 +268,12 @@ class sonarUtils:
             allow_updates=cache.allow_updates,
             debug=cache.debug,
         )
-        l = len(cache._samplefiles_to_profile)
+        l = cache._samplefiles_to_profile
         LOGGER.info(f"Total samples that need to be processed: {l}")
         if l == 0:
             return
         start_align_time = get_current_time()
+        passed_align_samples = []
         with (
             WorkerPool(n_jobs=threads, start_method="fork") as pool,
             tqdm(
@@ -284,6 +289,8 @@ class sonarUtils:
                     aligner.process_cached_sample, sample_data_dict_list
                 ):
                     try:
+                        if sample_data:  # Ignore None results
+                            passed_align_samples.append(sample_data)
                         pbar.update(1)
                     except Exception as e:
                         LOGGER.error(
@@ -293,7 +300,9 @@ class sonarUtils:
             except Exception as outer_exception:
                 LOGGER.error(f"Error in multiprocessing pool: {outer_exception}")
                 sys.exit(1)
-
+        LOGGER.info(
+            f"Number of samples that passed alignment: {len(passed_align_samples)}"
+        )
         LOGGER.info(
             f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}"
         )
@@ -303,7 +312,7 @@ class sonarUtils:
 
         start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples(
-            sample_data_dict_list
+            passed_align_samples, must_pass_paranoid
         )
         LOGGER.info(
             f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}"
@@ -342,8 +351,9 @@ class sonarUtils:
                         },
                     )
             except Exception as e:
+                tb = traceback.format_exc()
                 LOGGER.error(
-                    f"Annotation process failed with error: {e}, abort all workers"
+                    f"Annotation process failed with error: {e}, abort all workers. Traceback:\n{tb}"
                 )
                 # Abort all pool workers
                 pool.terminate()  # Or pool.close()
@@ -850,7 +860,8 @@ class sonarUtils:
             if os.path.exists(merged_anno_vcf):
                 os.remove(merged_anno_vcf)
         except Exception as e:
-            LOGGER.error(f"Worker {worker_id} stopped: {e}")
+            tb = traceback.format_exc()
+            LOGGER.error(f"Worker {worker_id} stopped: {e}. Traceback: {tb}")
             raise  # Raise to ensure the failure is propagated back to the worker pool
         return filtered_vcf
 

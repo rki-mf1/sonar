@@ -81,7 +81,6 @@ class sonarCache:
         if not self.refmols:
             LOGGER.info(f"Cannot find reference: {self.refacc}")
             sys.exit()
-        LOGGER.debug(f"Init refmols: {self.refmols}")
         self.default_refmol_acc = [x for x in self.refmols][0]
 
         self._molregex = re.compile(r"\[molecule=([^\[\]=]+)\]")
@@ -113,7 +112,7 @@ class sonarCache:
 
         self._samplefiles = set()
         self.sampleinput_total = 0
-        self._samplefiles_to_profile = set()
+        self._samplefiles_to_profile = 0
         self._samples_dict = dict()
 
         self._refs = set()
@@ -251,11 +250,13 @@ class sonarCache:
             # del batch_data[i]["sequence"]
             # reformat data and only neccessay keys are kept.
             _return_data = self.cache_sample(**batch_data[i])
-            # TODO: if empty remove batch_data[i] or skip
             batch_data[i] = _return_data
 
+        # Note: remove batch_data[i] with empty dict
+        batch_data = list(filter(None, batch_data))
         # add result to queue
         self.result_queue.put(batch_data)
+        # return batch_data
 
     def cache_sample(
         self,
@@ -312,7 +313,7 @@ class sonarCache:
             "properties": properties,
             "include_nx": include_nx,
         }
-        fname = name  # self.get_sample_fname(name)  # return fname with full path
+        # fname = name  # self.get_sample_fname(name)  # return fname with full path
         self.sampleinput_total = self.sampleinput_total + 1
         # NOTE: write files only need to be processed
         if self.allow_updates or algnid is None:
@@ -321,15 +322,16 @@ class sonarCache:
             # except OSError:
             #     os.makedirs(os.path.dirname(fname), exist_ok=True)
             #     self.write_pickle(fname, data)
-
-            self._samplefiles_to_profile.add(fname)
-
+            self._samplefiles_to_profile += 1
             # NOTE: IF previous_seqhash != current_seqhash, we have realign and update the variant?
             # uncomment below to enable this
+            return data
         elif seqhash is not None:  # changes in seq content
-            self._samplefiles_to_profile.add(fname)
+            self._samplefiles_to_profile += 1
+            return data
 
-        return data
+        # we skip the existing one
+        return {}
 
     def get_sample_fname(self, sample_name):
         fn = slugify(hashlib.sha1(sample_name.encode("utf-8")).hexdigest())
@@ -737,7 +739,7 @@ class sonarCache:
             return None
 
     def perform_paranoid_cached_samples(  # noqa: C901
-        self, sample_data_dict_list
+        self, sample_data_dict_list, must_pass_paranoid
     ) -> list:
         """
         This function performs the paranoid test without fetching variants from the database.
@@ -750,8 +752,7 @@ class sonarCache:
         """
         list_fail_samples = []
         passed_samples_list = []
-        total_samples = len(self._samplefiles_to_profile)
-
+        total_samples = len(sample_data_dict_list)
         for sample_data in tqdm(
             sample_data_dict_list,
             total=total_samples,
@@ -765,15 +766,22 @@ class sonarCache:
                 # NOTE: right now, we no longer need var_file.
                 del sample_data["var_file"]
                 del sample_data["lift_file"]
-                if not sample_data["var_parquet_file"] is None:
+                if sample_data["var_parquet_file"] is not None:
                     # SECTION:ReadVar
                     var_df = pd.read_parquet(sample_data["var_parquet_file"])
-                    nt_df = var_df[(var_df["type"] == "nt")]
-                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
-                        "records"
-                    )
+                    # Currently var_df might be empty if the imported sequence
+                    # is identical to the reference
+                    if not var_df.empty:
+                        nt_df = var_df[(var_df["type"] == "nt")]
+                        iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                            "records"
+                        )
+                    else:
+                        LOGGER.warning(
+                            f"Paranoid test: var file ({sample_data['var_parquet_file']}) is missing for sample {sample_data['name']}"
+                        )
                     # SECTION: Paranoid
-                    if not sample_data["seqhash"] is None:
+                    if sample_data["seqhash"] is not None:
                         # Get Reference sequence.
                         seq = list(
                             self.get_refseq(refmol_acc=sample_data["source_acc"])
@@ -801,7 +809,23 @@ class sonarCache:
                             orig_seq = handle.read()
 
                         seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
+
                         if seq != orig_seq:
+                            LOGGER.warning(
+                                f"Failed paranoid test for sample '{sample_name}'"
+                            )
+
+                            # Only for printing the sequences with some indication
+                            # of mismatches between the original and target sequence
+                            min_len = min(len(orig_seq), len(seq))
+                            mismatches = []
+                            for a, b in zip(
+                                list(orig_seq[:min_len]), list(seq[:min_len])
+                            ):
+                                mismatches.append("|" if a == b else "X")
+                            LOGGER.debug(f"Original: {orig_seq}")
+                            LOGGER.debug(f"        : {''.join(mismatches)}")
+                            LOGGER.debug(f"Rebuilt : {seq}")
 
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.
@@ -862,8 +886,11 @@ class sonarCache:
                 LOGGER.error(sample_data)
                 sys.exit("Unknown import error")
 
+        count_sample = total_samples - len(list_fail_samples)
+        LOGGER.info(f"Total passed samples: {count_sample}")
+
         if list_fail_samples:
-            LOGGER.warn(
+            LOGGER.warning(
                 "Some samples fail in sanity check; please check import.log under the cache directory."
             )
             # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
@@ -874,11 +901,12 @@ class sonarCache:
 
             # currently, we report only failed sample IDs.
             self.error_logfile_obj.write("Fail sample during alignment:----\n")
+            LOGGER.warning("Failed sample IDs:")
             for fail_sample in list_fail_samples:
                 self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
-
-        count_sample = total_samples - len(list_fail_samples)
-        LOGGER.info(f"Total passed samples: {count_sample}")
+                LOGGER.warning(fail_sample["sample_name"])
+            if must_pass_paranoid:
+                sys.exit("Some sequences failed the paranoid test, aborting.")
 
         return passed_samples_list
 
