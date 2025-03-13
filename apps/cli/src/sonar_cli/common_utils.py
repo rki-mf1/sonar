@@ -27,7 +27,7 @@ LOGGER = LoggingConfigurator.get_logger()
 @contextmanager
 def open_file_autodetect(file_path: str, mode: str = "r"):
     """
-    Opens a file with automatic packing detection.
+    Opens a file with automatic packing detection and handles symlinks.
 
     Args:
         file_path: The path of the file to open.
@@ -36,6 +36,8 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
     Returns:
         A context manager yielding a file object.
     """
+    # Resolve symlinks
+    file_path = os.path.realpath(file_path)
     # Use the magic library to identify the file type
     file_type = magic.from_file(file_path, mime=True)
 
