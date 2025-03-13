@@ -909,5 +909,6 @@ class TasksView(
             )
         except models.ProcessingJob.DoesNotExist:
             return Response(
-                data={"detail": "Job not found"}, status=status.HTTP_400_BAD_REQUEST
+                data={"detail": f"Job not found ({job_id})"},
+                status=status.HTTP_400_BAD_REQUEST,
             )

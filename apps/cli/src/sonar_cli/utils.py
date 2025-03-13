@@ -618,8 +618,6 @@ class sonarUtils:
                     return
                 else:
                     job_ids.extend(job_id)
-                    continue
-                    # LOGGER.info(f"Chunk {chunk_num} from {_file} uploaded successfully.")
                 LOGGER.info(f"Job list: {job_ids}")
         # Final status checking
         LOGGER.info(f"All chunks for job {job_id} uploaded. Monitoring job status...")
