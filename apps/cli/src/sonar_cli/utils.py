@@ -617,7 +617,7 @@ class sonarUtils:
                     LOGGER.error(msg)
                     return
                 else:
-                    job_ids.extend(job_id)
+                    job_ids.extend([job_id])
                 LOGGER.info(f"Job list: {job_ids}")
         # Final status checking
         LOGGER.info(f"All chunks for job {job_id} uploaded. Monitoring job status...")
