@@ -537,9 +537,9 @@ export default {
       // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
       // what about the property 'name' ?? its not in the list, but its always shown in the table
       const coverage = Object.fromEntries(
-        Object.entries(this.samplesStore.filteredStatistics?.['meta_data_coverage'] || {}).filter(
-          ([key]) => this.samplesStore.metaCoverageOptions.includes(key),
-        ),
+        Object.entries(
+          this.samplesStore.filteredStatisticsPlots?.['meta_data_coverage'] || {},
+        ).filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key)),
       )
 
       const totalCount = this.samplesStore.filteredCount

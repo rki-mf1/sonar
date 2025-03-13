@@ -6,6 +6,7 @@ import {
   type FilterGroupFilters,
   type GenomeFilter,
   type ProfileFilter,
+  type Statistics,
   type FilteredStatistics,
   type FilteredStatisticsPlots,
   DjangoFilterType,
@@ -104,6 +105,7 @@ function parseDateToDateRangeFilter(data: Date[]) {
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
     samples: [],
+    statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
     filteredStatisticsPlots: {} as FilteredStatisticsPlots,
     filteredCount: 0,
@@ -169,6 +171,26 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
+    async updateStatistics() {
+      const emptyStatistics = {
+        samples_total: 0,
+        first_sample_date: '',
+        latest_sample_date: '',
+        meta_data_coverage: {},
+      }
+      try {
+        const statistics = await API.getInstance().getSampleStatistics()
+        if (!statistics) {
+          this.statistics = emptyStatistics
+        } else {
+          this.statistics = statistics
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching statistics:', error)
+        this.statistics = emptyStatistics
+      }
+    },
     async updateSamples() {
       this.errorMessage = ''
       this.loading = true
@@ -198,7 +220,6 @@ export const useSamplesStore = defineStore('samples', {
     async updateFilteredStatistics() {
       const emptyStatistics = {
         filtered_total_count: 0,
-        meta_data_coverage: {},
       }
       try {
         const filteredStatistics = await API.getInstance().getFilteredStatistics(this.filters)
@@ -218,6 +239,7 @@ export const useSamplesStore = defineStore('samples', {
     async updateFilteredStatisticsPlots() {
       const emptyStatistics = {
         samples_per_week: {},
+        meta_data_coverage: {},
         genomecomplete_chart: {},
         lineage_area_chart: [],
         lineage_bar_chart: [],
@@ -246,10 +268,9 @@ export const useSamplesStore = defineStore('samples', {
       }
     },
     async setDefaultTimeRange() {
-      const statistics = await API.getInstance().getSampleStatistics()
       this.timeRange = [
-        new Date(statistics.first_sample_date),
-        new Date(statistics.latest_sample_date ?? Date.now()),
+        new Date(this.statistics.first_sample_date),
+        new Date(this.statistics.latest_sample_date ?? Date.now()),
       ]
       return this.timeRange
     },
@@ -288,12 +309,11 @@ export const useSamplesStore = defineStore('samples', {
     async updatePropertyOptions() {
       try {
         const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-        const metaData = this.filteredStatistics?.meta_data_coverage ?? {}
         if (!res) {
           console.error('API request failed')
           return
         }
-
+        const metaData = this.statistics?.meta_data_coverage ?? {}
         this.propertiesDict = {}
         res.values.forEach(
           (property: { name: string; query_type: string; description: string }) => {
