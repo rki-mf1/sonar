@@ -524,6 +524,11 @@ def create_subparser_import(
         help="Save additional files to the cache dir that can be useful when debugging errors",
         action="store_true",
     )
+    parser.add_argument(
+        "--must-pass-paranoid",
+        help="abort import if any sequence fails the 'paranoid' test",
+        action="store_true",
+    )
     return subparsers, parser
 
 
@@ -739,10 +744,13 @@ def handle_import(args: argparse.Namespace):
     elif args.method == 3:
         LOGGER.info("Alignment Tool: WFA2-lib")
     else:
-        LOGGER.warn("Invalid --method. Please use 'import -h' to see available methods")
+        LOGGER.warning(
+            "Invalid --method. Please use 'import -h' to see available methods"
+        )
         exit(1)
     LOGGER.info(f"Skip N/X mutation: {args.skip_nx}")
     LOGGER.info(f"Variant Annotation: {args.auto_anno}")
+    LOGGER.info(f"All sequences must pass 'paranoid' test: {args.must_pass_paranoid}")
     sonarUtils.import_data(
         db=args.db,
         fasta=args.fasta,
@@ -761,6 +769,7 @@ def handle_import(args: argparse.Namespace):
         no_upload_sample=args.no_upload,
         include_nx=not args.skip_nx,
         debug=args.debug,
+        must_pass_paranoid=args.must_pass_paranoid,
     )
 
 

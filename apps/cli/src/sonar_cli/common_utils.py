@@ -119,8 +119,13 @@ def remove_charfromsequence_data(seq: str, char="-") -> str:
 
 
 def read_seqcache(fname):
+    seq = ""
     with open(fname, "r") as handle:
-        seq = handle.readline().strip()
+        for line in handle:
+            # Skip the header
+            if line.startswith(">"):
+                continue
+            seq += line.rstrip()
     return seq
 
 
