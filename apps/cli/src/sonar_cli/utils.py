@@ -599,6 +599,7 @@ class sonarUtils:
                 job_id = APIClient(base_url=BASE_URL).get_jobID(is_prop_job=True)[
                     "job_id"
                 ]
+                LOGGER.info(f"Sending job {job_id}")
                 file = {"zip_file": ("properties.zip", zip_buffer, "application/zip")}
                 data = {
                     "sample_id_column": sample_id_column,
@@ -619,6 +620,7 @@ class sonarUtils:
                     job_ids.extend(job_id)
                     continue
                     # LOGGER.info(f"Chunk {chunk_num} from {_file} uploaded successfully.")
+                LOGGER.info(f"Job list: {job_ids}")
         # Final status checking
         LOGGER.info(f"All chunks for job {job_id} uploaded. Monitoring job status...")
         job_status = None
@@ -631,6 +633,7 @@ class sonarUtils:
             # iterated through
             jobs_tmp = incomplete_jobs.copy()
             for job in jobs_tmp:
+                LOGGER.info(f"Checking job {job}")
                 resp = APIClient(base_url=BASE_URL).get_job_byID(job)
                 job_status = resp["status"]
                 if job_status in ["Q", "IP"]:
