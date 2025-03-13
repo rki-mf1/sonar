@@ -27,7 +27,7 @@ LOGGER = LoggingConfigurator.get_logger()
 @contextmanager
 def open_file_autodetect(file_path: str, mode: str = "r"):
     """
-    Opens a file with automatic packing detection.
+    Opens a file with automatic packing detection and handles symlinks.
 
     Args:
         file_path: The path of the file to open.
@@ -36,6 +36,8 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
     Returns:
         A context manager yielding a file object.
     """
+    # Resolve symlinks
+    file_path = os.path.realpath(file_path)
     # Use the magic library to identify the file type
     file_type = magic.from_file(file_path, mime=True)
 
@@ -47,7 +49,7 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
         zip_file = zipfile.ZipFile(file_path, mode)  # zip
         # Assumes there's one file in the ZIP, adjust as necessary
         file_obj = zip_file.open(zip_file.namelist()[0], mode)
-    elif file_type == "text/plain" or file_type == "application/csv":  # plain
+    elif file_type in ["text/plain", "application/csv", "text/csv"]:  # plain
         file_obj = open(file_path, mode)
     else:
         raise ValueError(f"Unsupported file type: {file_type}")
