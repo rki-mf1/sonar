@@ -1028,7 +1028,7 @@ class SampleViewSet(
             Q(amino_acid_mutations__end=ref_pos)
             & Q(amino_acid_mutations__ref=ref_aa)
             & (mutation_alt)
-            & Q(amino_acid_mutations__gene__gene_symbol=protein_symbol)
+            & Q(amino_acid_mutations__gene__symbol=protein_symbol)
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 

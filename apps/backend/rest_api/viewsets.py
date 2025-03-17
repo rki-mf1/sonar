@@ -227,36 +227,38 @@ class GeneViewSet(viewsets.ModelViewSet):
             )
 
         sample_data = []
-        for item in queryset.all():
-            _data = {}
-            _data["reference.id"] = item.gene.replicon.reference.id
-            _data["reference.accession"] = item.gene.replicon.reference.accession
-            _data["reference.description"] = item.gene.replicon.reference.description
-            _data["reference.organism"] = item.gene.replicon.reference.organism
-            _data["reference.host"] = item.gene.replicon.reference.host
-            _data["replicon.id"] = item.gene.replicon.id
-            _data["replicon.accession"] = item.gene.replicon.accession
-            _data["replicon.description"] = item.gene.replicon.description
-            _data["replicon.length"] = item.gene.replicon.length
-            _data["replicon.segment_number"] = item.gene.replicon.segment_number
-            _data["gene.id"] = item.gene.id
-            _data["gene.start"] = item.gene.start
-            _data["gene.end"] = item.gene.end
-            _data["gene.description"] = item.gene.description
-            _data["gene.gene_symbol"] = item.gene.gene_symbol
-            _data["gene.gene_accession"] = item.gene.gene_accession
-            _data["gene.gene_sequence"] = item.gene.gene_sequence
-            _data["gene.cds_sequence"] = item.gene.cds_sequence
-            _data["gene.cds_accession"] = item.gene.cds_accession
-            _data["gene.cds_symbol"] = item.gene.cds_symbol
-            _data["gene_segment.id"] = item.id
-            _data["gene_segment.gene_id"] = item.gene_id
-            _data["gene_segment.start"] = item.start
-            _data["gene_segment.end"] = item.end
-            _data["gene_segment.strand"] = item.strand
-            _data["gene_segment.base"] = item.base
-            _data["gene_segment.segment"] = item.segment
-            sample_data.append(_data)
+        # TODO : check for mulitple cds's per gene
+        raise NotImplementedError("Multiple CDS per gene not implemented")
+        # for item in queryset.all():
+        #     _data = {}
+        #     _data["reference.id"] = item.gene.replicon.reference.id
+        #     _data["reference.accession"] = item.gene.replicon.reference.accession
+        #     _data["reference.description"] = item.gene.replicon.reference.description
+        #     _data["reference.organism"] = item.gene.replicon.reference.organism
+        #     _data["reference.host"] = item.gene.replicon.reference.host
+        #     _data["replicon.id"] = item.gene.replicon.id
+        #     _data["replicon.accession"] = item.gene.replicon.accession
+        #     _data["replicon.description"] = item.gene.replicon.description
+        #     _data["replicon.length"] = item.gene.replicon.length
+        #     _data["replicon.segment_number"] = item.gene.replicon.segment_number
+        #     _data["gene.id"] = item.gene.id
+        #     _data["gene.start"] = item.gene.start
+        #     _data["gene.end"] = item.gene.end
+        #     _data["gene.description"] = item.gene.description
+        #     _data["gene.gene_symbol"] = item.gene.symbol
+        #     _data["gene.gene_accession"] = item.cds.gene.accession
+        #     _data["gene.gene_sequence"] = item.cds.gene.sequence
+        #     _data["gene.cds_sequence"] = item.gene.cds_sequence
+        #     _data["gene.cds_accession"] = item.gene.cds_accession
+        #     _data["gene.cds_symbol"] = item.gene.cds_symbol
+        #     _data["gene_segment.id"] = item.id
+        #     _data["gene_segment.gene_id"] = item.gene_id
+        #     _data["gene_segment.start"] = item.start
+        #     _data["gene_segment.end"] = item.end
+        #     _data["gene_segment.forward_strand"] = item.forward_strand
+        #     _data["gene_segment.base"] = item.base
+        #     _data["gene_segment.order"] = item.order
+        #     sample_data.append(_data)
 
         # sample_data =queryset.values()
 

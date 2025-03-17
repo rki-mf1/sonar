@@ -1,3 +1,4 @@
+from enum import Enum
 from django.db import models
 from django.db.models import Q
 from django.db.models import UniqueConstraint
@@ -72,31 +73,76 @@ class Gene(models.Model):
     description = models.CharField(max_length=100, blank=True, null=True)
     start = models.BigIntegerField()
     end = models.BigIntegerField()
-    strand = models.BigIntegerField()
-    gene_symbol = models.CharField(max_length=50, blank=True, null=True)
-    cds_symbol = models.CharField(max_length=50, blank=True, null=True)
-    gene_accession = models.CharField(
-        max_length=50, unique=False, blank=True, null=True
-    )
-    cds_accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    gene_sequence = models.TextField(blank=True, null=True)
-    cds_sequence = models.TextField(blank=True, null=True)
+    forward_strand = models.BooleanField()
+    symbol = models.CharField(max_length=50, blank=True, null=True)
+    accession = models.CharField(max_length=50, unique=False, blank=True, null=True)
+    sequence = models.TextField(blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.CASCADE)
+
+    class GeneTypes(models.TextChoices):
+        CDS = "CDS"
+        rRNA = "rRNA"
+        tRNA = "tRNA"
+        ncRNA = "ncRNA"
+        tmRNA = "tmRNA"
+        misc_RNA = "misc_RNA"
+        repeat_region = "repeat_region"
+        mobile_element = "mobile_element"
+        regulatory = "regulatory"
+        #pseudogene = "pseudogene"
+        protein_binding = "protein_binding"
+        operon = "operon"
+        misc_feature = "misc_feature"
+        mobile_genetic_element = "mobile_genetic_element"
+
+    type = models.TextChoices(GeneTypes, blank=True, null=True)
 
     class Meta:
         db_table = "gene"
 
 
-class GeneSegment(models.Model):
+class CDS(models.Model):
+    accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    sequence = models.TextField(blank=True, null=True)
     gene = models.ForeignKey(Gene, models.CASCADE)
+    description = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        db_table = "cds"
+
+
+class CDSSegment(models.Model):
+    cds = models.ForeignKey(CDS, models.CASCADE)
+    order = models.BigIntegerField()
     start = models.BigIntegerField()
     end = models.BigIntegerField()
-    strand = models.BigIntegerField()
-    base = models.FloatField()
-    segment = models.BigIntegerField()
+    forward_strand = models.BooleanField()
+
+    class Meta:
+        db_table = "cds_part"
+        constraints = [
+            UniqueConstraint(
+                name="unique_cds_part",
+                fields=["cds", "order"],
+            ),
+        ]
+
+
+class GeneSegment(models.Model):
+    gene = models.ForeignKey(Gene, models.CASCADE)
+    order = models.BigIntegerField()
+    start = models.BigIntegerField()
+    end = models.BigIntegerField()
+    forward_strand = models.BooleanField()
 
     class Meta:
         db_table = "gene_segment"
+        constraints = [
+            UniqueConstraint(
+                name="unique_gene_segment",
+                fields=["gene", "order"],
+            ),
+        ]
 
 
 class Lineage(models.Model):
@@ -258,7 +304,7 @@ class NucleotideMutation(models.Model):
 
 
 class AminoAcidMutation(models.Model):
-    gene = models.ForeignKey("Gene", models.CASCADE)
+    cds = models.ForeignKey(CDS, models.CASCADE)
     replicon = models.ForeignKey(Replicon, models.CASCADE)
     ref = models.TextField()
     alt = models.TextField()
@@ -276,7 +322,7 @@ class AminoAcidMutation(models.Model):
     class Meta:
         db_table = "amino_acid_mutation"
         indexes = [
-            models.Index(fields=["gene"]),
+            models.Index(fields=["cds"]),
             models.Index(fields=["start"]),
             models.Index(fields=["end"]),
             models.Index(fields=["ref"]),
@@ -285,7 +331,7 @@ class AminoAcidMutation(models.Model):
         constraints = [
             UniqueConstraint(
                 name="unique_aa_mutation",
-                fields=["ref", "alt", "start", "end", "gene", "replicon"],
+                fields=["ref", "alt", "start", "end", "cds", "replicon"],
             ),
         ]
 

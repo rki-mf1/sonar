@@ -1,24 +1,20 @@
-from datetime import datetime
 import os
 import pathlib
+from datetime import datetime
 
-from Bio import SeqFeature
-from Bio import SeqIO
-from Bio import SeqRecord
+from Bio import SeqFeature, SeqIO, SeqRecord
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
-from django.db.utils import IntegrityError
-
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from rest_api.models import Gene
-from rest_api.models import GeneSegment
-from rest_api.models import Reference
-from rest_api.models import Replicon
-from rest_api.serializers import find_or_create
-from rest_api.serializers import GeneSegmentSerializer
-from rest_api.serializers import GeneSerializer
-from rest_api.serializers import ReferenceSerializer
-from rest_api.serializers import RepliconSerializer
+from rest_api.models import CDS, CDSSegment, Gene, GeneSegment, Reference, Replicon
+from rest_api.serializers import (
+    CDSSerializer,
+    GeneSegmentSerializer,
+    GeneSerializer,
+    ReferenceSerializer,
+    RepliconSerializer,
+    find_or_create,
+)
 
 
 def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
@@ -50,21 +46,40 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                     "segment_number"
                 ]  # TODO ?? id
             replicon = find_or_create(replicon_data, Replicon, RepliconSerializer)
-            for feature in record.features:
-                if "pseudogene" in feature.qualifiers or feature.type not in [
-                    "CDS",
-                    "gene",
-                ]:
-                    continue
-                # NOTE: some pathogens have duplicated gene names
-                #  this can cause IntegrityError: duplicate key value violates ??
-                try:
-                    element = _put_gene_from_feature(feature, record.seq, replicon.id)
-                    _create_elemparts(feature, element)
-                except IntegrityError as e:
-                    print(f"Error: {e}")
-                    print(f"Error at: {feature}")
-                    continue
+            gene_features = list(
+                filter(
+                    lambda x: x.type == "gene" and "pseudogene" not in x.qualifiers,
+                    record.features,
+                )
+            )
+            cds_features = list(
+                filter(
+                    lambda x: x.type == "CDS" and "pseudogene" not in x.qualifiers,
+                    record.features,
+                )
+            )
+            gene_id_to_obj: dict[str, Gene] = {}
+            for gene_feature in gene_features:
+                gene_symbol = gene_feature.qualifiers.get("gene", [None])[0]
+                if gene_symbol is None:
+                    raise ValueError("No gene symbol found.")
+                # TODO : check if join/multiple orders
+                element = _put_gene_from_feature(gene_feature, record.seq, replicon)
+                gene_id_to_obj[gene_feature.qualifiers.gene] = element
+                _create_gene_segments(gene_feature, element)
+
+            for cds_feature in cds_features:
+                gene_symbol = cds_feature.qualifiers.get("gene", [None])[0]
+                if gene_symbol is None:
+                    raise ValueError("No gene symbol found.")
+                # TODO : check if join/multiple orders
+                gene = gene_id_to_obj.get(gene_symbol, None)
+                if gene is None:
+                    raise ValueError("No gene found for CDS.")
+                element = _put_cds_from_feature(
+                    cds_feature, record.seq, replicon.id, gene
+                )
+                _create_cds_segments(cds_feature, element)
 
     return records
 
@@ -86,14 +101,14 @@ def _process_segments(
                                     as a list of integers [start, end, strand, base, index].
     """
     base = 0
-    div = 1 if not cds else 3
+    div = 3 if cds else 1
     segments = []
     for i, segment in enumerate(feat_location_parts, 1):
         segments.append(
             {
                 "start": int(segment.start),
                 "end": int(segment.end),
-                "strand": segment.strand,
+                "forward_strand": segment.forward_strand,
                 "base": base,
                 "segment": i,
             }
@@ -117,50 +132,57 @@ def _determine_accession(feature: SeqFeature.SeqFeature) -> str | None:
         return feature.qualifiers["protein_id"][0]
     elif "locus_tag" in feature.qualifiers:
         return feature.qualifiers["locus_tag"][0]
+    raise ValueError("No qualifier for gene accession found.")
+
+
+def _determine_symbol(feature: SeqFeature.SeqFeature) -> str | None:
+    if "gene" in feature.qualifiers:
+        return feature.qualifiers["gene"][0]
+    elif "locus_tag" in feature.qualifiers:
+        return feature.qualifiers["locus_tag"][0]
+    raise ValueError("No qualifier for gene symbol found.")
 
 
 def _put_gene_from_feature(
-    feature: SeqFeature.SeqFeature, source_seq: str, replicon_id: int
+    feature: SeqFeature.SeqFeature, source_seq: str, replicon: Replicon
 ) -> Gene:
-    if feature.type not in ["gene", "CDS"]:
-        raise ValueError(f"The provided feature type({feature.type}) is unknown.")
     if feature.location is None:
         raise ValueError("No location information found for gene feature.")
-    type = feature.type.lower()
     gene_base_data = {
         "start": int(feature.location.start),
         "end": int(feature.location.end),
-        "strand": feature.location.strand,
-        "replicon": replicon_id,
+        "forward_strand": feature.location.forward_strand,
+        "replicon": replicon,
     }
     gene_update_data = {}
+    gene_update_data[f"accession"] = _determine_accession(feature)
+    gene_update_data[f"symbol"] = _determine_symbol(feature)
+    gene_update_data[f"sequence"] = str(feature.extract(source_seq))
 
-    if accession := _determine_accession(feature):
-        gene_update_data[f"{type}_accession"] = accession
-    else:
-        raise ValueError("No qualifier for gene accession found.")
-
-    if "gene" in feature.qualifiers:
-        gene_update_data[f"{type}_symbol"] = feature.qualifiers["gene"][0]
-    elif "locus_tag" in feature.qualifiers:
-        gene_update_data[f"{type}_symbol"] = feature.qualifiers["locus_tag"][0]
-    else:
-        raise ValueError("No qualifier for gene symbol found.")
-
-    if feature.type == "CDS":
-        _validate_segment_lengths(
-            feature.location.parts, gene_update_data["cds_accession"]
-        )
-        gene_update_data[f"{type}_sequence"] = feature.qualifiers.get(
-            "translation", [""]
-        )[0]
-        gene_update_data["description"] = feature.qualifiers.get("product", [""])[0]
-    else:
-        gene_update_data[f"{type}_sequence"] = str(feature.extract(source_seq))
     gene = find_or_create(gene_base_data, Gene, GeneSerializer)
     for attr_name, value in gene_update_data.items():
         setattr(gene, attr_name, value)
     return GeneSerializer(gene).update(gene, gene_update_data)
+
+
+def _put_cds_from_feature(
+    feature: SeqFeature.SeqFeature, source_seq: str, gene: Gene
+) -> CDS:
+
+    if feature.location is None:
+        raise ValueError("No location information found for CDS feature.")
+
+    cds_update_data = {}
+    cds_update_data[f"accession"] = _determine_accession(feature)
+    _validate_segment_lengths(feature.location.parts, cds_update_data["accession"])
+    cds_update_data[f"sequence"] = feature.qualifiers.get("translation", [""])[0]
+    cds_update_data["description"] = feature.qualifiers.get("product", [""])[0]
+
+    cds = find_or_create({"gene": gene}, CDS, CDSSerializer)
+
+    for attr_name, value in cds_update_data.items():
+        setattr(cds, attr_name, value)
+    return CDSSerializer(cds).update(cds, cds_update_data)
 
 
 def _put_reference_from_record(
@@ -220,13 +242,22 @@ def _put_reference_from_record(
         return serializer.save()
 
 
-def _create_elemparts(feature: SeqFeature.SeqFeature, gene: Gene):
+def _create_gene_segments(feature: SeqFeature.SeqFeature, gene: Gene):
     for elempart in _process_segments(feature.location.parts):
         elempart_data = {
-            "gene": gene.id,
+            "gene": gene,
             **elempart,
         }
         find_or_create(elempart_data, GeneSegment, GeneSegmentSerializer)
+
+
+def _create_cds_segments(feature: SeqFeature.SeqFeature, cds: CDS):
+    for elempart in _process_segments(feature.location.parts, cds=True):
+        elempart_data = {
+            "cds": cds,
+            **elempart,
+        }
+        find_or_create(elempart_data, CDSSegment, CDSSerializer)
 
 
 def _temp_save_file(uploaded_file: InMemoryUploadedFile):

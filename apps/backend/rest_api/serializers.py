@@ -160,17 +160,21 @@ class RepliconSerializer(serializers.ModelSerializer):
 
 class GeneSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
-        for sequence in ["gene_sequence", "cds_sequence"]:
-            if sequence in validated_data:
-                validated_data[sequence] = (
-                    validated_data["sequence"].strip().upper().replace("U", "T")
-                )
+        if "sequence" in validated_data:
+            validated_data["sequence"] = (
+                validated_data["sequence"].strip().upper().replace("U", "T")
+            )
         return super().create(validated_data)
 
     class Meta:
         model = models.Gene
         fields = "__all__"
 
+class CDSSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = models.CDS
+        fields = "__all__"
 
 class GeneSegmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -237,15 +241,15 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     label = ""
                     # SNP and INS
                     if mutation.alt != "":
-                        label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
+                        label = f"{mutation.gene.symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
                     else:  # DEL
                         if mutation.end - mutation.start == 1:
-                            label = f"{mutation.gene.gene_symbol}:del:" + str(
+                            label = f"{mutation.gene.symbol}:del:" + str(
                                 mutation.start + 1
                             )
                         else:
                             label = (
-                                f"{mutation.gene.gene_symbol}:del:"
+                                f"{mutation.gene.symbol}:del:"
                                 + str(mutation.start + 1)
                                 + "-"
                                 + str(mutation.end)
