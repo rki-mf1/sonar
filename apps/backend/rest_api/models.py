@@ -181,6 +181,7 @@ class Sample(models.Model):
     collection_date = models.DateField(blank=True, null=True)
     init_upload_date = models.DateTimeField(auto_now=True)
     last_update_date = models.DateTimeField(blank=True, null=True)
+    data_set = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         db_table = "sample"
@@ -196,6 +197,7 @@ class Sample(models.Model):
             models.Index(fields=["collection_date"]),
             models.Index(fields=["init_upload_date"]),
             models.Index(fields=["last_update_date"]),
+            models.Index(fields=["data_set"]),
         ]
 
     def save(self, *args, **kwargs):
