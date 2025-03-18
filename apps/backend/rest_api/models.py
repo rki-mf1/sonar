@@ -156,6 +156,7 @@ class Gene(models.Model):
         rRNA = "rRNA"
         tRNA = "tRNA"
         ncRNA = "ncRNA"
+        miRNA = "miRNA"
         misc_RNA = "misc_RNA"
         # tmRNA = "tmRNA"
 
@@ -221,6 +222,63 @@ class CDSSegment(models.Model):
             UniqueConstraint(
                 name="unique_cds_part",
                 fields=["cds", "order"],
+            ),
+        ]
+
+
+class Peptide(models.Model):
+    """
+    Represents peptides that are generated from larger cds by cutting them into different parts
+    Filled with information from the gene bank file via gbk_import
+
+    Attributes:
+        cds (ForeignKey): Reference to the associated CDS (CASCADE deletion).
+        description (CharField, optional): Description (product tag) of peptide=final virus protein (enum mat_peptide or sig_peptide).
+
+    """
+
+    cds = models.ForeignKey(CDS, models.CASCADE)
+    description = models.CharField(max_length=100, blank=True, null=True)
+
+    class PeptideTypes(models.TextChoices):
+        mat_peptide = "mat_peptide"
+        sig_peptide = "sig_peptide"
+
+    type = models.TextChoices(PeptideTypes, blank=True, null=True)
+
+    class Meta:
+        db_table = "peptide"
+
+
+class PeptideSegment(models.Model):
+    """
+    Represents a segment of a Peptide, if CDS has joins, here too
+
+    Filled with information from the gene bank file via gbk_import
+
+    Attributes:
+        cds (ForeignKey): Reference to the associated CDS (CASCADE deletion).
+        order (BigIntegerField): Defines the sequential order of segments for final CDS product.
+        start (BigIntegerField): Start position of the segment within the nt sequence.
+        end (BigIntegerField): End position of the segment within the nt sequence.
+        forward_strand (BooleanField): Indicates whether the segment is on the forward strand.
+
+    Constraints:
+        - Ensures each segment of a CDS has a unique order within the same CDS.
+    """
+
+    peptide = models.ForeignKey(Peptide, models.CASCADE)
+    order = models.BigIntegerField()
+    start = models.BigIntegerField()
+    end = models.BigIntegerField()
+    forward_strand = models.BooleanField()
+
+    class Meta:
+        db_table = "peptide_part"
+        constraints = [
+            UniqueConstraint(
+                name="unique_peptide_part",
+                fields=["peptide", "order"],
             ),
         ]
 
