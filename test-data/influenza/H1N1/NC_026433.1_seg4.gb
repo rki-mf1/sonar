@@ -1,0 +1,156 @@
+LOCUS       NC_026433               1701 bp    cRNA    linear   VRL 13-AUG-2018
+DEFINITION  Influenza A virus (A/California/07/2009(H1N1)) segment 4
+            hemagglutinin (HA) gene, complete cds.
+ACCESSION   NC_026433
+VERSION     NC_026433.1
+DBLINK      BioProject: PRJNA485481
+KEYWORDS    RefSeq.
+SOURCE      Influenza A virus (A/California/07/2009(H1N1))
+  ORGANISM  Influenza A virus (A/California/07/2009(H1N1))
+            Viruses; Riboviria; Orthornavirae; Negarnaviricota;
+            Polyploviricotina; Insthoviricetes; Articulavirales;
+            Orthomyxoviridae; Alphainfluenzavirus; Alphainfluenzavirus
+            influenzae.
+REFERENCE   1  (bases 1 to 1701)
+  AUTHORS   Garten,R.J., Davis,C.T., Russell,C.A., Shu,B., Lindstrom,S.,
+            Balish,A., Sessions,W.M., Xu,X., Skepner,E., Deyde,V.,
+            Okomo-Adhiambo,M., Gubareva,L., Barnes,J., Smith,C.B., Emery,S.L.,
+            Hillman,M.J., Rivailler,P., Smagala,J., de Graaf,M., Burke,D.F.,
+            Fouchier,R.A., Pappas,C., Alpuche-Aranda,C.M., Lopez-Gatell,H.,
+            Olivera,H., Lopez,I., Myers,C.A., Faix,D., Blair,P.J., Yu,C.,
+            Keene,K.M., Dotson,P.D. Jr., Boxrud,D., Sambol,A.R., Abid,S.H., St
+            George,K., Bannerman,T., Moore,A.L., Stringer,D.J., Blevins,P.,
+            Demmler-Harrison,G.J., Ginsberg,M., Kriner,P., Waterman,S.,
+            Smole,S., Guevara,H.F., Belongia,E.A., Clark,P.A., Beatrice,S.T.,
+            Donis,R., Katz,J., Finelli,L., Bridges,C.B., Shaw,M.,
+            Jernigan,D.B., Uyeki,T.M., Smith,D.J., Klimov,A.I. and Cox,N.J.
+  TITLE     Antigenic and genetic characteristics of swine-origin 2009 A(H1N1)
+            influenza viruses circulating in humans
+  JOURNAL   Science 325 (5937), 197-201 (2009)
+   PUBMED   19465683
+REFERENCE   2  (bases 1 to 1701)
+  AUTHORS   Dawood,F.S., Jain,S., Finelli,L., Shaw,M.W., Lindstrom,S.,
+            Garten,R.J., Gubareva,L.V., Xu,X., Bridges,C.B. and Uyeki,T.M.
+  CONSRTM   Novel Swine-Origin Influenza A (H1N1) Virus Investigation Team
+  TITLE     Emergence of a novel swine-origin influenza A (H1N1) virus in
+            humans
+  JOURNAL   N. Engl. J. Med. 360 (25), 2605-2615 (2009)
+   PUBMED   19423869
+  REMARK    Erratum:[N Engl J Med. 2009 Jul 2;361(1):102]
+REFERENCE   3  (bases 1 to 1701)
+  CONSRTM   NCBI Genome Project
+  TITLE     Direct Submission
+  JOURNAL   Submitted (06-FEB-2015) National Center for Biotechnology
+            Information, NIH, Bethesda, MD 20894, USA
+REFERENCE   4  (bases 1 to 1701)
+  AUTHORS   Shu,B., Balish,A., Garten,R., Smith,C., Emery,S., Barnes,J.,
+            Deyde,V., Klimov,A. and Cox,N.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (28-APR-2009) WHO Collaborating Center for Surveillance,
+            Epidemiology and Control of Influenza, Influenza Division, Centers
+            for Disease Control and Prevention, Atlanta, 1600 Clifton Road,
+            N.E., Atlanta, GA 30333, USA
+COMMENT     REVIEWED REFSEQ: This record has been curated by NCBI staff. The
+            reference sequence is identical to FJ969540.
+            Swine influenza A (H1N1) virus isolated during human swine flu
+            outbreak of 2009.  For more information, see http://www.cdc.gov/.
+            
+            Some of the information does not have GenBank feature identifiers
+            and is being provided in the comment section.
+            
+            ##EpifluData-START##
+            Isolate                :: A/California/07/2009
+            Subtype                :: H1N1
+            Segment_name           :: HA
+            Host_gender            :: M
+            Host_age               :: 54
+            Passage_history        :: E2
+            Adamantane_resistance  :: resistant
+            Zanamivir_resistance   :: sensitive
+            Oseltamivir_resistance :: sensitive
+            Country                :: USA
+            State/Province         :: California state
+            Collection_day         :: 9
+            Collection_month       :: 4
+            Collection_year        :: 2009
+            EPI_accession          :: EPI176620
+            ##EpifluData-END##
+            COMPLETENESS: full length.
+FEATURES             Location/Qualifiers
+     source          1..1701
+                     /organism="Influenza A virus (A/California/07/2009(H1N1))"
+                     /mol_type="viral cRNA"
+                     /strain="A/California/07/2009"
+                     /serotype="H1N1"
+                     /host="Homo sapiens; gender M; age 54"
+                     /db_xref="taxon:641809"
+                     /segment="4"
+                     /geo_loc_name="USA: California state"
+                     /collection_date="09-Apr-2009"
+     gene            1..1701
+                     /gene="HA"
+                     /locus_tag="UJ99_s4gp1"
+                     /db_xref="GeneID:23308115"
+     CDS             1..1701
+                     /gene="HA"
+                     /locus_tag="UJ99_s4gp1"
+                     /codon_start=1
+                     /product="hemagglutinin"
+                     /protein_id="YP_009118626.1"
+                     /db_xref="GeneID:23308115"
+                     /translation="MKAILVVLLYTFATANADTLCIGYHANNSTDTVDTVLEKNVTVT
+                     HSVNLLEDKHNGKLCKLRGVAPLHLGKCNIAGWILGNPECESLSTASSWSYIVETPSS
+                     DNGTCYPGDFIDYEELREQLSSVSSFERFEIFPKTSSWPNHDSNKGVTAACPHAGAKS
+                     FYKNLIWLVKKGNSYPKLSKSYINDKGKEVLVLWGIHHPSTSADQQSLYQNADAYVFV
+                     GSSRYSKKFKPEIAIRPKVRXXEGRMNYYWTLVEPGDKITFEATGNLVVPRYAFAMER
+                     NAGSGIIISDTPVHDCNTTCQTPKGAINTSLPFQNIHPITIGKCPKYVKSTKLRLATG
+                     LRNIPSIQSRGLFGAIAGFIEGGWTGMVDGWYGYHHQNEQGSGYAADLKSTQNAIDEI
+                     TNKVNSVIEKMNTQFTAVGKEFNHLEKRIENLNKKVDDGFLDIWTYNAELLVLLENER
+                     TLDYHDSNVKNLYEKVRSQLKNNAKEIGNGCFEFYHKCDNTCMESVKNGTYDYPKYSE
+                     EAKLNREEIDGVKLESTRIYQILAIYSTVASSLVLVVSLGAISFWMCSNGSLQCRICI
+                     "
+     sig_peptide     1..51
+                     /gene="HA"
+                     /locus_tag="UJ99_s4gp1"
+     mat_peptide     52..1032
+                     /gene="HA"
+                     /locus_tag="UJ99_s4gp1"
+                     /product="HA1"
+                     /protein_id="YP_009121768.1"
+     mat_peptide     1033..1698
+                     /gene="HA"
+                     /locus_tag="UJ99_s4gp1"
+                     /product="HA2"
+                     /protein_id="YP_009121767.1"
+ORIGIN      
+        1 atgaaggcaa tactagtagt tctgctatat acatttgcaa ccgcaaatgc agacacatta
+       61 tgtataggtt atcatgcgaa caattcaaca gacactgtag acacagtact agaaaagaat
+      121 gtaacagtaa cacactctgt taaccttcta gaagacaagc ataacgggaa actatgcaaa
+      181 ctaagagggg tagccccatt gcatttgggt aaatgtaaca ttgctggctg gatcctggga
+      241 aatccagagt gtgaatcact ctccacagca agctcatggt cctacattgt ggaaacacct
+      301 agttcagaca atggaacgtg ttacccagga gatttcatcg attatgagga gctaagagag
+      361 caattgagct cagtgtcatc atttgaaagg tttgagatat tccccaagac aagttcatgg
+      421 cccaatcatg actcgaacaa aggtgtaacg gcagcatgtc ctcatgctgg agcaaaaagc
+      481 ttctacaaaa atttaatatg gctagttaaa aaaggaaatt catacccaaa gctcagcaaa
+      541 tcctacatta atgataaagg gaaagaagtc ctcgtgctat ggggcattca ccatccatct
+      601 actagtgctg accaacaaag tctctatcag aatgcagatg catatgtttt tgtggggtca
+      661 tcaagataca gcaagaagtt caagccggaa atagcaataa gacccaaagt gagggrtcra
+      721 gaagggagaa tgaactatta ctggacacta gtagagccgg gagacaaaat aacattcgaa
+      781 gcaactggaa atctagtggt accgagatat gcattcgcaa tggaaagaaa tgctggatct
+      841 ggtattatca tttcagatac accagtccac gattgcaata caacttgtca aacacccaag
+      901 ggtgctataa acaccagcct cccatttcag aatatacatc cgatcacaat tggaaaatgt
+      961 ccaaaatatg taaaaagcac aaaattgaga ctggccacag gattgaggaa tatcccgtct
+     1021 attcaatcta gaggcctatt tggggccatt gccggtttca ttgaaggggg gtggacaggg
+     1081 atggtagatg gatggtacgg ttatcaccat caaaatgagc aggggtcagg atatgcagcc
+     1141 gacctgaaga gcacacagaa tgccattgac gagattacta acaaagtaaa ttctgttatt
+     1201 gaaaagatga atacacagtt cacagcagta ggtaaagagt tcaaccacct ggaaaaaaga
+     1261 atagagaatt taaataaaaa agttgatgat ggtttcctgg acatttggac ttacaatgcc
+     1321 gaactgttgg ttctattgga aaatgaaaga actttggact accacgattc aaatgtgaag
+     1381 aacttatatg aaaaggtaag aagccagcta aaaaacaatg ccaaggaaat tggaaacggc
+     1441 tgctttgaat tttaccacaa atgcgataac acgtgcatgg aaagtgtcaa aaatgggact
+     1501 tatgactacc caaaatactc agaggaagca aaattaaaca gagaagaaat agatggggta
+     1561 aagctggaat caacaaggat ttaccagatt ttggcgatct attcaactgt cgccagttca
+     1621 ttggtactgg tagtctccct gggggcaatc agtttctgga tgtgctctaa tgggtctcta
+     1681 cagtgtagaa tatgtattta a
+//
+

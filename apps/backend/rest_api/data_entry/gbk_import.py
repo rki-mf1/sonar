@@ -1,20 +1,26 @@
+from datetime import datetime
 import os
 import pathlib
-from datetime import datetime
 
-from Bio import SeqFeature, SeqIO, SeqRecord
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from Bio import SeqFeature
+from Bio import SeqIO
+from Bio import SeqRecord
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
-from rest_api.models import CDS, CDSSegment, Gene, GeneSegment, Reference, Replicon
-from rest_api.serializers import (
-    CDSSerializer,
-    GeneSegmentSerializer,
-    GeneSerializer,
-    ReferenceSerializer,
-    RepliconSerializer,
-    find_or_create,
-)
+
+from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from rest_api.models import CDS
+from rest_api.models import CDSSegment
+from rest_api.models import Gene
+from rest_api.models import GeneSegment
+from rest_api.models import Reference
+from rest_api.models import Replicon
+from rest_api.serializers import CDSSerializer
+from rest_api.serializers import find_or_create
+from rest_api.serializers import GeneSegmentSerializer
+from rest_api.serializers import GeneSerializer
+from rest_api.serializers import ReferenceSerializer
+from rest_api.serializers import RepliconSerializer
 
 
 def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
@@ -98,9 +104,8 @@ def _process_segments(
 
     Returns:
         segments (List[List[int]]): A list of processed segments. Each segment is represented
-                                    as a list of integers [start, end, strand, base, index].
+                                    as a list of integers [start, end, strand, index].
     """
-    base = 0
     div = 3 if cds else 1
     segments = []
     for i, segment in enumerate(feat_location_parts, 1):
@@ -109,11 +114,9 @@ def _process_segments(
                 "start": int(segment.start),
                 "end": int(segment.end),
                 "forward_strand": segment.forward_strand,
-                "base": base,
                 "segment": i,
             }
         )
-        base += round(int(segment.end) - int(segment.start - 1) / div, 1)
     return segments
 
 
