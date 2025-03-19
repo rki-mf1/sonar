@@ -160,7 +160,7 @@ class Gene(models.Model):
         misc_RNA = "misc_RNA"
         # tmRNA = "tmRNA"
 
-    type = models.TextChoices(GeneTypes, blank=True, null=True)
+    type = models.CharField(choices=GeneTypes, blank=True, null=True)
 
     class Meta:
         db_table = "gene"
@@ -244,11 +244,10 @@ class Peptide(models.Model):
         mat_peptide = "mat_peptide"
         sig_peptide = "sig_peptide"
 
-    type = models.TextChoices(PeptideTypes, blank=True, null=True)
+    type = models.CharField(choices=PeptideTypes)
 
     class Meta:
         db_table = "peptide"
-
 
 class PeptideSegment(models.Model):
     """
@@ -271,7 +270,6 @@ class PeptideSegment(models.Model):
     order = models.BigIntegerField()
     start = models.BigIntegerField()
     end = models.BigIntegerField()
-    forward_strand = models.BooleanField()
 
     class Meta:
         db_table = "peptide_part"
@@ -635,7 +633,7 @@ class AminoAcidMutation(models.Model):
         constraints = [
             UniqueConstraint(
                 name="unique_aa_mutation",
-                fields=["ref", "alt", "start", "end", "cds", "replicon"],
+                fields=["ref", "alt", "start", "end", "cds"],
             ),
         ]
 

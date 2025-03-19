@@ -584,7 +584,7 @@ class PropertyViewSet(
                     "name": _property_queryset.name,
                     "query_type": _property_queryset.datatype,
                     "description": _property_queryset.description,
-                    "default": _property_queryset.standard,
+                    "default": _property_queryset.default,
                 }
             )
         data = {"keys": cols, "values": data_list}

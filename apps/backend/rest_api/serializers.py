@@ -170,11 +170,32 @@ class GeneSerializer(serializers.ModelSerializer):
         model = models.Gene
         fields = "__all__"
 
+
 class CDSSerializer(serializers.ModelSerializer):
-    
+
     class Meta:
         model = models.CDS
         fields = "__all__"
+
+
+class CDSSegmentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.CDSSegment
+        fields = "__all__"
+
+
+class PeptideSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Peptide
+        fields = "__all__"
+
+
+class PeptideSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.PeptideSegment
+        fields = "__all__"
+
 
 class GeneSegmentSerializer(serializers.ModelSerializer):
     class Meta:
