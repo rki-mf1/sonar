@@ -217,10 +217,10 @@ class CDSSegment(models.Model):
     forward_strand = models.BooleanField()
 
     class Meta:
-        db_table = "cds_part"
+        db_table = "cds_segment"
         constraints = [
             UniqueConstraint(
-                name="unique_cds_part",
+                name="unique_cds_segment",
                 fields=["cds", "order"],
             ),
         ]
@@ -249,6 +249,7 @@ class Peptide(models.Model):
     class Meta:
         db_table = "peptide"
 
+
 class PeptideSegment(models.Model):
     """
     Represents a segment of a Peptide, if CDS has joins, here too
@@ -272,10 +273,10 @@ class PeptideSegment(models.Model):
     end = models.BigIntegerField()
 
     class Meta:
-        db_table = "peptide_part"
+        db_table = "peptide_segement"
         constraints = [
             UniqueConstraint(
-                name="unique_peptide_part",
+                name="unique_peptide_segment",
                 fields=["peptide", "order"],
             ),
         ]
