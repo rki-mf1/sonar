@@ -71,7 +71,6 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
             ]
 
             gene_id_to_gene_obj: dict[str, Gene] = {}
-            gene_id_to_cds_obj: dict[str, CDS] = {}
             for gene_feature in gene_features:
                 """
                 gene_feature = type: gene, location: [26244:26472](+), qualifiers: Key: gene, Value: ['E']
@@ -91,21 +90,28 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 _create_gene_segments(gene_feature, gene_obj)
 
             # features with CDS qualifier
+            gene_id_to_cds_obj: dict[str, list(CDS)] = {}
             cds_features = [
                 f
                 for f in record.features
                 if f.type == "CDS" and "pseudogene" not in f.qualifiers
             ]
             for cds_feature in cds_features:
+                # TODO add note to cds table (e.g. ORF1)
                 gene_symbol = cds_feature.qualifiers.get("gene", [None])[0]
                 if gene_symbol is None:
                     raise ValueError("No gene symbol found.")
                 # TODO : check if join/multiple orders
                 gene = gene_id_to_gene_obj.get(gene_symbol, None)
                 if gene is None:
-                    raise ValueError("No gene found for CDS.")
+                    raise ValueError("No gene object found for CDS.")
                 cds = _put_cds_from_feature(cds_feature, record.seq, gene)
-                gene_id_to_cds_obj[gene_symbol] = cds
+                # different cds in one gene
+                if gene_symbol not in gene_id_to_cds_obj:
+                    gene_id_to_cds_obj[gene_symbol] = []
+                    gene_id_to_cds_obj[gene_symbol].append(cds)
+                else:
+                    gene_id_to_cds_obj[gene_symbol].append(cds)
                 _create_cds_segments(cds_feature, cds)
 
             # features with peptide qualifier (e.g. HIV)
@@ -117,11 +123,19 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 if gene_symbol is None:
                     raise ValueError("No gene symbol found.")
                 # TODO : check if join/multiple orders
-                cds = gene_id_to_cds_obj.get(gene_symbol, None)
+                cds_objects = gene_id_to_cds_obj.get(gene_symbol, None)
                 if cds is None:
                     raise ValueError("No gene found for peptide.")
-                peptide = _put_peptide_from_feature(peptide_feature, record.seq, cds)
-                _create_peptide_segments(peptide_feature, peptide)
+                elif len(cds_objects) > 1:
+                    raise ValueError(
+                        f"Multiple CDS objects found for gene symbol {gene_symbol}. Can't assign mat_peptides to CDS."
+                    )
+                elif len(cds_objects) == 1:
+                    cds = cds_objects[0]
+                    peptide = _put_peptide_from_feature(
+                        peptide_feature, record.seq, cds
+                    )
+                    _create_peptide_segments(peptide_feature, peptide)
 
     return records
 
@@ -135,7 +149,7 @@ def determine_gene_type(
         if feature.type in Gene.GeneTypes.values
         and feature.qualifiers.get("gene", [None])[0] == gene_symbol
     ]
-    if len(types) > 1:
+    if len(set(types)) > 1:
         raise ValueError(f"Multiple gene types found for {gene_symbol}: {types}")
     return types[0] if types else None
 
@@ -248,7 +262,9 @@ def _put_cds_from_feature(
     _validate_segment_lengths(feature.location.parts, cds_update_data["accession"])
     cds_update_data["sequence"] = feature.qualifiers.get("translation", [""])[0]
     cds_update_data["description"] = feature.qualifiers.get("product", [""])[0]
-    cds = find_or_create({"gene": gene.pk}, CDS, CDSSerializer)
+    cds = find_or_create(
+        {"gene": gene.pk, "accession": cds_update_data["accession"]}, CDS, CDSSerializer
+    )
 
     for attr_name, value in cds_update_data.items():
         setattr(cds, attr_name, value)
@@ -261,16 +277,15 @@ def _put_peptide_from_feature(
     if feature.location is None:
         raise ValueError("No location information found for peptide feature.")
     peptide_base_data = {
-        "cds_start_position": feature.location.start,
-        "cds_end_position": feature.location.end,
         "cds": cds.pk,
+        "type": feature.type,
+        "description": feature.qualifiers.get("product", [""])[0],
     }
     peptide_update_data = {}
-    peptide_update_data["description"] = feature.qualifiers.get("product", [""])[0]
-    cds = find_or_create(peptide_base_data, Peptide, PeptideSerializer)
+    peptide = find_or_create(peptide_base_data, Peptide, PeptideSerializer)
     for attr_name, value in peptide_update_data.items():
-        setattr(cds, attr_name, value)
-    return PeptideSerializer(cds).update(cds, peptide_update_data)
+        setattr(peptide, attr_name, value)
+    return PeptideSerializer(peptide).update(peptide, peptide_update_data)
 
 
 def _put_reference_from_record(
@@ -351,7 +366,7 @@ def _create_cds_segments(feature: SeqFeature.SeqFeature, cds: CDS):
 def _create_peptide_segments(feature: SeqFeature.SeqFeature, peptide: Peptide):
     for elempart in _process_segments(feature.location.parts):
         elempart_data = {
-            "peptide": peptide,
+            "peptide": peptide.pk,
             **elempart,
         }
         find_or_create(elempart_data, PeptideSegment, PeptideSegmentSerializer)
