@@ -1,3 +1,4 @@
+import glob
 import hashlib
 from itertools import zip_longest
 import os
@@ -570,17 +571,20 @@ class sonarCache:
             ]
             # if there is no cds, the lift file will not be generated
             for cds in self.iter_cds_v2(refmol_acc):
+                print(cds)
                 try:
                     elemid = cds["id"]
                     symbol = cds["symbol"]
                     accession = cds["accession"]
+                    full_seq = cds["sequence"] + "*"  # Full cds sequence
                     coords = [
                         list(group)
                         for group in zip_longest(
                             *[iter(self.get_cds_coord_list(cds))] * 3, fillvalue="-"
                         )
                     ]  # provide a list of triplets for all CDS coordinates
-                    seq = list(reversed(cds["sequence"] + "*"))
+                    # seq = list(reversed(cds["sequence"] + "*"))
+                    seq = list(full_seq)  # Convert AA sequence to list for tracking
                     for aa_pos, nuc_pos_list in enumerate(coords):
 
                         rows.append(
@@ -592,7 +596,7 @@ class sonarCache:
                                 sequence[nuc_pos_list[2]],
                             ]
                             * 2
-                            + [symbol, accession, aa_pos, seq.pop()]
+                            + [symbol, accession, aa_pos, seq[aa_pos]]
                         )
 
                 except Exception as e:
@@ -609,7 +613,7 @@ class sonarCache:
             # df.to_pickle(fname)
 
             # for debug
-            # df.to_csv(fname + ".csv")
+            # df.to_csv("new_lift_HIV" + ".csv")
             self._lifts = df
 
         return self._lifts
@@ -643,41 +647,42 @@ class sonarCache:
         return os.path.join(self.var_dir, fn[:2], fn + ".var")
 
     def iter_cds_v2(self, refmol_acc):
+        """
+        Extracts CDS sequences and their corresponding genomic coordinates.
+        """
         cds = {}
         prev_elem = None
         gene_rows = APIClient(base_url=self.base_url).get_elements(ref_acc=refmol_acc)
 
         for row in gene_rows:
+            for cds_entry in row["cds_list"]:  # Iterate through cds_list
 
-            if prev_elem is None:
-                prev_elem = row["gene_segment.gene_id"]
-            elif row["gene_segment.gene_id"] != prev_elem:
-                yield cds
-                cds = {}
-                prev_elem = row["gene_segment.gene_id"]
-            if cds == {}:
+                if prev_elem is None:
+                    prev_elem = cds_entry["cds.id"]
+                elif cds_entry["cds.id"] != prev_elem:
+                    yield cds
+                    cds = {}
+                    prev_elem = cds_entry["cds.id"]
 
-                cds = {
-                    "id": row["gene_segment.gene_id"],
-                    "accession": row["gene.cds_accession"],
-                    "symbol": row["gene.cds_symbol"],
-                    "sequence": row["gene.cds_sequence"],
-                    "ranges": [
-                        (
-                            row["gene_segment.start"],
-                            row["gene_segment.end"],
-                            row["gene_segment.strand"],
-                        )
-                    ],
-                }
-            else:
-                cds["ranges"].append(
-                    (
-                        row["gene_segment.start"],
-                        row["gene_segment.end"],
-                        row["gene_segment.strand"],
-                    )
-                )
+                if not cds:
+                    cds = {
+                        "id": cds_entry["cds.id"],
+                        "accession": cds_entry["cds.accession"],
+                        "symbol": row["gene.gene_symbol"],  # Gene symbol from gene
+                        "sequence": cds_entry["cds.sequence"],  # Protein sequence
+                        "ranges": [
+                            (
+                                segment["cds_segment.start"],
+                                segment["cds_segment.end"],
+                                (
+                                    1 if segment["cds_segment.forward_strand"] else -1
+                                ),  # Convert bool to strand
+                            )
+                            for segment in cds_entry[
+                                "cds_segments"
+                            ]  # Extract ranges from cds_segments
+                        ],
+                    }
 
         if cds:
             yield cds
@@ -897,13 +902,16 @@ class sonarCache:
         """Build snpeff cache for the given reference,
         1. Request the gbk file from server
         2. Then save it to the cache directory (self.basedir/snpeff_data/{reference}/genes.gbk).
-        3. Use snpeff to build the cache.
+        3. Use snpeff to build the cache, (TODO: need to update the snpEff.config
+        file if the reference is not in the config file, for example AF033819.3.genome : HIV-1_AF033819)
         snpEff build -nodownload MN908947.3 -genbank -dataDir self.basedir/snpeff_data/snpeffDB/ -v
         4. Check if the file is built or failed.
         """
         params = {
             "reference": reference,
         }
+        self.update_snpeff_config(reference)
+
         if os.path.exists(os.path.join(self.snpeff_data_dir, reference, ".done")):
             LOGGER.info(f"snpeff cache for reference {reference} is already built.")
             return True
@@ -945,3 +953,52 @@ class sonarCache:
         else:
             LOGGER.error(f"Cannot get genbank file for reference {reference}")
             return False
+
+    def find_snpeff_config(self):
+        """Finds the latest snpEff.config file in the active Conda environment."""
+        conda_env_dir = os.getenv("CONDA_PREFIX")
+
+        if not conda_env_dir:
+            LOGGER.error("No conda environment is currently activated.")
+            sys.exit(1)
+
+        # Look for snpEff-* directories inside 'share'
+        share_path = os.path.join(conda_env_dir, "share")
+        snpeff_versions = sorted(
+            glob.glob(os.path.join(share_path, "snpeff-*")), reverse=True
+        )
+
+        if not snpeff_versions:
+            LOGGER.error("No snpEff installation found in the Conda environment.")
+            sys.exit(1)
+        else:
+            LOGGER.debug(
+                f"Found {snpeff_versions} snpEff installations in the Conda environment."
+            )
+        # Take the latest version directory
+        latest_snpeff_dir = snpeff_versions[0]
+        config_path = os.path.join(latest_snpeff_dir, "snpEff.config")
+
+        if not os.path.exists(config_path):
+            LOGGER.error(f"snpEff.config not found in {latest_snpeff_dir}")
+            sys.exit(1)
+
+        return config_path
+
+    def update_snpeff_config(self, reference):
+        """Updates snpEff.config by adding a new reference genome."""
+        config_file = self.find_snpeff_config()
+        genome_entry = f"{reference}.genome : {reference}"
+
+        with open(config_file, "r") as f:
+            lines = f.readlines()
+
+        # Check if reference already exists
+        if any(genome_entry in line for line in lines):
+            LOGGER.info(f"{reference} is already present in {config_file}.")
+        else:
+            # Append new reference
+            with open(config_file, "a") as f:
+                f.write(f"\n{genome_entry}\n")
+
+            LOGGER.info(f"Added '{genome_entry}' to {config_file}.")

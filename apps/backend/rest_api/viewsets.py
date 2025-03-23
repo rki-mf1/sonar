@@ -228,40 +228,80 @@ class GeneViewSet(viewsets.ModelViewSet):
 
         sample_data = []
         # TODO : check for mulitple cds's per gene
-        raise NotImplementedError("Multiple CDS per gene not implemented")
-        # for item in queryset.all():
-        #     _data = {}
-        #     _data["reference.id"] = item.gene.replicon.reference.id
-        #     _data["reference.accession"] = item.gene.replicon.reference.accession
-        #     _data["reference.description"] = item.gene.replicon.reference.description
-        #     _data["reference.organism"] = item.gene.replicon.reference.organism
-        #     _data["reference.host"] = item.gene.replicon.reference.host
-        #     _data["replicon.id"] = item.gene.replicon.id
-        #     _data["replicon.accession"] = item.gene.replicon.accession
-        #     _data["replicon.description"] = item.gene.replicon.description
-        #     _data["replicon.length"] = item.gene.replicon.length
-        #     _data["replicon.segment_number"] = item.gene.replicon.segment_number
-        #     _data["gene.id"] = item.gene.id
-        #     _data["gene.start"] = item.gene.start
-        #     _data["gene.end"] = item.gene.end
-        #     _data["gene.description"] = item.gene.description
-        #     _data["gene.gene_symbol"] = item.gene.symbol
-        #     _data["gene.gene_accession"] = item.cds.gene.accession
-        #     _data["gene.gene_sequence"] = item.cds.gene.sequence
-        #     _data["gene.cds_sequence"] = item.gene.cds_sequence
-        #     _data["gene.cds_accession"] = item.gene.cds_accession
-        #     _data["gene.cds_symbol"] = item.gene.cds_symbol
-        #     _data["gene_segment.id"] = item.id
-        #     _data["gene_segment.gene_id"] = item.gene_id
-        #     _data["gene_segment.start"] = item.start
-        #     _data["gene_segment.end"] = item.end
-        #     _data["gene_segment.forward_strand"] = item.forward_strand
-        #     _data["gene_segment.base"] = item.base
-        #     _data["gene_segment.order"] = item.order
-        #     sample_data.append(_data)
+        # raise NotImplementedError("Multiple CDS per gene not implemented")
+        for item in queryset.all():
+            _data = {}
+            _data["reference.id"] = item.gene.replicon.reference.id
+            _data["reference.accession"] = item.gene.replicon.reference.accession
+            _data["reference.description"] = item.gene.replicon.reference.description
+            _data["reference.organism"] = item.gene.replicon.reference.organism
+            _data["reference.host"] = item.gene.replicon.reference.host
+            _data["replicon.id"] = item.gene.replicon.id
+            _data["replicon.accession"] = item.gene.replicon.accession
+            _data["replicon.description"] = item.gene.replicon.description
+            _data["replicon.length"] = item.gene.replicon.length
+            _data["replicon.segment_number"] = item.gene.replicon.segment_number
+            _data["gene.id"] = item.gene.id
+            _data["gene.start"] = item.gene.start
+            _data["gene.end"] = item.gene.end
+            _data["gene.description"] = item.gene.description
+            _data["gene.gene_symbol"] = item.gene.symbol
+            _data["gene.gene_accession"] = item.gene.accession
+            _data["gene.gene_sequence"] = item.gene.sequence
+            _data["gene_segment.id"] = item.id
+            _data["gene_segment.gene_id"] = item.gene_id
+            _data["gene_segment.start"] = item.start
+            _data["gene_segment.end"] = item.end
+            _data["gene_segment.forward_strand"] = item.forward_strand
+            _data["gene_segment.order"] = item.order
 
+            # Add CDS information
+            cds_list = []
+            for cds in item.gene.cds_set.all():
+                cds_data = {
+                    "cds.id": cds.id,
+                    "cds.accession": cds.accession,
+                    "cds.sequence": cds.sequence,
+                    "cds.description": cds.description,
+                }
+                cds_segments = []
+                for segment in cds.cdssegment_set.all():
+                    segment_data = {
+                        "cds_segment.id": segment.id,
+                        "cds_segment.order": segment.order,
+                        "cds_segment.start": segment.start,
+                        "cds_segment.end": segment.end,
+                        "cds_segment.forward_strand": segment.forward_strand,
+                    }
+                    cds_segments.append(segment_data)
+                cds_data["cds_segments"] = cds_segments
+
+                # Add Peptide information
+                peptide_list = []
+                for peptide in cds.peptide_set.all():
+                    peptide_data = {
+                        "peptide.id": peptide.id,
+                        "peptide.description": peptide.description,
+                        "peptide.type": peptide.type,
+                    }
+                    peptide_segments = []
+                    for segment in peptide.peptidesegment_set.all().order_by("order"):
+                        segment_data = {
+                            "peptide_segment.id": segment.id,
+                            "peptide_segment.order": segment.order,
+                            "peptide_segment.start": segment.start,
+                            "peptide_segment.end": segment.end,
+                        }
+                        peptide_segments.append(segment_data)
+                    peptide_data["peptide_segments"] = peptide_segments
+                    peptide_list.append(peptide_data)
+                cds_data["peptide_list"] = peptide_list
+
+                cds_list.append(cds_data)
+            _data["cds_list"] = cds_list
+
+            sample_data.append(_data)
         # sample_data =queryset.values()
-
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
