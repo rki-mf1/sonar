@@ -262,15 +262,15 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     label = ""
                     # SNP and INS
                     if mutation.alt != "":
-                        label = f"{mutation.gene.symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
+                        label = f"{mutation.cds.gene.symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
                     else:  # DEL
                         if mutation.end - mutation.start == 1:
-                            label = f"{mutation.gene.symbol}:del:" + str(
+                            label = f"{mutation.cds.gene.symbol}:del:" + str(
                                 mutation.start + 1
                             )
                         else:
                             label = (
-                                f"{mutation.gene.symbol}:del:"
+                                f"{mutation.cds.gene.symbol}:del:"
                                 + str(mutation.start + 1)
                                 + "-"
                                 + str(mutation.end)

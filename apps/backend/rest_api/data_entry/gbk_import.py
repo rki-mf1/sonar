@@ -176,7 +176,7 @@ def _process_segments(
             "order": i,
         }
         if include_strand:
-            segment_data["forward_strand"] = segment.strand
+            segment_data["forward_strand"] = True if segment.strand == 1 else False
         segments.append(segment_data)
     return segments
 
@@ -234,7 +234,7 @@ def _put_gene_from_feature(
     gene_base_data = {
         "start": int(feature.location.start),
         "end": int(feature.location.end),
-        "forward_strand": feature.location.strand,
+        "forward_strand": True if feature.location.strand == 1 else False,
         "replicon": replicon.pk,
         "type": gene_type,
     }
