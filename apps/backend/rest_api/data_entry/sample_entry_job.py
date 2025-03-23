@@ -441,8 +441,8 @@ def process_batch_run(
             AminoAcidMutation.objects.bulk_create(
                 cds_mutation_set,
                 update_conflicts=True,
-                unique_fields=["ref", "alt", "start", "end", "gene", "replicon"],
-                update_fields=["ref", "alt", "start", "end", "gene", "replicon"],
+                unique_fields=["ref", "alt", "start", "end", "cds"],
+                update_fields=["ref", "alt", "start", "end", "cds"],
             )
             AminoAcidMutation.parent.through.objects.bulk_create(
                 parent_relations,

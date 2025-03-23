@@ -184,10 +184,10 @@ class SampleViewSet(
             ).order_by("start")
             proteomic_profiles_qs = (
                 models.AminoAcidMutation.objects.only(
-                    "ref", "alt", "start", "end", "gene"
+                    "ref", "alt", "start", "end", "cds"
                 )
-                .prefetch_related("gene")
-                .order_by("gene", "start")
+                .prefetch_related("cds")
+                .order_by("cds", "start")
             )
             annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")
 

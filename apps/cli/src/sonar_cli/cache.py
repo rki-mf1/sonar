@@ -571,7 +571,7 @@ class sonarCache:
             ]
             # if there is no cds, the lift file will not be generated
             for cds in self.iter_cds_v2(refmol_acc):
-                print(cds)
+                LOGGER.debug(cds)
                 try:
                     elemid = cds["id"]
                     symbol = cds["symbol"]
