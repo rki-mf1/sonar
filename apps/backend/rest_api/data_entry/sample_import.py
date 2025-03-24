@@ -265,6 +265,9 @@ class SampleImport:
                                 )
                             )
                         except KeyError:
+                            LOGGER.warning(
+                                f"Parent ID {parent_id} not found in parent_id_mapping for mutation {mutation_data}"
+                            )
                             pass
                 sample_cds_mutations.append(mutation)
         return mutation_parent_relations
