@@ -445,7 +445,7 @@ def process_batch_run(
                 update_fields=["ref", "alt", "start", "end", "cds"],
             )
             AminoAcidMutation.parent.through.objects.bulk_create(
-                parent_relations,
+                mutation_parent_relations,
                 ignore_conflicts=True,
             )
             NucleotideMutation.alignments.through.objects.bulk_create(
