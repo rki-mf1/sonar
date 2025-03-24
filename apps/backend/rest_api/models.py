@@ -149,6 +149,7 @@ class Gene(models.Model):
     symbol = models.CharField(max_length=50, blank=True, null=True)
     accession = models.CharField(max_length=50, unique=False, blank=True, null=True)
     sequence = models.TextField(blank=True, null=True)
+    locus_tag = models.CharField(max_length=100, blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.CASCADE)
 
     class GeneTypes(models.TextChoices):

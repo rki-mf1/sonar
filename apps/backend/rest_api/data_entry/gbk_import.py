@@ -101,7 +101,6 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 gene_symbol = cds_feature.qualifiers.get("gene", [None])[0]
                 if gene_symbol is None:
                     raise ValueError("No gene symbol found.")
-                # TODO : check if join/multiple orders
                 gene = gene_id_to_gene_obj.get(gene_symbol, None)
                 if gene is None:
                     raise ValueError("No gene object found for CDS.")
@@ -122,7 +121,6 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 gene_symbol = peptide_feature.qualifiers.get("gene", [None])[0]
                 if gene_symbol is None:
                     raise ValueError("No gene symbol found.")
-                # TODO : check if join/multiple orders
                 cds_objects = gene_id_to_cds_obj.get(gene_symbol, None)
                 if cds is None:
                     raise ValueError("No gene found for peptide.")
@@ -244,6 +242,7 @@ def _put_gene_from_feature(
     gene_update_data["accession"] = _determine_accession(feature)
     gene_update_data["symbol"] = _determine_symbol(feature)
     gene_update_data["sequence"] = str(feature.extract(replicon_seq))
+    gene_update_data["locus_tag"] = feature.qualifiers.get("locus_tag", [""])[0]
 
     gene = find_or_create(gene_base_data, Gene, GeneSerializer)
     for attr_name, value in gene_update_data.items():
