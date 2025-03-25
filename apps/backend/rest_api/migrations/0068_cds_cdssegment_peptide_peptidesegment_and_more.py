@@ -150,7 +150,7 @@ class Migration(migrations.Migration):
             model_name="property",
             old_name="standard",
             new_name="default",
-        ),        
+        ),
         migrations.RemoveField(
             model_name="aminoacidmutation",
             name="replicon",
