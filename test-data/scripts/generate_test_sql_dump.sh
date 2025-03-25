@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# usage: ./generate_test_sql_dump.sh
+
 xz -d -k "../sars-cov-2/SARS-CoV-2_12.tsv.xz"
 xz -d -k "../sars-cov-2/SARS-CoV-2_12.fasta.xz"
 cd ../../apps/backend
