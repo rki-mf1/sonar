@@ -15,7 +15,7 @@ services:
       # This exact path inside the container needs to be mapped to a volume,
       # otherwise it will automatically be mapped to a volume inside of the
       # host's /var/lib/docker/volumes directory
-      - ${POSTGRES_DATA_EXTERNAL}:/var/lib/postgresql/data
+      - dbdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=$POSTGRES_DB
       - POSTGRES_SCHEMA=$POSTGRES_SCHEMA
@@ -241,3 +241,5 @@ services:
     depends_on:
       celery-workers:
         condition: service_started
+volumes:
+  dbdata:

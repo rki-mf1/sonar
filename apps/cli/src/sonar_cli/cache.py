@@ -81,7 +81,6 @@ class sonarCache:
             LOGGER.info(f"Cannot find reference: {self.refacc}")
             sys.exit()
         self.default_refmol_acc = [x for x in self.refmols][0]
-
         self._molregex = re.compile(r"\[molecule=([^\[\]=]+)\]")
 
         self.basedir = TMP_CACHE if not outdir else os.path.abspath(outdir)
@@ -148,8 +147,9 @@ class sonarCache:
                 sys.exit(1)
         # for segment genome
         self.blast_db = None
-
+        self.is_segment_import = False
         if len(self.refmols) > 1:
+            self.is_segment_import = True
             LOGGER.info(
                 "Segment genome detect: creating BLAST database for assigning appropriate reference accession"
             )
@@ -236,7 +236,7 @@ class sonarCache:
             batch_data[i]["source_acc"] = (
                 self.refmols[self.default_refmol_acc]["accession"]
                 if self.refmols[self.default_refmol_acc]["id"] == data["refmolid"]
-                else None
+                else data["refmol"]
             )
             refseq_accession = data["refmol"]
             batch_data[i]["refseq_id"] = self.get_refseq_id(refseq_accession)
@@ -365,15 +365,17 @@ class sonarCache:
                     line = line.strip()
                     if line.startswith(">"):
                         if seq:
-                            yield self.process_fasta_entry(header, "".join(seq))
+                            yield self.process_fasta_entry(header, "".join(seq), fname)
                             seq = []
                         header = line[1:]
                     else:
                         seq.append(line)
                 if seq:
-                    yield self.process_fasta_entry(header, "".join(seq))
+                    yield self.process_fasta_entry(header, "".join(seq), fname)
 
-    def process_fasta_entry(self, header: str, seq: str) -> Dict[str, Union[str, int]]:
+    def process_fasta_entry(
+        self, header: str, seq: str, fname: str
+    ) -> Dict[str, Union[str, int]]:
         """
         Formulate a data dict.
 
@@ -399,13 +401,16 @@ class sonarCache:
 
         refmol = self.get_refmol(header)
         if not refmol:
-            sys.exit(
-                "input error: "
-                + sample_id
-                + " refers to an unknown reference molecule ("
-                + self._molregex.search(header)
-                + ")."
-            )
+            # blast assignment for acession
+            try:
+                best_aln_dict = self.blast_best_aln[fname]
+                refmol = best_aln_dict[sample_id]
+                LOGGER.debug(f"Using refmol_acc: {refmol}, {sample_id}")
+            except Exception as e:
+                LOGGER.error(f"An error occurred: {e}")
+                sys.exit(
+                    f"input error: {sample_id} refers to an unknown reference molecule ({self._molregex.search(header)})."
+                )
         seq = harmonize_seq(seq)
         seq = remove_charfromsequence_data(seq, char="-")
         seqhash = hash_seq(seq)
@@ -429,14 +434,30 @@ class sonarCache:
             return default_refmol_acc if cannot find mol_id from the header
         """
         mol = self._molregex.search(fasta_header)
-        if not mol:
+        if mol:
             try:
                 LOGGER.info(f"Using refmol_acc: {self.refmols[mol]['accession']}")
                 return self.refmols[mol]["accession"]
             except Exception:
                 None
+        else:
+            if not self.blast_db:  # not segment gneome
+                return self.default_refmol_acc
+            elif self.blast_best_aln is not None:
+                return None
 
-        return self.default_refmol_acc
+            # if blast_best_aln is None then use default mol
+            # TODO: dont return default_refmol_acc
+            # return self.default_refmol_acc
+
+            # NOTE: This code will not be triggered.... If I haven't missed anything in the logic or operation before,
+            # however, I should leave the raise error as it is  in case
+            # I miss something or unexpectedly event occurs.
+            LOGGER.error(
+                "An unexpected error occurred at def get_refmol, Please contact us.",
+                exc_info=True,
+            )
+            raise
 
     def get_refseq(self, refmol_acc):
         try:
@@ -485,6 +506,10 @@ class sonarCache:
             data["liftfile"] = self.cache_lift(
                 refseq_acc, data["refmol"], self.get_refseq(data["refmol"])
             )
+            # if refseq_acc != "NC_026433.1":
+            #     print(refseq_acc)
+            #     print(data["refmol"])
+            #     print(data["liftfile"])
             # cache_cds is used for frameshift detection
             # but this will be removed soon, since we use snpEff.
             data["cdsfile"] = None  # self.cache_cds(refseq_acc, data["refmol"])
@@ -559,7 +584,7 @@ class sonarCache:
             self._refs.add(refid)
         return fname
 
-    def cache_lift(self, refid, refmol_acc, sequence):
+    def cache_lift(self, refseq_acc, refmol_acc, sequence):
         """
         The function takes in a reference id, a reference molecule accession number,
         and a reference sequence. It then checks to see if the reference molecule accession number is in the set of molecules that
@@ -588,6 +613,7 @@ class sonarCache:
                 "aaPos",
                 "aa",
             ]
+            print(refmol_acc)
             # if there is no cds, the lift file will not be generated
             for cds in self.iter_cds_v2(refmol_acc):
                 LOGGER.debug(cds)
@@ -671,8 +697,14 @@ class sonarCache:
         """
         cds = {}
         prev_elem = None
-        gene_rows = APIClient(base_url=self.base_url).get_elements(ref_acc=refmol_acc)
-
+        if self.is_segment_import:
+            gene_rows = APIClient(base_url=self.base_url).get_elements(
+                molecule_acc=refmol_acc
+            )
+        else:
+            gene_rows = APIClient(base_url=self.base_url).get_elements(
+                ref_acc=refmol_acc
+            )
         for row in gene_rows:
             for cds_entry in row["cds_list"]:  # Iterate through cds_list
 

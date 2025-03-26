@@ -234,14 +234,13 @@ def parse_blast_results_tsv(output_file):
 
 def perform_blast_search_tsv_from_memory(fasta_file, db_name) -> dict:
     # The smaller the E-value, the better the match.
-    fasta_file = "/mnt/c/works/influ/mix.seq.fasta"
     try:
         cline = NcbiblastnCommandline(
             query=fasta_file,
             db=db_name,
             evalue=0.000001,
             outfmt=6,
-            max_target_seqs=5,
+            max_target_seqs=1,
             out="-",
         )
         print(cline)

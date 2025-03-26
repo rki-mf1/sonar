@@ -303,7 +303,7 @@ class APIClient:
             params["ref_acc"] = ref_acc
 
         if molecule_acc:
-            params["molecule_acc"] = molecule_acc
+            params["replicon_acc"] = molecule_acc
 
         json_response = self._make_request(
             "GET", endpoint=self.get_gene_endpoint, params=params
