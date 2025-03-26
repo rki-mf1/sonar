@@ -13,6 +13,7 @@ from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Union
+import zipfile
 
 import pandas as pd
 from sonar_cli.api_interface import APIClient
@@ -99,6 +100,7 @@ class sonarCache:
         self.error_dir = os.path.join(self.basedir, "error")
         self.anno_dir = os.path.join(self.basedir, "anno")
         self.snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
+        os.makedirs(self.snpeff_data_dir, exist_ok=True)
         os.makedirs(self.seq_dir, exist_ok=True)
         os.makedirs(self.ref_dir, exist_ok=True)
         # os.makedirs(self.algn_dir, exist_ok=True)
@@ -898,57 +900,114 @@ class sonarCache:
 
         return passed_samples_list
 
-    def build_snpeff_cache(self, reference):
-        """Build snpeff cache for the given reference,
-        1. Request the gbk file from server
-        2. Then save it to the cache directory (self.basedir/snpeff_data/{reference}/genes.gbk).
-        3. Use snpeff to build the cache, (TODO: need to update the snpEff.config
-        file if the reference is not in the config file, for example AF033819.3.genome : HIV-1_AF033819)
-        snpEff build -nodownload MN908947.3 -genbank -dataDir self.basedir/snpeff_data/snpeffDB/ -v
-        4. Check if the file is built or failed.
+    def build_snpeff_cache(self, reference):  # noqa: C901
+        """Build snpEff cache for the given reference,
+        supporting both single and multiple GenBank files (segments).
+
+        1. Request the GBK file (or ZIP if segment).
+        2. Extract accession versions from GenBank headers.
+        3. Create folders for each replicon using accession versions.
+        4. Update snpEff.config with replicon accessions.
+        5. Build the snpEff cache for each replicon.
         """
         params = {
             "reference": reference,
         }
-        self.update_snpeff_config(reference)
 
         if os.path.exists(os.path.join(self.snpeff_data_dir, reference, ".done")):
-            LOGGER.info(f"snpeff cache for reference {reference} is already built.")
+            # for multiple replicons, we assume if there is a refernce accesion and .done file,
+            # Thery are already built.
+            LOGGER.info(f"snpEff cache for reference {reference} is already built.")
             return True
 
         response = APIClient(base_url=self.base_url).get_reference_genbank(params)
         if response.status_code == 200:
-            gbk_file = os.path.join(self.snpeff_data_dir, reference, "genes.gbk")
-            os.makedirs(os.path.dirname(gbk_file), exist_ok=True)
+            LOGGER.info("----------- Build snpEff cache -----------")
+            gbk_files = []
+            # Check if response is a ZIP file (multiple segments) or a single GBK
+            content_type = response.headers.get("Content-Type", "")
+            snpeff_data_dir_tmp = os.path.join(self.snpeff_data_dir, "tmp")
+            os.makedirs(snpeff_data_dir_tmp, exist_ok=True)
 
-            with open(gbk_file, "wb") as file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    file.write(chunk)
-            LOGGER.info(f"Genbank downloaded successfully: {gbk_file}")
-            # build snpeff cache
-            snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
-            os.makedirs(snpeff_data_dir, exist_ok=True)
-            cmd = [
-                "snpEff",
-                "build",
-                "-nodownload",
-                reference,
-                "-genbank",
-                "-dataDir",
-                self.snpeff_data_dir,
-            ]
-            LOGGER.info(f"Building snpeff cache for reference {reference}")
-            try:
-                subprocess.run(cmd, capture_output=True, check=True)
-                # write .done file for later checking if the cahce is built already
-                # so we dont need to rebuild it again.
-                with open(
-                    os.path.join(self.snpeff_data_dir, reference, ".done"), "w"
-                ) as handle:
-                    handle.write("done")
-            except subprocess.CalledProcessError as e:
-                LOGGER.error(f"An error occurred: {e}")
-                sys.exit(1)
+            if "zip" in content_type:  # Zip file, Multi GBK files
+                zip_path = os.path.join(snpeff_data_dir_tmp, f"{reference}.segment.zip")
+                with open(zip_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+                # Extract ZIP file
+                with zipfile.ZipFile(zip_path, "r") as zipf:
+                    zipf.extractall(snpeff_data_dir_tmp)
+                    gbk_files = [
+                        os.path.join(snpeff_data_dir_tmp, f) for f in zipf.namelist()
+                    ]
+                LOGGER.debug(f"Detect segment genome, all GBKs: {gbk_files}")
+            else:
+                # Single GBK file
+                gbk_file = os.path.join(snpeff_data_dir_tmp, f"{reference}.gbk")
+                os.makedirs(os.path.dirname(gbk_file), exist_ok=True)
+                with open(gbk_file, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                gbk_files = [gbk_file]
+
+            # Extract accession versions and organize files
+            replicon_accessions = []
+            for gbk_file in gbk_files:
+                with open(gbk_file, "r") as f:
+                    for line in f:
+                        if line.startswith("VERSION"):
+                            accession = line.split()[1]
+                            replicon_accessions.append(accession)
+                            break
+                # Create a folder for each replicon and move the file
+                replicon_dir = os.path.join(self.snpeff_data_dir, accession)
+                os.makedirs(replicon_dir, exist_ok=True)
+                shutil.move(gbk_file, os.path.join(replicon_dir, "genes.gbk"))
+            LOGGER.info(f"Replicon accession: {replicon_accessions}")
+
+            # Update snpEff.config with replicon accessions
+            for replicon_accession in replicon_accessions:
+                self.update_snpeff_config(replicon_accession)
+
+            # Build snpEff cache for each segment
+            for replicon_accession in replicon_accessions:
+                # get folder name from gbk_file since it represents an each accession
+                replicon_dir = os.path.join(self.snpeff_data_dir, replicon_accession)
+                _done_file = os.path.join(replicon_dir, ".done")
+                # Skip if already built
+                if os.path.exists(_done_file):
+                    LOGGER.info(
+                        f"snpEff cache for {replicon_accession} already exists, skipping..."
+                    )
+                    continue
+
+                cmd = [
+                    "snpEff",
+                    "build",
+                    "-nodownload",
+                    replicon_accession,
+                    "-genbank",
+                    "-dataDir",
+                    self.snpeff_data_dir,
+                ]
+
+                LOGGER.info(f"Building snpEff cache for {replicon_accession}")
+                try:
+                    subprocess.run(cmd, capture_output=True, check=True)
+                    # Mark this segment as done
+                    with open(_done_file, "w") as f:
+                        f.write("done")
+
+                except subprocess.CalledProcessError as e:
+                    LOGGER.error(
+                        f"Failed to build snpEff for {replicon_accession}: {e}"
+                    )
+                    sys.exit(1)
+
+            # remove tmp folder
+            shutil.rmtree(snpeff_data_dir_tmp)
+            LOGGER.info("----------- Done -----------")
             return True
         else:
             LOGGER.error(f"Cannot get genbank file for reference {reference}")
@@ -995,10 +1054,10 @@ class sonarCache:
 
         # Check if reference already exists
         if any(genome_entry in line for line in lines):
-            LOGGER.info(f"{reference} is already present in {config_file}.")
+            LOGGER.debug(f"{reference} is already present in {config_file}.")
         else:
             # Append new reference
             with open(config_file, "a") as f:
                 f.write(f"\n{genome_entry}\n")
 
-            LOGGER.info(f"Added '{genome_entry}' to {config_file}.")
+            LOGGER.debug(f"Added '{genome_entry}' to {config_file}.")

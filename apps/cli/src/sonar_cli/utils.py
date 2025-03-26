@@ -1165,16 +1165,25 @@ class sonarUtils:
         return modified_data
 
     @staticmethod
-    def add_ref_by_genebank_file(reference_gb, default_reference=False):
+    def add_ref_by_genebank_file(reference_gbs: List[str]):
         """
         add reference
         """
-        if default_reference:
-            reference_gb = sonarUtils.get_default_reference_gb()
-        _files_exist(reference_gb)
-        reference_gb_obj = open(reference_gb, "rb")
+        segment = False
+
+        reference_gb_obj = []
+        if len(reference_gbs) > 1:
+            segment = True
+            LOGGER.info(f"Detect segmented genome: {reference_gbs}")
+
+        for reference_gb in reference_gbs:
+            _files_exist(reference_gb)
+            reference_gb_obj.append(open(reference_gb, "rb"))
+
         try:
-            flag = APIClient(base_url=BASE_URL).post_add_reference(reference_gb_obj)
+            flag = APIClient(base_url=BASE_URL).post_add_reference(
+                reference_gb_obj, segment
+            )
 
             if flag:
                 LOGGER.info("The reference has been added successfully.")
