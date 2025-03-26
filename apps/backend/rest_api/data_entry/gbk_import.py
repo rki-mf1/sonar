@@ -28,11 +28,26 @@ from rest_api.serializers import ReferenceSerializer
 from rest_api.serializers import RepliconSerializer
 
 
-def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
-    file_path = _temp_save_file(uploaded_file)
-    records = list(SeqIO.parse(file_path, "genbank"))
+def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: int):
+    """
+    Import GenBank file. or Import multiple GenBank files as segments.
+
+    Args:
+        - uploaded_files (list): List of InMemoryUploadedFile objects.
+        - translation_id (int): ID for translation.
+    """
+    records = []
+    file_paths = []
+    for uploaded_file in uploaded_files:
+        file_path = _temp_save_file(uploaded_file)
+        file_paths.append(str(file_path))
+        records.extend(list(SeqIO.parse(file_path, "genbank")))
+
+    file_path_str = ", ".join(
+        file_paths
+    )  # join multiple file paths into a comma-space separated string
     records: list[SeqRecord.SeqRecord]
-    reference = _put_reference_from_record(records[0], translation_id, file_path)
+    reference = _put_reference_from_record(records[0], translation_id, file_path_str)
     with transaction.atomic():
         # record = complete gbk file
         for record in records:
@@ -90,7 +105,7 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 _create_gene_segments(gene_feature, gene_obj)
 
             # features with CDS qualifier
-            gene_id_to_cds_obj: dict[str, list(CDS)] = {}
+            gene_id_to_cds_obj: dict[str, list[CDS]] = {}
             cds_features = [
                 f
                 for f in record.features

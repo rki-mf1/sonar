@@ -392,7 +392,7 @@ class Reference(models.Model):
         - Ensures unique identifiers for name, accession, and db_xref.
     """
 
-    name = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    name = models.CharField(max_length=600, unique=True, blank=True, null=True)
     accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     description = models.CharField(max_length=400, blank=True, null=True)
     organism = models.CharField(max_length=50, blank=True, null=True)
