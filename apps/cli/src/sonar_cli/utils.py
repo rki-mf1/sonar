@@ -25,11 +25,15 @@ from sonar_cli.basic import _check_reference
 from sonar_cli.basic import _is_import_required
 from sonar_cli.basic import _log_import_mode
 from sonar_cli.basic import construct_query
+from sonar_cli.blast_ext import perform_blast_search_tsv_from_memory
+from sonar_cli.blast_ext import write_best_aln_csv
 from sonar_cli.cache import sonarCache
 from sonar_cli.common_utils import _files_exist
 from sonar_cli.common_utils import _get_csv_colnames
 from sonar_cli.common_utils import calculate_time_difference
 from sonar_cli.common_utils import clear_unnecessary_cache
+from sonar_cli.common_utils import copy_file
+from sonar_cli.common_utils import extract_filename
 from sonar_cli.common_utils import flatten_json_output
 from sonar_cli.common_utils import get_current_time
 from sonar_cli.common_utils import get_fname
@@ -68,7 +72,7 @@ class sonarUtils:
     # DATA IMPORT
 
     @staticmethod
-    def import_data(
+    def import_data(  # noqa: C901
         db: str,
         fasta: List[str] = [],
         csv_files: List[str] = [],
@@ -157,6 +161,25 @@ class sonarUtils:
 
         # importing sequences
         if fasta:
+
+            # Segment genome detection
+            if cache.blast_db is not None:
+                for fname in fasta:
+                    new_path = copy_file(fname, cache.blast_dir)
+                    best_alignments = perform_blast_search_tsv_from_memory(
+                        new_path, cache.blast_db
+                    )
+                    best_aln_path = os.path.join(
+                        cache.blast_dir,
+                        extract_filename(new_path, include_extension=False)
+                        + ".best_aln",
+                    )
+                    write_best_aln_csv(best_alignments, best_aln_path)
+                    cache.blast_best_aln[fname] = best_alignments
+                LOGGER.info(
+                    f"Blast Search Runtime: {calculate_time_difference(start_import_time, get_current_time())}"
+                )
+
             sonarUtils._import_fasta(
                 fasta,
                 cache,

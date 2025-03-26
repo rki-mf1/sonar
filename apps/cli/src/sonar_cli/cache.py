@@ -17,6 +17,7 @@ import zipfile
 
 import pandas as pd
 from sonar_cli.api_interface import APIClient
+from sonar_cli.blast_ext import create_blast_db
 from sonar_cli.common_utils import file_collision
 from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import harmonize_seq
@@ -100,6 +101,8 @@ class sonarCache:
         self.error_dir = os.path.join(self.basedir, "error")
         self.anno_dir = os.path.join(self.basedir, "anno")
         self.snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
+        self.blast_dir = os.path.join(self.basedir, "blast")
+
         os.makedirs(self.snpeff_data_dir, exist_ok=True)
         os.makedirs(self.seq_dir, exist_ok=True)
         os.makedirs(self.ref_dir, exist_ok=True)
@@ -143,6 +146,20 @@ class sonarCache:
                     "Could not retrieve the snpEff reference annotation from the sonar server. Aborting."
                 )
                 sys.exit(1)
+        # for segment genome
+        self.blast_db = None
+
+        if len(self.refmols) > 1:
+            LOGGER.info(
+                "Segment genome detect: creating BLAST database for assigning appropriate reference accession"
+            )
+            # BUILD BLAST DATABSE
+            os.makedirs(self.blast_dir, exist_ok=True)
+            self.blast_db = os.path.join(self.blast_dir, get_fname(self.refacc))
+            create_blast_db(self.refmols, self.blast_db)
+            self.blast_best_aln = (
+                dict()
+            )  # <-- example { fname: {'LC638384.1' (sampleID):'NC_026435.1' (repliconID) , 'LC778458.1':....} (dict) }
 
     def __enter__(self):
         return self

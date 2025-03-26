@@ -68,10 +68,21 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                 "sequence": str(source_feature.extract(record.seq)),
                 "reference": reference.id,
             }
+            # If the record has a segment number at the top level, use that
+            # else look at the source feature for segment number
             if "segment_number" in record.annotations:
-                replicon_data["segment_number"] = record.annotations[
-                    "segment_number"
-                ]  # TODO ?? id
+                replicon_data["segment_number"] = record.annotations["segment_number"]
+            else:
+                source_features = [f for f in record.features if f.type == "source"]
+
+                if (
+                    len(source_features) == 1
+                    and "segment" in source_features[0].qualifiers
+                ):
+                    replicon_data["segment_number"] = source_features[0].qualifiers[
+                        "segment"
+                    ][0]
+
             replicon = find_or_create(replicon_data, Replicon, RepliconSerializer)
             # features with gene qualifier
             gene_features = [
