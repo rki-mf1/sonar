@@ -326,10 +326,10 @@ export const useSamplesStore = defineStore('samples', {
             }
           },
         )
-        // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
+        // keep only those properties that have a coverage, i.e. that are not entirly empty
         // & drop the 'name' column because the ID column is fixed
         this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-          (key) => key !== 'name' && metaData[key] > 0,
+          (key) => key !== 'name' && metaData[key] == true,
         )
         this.propertyMenuOptions = [
           'name',
@@ -344,7 +344,6 @@ export const useSamplesStore = defineStore('samples', {
         ]
       } catch (error) {
         console.error('Failed to update property options:', error)
-        // Optionally, you can show a user-friendly message or take other actions
       }
     },
     async updateRepliconAccessionOptions() {

@@ -122,7 +122,7 @@ export type Statistics = {
   samples_total: number
   first_sample_date: string
   latest_sample_date: string
-  meta_data_coverage: { [key: string]: number }
+  meta_data_coverage: { [key: string]: boolean }
 }
 
 export type FilteredStatistics = {
