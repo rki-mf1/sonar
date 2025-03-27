@@ -223,7 +223,6 @@ class GeneViewSet(viewsets.ModelViewSet):
         elif replicon_id := request.query_params.get("replicon_id"):
             queryset = self.queryset.filter(replicon_id=replicon_id)
         elif replicon_acc := request.query_params.get("replicon_acc"):
-            print(replicon_acc)
             queryset = models.GeneSegment.objects.select_related(
                 "gene__replicon"
             ).filter(gene__replicon__accession=replicon_acc)
@@ -383,7 +382,6 @@ class ReferenceViewSet(
             # Fetch associated replicon accessions
             replicons = models.Replicon.objects.filter(reference=reference_obj)
             replicon_accessions = list(replicons.values_list("accession", flat=True))
-            print(replicon_accessions)
             if len(reference_files) == 1:
                 # Only one file, send it directly
                 reference_file = reference_files[0]

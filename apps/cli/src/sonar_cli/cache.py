@@ -117,7 +117,7 @@ class sonarCache:
         self._samples_dict = dict()
 
         self._refs = set()
-        self._lifts = None
+        self._lifts = {}
         self._cds = set()
         self._tt = set()
 
@@ -506,10 +506,7 @@ class sonarCache:
             data["liftfile"] = self.cache_lift(
                 refseq_acc, data["refmol"], self.get_refseq(data["refmol"])
             )
-            # if refseq_acc != "NC_026433.1":
-            #     print(refseq_acc)
-            #     print(data["refmol"])
-            #     print(data["liftfile"])
+
             # cache_cds is used for frameshift detection
             # but this will be removed soon, since we use snpEff.
             data["cdsfile"] = None  # self.cache_cds(refseq_acc, data["refmol"])
@@ -596,7 +593,10 @@ class sonarCache:
         """
         rows = []
         # cache self._lifts
-        if self._lifts is None:
+        if refmol_acc in self._lifts:
+            # Reuse the cached dataframe
+            return self._lifts[refmol_acc]
+        else:
             cols = [
                 "elemid",
                 "nucPos1",
@@ -613,7 +613,6 @@ class sonarCache:
                 "aaPos",
                 "aa",
             ]
-            print(refmol_acc)
             # if there is no cds, the lift file will not be generated
             for cds in self.iter_cds_v2(refmol_acc):
                 LOGGER.debug(cds)
@@ -658,10 +657,9 @@ class sonarCache:
             # df.to_pickle(fname)
 
             # for debug
-            # df.to_csv("new_lift_HIV" + ".csv")
-            self._lifts = df
-
-        return self._lifts
+            df.to_csv(f"new_{refmol_acc}" + ".csv")
+            self._lifts[refmol_acc] = df
+            return df
 
     def get_cds_fname(self, refid):
         return os.path.join(self.ref_dir, str(refid) + ".lcds")
@@ -705,6 +703,7 @@ class sonarCache:
             gene_rows = APIClient(base_url=self.base_url).get_elements(
                 ref_acc=refmol_acc
             )
+
         for row in gene_rows:
             for cds_entry in row["cds_list"]:  # Iterate through cds_list
 
