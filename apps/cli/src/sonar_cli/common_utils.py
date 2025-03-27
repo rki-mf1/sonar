@@ -410,3 +410,16 @@ def extract_filename(file_path, include_extension=True):
     # If not including extension, remove the extension
     filename, _ = os.path.splitext(filename_with_extension)
     return filename
+
+
+def flatten_list(nested_list):
+    """
+    Recursively flattens a deeply nested list into a one-dimensional list.
+    """
+    flat_list = []
+    for item in nested_list:
+        if isinstance(item, list):
+            flat_list.extend(flatten_list(item))
+        else:
+            flat_list.append(item)
+    return flat_list
