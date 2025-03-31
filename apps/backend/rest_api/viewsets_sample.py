@@ -350,9 +350,7 @@ class SampleViewSet(
             if field.concrete and not field.is_relation:
                 field_name = field.name
                 if field.get_internal_type() == "CharField":
-                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
-                        **{field_name: ""}
-                    )
+                    condition = ~Q(**{field_name: ""})
                 else:
                     condition = Q(**{f"{field_name}__isnull": False})
 
