@@ -121,8 +121,8 @@ class SampleViewSet(
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
-        response_dict["meta_data_coverage"] = (
-            SampleViewSet.get_meta_data_coverage_boolean(
+        response_dict["populated_metadata_fields"] = (
+            SampleViewSet.get_populated_metadata_fields(
                 queryset=models.Sample.objects.all()
             )
         )
@@ -325,7 +325,7 @@ class SampleViewSet(
                 yield writer.writerow(serialized["row"])
 
     @staticmethod
-    def get_meta_data_coverage_boolean(queryset):
+    def get_populated_metadata_fields(queryset):
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
@@ -350,7 +350,9 @@ class SampleViewSet(
             if field.concrete and not field.is_relation:
                 field_name = field.name
                 if field.get_internal_type() == "CharField":
-                    condition = ~Q(**{field_name: ""})
+                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
+                        **{field_name: ""}
+                    )
                 else:
                     condition = Q(**{f"{field_name}__isnull": False})
 
@@ -387,9 +389,9 @@ class SampleViewSet(
         result = queryset.annotate(**annotations).values(*annotations.keys()).first()
 
         return (
-            {key.replace("has_", ""): value for key, value in result.items()}
+            [k.replace("has_", "") for k in filter(result.get, result)]
             if result
-            else {}
+            else []
         )
 
     @staticmethod
