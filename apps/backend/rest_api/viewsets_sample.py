@@ -15,8 +15,11 @@ from dateutil.rrule import rrule
 from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
+from django.db.models import BooleanField
 from django.db.models import Case
+from django.db.models import CharField
 from django.db.models import Count
+from django.db.models import Exists
 from django.db.models import IntegerField
 from django.db.models import Min
 from django.db.models import OuterRef
@@ -24,6 +27,7 @@ from django.db.models import Prefetch
 from django.db.models import Q
 from django.db.models import QuerySet
 from django.db.models import Subquery
+from django.db.models import Value
 from django.db.models import When
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
@@ -117,6 +121,12 @@ class SampleViewSet(
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
+        response_dict["populated_metadata_fields"] = (
+            SampleViewSet.get_populated_metadata_fields(
+                queryset=models.Sample.objects.all()
+            )
+        )
+
         return response_dict
 
     @action(detail=False, methods=["get"])
@@ -314,89 +324,158 @@ class SampleViewSet(
             ).data:
                 yield writer.writerow(serialized["row"])
 
-    def _get_meta_data_coverage(self, queryset):
-        dict = {}
+    @staticmethod
+    def get_populated_metadata_fields(queryset):
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
-        annotations["not_null_count_genomic_profiles"] = Count(
-            Subquery(
-                models.Sample.objects.filter(
-                    sequence__alignments__nucleotide_mutations__isnull=False,
-                    id=OuterRef("id"),
-                ).values("id")[
-                    :1
-                ]  # Return only one to indicate existence
+
+        # check genomic profiles
+        annotations["has_genomic_profiles"] = Exists(
+            models.Sample.objects.filter(
+                sequence__alignments__nucleotide_mutations__isnull=False,
+                id=OuterRef("id"),
             )
         )
-        annotations["not_null_count_proteomic_profiles"] = Count(
-            Subquery(
-                models.Sample.objects.filter(
-                    sequence__alignments__amino_acid_mutations__isnull=False,
-                    id=OuterRef("id"),
-                ).values("id")[
-                    :1
-                ]  # Return only one to indicate existence
+
+        # check proteomic profiles
+        annotations["has_proteomic_profiles"] = Exists(
+            models.Sample.objects.filter(
+                sequence__alignments__amino_acid_mutations__isnull=False,
+                id=OuterRef("id"),
             )
         )
+
+        # check sample fields
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
                 field_name = field.name
                 if field.get_internal_type() == "CharField":
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        Case(
-                            When(
-                                Q(**{f"{field_name}__isnull": False})
-                                & ~Q(**{f"{field_name}": ""}),
-                                then=1,
-                            ),
-                            output_field=IntegerField(),
-                        )
+                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
+                        **{field_name: ""}
                     )
                 else:
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        Case(
-                            When(**{f"{field_name}__isnull": False}, then=1),
-                            output_field=IntegerField(),
-                        )
-                    )
-        property_to_datatype = {
-            property.name: property.datatype
-            for property in models.Property.objects.all()
-        }
-        property_names = PropertyViewSet.get_custom_property_names()
-        for property_name in property_names:
+                    condition = Q(**{f"{field_name}__isnull": False})
+
+                annotations[f"has_{field_name}"] = Case(
+                    When(condition, then=True),
+                    default=False,
+                    output_field=BooleanField(),
+                )
+
+        # check properties
+        property_to_datatype = dict(
+            models.Property.objects.values_list("name", "datatype")
+        )
+        for property_name in PropertyViewSet.get_custom_property_names():
+            datatype = property_to_datatype.get(property_name)
+            if not datatype:
+                LOGGER.warning(f"Property {property_name} not found")
+                continue
+
             try:
-                if property_name not in property_to_datatype:
-                    print(f"Property {property_name} not found")
-                    continue
-                datatype = property_to_datatype[property_name]
-                # Determine the exclusion value based on the datatype
-                annotations[f"not_null_count_{property_name}"] = Count(
-                    Subquery(
-                        models.Sample.objects.filter(
-                            properties__property__name=property_name,
-                            **{f"properties__{datatype}__isnull": False},
-                            id=OuterRef("id"),
-                        ).values("id")[:1]
+                annotations[f"has_{property_name}"] = Exists(
+                    models.Sample.objects.filter(
+                        id=OuterRef("id"),
+                        properties__property__name=property_name,
+                        **{f"properties__{datatype}__isnull": False},
                     )
                 )
-            except ValueError as e:
+            except Exception as e:
                 LOGGER.error(
-                    f"Error with property_name: {property_name}, datatype: {datatype}"
+                    f"Error processing property {property_name} (datatype: {datatype}): {e}"
                 )
-                LOGGER.error(f"Error message: {e}")
 
-        # Use the aggregate method with the dynamically created dictionary
+        # apply annotations and check existence (True/False)
+        result = queryset.annotate(**annotations).values(*annotations.keys()).first()
+
+        return (
+            [k.replace("has_", "") for k in filter(result.get, result)]
+            if result
+            else []
+        )
+
+    @staticmethod
+    def get_meta_data_coverage(queryset):
+        queryset = queryset.prefetch_related("properties__property")
+        annotations = {}
+
+        def add_annotation(name, filter_kwargs):
+            annotations[f"not_null_count_{name}"] = Count(
+                Case(
+                    When(
+                        Exists(
+                            models.Sample.objects.filter(
+                                id=OuterRef("id"), **filter_kwargs
+                            )
+                        ),
+                        then=1,
+                    ),
+                    output_field=IntegerField(),
+                )
+            )
+
+        # check genomic and proteomic profiles
+        add_annotation(
+            "genomic_profiles",
+            {"sequence__alignments__nucleotide_mutations__isnull": False},
+        )
+        add_annotation(
+            "proteomic_profiles",
+            {"sequence__alignments__amino_acid_mutations__isnull": False},
+        )
+
+        for field in models.Sample._meta.get_fields():
+            if field.concrete and not field.is_relation:
+                field_name = field.name
+                if field.get_internal_type() == "CharField":
+                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
+                        **{field_name: ""}
+                    )
+                else:
+                    condition = Q(**{f"{field_name}__isnull": False})
+
+                annotations[f"not_null_count_{field_name}"] = Count(
+                    Case(When(condition, then=1), output_field=IntegerField())
+                )
+
+        # mapping from property name to datatype
+        property_to_datatype = dict(
+            models.Property.objects.values_list("name", "datatype")
+        )
+        property_names = PropertyViewSet.get_custom_property_names()
+        # annotate custom properties based on datatype
+        for property_name in property_names:
+            datatype = property_to_datatype.get(property_name)
+            if not datatype:
+                LOGGER.warning(f"Property {property_name} not found")
+                continue
+            try:
+                annotations[f"not_null_count_{property_name}"] = Count(
+                    Case(
+                        When(
+                            Exists(
+                                models.Sample.objects.filter(
+                                    id=OuterRef("id"),
+                                    properties__property__name=property_name,
+                                    **{f"properties__{datatype}__isnull": False},
+                                )
+                            ),
+                            then=1,
+                        ),
+                        output_field=IntegerField(),
+                    )
+                )
+            except Exception as e:
+                LOGGER.error(
+                    f"Error with property {property_name} (datatype: {datatype}): {e}"
+                )
+
         result = queryset.aggregate(**annotations)
-
-        # Print or use the result
-        dict = {
+        return {
             key.replace("not_null_count_", ""): value
             for key, value in result.items()
-            if key.startswith("not_null_count")
+            if key.startswith("not_null_count_")
         }
-
-        return dict
 
     def _get_genomecomplete_chart(self, queryset):
         result_dict = {}
@@ -656,6 +735,8 @@ class SampleViewSet(
         # Construct the final result with percentages
         result = []
         for item in weekly_data:
+            if item["week"] is None:
+                continue
             week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
             percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
             result.append(
@@ -668,44 +749,128 @@ class SampleViewSet(
 
         return result
 
+    def get_weekly_lineage_grouped_percentage_bar_chart(self, queryset):
+
+        present_lineages = {entry["lineage"] for entry in queryset.values("lineage")}
+
+        # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
+        lineage_groups = {
+            ".".join(lineage.split(".")[:2])
+            for lineage in present_lineages
+            if lineage is not None
+        }
+        lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
+
+        # build mapping from sublineage to lineage_group
+        lineage_to_group = {}
+        for lineage_group in lineage_groups_model:
+            for sublineage in lineage_group.get_sublineages():
+                if sublineage.name in present_lineages:
+                    lineage_to_group[sublineage.name] = lineage_group.name
+
+        # map lineages in data to groups using django conditions
+        lineage_cases = [
+            When(lineage=lineage, then=Value(group))
+            for lineage, group in lineage_to_group.items()
+        ]
+        # annotate queryset with lineage_group
+        queryset = queryset.annotate(
+            lineage_group=Case(
+                *lineage_cases,
+                default=Value("Unknown"),
+                output_field=CharField(),
+            )
+        )
+
+        weekly_data = (
+            queryset.values("year", "week", "lineage_group")
+            .annotate(lineage_count=Count("lineage_group"))
+            .order_by("year", "week", "lineage_group")
+        )
+
+        week_totals = {
+            item["week"]: item["total_count"]
+            for item in queryset.values("week")
+            .annotate(total_count=Count("id"))
+            .order_by("week")
+        }
+
+        result = []
+        for item in weekly_data:
+            if item["week"] is None:
+                continue
+            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
+            percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
+            result.append(
+                {
+                    "week": week_str,
+                    "lineage_group": item["lineage_group"],
+                    "count": item["lineage_count"],
+                    "percentage": round(percentage, 2),
+                }
+            )
+
+        return result
+
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-        queryset = queryset.annotate(
-            lineage_parent=Subquery(
-                models.Lineage.objects.filter(name=OuterRef("lineage")).values(
-                    "parent"
-                )[:1]
-            )
-        )
-        queryset = queryset.extra(
-            select={
-                "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                "month": 'EXTRACT(\'month\' FROM "sample"."collection_date")',
-                "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-            }
-        )
-        dict = {}
-        dict["filtered_total_count"] = queryset.count()
-        dict["meta_data_coverage"] = self._get_meta_data_coverage(queryset)
-        dict["samples_per_week"] = self._get_samples_per_week(queryset)
-        dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
 
-        # dict["lineage_area_chart"] = self.get_monthly_lineage_percentage_area_chart(queryset)
-        dict["lineage_area_chart"] = (
-            self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
+        result_dict = {}
+        result_dict["filtered_total_count"] = queryset.count()
+
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def filtered_statistics_plots(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+
+        result_dict = {}
+        # check if queryset has any records with a collection_date -> if not, return empty object
+        if not queryset.filter(collection_date__isnull=False).exists():
+            result_dict["samples_per_week"] = {}
+            result_dict["lineage_area_chart"] = {}
+            result_dict["lineage_bar_chart"] = {}
+            result_dict["lineage_grouped_bar_chart"] = {}
+        else:
+            queryset = queryset.annotate(
+                lineage_parent=Subquery(
+                    models.Lineage.objects.filter(name=OuterRef("lineage")).values(
+                        "parent"
+                    )[:1]
+                )
+            )
+            queryset = queryset.extra(
+                select={
+                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
+                    "month": 'EXTRACT(\'month\' FROM "sample"."collection_date")',
+                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
+                }
+            )
+            result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
+            result_dict["lineage_area_chart"] = (
+                self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
+            )
+            result_dict["lineage_bar_chart"] = (
+                self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
+            )
+            result_dict["lineage_grouped_bar_chart"] = (
+                self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
+            )
+
+        result_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
+            queryset
         )
-        dict["lineage_bar_chart"] = (
-            self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
-        )
-        dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
-        dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
-        dict["sample_type"] = self._get_sampleType_chart(queryset)
-        dict["host"] = self._get_host_chart(queryset)
-        dict["length"] = self._get_length_chart(queryset)
-        dict["lab"] = self._get_lab_chart(queryset)
-        dict["zip_code"] = self._get_zip_code_chart(queryset)
-        return Response(data=dict)
+        result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
+        result_dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
+        result_dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
+        result_dict["sample_type"] = self._get_sampleType_chart(queryset)
+        result_dict["host"] = self._get_host_chart(queryset)
+        result_dict["length"] = self._get_length_chart(queryset)
+        result_dict["lab"] = self._get_lab_chart(queryset)
+        result_dict["zip_code"] = self._get_zip_code_chart(queryset)
+
+        return Response(data=result_dict)
 
     def resolve_genome_filter(self, filters) -> Q:
         q_obj = Q()

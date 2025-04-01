@@ -75,7 +75,9 @@
             label="&nbsp;Set Advanced Filters"
             severity="warning"
             raised
-            :style="{ border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)' }"
+            :style="{
+              border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
+            }"
             @click="displayDialogFilter = true"
           />
           <PrimeButton
@@ -83,7 +85,7 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{ border: samplesStore.filtersChanged ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)' }"
+            :disabled="samplesStore.filtersChanged ? false : true"
             @click="updateSamplesInTableAndFilteredStatistics()"
           >
           </PrimeButton>
@@ -116,7 +118,7 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+            :disabled="samplesStore.filtersChanged ? false : true"
             @click="closeAdvancedFilterDialogAndUpdate"
           >
           </PrimeButton>
@@ -167,8 +169,8 @@
                 <p class="m-0">
                   gte = "greater than or equal" <br />
                   Example:
-                  <PrimeChip label="15" /> will filter records where the value is greater than or equal
-                  to 15.
+                  <PrimeChip label="15" /> will filter records where the value is greater than or
+                  equal to 15.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: lt">
@@ -182,8 +184,8 @@
                 <p class="m-0">
                   lte = "less than or equal" <br />
                   Example:
-                  <PrimeChip label="25" /> will filter records where the value is less than or equal to
-                  25.
+                  <PrimeChip label="25" /> will filter records where the value is less than or equal
+                  to 25.
                 </p>
               </AccordionTab>
               <AccordionTab header="Operator: range">
@@ -328,12 +330,13 @@ export default {
     },
     closeAdvancedFilterDialogAndUpdate() {
       if (this.samplesStore.filtersChanged) {
+        this.displayDialogFilter = false
         this.samplesStore.updateSamples()
         this.samplesStore.updateFilteredStatistics()
+        if (this.$route.name === 'Plots') {
+          this.samplesStore.updateFilteredStatisticsPlots()
+        }
       }
-      this.displayDialogFilter = false
-      this.samplesStore.updateSamples()
-      this.samplesStore.updateFilteredStatistics()
     },
     toggleHelp(event: Event) {
       const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as {
@@ -348,6 +351,9 @@ export default {
     },
     updateSamplesInTableAndFilteredStatistics() {
       this.samplesStore.updateFilteredStatistics()
+      if (this.$route.name === 'Plots') {
+        this.samplesStore.updateFilteredStatisticsPlots()
+      }
       return this.samplesStore.updateSamples()
     },
     async setDefaultTimeRange() {

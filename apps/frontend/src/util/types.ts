@@ -117,14 +117,26 @@ export type LineageBarChartData = {
   week: string
   percentage: number
 }
-// TODO: too unflexibel, change to more flexible structure allowing different properties
+
+export type Statistics = {
+  samples_total: number
+  first_sample_date: string
+  latest_sample_date: string
+  populated_metadata_fields: string[]
+}
+
 export type FilteredStatistics = {
   filtered_total_count: number
-  meta_data_coverage: { [key: string]: number }
+}
+
+// TODO: too unflexibel, change to more flexible structure allowing different properties
+export type FilteredStatisticsPlots = {
   samples_per_week: { [key: string]: number }
+  meta_data_coverage: { [key: string]: number }
   genomecomplete_chart: { [key: string]: number }
   lineage_area_chart: Array<{ date: string; lineage: string; percentage: number }>
   lineage_bar_chart: LineageBarChartData[]
+  lineage_grouped_bar_chart: Array<{ week: string; lineage_group: string; percentage: number }>
   sequencing_tech: { [key: string]: number }
   sequencing_reason: { [key: string]: number }
   sample_type: { [key: string]: number }
@@ -140,15 +152,15 @@ export type CustomPercentageLabelsOptions = {
 }
 
 export type RowSelectEvent<T = unknown> = {
-  data: T;
-  index: number;
-  originalEvent: Event;
-  type: string;
+  data: T
+  index: number
+  originalEvent: Event
+  type: string
 }
 
 export type SelectedRowData = {
-  name: string;
-  properties: never[];
-  genomic_profiles:  {[variant: string]: string[]};
-  proteomic_profiles: string[];
+  name: string
+  properties: never[]
+  genomic_profiles: { [variant: string]: string[] }
+  proteomic_profiles: string[]
 }

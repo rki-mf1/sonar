@@ -1,8 +1,8 @@
-import type {FilterGroupRoot } from '@/util/types'
+import type { FilterGroupRoot } from '@/util/types'
 import axios from 'axios'
 import { saveAs } from 'file-saver'
 import qs from 'qs'
-import * as ExcelJS from 'exceljs';
+import * as ExcelJS from 'exceljs'
 
 export default class API {
   CODE_OK = 200
@@ -91,6 +91,13 @@ export default class API {
     const url = `samples/filtered_statistics/${queryString}`
     return this.getRequest(url, {} as JSON, false)
   }
+
+  getFilteredStatisticsPlots(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/filtered_statistics_plots/${queryString}`
+    return this.getRequest(url, {} as JSON, false)
+  }
+
   async getSampleGenomesExport(
     params: FilterGroupRoot,
     columns: string[],
@@ -136,7 +143,7 @@ export default class API {
   }
 
   async saveAsXLSX(reader: ReadableStreamDefaultReader<string>, columns: string[]) {
-    const workbook = new ExcelJS.Workbook();
+    const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Sheet 1')
     worksheet.columns = columns.map((c) => ({ header: c, key: c, width: 20 }))
     let data = '' as string

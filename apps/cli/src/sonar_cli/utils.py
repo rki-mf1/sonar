@@ -6,6 +6,7 @@ import os
 import pickle
 import sys
 import time
+import traceback
 from typing import Any
 from typing import Dict
 from typing import Iterator
@@ -33,7 +34,7 @@ from sonar_cli.common_utils import flatten_json_output
 from sonar_cli.common_utils import get_current_time
 from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import out_autodetect
-from sonar_cli.common_utils import read_var_file
+from sonar_cli.common_utils import read_var_parquet_file
 from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
@@ -84,6 +85,8 @@ class sonarUtils:
         method: int = 1,
         no_upload_sample: bool = False,
         include_nx: bool = True,
+        debug: bool = False,
+        must_pass_paranoid: bool = False,
     ) -> None:
         """Import data from various sources into the database.
 
@@ -133,8 +136,6 @@ class sonarUtils:
                 )
                 sys.exit(1)
             sample_id_column = properties["name"]
-            del properties["name"]
-
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
@@ -142,7 +143,6 @@ class sonarUtils:
                     "Cannot link ID. Please provide a mapping ID in the meta file, add --cols name=(column ID/sample name) to the command line."
                 )
                 sys.exit(1)
-
         # setup cache
         cache = sonarUtils._setup_cache(
             db=db,
@@ -150,26 +150,27 @@ class sonarUtils:
             cachedir=cachedir,
             update=update,
             progress=progress,
+            debug=debug,
             include_nx=include_nx,
+            auto_anno=auto_anno,
         )
 
         # importing sequences
         if fasta:
             sonarUtils._import_fasta(
                 fasta,
-                properties,
                 cache,
                 threads,
                 progress,
                 method,
-                auto_anno,
                 no_upload_sample,
+                must_pass_paranoid,
             )
 
         # importing properties
         if csv_files or tsv_files:
             if len(properties) == 0:
-                LOGGER.warn(
+                LOGGER.warning(
                     "Skip sending properties: no column in the file is mapped to the corresponding variables in the database."
                 )
             else:
@@ -205,6 +206,7 @@ class sonarUtils:
         progress: bool = False,
         debug: bool = False,
         include_nx: bool = True,
+        auto_anno: bool = False,
     ) -> sonarCache:
         """Set up a cache for sequence data."""
         # Instantiate a sonarCache object.
@@ -218,18 +220,18 @@ class sonarUtils:
             disable_progress=not progress,
             refacc=reference,
             include_nx=include_nx,
+            auto_anno=auto_anno,
         )
 
     @staticmethod
     def _import_fasta(  # noqa: C901
         fasta_files: List[str],
-        properties: Dict,
         cache: sonarCache,
         threads: int = 1,
         progress: bool = False,
         method: int = 1,
-        auto_anno: bool = False,
         no_upload_sample: bool = False,
+        must_pass_paranoid: bool = False,
     ) -> None:
         """
         Process and import sequences from fasta files.
@@ -261,13 +263,17 @@ class sonarUtils:
 
         # Align sequences and process
         aligner = sonarAligner(
-            cache_outdir=cache.basedir, method=method, allow_updates=cache.allow_updates
+            cache_outdir=cache.basedir,
+            method=method,
+            allow_updates=cache.allow_updates,
+            debug=cache.debug,
         )
-        l = len(cache._samplefiles_to_profile)
+        l = cache._samplefiles_to_profile
         LOGGER.info(f"Total samples that need to be processed: {l}")
         if l == 0:
             return
         start_align_time = get_current_time()
+        passed_align_samples = []
         with (
             WorkerPool(n_jobs=threads, start_method="fork") as pool,
             tqdm(
@@ -283,6 +289,8 @@ class sonarUtils:
                     aligner.process_cached_sample, sample_data_dict_list
                 ):
                     try:
+                        if sample_data:  # Ignore None results
+                            passed_align_samples.append(sample_data)
                         pbar.update(1)
                     except Exception as e:
                         LOGGER.error(
@@ -292,7 +300,9 @@ class sonarUtils:
             except Exception as outer_exception:
                 LOGGER.error(f"Error in multiprocessing pool: {outer_exception}")
                 sys.exit(1)
-
+        LOGGER.info(
+            f"Number of samples that passed alignment: {len(passed_align_samples)}"
+        )
         LOGGER.info(
             f"[runtime] Alignment: {calculate_time_difference(start_align_time, get_current_time())}"
         )
@@ -302,7 +312,7 @@ class sonarUtils:
 
         start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples(
-            sample_data_dict_list
+            passed_align_samples, must_pass_paranoid
         )
         LOGGER.info(
             f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}"
@@ -317,7 +327,7 @@ class sonarUtils:
             )
             for i in range(0, len(passed_samples_list), n)
         ]
-        if auto_anno:
+        if cache.auto_anno:
             anno_result_list = []
             start_anno_time = get_current_time()
             try:
@@ -341,8 +351,9 @@ class sonarUtils:
                         },
                     )
             except Exception as e:
+                tb = traceback.format_exc()
                 LOGGER.error(
-                    f"Annotation process failed with error: {e}, abort all workers"
+                    f"Annotation process failed with error: {e}, abort all workers. Traceback:\n{tb}"
                 )
                 # Abort all pool workers
                 pool.terminate()  # Or pool.close()
@@ -396,18 +407,20 @@ class sonarUtils:
                     sleep_time = 3
                     time.sleep(sleep_time)
 
-            if auto_anno:
+            if cache.auto_anno:
 
-                for each_file in tqdm(
-                    anno_result_list,
-                    desc="Uploading and importing annotations",
-                    unit="file",
-                    bar_format=bar_format,
-                    position=0,
-                    disable=not progress,
+                for chunk_number, each_file in enumerate(
+                    tqdm(
+                        anno_result_list,
+                        desc="Uploading and importing annotations",
+                        unit="file",
+                        bar_format=bar_format,
+                        position=0,
+                        disable=not progress,
+                    )
                 ):
                     sonarUtils.zip_import_upload_annotation_singlethread(
-                        cache_dict, each_file
+                        cache_dict, each_file, chunk_number
                     )
 
             LOGGER.info(
@@ -426,7 +439,9 @@ class sonarUtils:
         )
 
     @staticmethod
-    def zip_import_upload_annotation_singlethread(shared_objects: dict, file_path):
+    def zip_import_upload_annotation_singlethread(
+        shared_objects: dict, file_path, chunk_number: int
+    ):
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
@@ -444,8 +459,11 @@ class sonarUtils:
             "zip_file": compressed_data,
         }
 
+        job_id = shared_objects["job_id"]
+        job_with_chunk = f"{job_id}_chunk{chunk_number}"
+        LOGGER.debug(f"Uploading mutation annotations (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
-            files, job_id=shared_objects["job_id"]
+            files, job_id=job_with_chunk
         )
         msg = json_response["detail"]
         if msg != "File uploaded successfully":
@@ -459,7 +477,7 @@ class sonarUtils:
 
         files_to_compress = []
         for kwargs in sample_list:
-            var_file = kwargs["var_file"]
+            var_parquet_file = kwargs["var_parquet_file"]
             sample_dict = kwargs
 
             # Serialize the sample dictionary to bytes
@@ -468,11 +486,11 @@ class sonarUtils:
             # Append the serialized sample dictionary to the files to compress
             files_to_compress.append(
                 (
-                    f"samples/{get_fname(kwargs['name'], extension='.sample',enable_parent_dir=True)}",
+                    f"samples/{get_fname(kwargs['name'], extension='.sample', enable_parent_dir=True)}",
                     sample_bytes,
                 )
             )
-            files_to_compress.append(var_file)
+            files_to_compress.append(var_parquet_file)
 
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
@@ -499,7 +517,7 @@ class sonarUtils:
         }
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
-        LOGGER.debug(f"Uploading job_id: {job_with_chunk}")
+        LOGGER.debug(f"Uploading mutation profiles (job_id: {job_with_chunk})")
         json_response = APIClient(base_url=BASE_URL).post_import_upload(
             files, job_id=job_with_chunk
         )
@@ -509,12 +527,11 @@ class sonarUtils:
             LOGGER.error(msg)
 
     @staticmethod
-    def _import_properties(
+    def _import_properties(  # noqa: C901
         sample_id_column: str,
-        properties: Dict[str, Dict[str, str]],
-        # db: str,
-        csv_files: str,
-        tsv_files: str,
+        properties: Dict[str, Dict[str, str] | str],
+        csv_files: List[str],
+        tsv_files: List[str],
         progress: bool,
     ):
         """
@@ -529,10 +546,11 @@ class sonarUtils:
         """
         start_time = get_current_time()
 
-        json_resp = APIClient(base_url=BASE_URL).get_jobID(is_prop_job=True)
-        job_id = json_resp["job_id"]
         all_files = tsv_files + csv_files
+        job_ids = []
 
+        filtered_properties = {k: v for k, v in properties.items() if k != "name"}
+        columns_to_use = list(filtered_properties.keys()) + [sample_id_column]
         # Create an in-memory ZIP file
         for _file in all_files:
             LOGGER.info(f"Processing file: {_file}")
@@ -544,6 +562,7 @@ class sonarUtils:
                 sep="\t" if file_extension == ".tsv" else ",",
                 dtype="string",
                 chunksize=PROP_CHUNK_SIZE,
+                usecols=columns_to_use,
             )
             chunk_num = 0
             for chunk in tqdm(
@@ -577,15 +596,17 @@ class sonarUtils:
                 zip_buffer.seek(0)
 
                 # Prepare data for the API call
+                job_id = APIClient(base_url=BASE_URL).get_jobID(is_prop_job=True)[
+                    "job_id"
+                ]
                 file = {"zip_file": ("properties.zip", zip_buffer, "application/zip")}
                 data = {
                     "sample_id_column": sample_id_column,
-                    "column_mapping": json.dumps(properties),
+                    "column_mapping": json.dumps(filtered_properties),
                     "job_id": job_id,
                 }
 
                 # Send the chunk to the backend
-                # LOGGER.info("Uploading chunk...")
                 json_response = APIClient(base_url=BASE_URL).post_import_upload(
                     data=data, files=file
                 )
@@ -595,18 +616,32 @@ class sonarUtils:
                     LOGGER.error(msg)
                     return
                 else:
-                    continue
-                    # LOGGER.info(f"Chunk {chunk_num} from {_file} uploaded successfully.")
+                    job_ids.extend([job_id])
         # Final status checking
         LOGGER.info(f"All chunks for job {job_id} uploaded. Monitoring job status...")
         job_status = None
         sleep_time = 2
 
-        while job_status not in ["C", "F"]:
-            resp = APIClient(base_url=BASE_URL).get_job_byID(job_id)
-            job_status = resp["status"]
-            if job_status in ["Q", "IP"]:
-                LOGGER.info(f"Job {job_id} is {job_status}.")
+        # Wait for all chunk to be processed
+        incomplete_jobs = set(job_ids)
+        while len(incomplete_jobs) > 0:
+            # We make a copy because we can't modify a set that is being
+            # iterated through
+            jobs_tmp = incomplete_jobs.copy()
+            for job in jobs_tmp:
+                resp = APIClient(base_url=BASE_URL).get_job_byID(job)
+                job_status = resp["status"]
+                if job_status in ["Q", "IP"]:
+                    next
+                if job_status == "F":
+                    LOGGER.error(f"Job {job} failed (status={job_status}). Aborting.")
+                    sys.exit(1)
+                if job_status == "C":
+                    incomplete_jobs.remove(job)
+            if len(incomplete_jobs) > 0:
+                LOGGER.debug(
+                    f"Waiting for {len(incomplete_jobs)} chunks to finish being processed."
+                )
                 time.sleep(sleep_time)
 
         time_diff = calculate_time_difference(start_time, get_current_time())
@@ -638,39 +673,40 @@ class sonarUtils:
 
         Returns:
         - Dict[str, str]: Dictionary mapping column names to property details.
+
+        Note:
+            "name" key is special case, we use this to link the sample ID.
         """
         propnames = {}
 
         listofkeys, values_listofdict = sonarUtils.get_all_properties()
         prop_df = pd.DataFrame(values_listofdict, columns=listofkeys)
 
+        # get column names from the files
+        file_tuples = [(x, ",") for x in csv_files] + [(x, "\t") for x in tsv_files]
+        col_names_fromfile = {}
+        for fname, delim in file_tuples:
+            col_names_fromfile[fname] = _get_csv_colnames(fname, delim)
         if autolink:
             LOGGER.info(
                 "Auto-link is enabled, automatically linking columns in the file to existing properties in the database."
             )
-            file_tuples = [(x, ",") for x in csv_files] + [(x, "\t") for x in tsv_files]
-            col_names_fromfile = []
-            for fname, delim in file_tuples:
-                col_names_fromfile.extend(_get_csv_colnames(fname, delim))
-
             # Case insensitive linking (SAMPLE_TYPE = sample_type)
-            col_names_fromfile = list(set(col_names_fromfile))
-            for col_name in col_names_fromfile:
-                _row_df = prop_df[
-                    prop_df["name"].str.contains(
-                        col_name, na=False, case=False, regex=False
-                    )
-                ]
+            for fname, col_names in col_names_fromfile.items():
+                for col_name in col_names:
+                    _row_df = prop_df[
+                        prop_df["name"].str.fullmatch(col_name, na=False, case=False)
+                    ]
 
-                if not _row_df.empty:
-                    query_type = _row_df["query_type"].values[0]
-                    name = _row_df["name"].values[0]
-                    default = _row_df["default"].values[0]
-                    propnames[col_name] = {
-                        "db_property_name": name,
-                        "data_type": query_type,
-                        "default": default,
-                    }
+                    if not _row_df.empty:
+                        query_type = _row_df["query_type"].values[0]
+                        name = _row_df["name"].values[0]
+                        default = _row_df["default"].values[0]
+                        propnames[col_name] = {
+                            "db_property_name": name,
+                            "data_type": query_type,
+                            "default": default,
+                        }
 
             # Handle sample ID linking
             for link in prop_links:
@@ -707,6 +743,41 @@ class sonarUtils:
                     LOGGER.warning(
                         f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
                     )
+        # Check if columns exist in the provided CSV/TSV files
+        # only existing columns shall pass
+        valid_propnames = {}
+
+        for col, prop_info in propnames.items():
+            if col == "name":
+                # Check if 'ID' exists in the provided CSV/TSV files
+                valid_propnames[col] = prop_info
+                id_column = prop_info
+                missing_in_files = [
+                    fname
+                    for fname, cols in col_names_fromfile.items()
+                    if id_column not in cols
+                ]
+                if missing_in_files:
+                    LOGGER.error(
+                        f"Mapping ID column '{id_column}' does not exist in the provided files: {', '.join(missing_in_files)}."
+                    )
+                    sys.exit(
+                        1
+                    )  # this will stop the whole prop-import process or just continue??
+            else:
+                missing_in_files = [
+                    fname
+                    for fname, cols in col_names_fromfile.items()
+                    if col not in cols
+                ]
+                if not missing_in_files:
+                    valid_propnames[col] = prop_info
+                else:
+                    LOGGER.warning(
+                        f"Column '{col}' does not exist in the provided files: {', '.join(missing_in_files)}."
+                    )
+
+        propnames = valid_propnames
 
         LOGGER.info("Displaying property mappings:")
         LOGGER.info("(Input table column name -> Sonar database property name)")
@@ -726,6 +797,8 @@ class sonarUtils:
         worker_id, shared_objects: sonarCache, *sample_list
     ):  # **kwargs):
         """
+        NOTE: The _unique_name will be changed if the sample_list size changed or
+        sample's name changed, so the exist checking will be fail.
 
         kwargs are sample dict object
         """
@@ -765,7 +838,8 @@ class sonarUtils:
                 cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
             )
             filtered_vcf = os.path.join(
-                cache.anno_dir, get_fname(_unique_name, extension=".filtered.anno.vcf")
+                cache.anno_dir,
+                get_fname(_unique_name, extension=".filtered.anno.vcf.gz"),
             )
             if cache.allow_updates is False:
                 if os.path.exists(filtered_vcf):
@@ -802,7 +876,8 @@ class sonarUtils:
             if os.path.exists(merged_anno_vcf):
                 os.remove(merged_anno_vcf)
         except Exception as e:
-            LOGGER.error(f"Worker {worker_id} stopped: {e}")
+            tb = traceback.format_exc()
+            LOGGER.error(f"Worker {worker_id} stopped: {e}. Traceback: {tb}")
             raise  # Raise to ensure the failure is propagated back to the worker pool
         return filtered_vcf
 
@@ -1035,7 +1110,7 @@ class sonarUtils:
         cursor: object
             if from_var_file is False
                 The rows object which already has been fetched data.
-            eles if from_var_file is True
+            else if from_var_file is True
 
 
         reference: The reference genome name.
@@ -1051,7 +1126,7 @@ class sonarUtils:
             refernce_sequence = _dict["sequence"]
 
             if from_var_file:
-                records, all_samples = _get_vcf_data_form_var_file(
+                records, all_samples = _get_vcf_data_form_var_parquet_file(
                     cursor, refernce_sequence, showNX
                 )
             else:
@@ -1090,7 +1165,7 @@ class sonarUtils:
         return modified_data
 
     @staticmethod
-    def add_ref_by_genebank_file(reference_gb, debug=False, default_reference=False):
+    def add_ref_by_genebank_file(reference_gb, default_reference=False):
         """
         add reference
         """
@@ -1111,20 +1186,19 @@ class sonarUtils:
             raise
 
     @staticmethod
-    def delete_reference(reference, debug):
+    def delete_reference(reference):
         LOGGER.info("Start to delete....the process is not reversible.")
 
         # delete only reference will also delete the whole linked data.
-        """
-        if samples_ids:
-            if debug:
-                logging.info(f"Delete: {samples_ids}")
-            for sample in samples_ids:
-                # dbm.delete_seqhash(sample["seqhash"])
-                dbm.delete_alignment(
-                    seqhash=sample["seqhash"], element_id=_ref_element_id
-                )
-        """
+        # if samples_ids:
+        #    if debug:
+        #        logging.info(f"Delete: {samples_ids}")
+        #    for sample in samples_ids:
+        #        # dbm.delete_seqhash(sample["seqhash"])
+        #        dbm.delete_alignment(
+        #            seqhash=sample["seqhash"], element_id=_ref_element_id
+        #        )
+
         json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
 
         LOGGER.info(
@@ -1187,7 +1261,7 @@ class sonarUtils:
         LOGGER.info(json_response["detail"])
 
 
-def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
+def _get_vcf_data_form_var_parquet_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
     """
     Creates a data structure with records from a database cursor.
 
@@ -1203,27 +1277,30 @@ def _get_vcf_data_form_var_file(cursor: dict, selected_ref_seq, showNX) -> Dict:
         lambda: collections.defaultdict(lambda: collections.defaultdict(dict))
     )
 
-    rows = read_var_file(cursor["var_file"], exclude_var_type="cds", showNX=showNX)
+    rows = read_var_parquet_file(
+        cursor["var_parquet_file"], exclude_var_type="cds", showNX=showNX
+    )
     sample_name = cursor["name"]
     all_samples = set(sample_name.split("\t"))
 
     for row in rows:
         try:
-            if row["variant.start"] - 1 < 0:
+            if row["start"] - 1 < 0:
                 pre_ref = ""
             else:
-                pre_ref = selected_ref_seq[row["variant.start"] - 1]
+                pre_ref = selected_ref_seq[row["start"] - 1]
         except Exception as e:
             LOGGER.error(e)
             raise
 
         # Split out the data from each row
-        chrom, pos, pre_ref, ref, alt = (
-            row["variant.reference"],
-            row["variant.start"],
+        chrom, pos, pre_ref, ref, alt, _ = (
+            row["reference_acc"],
+            row["start"],
             pre_ref,
-            row["variant.ref"],
-            row["variant.alt"],
+            row["ref"],
+            row["alt"],
+            sample_name,
         )
 
         # POS position in VCF format: 1-based position
@@ -1259,10 +1336,10 @@ def _get_vcf_data(cursor) -> Dict:
         # Split out the data from each row
         chrom, pos, pre_ref, ref, alt, samples = (
             row["molecule.accession"],
-            row["variant.start"],
-            row["variant.pre_ref"],
-            row["variant.ref"],
-            row["variant.alt"],
+            row["start"],
+            row["pre_ref"],
+            row["ref"],
+            row["alt"],
             row["samples"],
         )
 

@@ -1,10 +1,13 @@
+import concurrent
 import hashlib
 from itertools import zip_longest
 import os
+from queue import Queue
 import re
 import shutil
 import subprocess
 import sys
+import threading
 import traceback
 from typing import Any
 from typing import Dict
@@ -27,7 +30,6 @@ from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
 from tqdm import tqdm
 
-
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
 
@@ -48,6 +50,7 @@ class sonarCache:
         debug: bool = False,
         disable_progress: bool = False,
         include_nx: bool = True,
+        auto_anno: bool = False,
     ):
         """
         Initialize the sonarCache object.
@@ -62,6 +65,7 @@ class sonarCache:
             temp (bool): Whether to set cache dir temporary or not.
             disable_progress (bool): Whether to disable progress display or not.
         """
+        self.result_queue = Queue()
         self.base_url = db if db else BASE_URL
         self.allow_updates = allow_updates
         self.debug = debug
@@ -77,8 +81,6 @@ class sonarCache:
         if not self.refmols:
             LOGGER.info(f"Cannot find reference: {self.refacc}")
             sys.exit()
-        if self.debug:
-            LOGGER.info(f"Init refmols: {self.refmols}")
         self.default_refmol_acc = [x for x in self.refmols][0]
 
         self._molregex = re.compile(r"\[molecule=([^\[\]=]+)\]")
@@ -110,7 +112,7 @@ class sonarCache:
 
         self._samplefiles = set()
         self.sampleinput_total = 0
-        self._samplefiles_to_profile = set()
+        self._samplefiles_to_profile = 0
         self._samples_dict = dict()
 
         self._refs = set()
@@ -133,7 +135,15 @@ class sonarCache:
                 open(self.error_logfile_name, "a+") if logfile else None
             )
         self.include_nx = include_nx
-        self.isBuilt_snpEffcache = self.build_snpeff_cache(reference=self.refacc)
+        self.auto_anno = auto_anno
+        if self.auto_anno:
+            self.isBuilt_snpEffcache = self.build_snpeff_cache(reference=self.refacc)
+
+            if not self.isBuilt_snpEffcache:
+                LOGGER.error(
+                    "Could not retrieve the snpEff reference annotation from the sonar server. Aborting."
+                )
+                sys.exit(1)
 
     def __enter__(self):
         return self
@@ -144,26 +154,38 @@ class sonarCache:
         if self.logfile_obj:
             self.logfile_obj.close()
 
-    def add_fasta_v2(self, *fnames, method=1, chunk_size=1000):  # noqa: C901
+    def add_fasta_v2(
+        self, *fnames, method=1, chunk_size=1000, max_workers=8
+    ):  # noqa: C901
+        """ """
         sample_data: List[Dict[str, Union[str, int]]] = []
-        for fname in fnames:
-            batch_data = []  # Collect data in batches before making API calls
-            for data in self.iter_fasta(fname):
-                batch_data.append(data)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for fname in fnames:
+                batch_data = []
+                for data in self.iter_fasta(fname):
+                    batch_data.append(data)
+                    if len(batch_data) == chunk_size:
+                        executor.submit(self.process_data_batch, batch_data, method)
+                        batch_data = []
+                # Process any remaining data in the last batch
+                if batch_data:
+                    executor.submit(self.process_data_batch, batch_data, method)
+            # Block until all tasks are done
+            executor.shutdown(wait=True)
 
-                if len(batch_data) == chunk_size:
-                    sample_data.extend(self.process_data_batch(batch_data, method))
-                    batch_data = []
-
-            # Process any remaining data in the last batch
-            if batch_data:
-                sample_data.extend(self.process_data_batch(batch_data, method))
+        # merge all queue results
+        while not self.result_queue.empty():
+            sample_data.extend(self.result_queue.get())
 
         return sample_data
 
     def process_data_batch(
         self, batch_data: List[Dict[str, Union[str, int]]], method: str
     ):
+        current_thread = threading.current_thread()
+        LOGGER.debug(
+            f"Thread {current_thread.name} started processing batch of size {len(batch_data)} , method {method} "
+        )
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
 
@@ -171,7 +193,6 @@ class sonarCache:
         json_response = api_client.get_bulk_sample_data(
             [data["name"] for data in batch_data]
         )
-
         sample_dict = {
             sample_info["name"]: {
                 "sample_id": sample_info["sample_id"],
@@ -229,10 +250,13 @@ class sonarCache:
             # del batch_data[i]["sequence"]
             # reformat data and only neccessay keys are kept.
             _return_data = self.cache_sample(**batch_data[i])
-            # TODO: if empty remove batch_data[i] or skip
             batch_data[i] = _return_data
 
-        return batch_data
+        # Note: remove batch_data[i] with empty dict
+        batch_data = list(filter(None, batch_data))
+        # add result to queue
+        self.result_queue.put(batch_data)
+        # return batch_data
 
     def cache_sample(
         self,
@@ -249,10 +273,10 @@ class sonarCache:
         translation_id,
         algnid,
         seqfile,
-        mafft_seqfile,
         vcffile,
         anno_vcf_file,
         reffile,
+        varparquetfile,
         varfile,
         liftfile: pd.DataFrame,
         cdsfile,
@@ -279,17 +303,17 @@ class sonarCache:
             "sample_sequence_length": len(sequence),
             # "sample_sequence": sequence,
             "seq_file": seqfile,
-            "mafft_seqfile": mafft_seqfile,
             "vcffile": vcffile,
             "anno_vcf_file": anno_vcf_file,
             "ref_file": reffile,
+            "var_parquet_file": varparquetfile,
             "var_file": varfile,
             "lift_file": liftfile,
             "cds_file": cdsfile,
             "properties": properties,
             "include_nx": include_nx,
         }
-        fname = name  # self.get_sample_fname(name)  # return fname with full path
+        # fname = name  # self.get_sample_fname(name)  # return fname with full path
         self.sampleinput_total = self.sampleinput_total + 1
         # NOTE: write files only need to be processed
         if self.allow_updates or algnid is None:
@@ -298,15 +322,16 @@ class sonarCache:
             # except OSError:
             #     os.makedirs(os.path.dirname(fname), exist_ok=True)
             #     self.write_pickle(fname, data)
-
-            self._samplefiles_to_profile.add(fname)
-
+            self._samplefiles_to_profile += 1
             # NOTE: IF previous_seqhash != current_seqhash, we have realign and update the variant?
             # uncomment below to enable this
+            return data
         elif seqhash is not None:  # changes in seq content
-            self._samplefiles_to_profile.add(fname)
+            self._samplefiles_to_profile += 1
+            return data
 
-        return data
+        # we skip the existing one
+        return {}
 
     def get_sample_fname(self, sample_name):
         fn = slugify(hashlib.sha1(sample_name.encode("utf-8")).hexdigest())
@@ -322,7 +347,7 @@ class sonarCache:
             with (
                 open_file_autodetect(fname) as handle,
                 tqdm(
-                    desc="processing " + fname + "...",
+                    desc="Read " + fname + "...",
                     total=os.path.getsize(fname),
                     unit="bytes",
                     unit_scale=True,
@@ -443,7 +468,7 @@ class sonarCache:
         # 1. force update?
 
         # In cases:
-        # 1. sample is reuploaded under the same name but changes in  sequence (fasta)
+        # 1. sample is reuploaded under the same name but changes in sequence (fasta)
         # 2. New Sample (no algnid found in database)
         if self.allow_updates or data["algnid"] is None or data["seqhash"] != seqhash:
             data["seqfile"] = self.cache_sequence(data["seqhash"], data["sequence"])
@@ -460,18 +485,12 @@ class sonarCache:
             # cache_cds is used for frameshift detection
             # but this will be removed soon, since we use snpEff.
             data["cdsfile"] = None  # self.cache_cds(refseq_acc, data["refmol"])
+            data["varparquetfile"] = self.get_var_parquet_fname(
+                data["seqhash"] + "@" + self.get_refhash(data["refmol"])
+            )
             data["varfile"] = self.get_var_fname(
                 data["seqhash"] + "@" + self.get_refhash(data["refmol"])
             )
-            if method == 1:
-                data["mafft_seqfile"] = self.cache_seq_mafftinput(
-                    refseq_acc,
-                    self.get_refseq(data["refmol"]),
-                    data["seqhash"],
-                    data["sequence"],
-                )
-            else:
-                data["mafft_seqfile"] = None
 
         else:
             # In cases:
@@ -479,12 +498,10 @@ class sonarCache:
             # 3. if different samples but have similar sequence/varaint, use exiting alignID and map back to sample
             data["seqhash"] = None
             data["seqfile"] = None
-            data["mafft_seqfile"] = None
-
             data["reffile"] = None
-            # data["ttfile"] = None
             data["liftfile"] = None
             data["cdsfile"] = None
+            data["varparquetfile"] = None
             data["varfile"] = None
 
         # annotation.
@@ -512,102 +529,32 @@ class sonarCache:
             yield self.read_pickle(fname)
 
     def cache_sequence(self, seqhash, sequence):
-
         fname = self.get_seq_fname(seqhash)
-        if os.path.isfile(fname):
-            if file_collision(fname, sequence):
+        seqfasta = f">{seqhash}\n{sequence}\n"
+        # checks if a file with the generated name (fname) already exist
+        if os.path.exists(fname):
+            if file_collision(fname, seqfasta):
+                LOGGER.error("seqhash collision: file name:" + fname + ".")
                 sys.exit(
                     "seqhash collision: sequences differ for seqhash " + seqhash + "."
                 )
         else:
             try:
                 with open(fname, "w") as handle:
-                    handle.write(sequence)
+                    handle.write(seqfasta)
             except OSError:
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
                 with open(fname, "w") as handle:
-                    handle.write(sequence)
+                    handle.write(seqfasta)
         return fname
 
     def cache_reference(self, refid, sequence):
         fname = self.get_ref_fname(refid)
         if refid not in self._refs:
             with open(fname, "w") as handle:
-                handle.write(sequence)
+                handle.write(">" + refid + "\n" + sequence + "\n")
             self._refs.add(refid)
         return fname
-
-    def cache_seq_mafftinput(self, refid, ref_sequence, seqhash, qry_sequence):
-        """
-        This function create fasta file which contains
-        only ref and query seq. The file will be used for MAFFT input.
-        """
-        # TODO: 1. Check the file exists or not: if not -> create a new one, else skip
-        # Get fname (.seq)
-        fname = self.get_seq_fname(seqhash)
-        fname = fname + ".fasta"  # (.seq.fasta)
-
-        try:
-            os.makedirs(os.path.dirname(fname), exist_ok=True)
-            with open(fname, "w") as handle:
-                handle.write(">" + refid + "\n")
-                handle.write(ref_sequence + "\n")
-                handle.write(">" + seqhash + "\n")
-                handle.write(qry_sequence + "\n")
-        except OSError as e:
-            LOGGER.error(f"An error occurred: {e}")
-            sys.exit(1)
-        return fname
-
-    # def cache_translation_table(self, translation_id):
-    #     """
-    #     If the translation table
-    #     is not in the cache, it is retrieved from the database and written to a file
-
-    #     :param translation_id: The id of the translation table
-    #     :param dbm: the database manager
-    #     :return: A file name.
-    #     """
-    #     fname = self.get_tt_fname(translation_id)  # write under /cache/ref/
-    #     if translation_id not in self._tt:
-    #         self.write_pickle(
-    #             fname,
-    #             APIClient(base_url=self.base_url).get_translation_dict(translation_id),
-    #         )
-    #         # self.write_pickle(fname, dbm.get_translation_dict(translation_id))
-    #         self._tt.add(translation_id)
-    #     return fname
-
-    # def cache_cds(self, refid, refmol_acc):
-    #     """
-    #     The function takes in a reference id, a reference molecule accession number,
-    #     and a reference sequence. It then checks to see if the reference molecule accession number is in the set of molecules that
-    #     have been cached. If it is not, it iterates through all of the coding sequences for that molecule and creates a
-    #     dataframe for each one.
-
-    #     It then saves the dataframe to a pickle file and adds the reference molecule accession number to
-    #     the set of molecules that have been cached.
-    #     It then returns the name of the pickle file
-    #     """
-    #     fname = self.get_cds_fname(refid)
-    #     if refmol_acc not in self._cds:
-    #         rows = []
-    #         cols = ["elemid", "pos", "end"]
-    #         for cds in self.iter_cds_v2(refmol_acc):
-    #             elemid = cds["id"]
-    #             coords = []
-    #             for rng in cds["ranges"]:
-    #                 coords.extend(list(rng))
-    #             for coord in coords:
-    #                 rows.append([elemid, coord, 0])
-    #             # rows[-1][2] = 1
-    #
-    #             df = pd.DataFrame.from_records(rows, columns=cols, coerce_float=False)
-    #             df.to_pickle(fname)
-    #             if self.debug:
-    #                 df.to_csv(fname + ".csv")
-    #         self._cds.add(refmol_acc)
-    #     return fname
 
     def cache_lift(self, refid, refmol_acc, sequence):
         """
@@ -704,6 +651,10 @@ class sonarCache:
         fn = slugify(seqhash)
         return os.path.join(self.algn_dir, fn[:2], fn + ".algn")
 
+    def get_var_parquet_fname(self, seqhash):
+        fn = slugify(seqhash)
+        return os.path.join(self.var_dir, fn[:2], fn + ".var.parquet")
+
     def get_var_fname(self, seqhash):
         fn = slugify(seqhash)
         return os.path.join(self.var_dir, fn[:2], fn + ".var")
@@ -788,7 +739,7 @@ class sonarCache:
             return None
 
     def perform_paranoid_cached_samples(  # noqa: C901
-        self, sample_data_dict_list
+        self, sample_data_dict_list, must_pass_paranoid
     ) -> list:
         """
         This function performs the paranoid test without fetching variants from the database.
@@ -801,8 +752,7 @@ class sonarCache:
         """
         list_fail_samples = []
         passed_samples_list = []
-        total_samples = len(self._samplefiles_to_profile)
-
+        total_samples = len(sample_data_dict_list)
         for sample_data in tqdm(
             sample_data_dict_list,
             total=total_samples,
@@ -813,36 +763,25 @@ class sonarCache:
         ):
             try:
                 iter_dna_list = []
-
+                # NOTE: right now, we no longer need var_file.
+                del sample_data["var_file"]
                 del sample_data["lift_file"]
-                if not sample_data["var_file"] is None:
+                if sample_data["var_parquet_file"] is not None:
                     # SECTION:ReadVar
-                    with open(sample_data["var_file"], "r") as handle:
-                        for line in handle:
-                            if line == "//":
-                                break
-                            if line.startswith("#"):
-                                continue
-                            vardat = line.strip("\r\n").split("\t")
-                            if vardat[7] == "cds":
-                                break
-                            iter_dna_list.append(
-                                {
-                                    "variant.ref": vardat[1],  # ref
-                                    "variant.alt": vardat[4],  # alt
-                                    "variant.start": int(vardat[2]),  # start
-                                    "variant.end": int(vardat[3]),  # end
-                                }  # frameshift
-                            )
-                        # NOTE: disable check feature because we stop at "NT"
-                        if line != "//" and False:
-                            sys.exit(
-                                "cache error: corrupted file ("
-                                + sample_data["var_file"]
-                                + ")"
-                            )
+                    var_df = pd.read_parquet(sample_data["var_parquet_file"])
+                    # Currently var_df might be empty if the imported sequence
+                    # is identical to the reference
+                    if not var_df.empty:
+                        nt_df = var_df[(var_df["type"] == "nt")]
+                        iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                            "records"
+                        )
+                    else:
+                        LOGGER.warning(
+                            f"Paranoid test: var file ({sample_data['var_parquet_file']}) is missing for sample {sample_data['name']}"
+                        )
                     # SECTION: Paranoid
-                    if not sample_data["seqhash"] is None:
+                    if sample_data["seqhash"] is not None:
                         # Get Reference sequence.
                         seq = list(
                             self.get_refseq(refmol_acc=sample_data["source_acc"])
@@ -853,27 +792,40 @@ class sonarCache:
                         sample_name = sample_data["name"]
 
                         for vardata in iter_dna_list:
-                            if vardata["variant.alt"] in gaps:
-                                for i in range(
-                                    vardata["variant.start"], vardata["variant.end"]
-                                ):
+                            if vardata["alt"] in gaps:
+                                for i in range(vardata["start"], vardata["end"]):
                                     seq[i] = ""
-                            elif vardata["variant.alt"] == ".":
-                                for i in range(
-                                    vardata["variant.start"], vardata["variant.end"]
-                                ):
+                            elif vardata["alt"] == ".":
+                                for i in range(vardata["start"], vardata["end"]):
                                     seq[i] = ""
-                            elif vardata["variant.start"] >= 0:
-                                seq[vardata["variant.start"]] = vardata["variant.alt"]
+                            elif vardata["start"] >= 0:
+                                seq[vardata["start"]] = vardata["alt"]
                             else:
-                                prefix = vardata["variant.alt"]
+                                prefix = vardata["alt"]
 
                         # seq is now a restored version from variant dict.
                         seq = prefix + "".join(seq)
                         with open(sample_data["seq_file"], "r") as handle:
                             orig_seq = handle.read()
 
+                        seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
+
                         if seq != orig_seq:
+                            LOGGER.warning(
+                                f"Failed paranoid test for sample '{sample_name}'"
+                            )
+
+                            # Only for printing the sequences with some indication
+                            # of mismatches between the original and target sequence
+                            min_len = min(len(orig_seq), len(seq))
+                            mismatches = []
+                            for a, b in zip(
+                                list(orig_seq[:min_len]), list(seq[:min_len])
+                            ):
+                                mismatches.append("|" if a == b else "X")
+                            LOGGER.debug(f"Original: {orig_seq}")
+                            LOGGER.debug(f"        : {''.join(mismatches)}")
+                            LOGGER.debug(f"Rebuilt : {seq}")
 
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.
@@ -921,6 +873,8 @@ class sonarCache:
                             list_fail_samples.append(paranoid_dict)
                         elif not paranoid_dict:
                             passed_samples_list.append(sample_data)
+                    # sample_name = sample_data["name"]
+                    # passed_samples_list.append(sample_data)
 
             except Exception as e:
                 LOGGER.error("\n------- Fatal Error ---------")
@@ -932,8 +886,11 @@ class sonarCache:
                 LOGGER.error(sample_data)
                 sys.exit("Unknown import error")
 
+        count_sample = total_samples - len(list_fail_samples)
+        LOGGER.info(f"Total passed samples: {count_sample}")
+
         if list_fail_samples:
-            LOGGER.warn(
+            LOGGER.warning(
                 "Some samples fail in sanity check; please check import.log under the cache directory."
             )
             # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
@@ -944,11 +901,12 @@ class sonarCache:
 
             # currently, we report only failed sample IDs.
             self.error_logfile_obj.write("Fail sample during alignment:----\n")
+            LOGGER.warning("Failed sample IDs:")
             for fail_sample in list_fail_samples:
-                self.error_logfile_obj.write(f"{ fail_sample['sample_name'] }\n")
-
-        count_sample = total_samples - len(list_fail_samples)
-        LOGGER.info(f"Total passed samples: {count_sample}")
+                self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
+                LOGGER.warning(fail_sample["sample_name"])
+            if must_pass_paranoid:
+                sys.exit("Some sequences failed the paranoid test, aborting.")
 
         return passed_samples_list
 
@@ -979,10 +937,18 @@ class sonarCache:
             # build snpeff cache
             snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
             os.makedirs(snpeff_data_dir, exist_ok=True)
-            cmd = f"snpEff build -nodownload {reference} -genbank -dataDir {self.snpeff_data_dir}"
+            cmd = [
+                "snpEff",
+                "build",
+                "-nodownload",
+                reference,
+                "-genbank",
+                "-dataDir",
+                self.snpeff_data_dir,
+            ]
             LOGGER.info(f"Building snpeff cache for reference {reference}")
             try:
-                subprocess.run(cmd, shell=True, check=True)
+                subprocess.run(cmd, capture_output=True, check=True)
                 # write .done file for later checking if the cahce is built already
                 # so we dont need to rebuild it again.
                 with open(

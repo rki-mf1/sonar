@@ -93,9 +93,10 @@ export default {
   mounted() {
     this.samplesStore.updateSamples()
     this.samplesStore
-      .updateFilteredStatistics()
+      .updateStatistics()
       .then(() => this.samplesStore.updatePropertyOptions())
       .then(() => this.samplesStore.updateSelectedColumns())
+    this.samplesStore.updateFilteredStatistics()
     this.samplesStore.updateLineageOptions()
     this.samplesStore.updateSymbolOptions()
     this.samplesStore.updateRepliconAccessionOptions()

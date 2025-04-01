@@ -46,6 +46,31 @@ class APIClient:
         self.base_url = base_url
         self.headers = {"Authorization": f"Bearer {token}"}
 
+    def _handle_response(self, response, url):
+        """Handles the response, checking for errors and returning JSON if valid."""
+        #   response.raise_for_status() for HTTP errors (4xx, 5xx)
+        if 400 <= response.status_code < 500:
+            # Handle client-side errors (e.g., bad request)
+            # message = return_json["message"] if "message" in return_json else ""
+            LOGGER.error(
+                f"{response.status_code} Client Error: {response.reason} for url: {url}"
+            )
+            LOGGER.error(response.text)
+            LOGGER.error("Immediately stop running and exit")
+            sys.exit(1)
+        elif 500 <= response.status_code < 600:
+            LOGGER.error(
+                f"{response.status_code} Server Error: {response.reason} for url: {url}"
+            )
+            # We can print the error message, but sometimes it returns HTML.
+            # If we print it out, we could possibly get 1000 lines of HTML.
+            if "html" not in response.text:
+                LOGGER.error(response.text)
+            LOGGER.error("Immediately stop running and exit")
+            sys.exit(1)
+        return_json = response.json()
+        return return_json
+
     def _make_request(
         self,
         method: str,
@@ -73,27 +98,9 @@ class APIClient:
                 stream=stream,
                 # timeout=300,
             )
-            if not stream:
-                return_json = response.json()
-                #   response.raise_for_status() for HTTP errors (4xx, 5xx)
-                if 400 <= response.status_code < 500:
-                    # Handle client-side errors (e.g., bad request)
-                    # message = return_json["message"] if "message" in return_json else ""
-                    LOGGER.error(
-                        f"{response.status_code} Client Error: {response.reason}: {return_json} "
-                    )
-                    LOGGER.error("Immediately stop running and exit")
-                    sys.exit(1)
-                elif 500 <= response.status_code < 600:
-                    LOGGER.error(
-                        f"{response.status_code} Server Error: {response.reason} for url: {url}"
-                    )
-                    LOGGER.error("Immediately stop running and exit")
-                    sys.exit(1)
-
-                return return_json
-            else:
+            if stream:
                 return response
+            return self._handle_response(response, url)
         except requests.exceptions.ConnectionError as errc:
             LOGGER.error(f"Error Connecting: {errc}")
             sys.exit(1)

@@ -17,6 +17,7 @@ import zipfile
 
 from Bio.Seq import Seq
 import magic
+import pandas as pd
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger
@@ -26,7 +27,7 @@ LOGGER = LoggingConfigurator.get_logger()
 @contextmanager
 def open_file_autodetect(file_path: str, mode: str = "r"):
     """
-    Opens a file with automatic packing detection.
+    Opens a file with automatic packing detection and handles symlinks.
 
     Args:
         file_path: The path of the file to open.
@@ -35,6 +36,8 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
     Returns:
         A context manager yielding a file object.
     """
+    # Resolve symlinks
+    file_path = os.path.realpath(file_path)
     # Use the magic library to identify the file type
     file_type = magic.from_file(file_path, mime=True)
 
@@ -46,7 +49,7 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
         zip_file = zipfile.ZipFile(file_path, mode)  # zip
         # Assumes there's one file in the ZIP, adjust as necessary
         file_obj = zip_file.open(zip_file.namelist()[0], mode)
-    elif file_type == "text/plain" or file_type == "application/csv":  # plain
+    elif file_type in ["text/plain", "application/csv", "text/csv"]:  # plain
         file_obj = open(file_path, mode)
     else:
         raise ValueError(f"Unsupported file type: {file_type}")
@@ -118,8 +121,13 @@ def remove_charfromsequence_data(seq: str, char="-") -> str:
 
 
 def read_seqcache(fname):
+    seq = ""
     with open(fname, "r") as handle:
-        seq = handle.readline().strip()
+        for line in handle:
+            # Skip the header
+            if line.startswith(">"):
+                continue
+            seq += line.rstrip()
     return seq
 
 
@@ -177,34 +185,20 @@ def write_to_log(logfile, msg, die=False, errtype="error"):
         exit(errtype + ": " + msg)
 
 
-def read_var_file(var_file: str, exclude_var_type: str = "", showNX: bool = False):
-    iter_dna_list = []
-    with open(var_file, "r") as handle:
-        for line in handle:
-            if line == "//":
-                break
-            if line.startswith("#"):
-                continue
-            vardat = line.strip("\r\n").split("\t")
-            if vardat[7] == exclude_var_type:
-                continue
-            else:
-
-                if not showNX and (vardat[4] == "N" or vardat[4] == "X"):
-                    continue
-
-                iter_dna_list.append(
-                    {
-                        "variant.ref": vardat[1],  # ref
-                        "variant.alt": vardat[4],  # alt
-                        "variant.start": int(vardat[2]),  # start
-                        "variant.end": int(vardat[3]),  # end
-                        "variant.reference": vardat[5],  # ref
-                        "variant.lable": vardat[6],  # lable
-                        "variant.type": vardat[7],  # type
-                    }  # frameshift
-                )
-    return iter_dna_list
+def read_var_parquet_file(
+    var_parquet_file: str, exclude_var_type: str = "", showNX: bool = False
+):
+    var_df = pd.read_parquet(var_parquet_file)
+    var_df = var_df[~(var_df["type"] == exclude_var_type)]
+    if not showNX:
+        var_df = var_df[
+            ~((var_df["type"] == "nt") & var_df["alt"].str.contains("N", na=False))
+        ]
+        var_df = var_df[
+            ~((var_df["type"] == "cds") & var_df["alt"].str.contains("X", na=False))
+        ]
+    var_df = var_df[["ref", "alt", "start", "end", "reference_acc", "label", "type"]]
+    return var_df.to_dict("records")
 
 
 def flatten_json_output(result_data: list, exclude_annotation=False):
@@ -309,7 +303,10 @@ def slugify(string):
 
 def file_collision(fname, data):
     with open(fname, "r") as handle:
-        if handle.read() != data:
+        file_contents = handle.read()
+        if file_contents != data:
+            LOGGER.debug(f"existing file: {file_contents}")
+            LOGGER.debug(f"new data: {data}")
             return True
     return False
 
@@ -321,11 +318,6 @@ def chunk(arr_range, arr_size):
 
 def clear_sample_cache(sample):
     try:
-        if sample["mafft_seqfile"] is not None:
-            try:
-                os.remove(sample["mafft_seqfile"])
-            except FileNotFoundError:
-                pass  # File was already deleted
         try:
             os.remove(sample["vcffile"] + ".gz")
         except FileNotFoundError:
@@ -334,12 +326,6 @@ def clear_sample_cache(sample):
             os.remove(sample["vcffile"] + ".gz.tbi")
         except FileNotFoundError:
             pass
-        # if os.path.exists(sample["vcffile"]):
-        #     os.remove(sample["vcffile"])
-        # if sample["anno_vcf_file"]:
-        #    os.remove(sample["anno_vcf_file"])
-        # if sample["anno_tsv_file"]:
-        #    os.remove(sample["anno_tsv_file"])
     except (TypeError, OSError) as e:
         LOGGER.error(traceback.format_exc())
         LOGGER.error("\nDebugging Information:")

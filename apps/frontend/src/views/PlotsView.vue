@@ -24,7 +24,7 @@
         <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
         <PrimePanel v-else header="Lineage Plot" class="w-full shadow-2">
           <!-- lineage area plot-->
-          <h4>Area Plot - COVID-19 Lineages Over Time</h4>
+          <h4>Area Plot - SARS-CoV-2 - Lineages Over Time</h4>
           <div class="h-30rem plot">
             <PrimeChart
               ref="lineageAreaPlot"
@@ -41,6 +41,17 @@
               ref="lineageBarPlot"
               type="bar"
               :data="lineage_barData()"
+              :options="lineage_barChartOptions()"
+              style="width: 100%; height: 100%"
+            />
+          </div>
+          <!-- Grouped lineage bar plot-->
+          <h4>Stacked Bar Plot - Grouped Lineage Distribution by Calendar Week</h4>
+          <div class="h-26rem plot">
+            <PrimeChart
+              ref="lineageGroupedBarPlot"
+              type="bar"
+              :data="lineage_grouped_barData()"
               :options="lineage_barChartOptions()"
               style="width: 100%; height: 100%"
             />
@@ -129,7 +140,11 @@
         <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
         <PrimePanel v-else header="Sample Type" class="w-full shadow-2">
           <div class="h-20rem plot">
-            <PrimeChart type="pie" :data="sampleTypeChartData()" :options="sampleTypeChartOptions()" />
+            <PrimeChart
+              type="pie"
+              :data="sampleTypeChartData()"
+              :options="sampleTypeChartOptions()"
+            />
           </div>
         </PrimePanel>
       </div>
@@ -197,8 +212,7 @@ const percentageLabelPlugin = {
     const datasets = chart.data.datasets
 
     datasets.forEach((dataset: ChartDataset, datasetIndex: number) => {
-      (chart.getDatasetMeta(datasetIndex).data as BarElement[]).forEach((bar, index) => {
-
+      ;(chart.getDatasetMeta(datasetIndex).data as BarElement[]).forEach((bar, index) => {
         let value = dataset.data[index]
         const percentage = `${value}%`
 
@@ -208,7 +222,7 @@ const percentageLabelPlugin = {
           if (isNaN(value)) return
         }
         if (typeof value !== 'number') return
-        const { height } = bar.getProps(['height'], true);
+        const { height } = bar.getProps(['height'], true)
         const y =
           value < options.threshold
             ? bar.y - 10 // Display above the bar for small values
@@ -236,11 +250,13 @@ export default {
     }
   },
   watch: {
-    // "samplesStore.filteredStatistics"(newValue) {
+    // "samplesStore.filteredStatisticsPlot"(newValue) {
     //   this.updateCharts(); // Update charts when data changes
     // }
   },
-  mounted() {},
+  mounted() {
+    this.samplesStore.updateFilteredStatisticsPlots()
+  },
   beforeUnmount() {},
   methods: {
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
@@ -269,8 +285,8 @@ export default {
         .colors(itemCount) // number of colors
     },
     samplesPerWeekChart() {
-      const samples_per_week = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['samples_per_week']
+      const samples_per_week = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['samples_per_week']
         : {}
       const labels: string[] = []
       const data: number[] = []
@@ -344,8 +360,8 @@ export default {
       }
     },
     lineage_areaData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_area_chart']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lineage_area_chart']
         : []
       if (!_data || Object.keys(_data).length === 0) {
         return this.emptyChartData()
@@ -430,8 +446,8 @@ export default {
       }
     },
     lineage_barData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lineage_bar_chart']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lineage_bar_chart']
         : []
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -494,13 +510,36 @@ export default {
         maintainAspectRatio: false,
       }
     },
+    lineage_grouped_barData() {
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lineage_grouped_bar_chart']
+        : []
+      if (this.isDataEmpty(_data)) {
+        return this.emptyChartData()
+      }
+      const lineages = [...new Set(_data.map((item) => item.lineage_group))]
+      const weeks = [...new Set(_data.map((item) => item.week))]
+      const colors = this.generateColorPalette(lineages.length)
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: weeks.map(
+          (week) =>
+            _data.find((item) => item.week === week && item.lineage_group === lineage)
+              ?.percentage || 0,
+        ),
+        backgroundColor: colors[index],
+        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
+        borderWidth: 2,
+      }))
+      return { labels: weeks, datasets }
+    },
     metaDataChart() {
       // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
       // what about the property 'name' ?? its not in the list, but its always shown in the table
       const coverage = Object.fromEntries(
-        Object.entries(this.samplesStore.filteredStatistics?.['meta_data_coverage'] || {}).filter(
-          ([key]) => this.samplesStore.metaCoverageOptions.includes(key),
-        ),
+        Object.entries(
+          this.samplesStore.filteredStatisticsPlots?.['meta_data_coverage'] || {},
+        ).filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key)),
       )
 
       const totalCount = this.samplesStore.filteredCount
@@ -549,8 +588,8 @@ export default {
       }
     },
     genomeCompleteChart() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['genomecomplete_chart']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['genomecomplete_chart']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -584,8 +623,8 @@ export default {
       }
     },
     sequencingTechChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['sequencing_tech']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['sequencing_tech']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -618,8 +657,8 @@ export default {
       }
     },
     sequencingReasonChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['sequencing_reason']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['sequencing_reason']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -652,8 +691,8 @@ export default {
       }
     },
     lengthChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['length']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['length']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -690,8 +729,8 @@ export default {
       }
     },
     hostChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['host']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['host']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -731,8 +770,8 @@ export default {
       }
     },
     labChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['lab']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['lab']
         : {}
       const { labels, data } = this.cleanDataAndAddNullSamples(_data)
       return {
@@ -780,8 +819,8 @@ export default {
       }
     },
     zipCodeChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['zip_code']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['zip_code']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -842,8 +881,8 @@ export default {
       }
     },
     sampleTypeChartData() {
-      const _data = this.samplesStore.filteredStatistics
-        ? this.samplesStore.filteredStatistics['sample_type']
+      const _data = this.samplesStore.filteredStatisticsPlots
+        ? this.samplesStore.filteredStatisticsPlots['sample_type']
         : {}
       if (this.isDataEmpty(_data)) {
         return this.emptyChartData()
@@ -886,7 +925,9 @@ export default {
         ],
       }
     },
-    isDataEmpty(data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>): boolean {
+    isDataEmpty(
+      data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>,
+    ): boolean {
       return (
         !data ||
         Object.keys(data).length === 0 ||
