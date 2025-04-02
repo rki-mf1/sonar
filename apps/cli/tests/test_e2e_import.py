@@ -5,6 +5,7 @@ import pytest
 from .conftest import run_cli
 
 
+# test gene bank import different viruses
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(1)
 def test_add_cov19_ref(monkeypatch, capfd, api_url):
@@ -16,6 +17,84 @@ def test_add_cov19_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(1)
+def test_add_mpox_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "../../../test-data/mpox/NC_063383.1.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(1)
+def test_add_rsv_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "../../../test-data/RSV/AF013254.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(1)
+def test_add_measels_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "../../../test-data/morbillivirus-hominis/NC_001498.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(1)
+def test_add_hiv_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "../../../test-data/HIV/AF033819.3.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(1)
+def test_add_dengue_type2_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "../../../test-data/dengue/type_2/NC_001474.2.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(1)
+def test_add_ebola_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "../../../test-data/ebola/NC_002549.1.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(1)
+def test_add_zika_ref(monkeypatch, capfd, api_url):
+    monkeypatch.chdir(Path(__file__).parent)
+    new_ref_file = "../../../test-data/zika/NC_035889.gb"
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+# test data import
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(2)
 def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
@@ -99,6 +178,86 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(7)
+def test_mafft_anno_upload_rsv(monkeypatch, api_url, tmpfile_name):
+    """Test rsv sample import command using mafft method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.imap_unordered",
+        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+            func(**arg) for arg in args
+        ),
+    )
+    command = f"import --db {api_url} -r AF013254.1 --method 1 --fasta ../../../test-data/RSV/RSV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command)
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(8)
+def test_mafft_anno_upload_mpox(monkeypatch, api_url, tmpfile_name):
+    """Test rsv sample import command using mafft method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.imap_unordered",
+        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+            func(**arg) for arg in args
+        ),
+    )
+    command = f"import --db {api_url} -r NC_063383.1 --method 1 --fasta ../../../test-data/mpox/mpox_2.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command)
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(9)
+def test_mafft_anno_upload_ebola(monkeypatch, api_url, tmpfile_name):
+    """Test rsv sample import command using mafft method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.imap_unordered",
+        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+            func(**arg) for arg in args
+        ),
+    )
+    command = f"import --db {api_url} -r NC_002549.1 --method 1 --fasta ../../../test-data/ebola/ebola_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command)
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(10)
+def test_mafft_anno_upload_dengue_type2(monkeypatch, api_url, tmpfile_name):
+    """Test rsv sample import command using mafft method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.imap_unordered",
+        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+            func(**arg) for arg in args
+        ),
+    )
+    command = f"import --db {api_url} -r NC_001474.2 --method 1 --fasta ../../../test-data/dengue/type_2/dengue_type2_complete_13.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command)
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(11)
+def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
+    """Test rsv sample import command using mafft method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.imap_unordered",
+        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+            func(**arg) for arg in args
+        ),
+    )
+    command = f"import --db {api_url} -r AF033819.3 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command)
+    assert code == 0
+
+
 # @pytest.mark.xdist_group(name="group1")
 # @pytest.mark.order(7)
 # def test_wfa_anno_no_upload(monkeypatch, api_url, tmpfile_name):
@@ -117,7 +276,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(8)
+@pytest.mark.order(12)
 def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
     """Test import command using autolink"""
     monkeypatch.chdir(Path(__file__).parent)
@@ -134,7 +293,7 @@ def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
 
 
 @pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(9)
+@pytest.mark.order(13)
 def test_add_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
