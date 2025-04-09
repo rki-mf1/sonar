@@ -5,7 +5,7 @@ on:
       - 'apps/cli/**'
   workflow_dispatch:
 jobs:
-  lint:
+  pytest-cli-only:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,6 +33,6 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "apps/cli/uv.lock"
       - name: Install the project
-        run: uv sync --locked --dev
+        run: uv sync --locked
       - name: Run cli pytest tests that don't require the backend
         run: uv run --locked pytest -m clionly
