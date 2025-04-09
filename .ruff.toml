@@ -9,3 +9,5 @@ docstring-code-format = false
 
 [lint.isort]
 force-single-line = true
+known-first-party = ["sonar_cli", "rest_api", "covsonar_backend"]
+known-third-party = ["django", "tabulate", "line_profiler"]
