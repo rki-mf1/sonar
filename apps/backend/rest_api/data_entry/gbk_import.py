@@ -1,5 +1,4 @@
 from datetime import datetime
-import os
 import pathlib
 
 from Bio import SeqFeature
@@ -14,11 +13,11 @@ from rest_api.models import Gene
 from rest_api.models import GeneSegment
 from rest_api.models import Reference
 from rest_api.models import Replicon
-from rest_api.serializers import find_or_create
 from rest_api.serializers import GeneSegmentSerializer
 from rest_api.serializers import GeneSerializer
 from rest_api.serializers import ReferenceSerializer
 from rest_api.serializers import RepliconSerializer
+from rest_api.serializers import find_or_create
 
 
 def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):

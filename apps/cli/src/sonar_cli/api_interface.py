@@ -6,6 +6,7 @@ from typing import List
 from typing import Optional
 
 import requests
+
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger
@@ -380,7 +381,6 @@ class APIClient:
         return json_response
 
     def get_variant_profile_bymatch_command(self, params: dict):
-
         json_response = self._make_request(
             "GET", endpoint=self.get_match_endpoint, params=params
         )

@@ -8,7 +8,6 @@ from pango_aliasor.aliasor import Aliasor
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description="Create file with all pangolin lineages mapped to their direct sublineages."
     )

@@ -244,7 +244,7 @@ LOGGING = {
             "level": LOG_LEVEL,
             "class": "logging.FileHandler",
             "filename": os.path.join(
-                LOG_PATH, f'{datetime.today().strftime("%Y_%m_%d")}.log.json'
+                LOG_PATH, f"{datetime.today().strftime('%Y_%m_%d')}.log.json"
             ),
             "formatter": "json",
         },

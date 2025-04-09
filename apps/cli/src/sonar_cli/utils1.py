@@ -137,7 +137,6 @@ class sonarUtils1:
 
     @staticmethod
     def upload_lineage(pathogen: str, lineage_file: str, output_file: str):
-
         LOGGER.info("Using Pathogen: %s", pathogen)
 
         if not lineage_file:

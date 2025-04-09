@@ -9,6 +9,7 @@ from Bio import BiopythonWarning
 from Bio.Seq import Seq
 import numpy as np
 import pandas as pd
+
 from sonar_cli.common_aligns import align_MAFFT
 from sonar_cli.common_aligns import align_Parasail
 from sonar_cli.common_utils import read_seqcache

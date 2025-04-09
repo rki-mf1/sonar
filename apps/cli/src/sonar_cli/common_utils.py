@@ -18,6 +18,7 @@ import zipfile
 from Bio.Seq import Seq
 import magic
 import pandas as pd
+
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger

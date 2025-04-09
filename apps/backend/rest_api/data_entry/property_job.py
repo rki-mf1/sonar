@@ -9,7 +9,6 @@ def find_or_create_property(
         obj = Property.objects.get(name=name)
         created = False
     except Property.DoesNotExist:
-
         obj = PropertySerializer(
             data={
                 "name": name,

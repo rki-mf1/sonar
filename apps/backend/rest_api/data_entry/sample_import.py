@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 import pathlib
 import pickle
-import typing
-from typing import Any
 from typing import Optional
 
 from django.utils import timezone
@@ -149,18 +147,18 @@ class SampleImport:
         for var_raw in self.vars_raw:
             replicon = None
             if var_raw.type == "nt":
-                if not var_raw.replicon_or_cds_accession in replicon_cache:
+                if var_raw.replicon_or_cds_accession not in replicon_cache:
                     replicon_cache[var_raw.replicon_or_cds_accession] = (
                         Replicon.objects.get(
                             accession=var_raw.replicon_or_cds_accession
                         )
                     )
                 replicon = replicon_cache[var_raw.replicon_or_cds_accession]
-                if not replicon in gene_cache_by_var_pos:
+                if replicon not in gene_cache_by_var_pos:
                     gene_cache_by_var_pos[replicon] = {}
-                if not var_raw.start in gene_cache_by_var_pos[replicon]:
+                if var_raw.start not in gene_cache_by_var_pos[replicon]:
                     gene_cache_by_var_pos[replicon][var_raw.start] = {}
-                if not var_raw.end in gene_cache_by_var_pos[replicon][var_raw.start]:
+                if var_raw.end not in gene_cache_by_var_pos[replicon][var_raw.start]:
                     gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end] = (
                         Gene.objects.filter(
                             replicon=replicon,
@@ -214,7 +212,7 @@ class SampleImport:
         mutation_parent_relations = []
         for var_raw in self.vars_raw:
             if var_raw.type == "cds":
-                if not var_raw.replicon_or_cds_accession in gene_cache_by_accession:
+                if var_raw.replicon_or_cds_accession not in gene_cache_by_accession:
                     try:
                         gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
                             Gene.objects.get(

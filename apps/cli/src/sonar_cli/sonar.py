@@ -3,13 +3,14 @@ from datetime import datetime
 import sys
 from typing import Optional
 
+from tabulate import tabulate
+
 from sonar_cli import config
 from sonar_cli.common_utils import combine_sample_argument
 from sonar_cli.common_utils import convert_default
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils import sonarUtils
 from sonar_cli.utils1 import sonarUtils1
-from tabulate import tabulate
 
 from . import NAME
 from . import VERSION
@@ -344,7 +345,6 @@ def create_parser_thread() -> argparse.ArgumentParser:
 def create_subparser_tasks(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     # View Reference.
     parser = subparsers.add_parser(
         "tasks",
@@ -401,7 +401,6 @@ def create_subparser_list_prop(
 def create_subparser_list_reference(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     # View Reference.
     parser = subparsers.add_parser(
         "list-ref",
@@ -414,7 +413,6 @@ def create_subparser_list_reference(
 def create_subparser_lineage_import(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     parser = subparsers.add_parser(
         "import-lineage",
         parents=parent_parsers,
@@ -534,7 +532,6 @@ def create_subparser_import(
 def create_subparser_add_reference(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     parser = subparsers.add_parser(
         "add-ref",
         parents=parent_parsers,
@@ -823,7 +820,6 @@ def handle_match(args: argparse.Namespace):
 
 
 def handle_list_ref(args: argparse.Namespace):
-
     print(
         tabulate(sonarUtils.get_all_references(), headers="keys", tablefmt="fancy_grid")
     )

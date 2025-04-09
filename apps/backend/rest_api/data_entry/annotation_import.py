@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import gzip
-import re
 
 from django.db.models import Q
 

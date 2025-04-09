@@ -251,7 +251,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                                 + str(mutation.end)
                             )
                     list.append(label)
-                except AttributeError as e:
+                except AttributeError:
                     # most of the time this AttributeError outputs
                     # 'NoneType' object has no attribute 'gene_symbol', so I comment it for now
                     # to reduce logs print out to a console
@@ -286,7 +286,6 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
     def get_genomic_profiles(self, obj: models.Sample):
         list = []
         for alignment in obj.sequence.alignments.all():
-
             for mutation in alignment.genomic_profiles:
                 variant = {}
                 variant["variant.id"] = mutation.id

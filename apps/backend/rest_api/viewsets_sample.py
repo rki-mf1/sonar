@@ -1,3 +1,4 @@
+import _csv
 import ast
 from collections import defaultdict
 import csv
@@ -5,14 +6,12 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 import os
-import pathlib
 import re
 import traceback
 from typing import Generator
 
-import _csv
-from dateutil.rrule import rrule
 from dateutil.rrule import WEEKLY
+from dateutil.rrule import rrule
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
 from django.db.models import BooleanField
@@ -45,12 +44,13 @@ from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
+from rest_api.utils import Response
 from rest_api.utils import define_profile
 from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import resolve_ambiguous_NT_AA
-from rest_api.utils import Response
 from rest_api.utils import strtobool
 from rest_api.viewsets import PropertyViewSet
+
 from . import models
 from .serializers import SampleGenomesSerializer
 from .serializers import SampleGenomesSerializerVCF
@@ -750,7 +750,6 @@ class SampleViewSet(
         return result
 
     def get_weekly_lineage_grouped_percentage_bar_chart(self, queryset):
-
         present_lineages = {entry["lineage"] for entry in queryset.values("lineage")}
 
         # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
@@ -966,7 +965,6 @@ class SampleViewSet(
                 )
 
             else:
-
                 raise ValueError(
                     f"Unsupported mutation type: {parsed_mutation.get('label')}"
                 )
@@ -1032,7 +1030,7 @@ class SampleViewSet(
             query[f"{property_name}__{filter_type}"] = value
         else:
             datatype = models.Property.objects.get(name=property_name).datatype
-            query = {f"properties__property__name": property_name}
+            query = {"properties__property__name": property_name}
             query[f"properties__{datatype}__{filter_type}"] = value
         if exclude:
             return ~Q(**query)

@@ -5,8 +5,6 @@ import uuid
 
 from dateutil import parser
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from rest_framework import status
-from rest_framework.response import Response
 
 from . import models
 
@@ -130,7 +128,7 @@ def define_profile(mutation):  # noqa: C901
                         raise ValueError(
                             f"Invalid AA mutation: '{alt}' contains non-AA characters."
                         )
-                    if not ref in IUPAC_CODES["aa"]:
+                    if ref not in IUPAC_CODES["aa"]:
                         raise ValueError(
                             f"Invalid AA reference: '{ref}' is not a valid amino acid."
                         )
@@ -140,7 +138,7 @@ def define_profile(mutation):  # noqa: C901
                     _query["protein_symbol"] = gene_name
                     _query["label"] = "SNP AA" if len(alt) == 1 else "Ins AA"
                 else:  # NT mutation
-                    if not alt_is_nt or not ref in IUPAC_CODES["nt"]:
+                    if not alt_is_nt or ref not in IUPAC_CODES["nt"]:
                         error_message = (
                             f"Invalid NT mutation: '{alt}' contains non-NT characters."
                             if not alt_is_nt

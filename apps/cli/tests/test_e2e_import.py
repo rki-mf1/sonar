@@ -123,9 +123,14 @@ def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
         "mpire.WorkerPool.map_unordered",
-        lambda self, func, args=(), progress_bar=True, progress_bar_options={}, kwds={}, callback=None, error_callback=None: (
-            func(arg) for arg in args
-        ),
+        lambda self,
+        func,
+        args=(),
+        progress_bar=True,
+        progress_bar_options={},
+        kwds={},
+        callback=None,
+        error_callback=None: (func(arg) for arg in args),
     )
     command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 1  --tsv sars-cov-2/meta.tsv --cols name=IMS_ID --auto-link"
     code = run_cli(command)
@@ -140,9 +145,14 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
         "mpire.WorkerPool.map_unordered",
-        lambda self, func, args=(), progress_bar=True, progress_bar_options={}, kwds={}, callback=None, error_callback=None: (
-            func(arg) for arg in args
-        ),
+        lambda self,
+        func,
+        args=(),
+        progress_bar=True,
+        progress_bar_options={},
+        kwds={},
+        callback=None,
+        error_callback=None: (func(arg) for arg in args),
     )
     command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2 --tsv sars-cov-2/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE"
     code = run_cli(command)
