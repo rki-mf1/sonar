@@ -1,4 +1,4 @@
-name: cli lint
+name: cli tests
 on:
   pull_request:
     paths:
