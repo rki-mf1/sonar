@@ -4,12 +4,15 @@ on:
     paths:
       - 'apps/cli/**'
   workflow_dispatch:
+env:
+  UV_SYSTEM_PYTHON: 1
 jobs:
   pytest-cli-only:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./apps/cli
+        shell: bash -el {0}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
