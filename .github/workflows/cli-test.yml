@@ -33,6 +33,6 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "apps/cli/uv.lock"
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --locked --dev
       - name: Run cli pytest tests that don't require the backend
         run: uv run --locked pytest -m clionly
