@@ -21,10 +21,6 @@ repos:
       - id: ruff
         args: [--fix]
         exclude: ^apps/backend/rest_api/migrations/
-      # Format imports
-      - id: ruff
-        args: [check, --select, I, --fix]
-        exclude: ^apps/backend/rest_api/migrations/
-      # Format everything else
+      # Run the code formatter
       - id: ruff-format
         exclude: ^apps/backend/rest_api/migrations/
