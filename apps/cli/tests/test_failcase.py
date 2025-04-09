@@ -7,13 +7,12 @@ from .conftest import run_cli
 
 
 def test_match_no_ref(capfd, api_url):
-
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run_cli(f"match --db {api_url} -r NOREF")
     out, err = capfd.readouterr()
     lines = err.splitlines()
     assert "reference NOREF does not exist" in lines[-1]
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 1
 
 
@@ -97,7 +96,7 @@ def test_match_no_fasta(caplog, api_url):
         with caplog.at_level(logging.ERROR):
             run_cli(f"import --db {api_url} -r MN908947.3 --fasta where.is.my.fasta")
     assert "The file 'where.is.my.fasta' does not exist" in caplog.text
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 1
 
 
@@ -107,14 +106,15 @@ def test_match_no_tsv(caplog, api_url):
             run_cli(f"import --db {api_url} -r MN908947.3 --tsv where.is.my.tsv")
 
     assert "The file 'where.is.my.tsv' does not exist" in caplog.text
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 1
 
 
+@pytest.mark.clionly
 def test_match_no_gb(caplog, api_url):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         with caplog.at_level(logging.ERROR):
             run_cli(f"add-ref --db {api_url} --gb where.is.gb.gb")
     assert "The file 'where.is.gb.gb' does not exist" in caplog.text
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 1
