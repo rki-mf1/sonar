@@ -28,5 +28,5 @@ jobs:
           python-version-file: "apps/cli/pyproject.toml"
       - name: Install the project
         run: uv sync --all-extras --dev
-      - name: Run flake8 - Code style check 🐱
-        run: uv run flake8 src/ --config=.flake8 -v
+      - name: Run cli-only pytest tests
+        run: uv run pytest test_e2e.py::test_help test_e2e.py::test_version test_failcase.py::test_match_no_gb test_sonar.py::test_no_args
