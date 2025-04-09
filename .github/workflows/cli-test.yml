@@ -20,10 +20,12 @@ jobs:
         with:
           # Install a specific version of uv.
           version: "0.6.13"
+          enable-cache: true
+          cache-dependency-glob: "apps/cli/uv.lock"
       - name: Set up Python 🐱
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version-file: "apps/cli/pyproject.toml"
       - name: Install the project
         run: uv sync --all-extras --dev
       - name: Run flake8 - Code style check 🐱
