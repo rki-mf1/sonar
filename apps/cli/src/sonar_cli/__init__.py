@@ -1,13 +1,6 @@
-import os
+from importlib.metadata import metadata
+from importlib.metadata import version
 
-import tomllib
-
-file_path = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(os.path.dirname(file_path))
-
-with open(os.path.join(ROOT_DIR, "pyproject.toml"), "rb") as f:
-    _META = tomllib.load(f)
-
-NAME = _META["tool"]["poetry"]["name"]
-VERSION = _META["tool"]["poetry"]["version"]
-DESCRIPTION = _META["tool"]["poetry"]["description"]
+__version__ = version(__name__)
+VERSION = __version__
+NAME = metadata(__name__)["Name"]

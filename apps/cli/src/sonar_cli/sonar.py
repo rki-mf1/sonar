@@ -11,7 +11,6 @@ from sonar_cli.utils import sonarUtils
 from sonar_cli.utils1 import sonarUtils1
 from tabulate import tabulate
 
-from . import DESCRIPTION
 from . import NAME
 from . import VERSION
 
@@ -40,7 +39,7 @@ def parse_args(args=None):
     """
     parser = argparse.ArgumentParser(
         prog="sonar-cli",
-        description=f"{NAME} {VERSION}: {DESCRIPTION}",
+        description=f"{NAME} {VERSION}",
     )
     general_parser = create_parser_general()
     database_parser = create_parser_database()
@@ -108,7 +107,7 @@ def parse_args(args=None):
         "-v",
         "--version",
         action="version",
-        version=f"{NAME}:{VERSION}",
+        version=f"{NAME} {VERSION}",
         help="Show program's version number and exit.",
     )
 
@@ -1045,7 +1044,7 @@ def execute_commands(args):  # noqa: C901
     Args:
         args (argparse.Namespace): Parsed command line arguments.
     """
-    LOGGER.info(f"Current version {NAME}:{VERSION}")
+    LOGGER.info(f"Current version {NAME} {VERSION}")
     if args.command == "import":
         if len(sys.argv[1:]) == 1:
             parse_args(["import", "-h"])
