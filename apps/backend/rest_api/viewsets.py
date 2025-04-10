@@ -7,15 +7,11 @@ import pickle
 import uuid
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db.models import Count
-from django.db.models import F
 from django.db.models import Q
-from django.db.models import Sum
 from django.db.utils import IntegrityError
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
-from rest_framework import serializers
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -30,18 +26,17 @@ from rest_api.data_entry.property_job import find_or_create_property
 from rest_api.data_entry.reference_job import delete_reference
 from rest_api.data_entry.sample_entry_job import check_for_new_data
 from rest_api.management.commands.import_lineage import LineageImport
+from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import generate_job_ID
 from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import parse_default_data
-from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
+
 from . import models
 from .serializers import AlignmentSerializer
-from .serializers import AminoAcidMutationSerializer
 from .serializers import GeneSerializer
 from .serializers import ImportLogSerializer
 from .serializers import LineagesSerializer
-from .serializers import NucleotideMutationSerializer
 from .serializers import ProcessingJobSerializer
 from .serializers import PropertySerializer
 from .serializers import ReferenceSerializer
@@ -678,7 +673,6 @@ class ResourceViewSet(viewsets.ViewSet):
 
 
 class FileUploadViewSet(viewsets.ViewSet):
-
     def _convert_property_column_mapping(
         self, column_mapping: dict[str, str]
     ) -> dict[str, PropertyColumnMapping]:
@@ -689,7 +683,6 @@ class FileUploadViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
-
         # Step 1: Check if zip file is present in the request
         if "zip_file" not in request.FILES:
             return Response(
@@ -779,7 +772,7 @@ class FileUploadViewSet(viewsets.ViewSet):
             proJobID_obj, _ = models.ProcessingJob.objects.get_or_create(
                 status="Q", job_name=jobID
             )
-        except IntegrityError as e:
+        except IntegrityError:
             proJobID_obj = models.ProcessingJob.objects.get(job_name=jobID)
 
         models.FileProcessing.objects.create(

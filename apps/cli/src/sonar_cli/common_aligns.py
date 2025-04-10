@@ -3,8 +3,9 @@ import subprocess
 import sys
 
 import parasail
-from pywfa import cigartuples_to_str
 from pywfa import WavefrontAligner
+from pywfa import cigartuples_to_str
+
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger

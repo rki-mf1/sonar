@@ -368,7 +368,6 @@ def construct_query(  # noqa: C901
     annotation_type: List[str] = [],
     annotation_impact: List[str] = [],
 ):
-
     int_pattern_single = re.compile(r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*)$")
     int_pattern_range = re.compile(r"^(\^*)(-?[1-9]+[0-9]*):(-?[1-9]+[0-9]*)$")
     date_pattern_single = re.compile(
@@ -414,7 +413,6 @@ def construct_query(  # noqa: C901
         # combine AND with different prop_name
         _prop_query = {"andFilter": []}
         for prop_name, prop_value_list in properties.items():
-
             if prop_value_list is None:
                 continue
 
@@ -453,7 +451,6 @@ def construct_query(  # noqa: C901
                         }
 
                     else:
-
                         # Determine the operator
                         operator = get_operator(
                             (

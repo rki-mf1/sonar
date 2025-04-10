@@ -1,25 +1,41 @@
-name: cli lint
+name: cli tests
 on:
   pull_request:
     paths:
       - 'apps/cli/**'
   workflow_dispatch:
+env:
+  UV_SYSTEM_PYTHON: 1
 jobs:
-  lint:
+  pytest-cli-only:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./apps/cli
+        shell: bash -el {0}
     steps:
-      - name: Checkout 🐱
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-      - name: Set up Python 🐱
-        uses: actions/setup-python@v5
+      - name: Install base dependencies (python, mafft, ...)
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: '3.11'
-      - name: Install dependencies 🐱
-        run: pip install poetry flake8
-      - name: Run flake8 - Code style check 🐱
-        run: poetry run flake8 src/ --config=.flake8 -v
+          miniforge-version: latest
+          channels: conda-forge,bioconda
+          conda-remove-defaults: "true"
+          activate-environment: "sonar-cli"
+          environment-file: apps/cli/environment.yml
+          python-version: 3.11
+          auto-activate-base: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Install a specific version of uv.
+          version: "0.6.13"
+          enable-cache: true
+          cache-dependency-glob: "apps/cli/uv.lock"
+      - name: Install the project
+        run: uv sync --locked
+      - name: Run cli pytest tests that don't require the backend
+        run: uv run --locked pytest -m clionly

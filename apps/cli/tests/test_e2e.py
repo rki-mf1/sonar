@@ -6,17 +6,19 @@ import pytest
 from .conftest import run_cli
 
 
+@pytest.mark.clionly
 def test_help():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run_cli("--help")
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 0
 
 
+@pytest.mark.clionly
 def test_version():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run_cli("-v")
-    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.type is SystemExit
     assert pytest_wrapped_e.value.code == 0
 
 
@@ -162,7 +164,6 @@ def test_delete_sample_fromfile(monkeypatch, capfd, api_url):
 
 
 def test_output_csv_format(capfd, api_url, tmpfile_name):
-
     code = run_cli(
         f" match --db {api_url} -r MN908947.3 --profile S:N440K C24503T --format csv -o {tmpfile_name}/out.csv "
     )

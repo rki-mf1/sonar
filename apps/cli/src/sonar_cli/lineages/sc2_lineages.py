@@ -3,7 +3,6 @@ from pango_aliasor.aliasor import Aliasor
 
 
 def main(output_file):
-
     path_lineages = "https://raw.githubusercontent.com/cov-lineages/pango-designation/master/lineage_notes.txt"
     all_lineages = [
         lineage

@@ -11,7 +11,6 @@ from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.db import DataError
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 from line_profiler import LineProfiler
 import pandas as pd
@@ -38,8 +37,8 @@ from rest_api.models import ProcessingJob
 from rest_api.models import Sample
 from rest_api.models import Sequence
 from rest_api.serializers import Sample2PropertyBulkCreateOrUpdateSerializer
-from rest_api.utils import parse_date
 from rest_api.utils import PropertyColumnMapping
+from rest_api.utils import parse_date
 
 property_cache = {}
 
@@ -134,7 +133,6 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
         .joinpath(process_file_path.stem)
     )
     try:
-
         filename_ID = process_file_path.name
         # get JOB ID based on the given files
         proJob_obj = ProcessingJob.objects.filter(files__file_name=filename_ID).first()
@@ -158,7 +156,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
         if pkl_path and pkl_path.exists():
             # property import
             import_type = ImportLog.ImportType.PROPERTY
-            print(f"Property import detected")
+            print("Property import detected")
             batch_size = PROPERTY_BATCH_SIZE
             print("Batch size:", batch_size)
             property_files_tsv = list(temp_dir.glob("**/*.tsv"))
@@ -411,9 +409,9 @@ def process_batch_run(
         nt_mutation_set: list[NucleotideMutation] = []
         cds_mutation_set: list[AminoAcidMutation] = []
         mutation_parent_relations = []
-        nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through] = (
-            []
-        )
+        nt_mutation_alignment_relations: list[
+            NucleotideMutation.alignments.through
+        ] = []
         aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = []
         for sample_import_obj in sample_import_objs:
             id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
@@ -588,7 +586,6 @@ def process_batch_single_thread(
 def import_property(
     property_file, sep, use_celery=False, column_mapping=None, batch_size=1000
 ):
-
     try:
         # Load the CSV file in batches
         properties_df = pd.read_csv(
@@ -621,7 +618,6 @@ def import_property(
         # Data preprocessing
 
         for column_name, col_info in serializable_column_mapping.items():
-
             if column_name not in properties_df.columns:
                 print(
                     f"Skipping column '{column_name}' as it is not in the property file."
@@ -632,7 +628,6 @@ def import_property(
             print(f"{column_name} :pairs with: {col_info}")
 
             if default_value is not None:
-
                 properties_df[column_name] = (
                     properties_df[column_name]
                     .replace("", default_value)  # Replace empty strings
@@ -726,7 +721,6 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
     custom_property_names = []
 
     for property_name in properties_df.columns:
-
         if property_name in column_mapping.keys():
             db_property_name = column_mapping[property_name].db_property_name
             try:
@@ -744,7 +738,6 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
     properties_df.set_index(sample_id_column, inplace=True)
     try:
         for sample in samples:
-
             row = properties_df[properties_df.index == sample.name]
 
             sample.last_update_date = timezone.now()

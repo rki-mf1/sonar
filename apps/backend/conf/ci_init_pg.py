@@ -18,7 +18,7 @@ def create_django_schema():
             print(f"Created the Schema '{schema}'")
         with connection.cursor() as cursor2:
             cursor2.execute(
-                f'GRANT ALL ON SCHEMA {schema} TO {getenv("POSTGRES_USER")}'
+                f"GRANT ALL ON SCHEMA {schema} TO {getenv('POSTGRES_USER')}"
             )
             print(f"Granted rights on schema {schema} to {getenv('POSTGRES_USER')}")
 

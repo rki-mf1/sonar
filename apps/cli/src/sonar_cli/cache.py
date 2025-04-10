@@ -17,6 +17,8 @@ from typing import Optional
 from typing import Union
 
 import pandas as pd
+from tqdm import tqdm
+
 from sonar_cli.api_interface import APIClient
 from sonar_cli.common_utils import file_collision
 from sonar_cli.common_utils import get_fname
@@ -28,7 +30,6 @@ from sonar_cli.common_utils import slugify
 from sonar_cli.config import BASE_URL
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
-from tqdm import tqdm
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
@@ -154,9 +155,7 @@ class sonarCache:
         if self.logfile_obj:
             self.logfile_obj.close()
 
-    def add_fasta_v2(
-        self, *fnames, method=1, chunk_size=1000, max_workers=8
-    ):  # noqa: C901
+    def add_fasta_v2(self, *fnames, method=1, chunk_size=1000, max_workers=8):  # noqa: C901
         """ """
         sample_data: List[Dict[str, Union[str, int]]] = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -216,7 +215,6 @@ class sonarCache:
         }
 
         for i, data in enumerate(batch_data):
-
             # get sample
             batch_data[i]["sampleid"], seqhash_from_DB = (
                 sample_dict[data["name"]]["sample_id"],
@@ -599,7 +597,6 @@ class sonarCache:
                     ]  # provide a list of triplets for all CDS coordinates
                     seq = list(reversed(cds["sequence"] + "*"))
                     for aa_pos, nuc_pos_list in enumerate(coords):
-
                         rows.append(
                             [elemid]
                             + nuc_pos_list
@@ -665,7 +662,6 @@ class sonarCache:
         gene_rows = APIClient(base_url=self.base_url).get_elements(ref_acc=refmol_acc)
 
         for row in gene_rows:
-
             if prev_elem is None:
                 prev_elem = row["gene_segment.gene_id"]
             elif row["gene_segment.gene_id"] != prev_elem:
@@ -673,7 +669,6 @@ class sonarCache:
                 cds = {}
                 prev_elem = row["gene_segment.gene_id"]
             if cds == {}:
-
                 cds = {
                     "id": row["gene_segment.gene_id"],
                     "accession": row["gene.cds_accession"],

@@ -2,11 +2,11 @@ import re
 import subprocess
 
 import pytest
+
 from sonar_cli import sonar
 from sonar_cli.annotation import Annotator
 from sonar_cli.cache import sonarCache
 from sonar_cli.config import ANNO_TOOL_PATH
-
 
 # Assuming Django API is running on localhost
 API_BASE_URL = "http://127.0.0.1:8000/api"

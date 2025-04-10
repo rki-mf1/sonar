@@ -17,6 +17,8 @@ import zipfile
 
 from mpire import WorkerPool
 import pandas as pd
+from tqdm import tqdm
+
 from sonar_cli.align import sonarAligner
 from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
@@ -41,7 +43,6 @@ from sonar_cli.config import BASE_URL
 from sonar_cli.config import CHUNK_SIZE
 from sonar_cli.config import PROP_CHUNK_SIZE
 from sonar_cli.logging import LoggingConfigurator
-from tqdm import tqdm
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
@@ -408,7 +409,6 @@ class sonarUtils:
                     time.sleep(sleep_time)
 
             if cache.auto_anno:
-
                 for chunk_number, each_file in enumerate(
                     tqdm(
                         anno_result_list,
@@ -496,12 +496,10 @@ class sonarUtils:
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
             for file_path in files_to_compress:
-
                 if isinstance(file_path, tuple):
                     # Add the dictionary data to the archive with pickle extension
                     zipf.writestr(file_path[0], file_path[1])
                 else:
-
                     # Find the index of 'var'
                     path_parts = file_path.split("/")
                     var_index = path_parts.index("var")
@@ -1393,7 +1391,6 @@ def _write_vcf_records(handle, records: Dict, all_samples: List[str]):  # noqa: 
     for chrom in records:
         for pos in records[chrom]:
             for ref in records[chrom][pos]:
-
                 if ref == "pre_ref":  # skip pre_ref key
                     continue
                 # snps and inserts (combined output)

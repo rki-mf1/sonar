@@ -3,8 +3,8 @@ from django.db import connection
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
 
-from rest_api.utils import Response
 from . import models
 from .viewsets_sample import SampleViewSet
 
@@ -116,7 +116,6 @@ class DatabaseInfoView(
         return Response(data={"detail": dict}, status=status.HTTP_200_OK)
 
     def get_database_size(self):
-
         with connection.cursor() as cursor:
             cursor.execute(
                 """

@@ -5,6 +5,8 @@ on:
       - 'apps/backend/**'
       - 'apps/cli/**'
   workflow_dispatch:
+env:
+  UV_SYSTEM_PYTHON: 1
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -16,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-      - name: Install base dependencies (python, poetry, mafft, ...)
+      - name: Install base dependencies (python, mafft, ...)
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
@@ -26,15 +28,20 @@ jobs:
           environment-file: apps/cli/environment.yml
           python-version: 3.11
           auto-activate-base: false
-      - name: Install python dependencies
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Install a specific version of uv.
+          version: "0.6.13"
+          enable-cache: true
+          cache-dependency-glob: "apps/cli/uv.lock"
+      - name: Install the cli
         working-directory: ./apps/cli
-        run: |
-          conda info
-          poetry install
-          poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
-      - name: Hello sonar-cli 🐶
-        run: sonar-cli -v
-      - name: Start backend containers 🙈
+        run: uv sync --locked
+      - name: Sanity check sonar-cli
+        working-directory: ./apps/cli
+        run: uv run --locked sonar-cli -v
+      - name: Build and start backend containers
         working-directory: ./apps/backend
         id: docker_compose_build
         run: |
@@ -48,8 +55,4 @@ jobs:
           CHUNK_SIZE: 100
           ANNO_TOOL_PATH: "snpEff"
           ANNO_CHUNK_SIZE: 50
-        run: poetry run pytest --cov --cache-clear --dist loadgroup -rfeP tests/
-    # - name: Stop containers 🙈
-    #   working-directory: sonar-backend
-    #   if: always()
-    #   run: docker compose -f "docker-compose.test-gh.yml" down
+        run: uv run --locked pytest --cov --cache-clear --dist loadgroup -rfeP tests/

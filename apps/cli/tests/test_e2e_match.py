@@ -10,7 +10,6 @@ def test_match(api_url):
 
 
 def test_match_pipe(capfd, api_url):
-
     result = run_cli_cmd(f"sonar-cli match --db {api_url} -r MN908947.3 ")
     assert result.returncode == 0, f"Expected exit code 0 but got {result}"
 

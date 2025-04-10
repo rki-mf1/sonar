@@ -73,30 +73,33 @@ Navigate to the root directory of `sonar-cli`.
 cd path/to/sonar-cli
 ```
 
-Install the application using Poetry.
+Install the application using uv.
 
 ```sh
-poetry install --only main
-```
-
-Temporary: build pywfa from source. This is to work around a segfault when
-using the conda or pip installation (see
-https://github.com/kcleal/pywfa/issues/16)
-
-```sh
-pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
+uv sync --no-managed-python
 ```
 
 Verify the installation by checking the version.
 
 ```sh
-sonar-cli -v
+uv run --system sonar-cli -v
+```
+
+Note: If you want to run a bunch of sonar-cli commands and are sick of writing
+`uv run`, after running the `uv sync` command you can acivate the virtual
+environment it creates and then run sonar-cli directly:
+
+```sh
+$ cd apps/cli
+$ source .venv/bin/activate
+$ sonar-cli -v
+sonar-cli 1.0.1.post21+592a435
 ```
 
 Next make sure you can contact the backend:
 
 ```sh
-$ sonar-cli list-ref
+$ uv run sonar-cli list-ref
 Current version sonar-cli:1.0.0
 ╒══════╤═════════════╤═══════════════╤═════════════════════════════════════════════════╕
 │   id │ accession   │ taxon         │ organism                                        │

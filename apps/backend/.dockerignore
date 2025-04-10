@@ -11,3 +11,4 @@ test-data/
 tmp/
 work/
 conf/docker/
+.venv
