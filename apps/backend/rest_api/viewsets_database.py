@@ -3,8 +3,7 @@ from django.db import connection
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import action
-
-from rest_api.utils import Response
+from rest_framework.response import Response
 
 from . import models
 from .viewsets_sample import SampleViewSet

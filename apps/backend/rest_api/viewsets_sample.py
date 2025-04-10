@@ -44,7 +44,6 @@ from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
-from rest_api.utils import Response
 from rest_api.utils import define_profile
 from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import resolve_ambiguous_NT_AA
