@@ -10,6 +10,7 @@ dependencies:
   - poetry=1.6.1
   - python=3.11
   - snpeff=5.2
+  - sourmash-minimal=4.8.14
   - pre-commit
 variables:
   REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt

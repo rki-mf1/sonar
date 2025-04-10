@@ -17,7 +17,6 @@ import zipfile
 
 import pandas as pd
 from sonar_cli.api_interface import APIClient
-from sonar_cli.blast_ext import create_blast_db
 from sonar_cli.common_utils import file_collision
 from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import harmonize_seq
@@ -26,8 +25,11 @@ from sonar_cli.common_utils import open_file_autodetect
 from sonar_cli.common_utils import remove_charfromsequence_data
 from sonar_cli.common_utils import slugify
 from sonar_cli.config import BASE_URL
+from sonar_cli.config import KSIZE
+from sonar_cli.config import SCALED
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
+from sonar_cli.sourmash_ext import create_cluster_db
 from tqdm import tqdm
 
 # Initialize logger
@@ -145,18 +147,19 @@ class sonarCache:
                     "Could not retrieve the snpEff reference annotation from the sonar server. Aborting."
                 )
                 sys.exit(1)
+
         # for segment genome
-        self.blast_db = None
+        self.cluster_db = None
         self.is_segment_import = False
         if len(self.refmols) > 1:
             self.is_segment_import = True
             LOGGER.info(
-                "Segment genome detect: creating BLAST database for assigning appropriate reference accession"
+                "Segment genome detected: creating a database for assigning appropriate reference accession"
             )
             # BUILD BLAST DATABSE
             os.makedirs(self.blast_dir, exist_ok=True)
-            self.blast_db = os.path.join(self.blast_dir, get_fname(self.refacc))
-            create_blast_db(self.refmols, self.blast_db)
+            self.cluster_db = os.path.join(self.blast_dir, get_fname(self.refacc))
+            create_cluster_db(self.refmols, self.cluster_db, KSIZE, SCALED)
             self.blast_best_aln = (
                 dict()
             )  # <-- example { fname: {'LC638384.1' (sampleID):'NC_026435.1' (repliconID) , 'LC778458.1':....} (dict) }
@@ -441,7 +444,7 @@ class sonarCache:
             except Exception:
                 None
         else:
-            if not self.blast_db:  # not segment gneome
+            if not self.cluster_db:  # not segment gneome
                 return self.default_refmol_acc
             elif self.blast_best_aln is not None:
                 return None

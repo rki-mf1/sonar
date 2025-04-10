@@ -371,7 +371,7 @@ def copy_file(src, dest):
 
     # Copy the file
     shutil.copy(src, new_file_path)
-    LOGGER.info(f"File {src} has been copied to {dest}")
+    # LOGGER.info(f"File {src} has been copied to {dest}")
     # Return the new file path
     return new_file_path
 
