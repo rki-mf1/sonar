@@ -130,7 +130,7 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                 gene = gene_id_to_gene_obj.get(gene_symbol, None)
                 if gene is None:
                     raise ValueError("No gene object found for CDS.")
-                cds = _put_cds_from_feature(cds_feature, record.seq, gene)
+                cds = _put_cds_from_feature(cds_feature, gene)
                 # different cds in one gene
                 if gene_symbol not in gene_id_to_cds_obj:
                     gene_id_to_cds_obj[gene_symbol] = []
@@ -156,9 +156,7 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                     )
                 elif len(cds_objects) == 1:
                     cds = cds_objects[0]
-                    peptide = _put_peptide_from_feature(
-                        peptide_feature, record.seq, cds
-                    )
+                    peptide = _put_peptide_from_feature(peptide_feature, cds)
                     _create_peptide_segments(peptide_feature, peptide)
 
     return records
@@ -240,7 +238,7 @@ def _put_gene_from_feature(
     gene_type: Gene.GeneTypes,
 ) -> Gene:
     """
-    Processes a gene feature from a sequence and updates or creates a corresponding Gene object.
+    Processes a gene feature from a gene bank file and updates or creates a corresponding Gene object.
 
     Args:
         feature (SeqFeature.SeqFeature): The gene feature containing location and qualifiers.
@@ -251,6 +249,11 @@ def _put_gene_from_feature(
 
     Returns:
         Gene: The updated or newly created Gene object.
+        gene_accession: filled with first existing tag in this order [gene, protein_id, locus_tag]
+        gene_symbol: filled with first existing tag in this order [gene, locus_tag]
+        gene_sequence: complete sequence of gene
+        gene_locus_tag: locus_tag = systematic gene name
+        gene_description: gene_synonym
 
     Raises:
         ValueError: If the feature has no location information.
@@ -269,6 +272,7 @@ def _put_gene_from_feature(
     gene_update_data["symbol"] = _determine_symbol(feature)
     gene_update_data["sequence"] = str(feature.extract(replicon_seq))
     gene_update_data["locus_tag"] = feature.qualifiers.get("locus_tag", [""])[0]
+    gene_update_data["description"] = feature.qualifiers.get("gene_synonym", [""])[0]
 
     gene = find_or_create(gene_base_data, Gene, GeneSerializer)
     for attr_name, value in gene_update_data.items():
@@ -276,12 +280,26 @@ def _put_gene_from_feature(
     return GeneSerializer(gene).update(gene, gene_update_data)
 
 
-def _put_cds_from_feature(
-    feature: SeqFeature.SeqFeature, source_seq: str, gene: Gene
-) -> CDS:
+def _put_cds_from_feature(feature: SeqFeature.SeqFeature, gene: Gene) -> CDS:
+    """
+    Processes a cds feature from a gene bank file and updates or creates a corresponding CDS object.
+    Location information stored in related cds_segment table
+
+    Args:
+        feature (SeqFeature.SeqFeature): The cds feature containing location and qualifiers.
+        gene (Gene): The associated gene object.
+
+    Returns:
+        CDS: The updated or newly created CDS object.
+        cds_accession: filled with first existing tag in this order [gene, protein_id, locus_tag]
+        cds_sequence: complete aa-sequence of cds
+        cds_descritption: product tag = protein name
+
+    Raises:
+        ValueError: If the feature has no location information.
+    """
     if feature.location is None:
         raise ValueError("No location information found for CDS feature.")
-
     cds_update_data = {}
     cds_update_data["accession"] = _determine_accession(feature)
     _validate_segment_lengths(feature.location.parts, cds_update_data["accession"])
@@ -296,9 +314,23 @@ def _put_cds_from_feature(
     return CDSSerializer(cds).update(cds, cds_update_data)
 
 
-def _put_peptide_from_feature(
-    feature: SeqFeature.SeqFeature, source_seq: str, cds: CDS
-) -> Peptide:
+def _put_peptide_from_feature(feature: SeqFeature.SeqFeature, cds: CDS) -> Peptide:
+    """
+    Processes a peptide feature from a gene bank file and updates or creates a corresponding Peptide object.
+    Location information stored in related peptide_segment table
+
+    Args:
+        feature (SeqFeature.SeqFeature): The cds feature containing location and qualifiers.
+        cds (CDS): The associated CDS object.
+
+    Returns:
+        Peptide: The updated or newly created peptide object.
+        peptide_type: mat_peptide or sig_peptide
+        peptide_descritption: product tag = protein name
+
+    Raises:
+        ValueError: If the feature has no location information.
+    """
     if feature.location is None:
         raise ValueError("No location information found for peptide feature.")
     peptide_base_data = {
@@ -357,9 +389,14 @@ def _put_reference_from_record(
                             date_string, "%d-%b-%Y"
                         ).date()
                     except ValueError:
-                        reference[attr_name] = datetime.strptime(
-                            date_string, "%b-%Y"
-                        ).date()
+                        try:
+                            reference[attr_name] = datetime.strptime(
+                                date_string, "%b-%Y"
+                            ).date()
+                        except ValueError:
+                            reference[attr_name] = datetime.strptime(
+                                date_string, "%Y"
+                            ).date()
             else:
                 reference[attr_name] = source.qualifiers[attr_name][0]
     try:

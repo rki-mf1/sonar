@@ -1,23 +1,56 @@
-LOCUS       AB016162               15894 bp    RNA     linear   VRL 21-SEP-2000
-DEFINITION  Measles virus genomic RNA, complete sequence.
-ACCESSION   AB016162
-VERSION     AB016162.1
-KEYWORDS    nonstructural C protein; L; large polymerase; H; hemagglutinin
-            protein; F; fusion protein; M; matrix protein; C; P;
-            phosphoprotein; N; nucleocapsid protein.
+LOCUS       NC_001498              15894 bp    cRNA    linear   VRL 13-AUG-2018
+DEFINITION  Measles virus, complete genome.
+ACCESSION   NC_001498
+VERSION     NC_001498.1
+DBLINK      Project: 15025
+            BioProject: PRJNA485481
+KEYWORDS    RefSeq.
 SOURCE      Measles morbillivirus
   ORGANISM  Measles morbillivirus
             Viruses; Riboviria; Orthornavirae; Negarnaviricota;
             Haploviricotina; Monjiviricetes; Mononegavirales; Paramyxoviridae;
             Orthoparamyxovirinae; Morbillivirus; Morbillivirus hominis.
-REFERENCE   1
+REFERENCE   1  (sites)
+  AUTHORS   Rima,B.K. and Duprex,W.P.
+  TITLE     The measles virus replication cycle
+  JOURNAL   Curr. Top. Microbiol. Immunol. 329, 77-102 (2009)
+   PUBMED   19198563
+REFERENCE   2
   AUTHORS   Takeuchi,K., Miyajima,N., Kobune,F. and Tashiro,M.
   TITLE     Comparative nucleotide sequence analyses of the entire genomes of
             B95a cell-isolated and vero cell-isolated measles viruses from the
             same patient
   JOURNAL   Virus Genes 20 (3), 253-257 (2000)
    PUBMED   10949953
-REFERENCE   2  (bases 1 to 15894)
+REFERENCE   3  (bases 1807 to 2705)
+  AUTHORS   Wardrop,E.A. and Briedis,D.J.
+  TITLE     Characterization of V protein in measles virus-infected cells
+  JOURNAL   J. Virol. 65 (7), 3421-3428 (1991)
+   PUBMED   2041073
+REFERENCE   4  (bases 1748 to 3402)
+  AUTHORS   Cattaneo,R., Kaelin,K., Baczko,K. and Billeter,M.A.
+  TITLE     Measles virus editing provides an additional cysteine-rich protein
+  JOURNAL   Cell 56 (5), 759-764 (1989)
+   PUBMED   2924348
+REFERENCE   5  (bases 1748 to 3402)
+  AUTHORS   Bellini,W.J., Englund,G., Richardson,C.D., Rozenblatt,S. and
+            Lazzarini,R.A.
+  TITLE     Matrix genes of measles virus and canine distemper virus: cloning,
+            nucleotide sequences, and deduced amino acid sequences
+  JOURNAL   J. Virol. 58 (2), 408-416 (1986)
+   PUBMED   3754588
+REFERENCE   6  (bases 1748 to 3402)
+  AUTHORS   Bellini,W.J., Englund,G., Rozenblatt,S., Arnheiter,H. and
+            Richardson,C.D.
+  TITLE     Measles virus P gene codes for two proteins
+  JOURNAL   J. Virol. 53 (3), 908-919 (1985)
+   PUBMED   3882996
+REFERENCE   7  (bases 1 to 15894)
+  CONSRTM   NCBI Genome Project
+  TITLE     Direct Submission
+  JOURNAL   Submitted (01-AUG-2000) National Center for Biotechnology
+            Information, NIH, Bethesda, MD 20894, USA
+REFERENCE   8  (bases 1 to 15894)
   AUTHORS   Takeuchi,K., Tanabayashi,K. and Tashiro,M.
   TITLE     Direct Submission
   JOURNAL   Submitted (10-JUL-1998) Kaoru Takeuchi, National Institute of
@@ -25,22 +58,33 @@ REFERENCE   2  (bases 1 to 15894)
             Gakuen, Musashi-murayama, Tokyo 208-0011, Japan
             (E-mail:ktake@nih.go.jp, Tel:81-42-561-0771(ex.530),
             Fax:81-42-567-5631)
-COMMENT     On Dec 14, 1998 this sequence version replaced gi:3986256.
+COMMENT     REVIEWED REFSEQ: This record has been curated by NCBI staff. The
+            reference sequence was derived from AB016162.
             Sequence updated (21-Jul-1998)
             Sequence updated (11-Dec-1998).
+            COMPLETENESS: full length.
 FEATURES             Location/Qualifiers
      source          1..15894
                      /organism="Measles morbillivirus"
-                     /mol_type="genomic RNA"
+                     /mol_type="viral cRNA"
                      /strain="Ichinose-B95a"
                      /db_xref="taxon:11234"
-     gene            108..1685
+     gene            56..1744
                      /gene="N"
+                     /locus_tag="MeVgp1"
+                     /db_xref="GeneID:1489804"
+     mRNA            56..1744
+                     /gene="N"
+                     /locus_tag="MeVgp1"
+                     /product="gene N"
+                     /db_xref="GeneID:1489804"
      CDS             108..1685
                      /gene="N"
+                     /locus_tag="MeVgp1"
                      /codon_start=1
                      /product="nucleocapsid protein"
-                     /protein_id="BAA34977.1"
+                     /protein_id="NP_056918.1"
+                     /db_xref="GeneID:1489804"
                      /translation="MATLLRSLALFKRNKDKPPITSGSGGAIRGIKHIIIVPIPGDSS
                      ITTRSRLLDRLVRLIGNPDVSGPKLTGALIGILSLFVESPGQLIQRITDDPDVSIRLL
                      EVVQSDQSQSGLTFASRGTNMEDEADQYFSHDDPSSSDQSRSGWFENKEISDIEVQDP
@@ -51,14 +95,33 @@ FEATURES             Location/Qualifiers
                      LVSEIAMHTTEDRISRAVGPRQAQVSFLHGDQSENELPGLGGKEDRRVKQGRGEARES
                      YRETGSSRASDARAAHPPTSMPLDIDTASESGQDPQDSRRSADALLRLQAMAGILEEQ
                      GSDTDTPRVYNDRDLLD"
-     gene            1807..3330
-                     /gene="P"
+     gene            1748..3402
+                     /gene="P/V/C"
+                     /locus_tag="MeVgp2"
+                     /gene_synonym="P"
+                     /db_xref="GeneID:1489805"
+     mRNA            1748..3402
+                     /gene="P/V/C"
+                     /locus_tag="MeVgp2"
+                     /gene_synonym="P"
+                     /product="P/V/C"
+                     /experiment="cDNA sequencing"
+                     /note="three proteins are translated from this mRNA;
+                     translation of phosphoprotein is initiated from an
+                     alternative site; V protein is translated from mRNA
+                     modified by the addition of a non-templated G"
+                     /citation=[4]
+                     /db_xref="GeneID:1489805"
      CDS             1807..3330
-                     /gene="P"
-                     /note="additional G insertion at 2499:V mRNA"
+                     /gene="P/V/C"
+                     /locus_tag="MeVgp2"
+                     /gene_synonym="P"
+                     /note="subunit of RNA dependent RNA polymerase (RdRp);
+                     chaperone for Measles virus nucleocapsid protein"
                      /codon_start=1
                      /product="phosphoprotein"
-                     /protein_id="BAA34978.1"
+                     /protein_id="NP_056919.1"
+                     /db_xref="GeneID:1489805"
                      /translation="MAEEQARHVKNGLECIRALKAEPIGSLAVEEAMAAWSEISDNPG
                      QDRATCKEEEAGSSGLSKPCLSAIGSTEGGAPRIRGQGSGESDDDAETLGIPSRNLQA
                      SSTGLQCYHVYDHSGEAVKGIQDADSIMVQSGLDGDSTLSGGDDESENSDVDIGEPDT
@@ -68,22 +131,67 @@ FEATURES             Location/Qualifiers
                      KLESLLLLKGEVESIKKQINRQNISISTLEGHLSSIMIAIPGLGKDPNDPTADVELNP
                      DLKPIIGRDSGRALAEVLKKPVASRQLQGMTNGRTSSRGQLLKEFQLKPIGKKVSSAV
                      GFVPDTGPASRSVIRSIIKSSRLEEDRKRYLMTLLDDIKGANDLAKFHQMLMKIIMK"
-     CDS             1829..2389
-                     /gene="P"
+     CDS             join(1807..2499,2499..2705)
+                     /gene="P/V/C"
+                     /locus_tag="MeVgp2"
+                     /gene_synonym="P"
+                     /experiment="antibody studies of V protein in tissue
+                     culture cells"
+                     /experiment="in vitro translation of synthetic RNA"
+                     /exception="RNA editing"
+                     /note="prevents interferon induced transcriptional
+                     responses in Measles virus; translated from P/V/C mRNA
+                     modified by co-transcriptional insertion of non-templated
+                     G at genome position 2499 nt"
+                     /citation=[3]
+                     /citation=[4]
                      /codon_start=1
-                     /product="nonstructural C protein"
-                     /protein_id="BAA34979.1"
+                     /product="V protein"
+                     /protein_id="YP_003873249.2"
+                     /db_xref="GeneID:1489805"
+                     /translation="MAEEQARHVKNGLECIRALKAEPIGSLAVEEAMAAWSEISDNPG
+                     QDRATCKEEEAGSSGLSKPCLSAIGSTEGGAPRIRGQGSGESDDDAETLGIPSRNLQA
+                     SSTGLQCYHVYDHSGEAVKGIQDADSIMVQSGLDGDSTLSGGDDESENSDVDIGEPDT
+                     EGYAITDRGSAPISMGFRASDVETAEGGEIHELLKLQSRGNNFPKLGKTLNVPPPPNP
+                     SRASTSETPIKKGHRREIGLIWNGDRVFIDRWCNPMCSKVTLGTIRARCTCGECPRVC
+                     EQCRTDTGVDTRIWYHNLPEIPE"
+     CDS             1829..2389
+                     /gene="P/V/C"
+                     /locus_tag="MeVgp2"
+                     /gene_synonym="P"
+                     /experiment="antibody studies of C protein in tissue
+                     culture cells"
+                     /note="prevents interferon-induced transcriptional
+                     responses; acts as infectivity factor; inhibits
+                     transcription; translated from overlapping reading frame
+                     in P/V/C mRNA using alternative start site"
+                     /citation=[6]
+                     /codon_start=1
+                     /product="C protein"
+                     /protein_id="NP_056920.1"
+                     /db_xref="GeneID:1489805"
                      /translation="MSKTDWNASGLSRPSPSAHWPSRKPWQHGQKYQTTQDRTEPPAR
                      KRRQAVRVSANHASQQLDQLKAVHLASAVRDLEKAMTTLKLWESPQEISRHQALGYSV
                      IMFMITAVKRLRESKMLTLSWFNQALMVIAPSQEETMNLKTAMWILANLIPRDMLSLT
                      GDLLPSLWGSGLLMLKLQKEGRSTSS"
-     gene            3438..4445
+     gene            3406..4872
                      /gene="M"
+                     /locus_tag="MeVgp3"
+                     /db_xref="GeneID:1489803"
+     mRNA            3406..4872
+                     /gene="M"
+                     /locus_tag="MeVgp3"
+                     /product="M gene"
+                     /db_xref="GeneID:1489803"
      CDS             3438..4445
                      /gene="M"
+                     /locus_tag="MeVgp3"
+                     /note="hydrophobic protein on inner leaflet of membrane;
+                     inhibits transcription"
                      /codon_start=1
                      /product="matrix protein"
-                     /protein_id="BAA34980.1"
+                     /protein_id="NP_056921.1"
+                     /db_xref="GeneID:1489803"
                      /translation="MTEIYDFDKSAWDIKGSIAPIQPTTYSDGRLVPQVRVIDPGLGD
                      RKDECFMYMFLLGVVEDSDPLGPPIGRAFGSLPLGVGRSTAKPEELLKEATELDIVVR
                      RTAGLNEKLVFYNNTPLTLLTPWRKVLTTGSVFNANQVCNAVNLIPLDTPQRFRVVYM
@@ -91,14 +199,25 @@ FEATURES             Location/Qualifiers
                      VHIGNFRRKKSEVYSADYCKMKIEKMGLVFALGGIGGTSLHIRSTGKMSKTLHAQLGF
                      KKTLCYPLMDINEDLNRLLWRSRCKIVRIQAVLQPSVPQEFRIYDDVIINDDQGLFKV
                      L"
-     gene            5458..7110
+     gene            4876..7247
                      /gene="F"
+                     /locus_tag="MeVgp4"
+                     /db_xref="GeneID:1489800"
+     mRNA            4876..7247
+                     /gene="F"
+                     /locus_tag="MeVgp4"
+                     /product="F gene"
+                     /db_xref="GeneID:1489800"
      CDS             5458..7110
                      /gene="F"
-                     /note="additional G inserted at 2499:V"
+                     /locus_tag="MeVgp4"
+                     /note="type I transmembrane glycoprotein; synthesized as
+                     precurser peptide F0; cleaved to a disulphide linked F1-F2
+                     complex by furin-like protease; acylated"
                      /codon_start=1
                      /product="fusion protein"
-                     /protein_id="BAA34981.1"
+                     /protein_id="NP_056922.1"
+                     /db_xref="GeneID:1489800"
                      /translation="MGLKVNVSAIFMAVLLTLQTPTGQIHWGNLSKIGVVGIGSASYK
                      VMTRSSHQSLVIKLMPNITLLNNCTRVEIAEYRRLLRTVLEPIRDALNAMTQNIRPVQ
                      SVASSRRHKRFAGVVLAGAALGVATAAQITAGIALHQSMLNSQAIDNLRASLETTNQA
@@ -109,13 +228,24 @@ FEATURES             Location/Qualifiers
                      ILCKCYTTGTIINQDPDKILTYIAADHCPVVEVNGVTIQVGSRRYPDAVYLHRIDLGP
                      PISLERLDVGTNLGNAIAKLEDAKELLESSDQILRSMKGLSSTSIVYILIAVCLGGLI
                      GIPALICCCRGRCNKKGEQVGMSRPGLKPDLTGTSKSYVRSL"
-     gene            7271..9124
+     gene            7251..9208
                      /gene="H"
+                     /locus_tag="MeVgp5"
+                     /db_xref="GeneID:1489801"
+     mRNA            7251..9208
+                     /gene="H"
+                     /locus_tag="MeVgp5"
+                     /product="H gene"
+                     /db_xref="GeneID:1489801"
      CDS             7271..9124
                      /gene="H"
+                     /locus_tag="MeVgp5"
+                     /note="type II transmembrane glycoprotein; attachment
+                     glycoprotein that interacts directly with entry receptors"
                      /codon_start=1
                      /product="hemagglutinin protein"
-                     /protein_id="BAA34982.1"
+                     /protein_id="NP_056923.1"
+                     /db_xref="GeneID:1489801"
                      /translation="MSPQRDRINAFYKDNPHPKGSRIVINREHLMIDRPYVLLAVLFV
                      MFLSLIGLLAIAGIRLHRAAIYTAEIHKSLSTNLDVTNSIEHQVKDVLTPLFKIIGDE
                      VGLRTPQRFTDLVKFISDKIKFLNPDREYDFRDLTWCINPPERIKLDYDQYCADVAAE
@@ -127,13 +257,24 @@ FEATURES             Location/Qualifiers
                      VYWLTIPPMKNLALGVINTLEWIPRFKVSPNLFTVPIKEAGEDCHAPTYLPAEVDGDV
                      KLSSNLVILPGQDLQYVLATYDTSRVEHAVVYYVYSPSRSFSYFYPFRLPIKGVPIEL
                      QVECFTWDKKLWCRHFCVLADSESGGHITHSGMVGMGVSCTVTREDGTNRR"
-     gene            9234..15785
+     gene            9212..15854
                      /gene="L"
+                     /locus_tag="MeVgp6"
+                     /db_xref="GeneID:1489802"
+     mRNA            9212..15854
+                     /gene="L"
+                     /locus_tag="MeVgp6"
+                     /product="L gene"
+                     /db_xref="GeneID:1489802"
      CDS             9234..15785
                      /gene="L"
+                     /locus_tag="MeVgp6"
+                     /note="large subunit of RNA dependent RNA polymerase
+                     (RdRp); RNA synthesis, capping, and polyadenylation"
                      /codon_start=1
-                     /product="large polymerase"
-                     /protein_id="BAA35122.1"
+                     /product="large polymerase protein"
+                     /protein_id="NP_056924.1"
+                     /db_xref="GeneID:1489802"
                      /translation="MDSLSVNQILYPEVHLDSPIVTNKIVAILEYARVPHAYSLEDPT
                      LCQNIKHRLKNGFSNQMIINNVEVGNVIKSKLRSYPAHSHIPYPNCNQDLFNIEDKES
                      TRKIRELLKKGNSLYSKVSDKVFQCLRDTNSRLGLGSELREDIKEKIINLGVYMHSSQ
@@ -439,3 +580,4 @@ ORIGIN
     15781 attaattggt tgaactccgg aaccctaatc ctgccctagg tagttaggca ttatttgcaa
     15841 tatattaaag aaaactttga aaatacgaag tttctattcc cagctttgtc tggt
 //
+
