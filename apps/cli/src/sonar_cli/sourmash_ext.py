@@ -1,6 +1,8 @@
+import gzip
 import os
 from pathlib import Path
 import pickle
+import shutil
 
 from Bio import SeqIO
 import sourmash
@@ -61,6 +63,25 @@ def create_cluster_db(records: dict, db_name: str, ksize=11, scaled=1):
 def perform_search(fasta_file: str, db_path: str, ksize: int = 11, scaled: int = 1):
     db = _load_db(db_path)
     best_alignments = {}
+    # Check if the file is compressed with .gz, .xz, or .zip
+    if fasta_file.endswith(".gz"):
+        decompressed_file = fasta_file.rstrip(".gz")
+        with gzip.open(fasta_file, "rb") as in_f:
+            with open(decompressed_file, "wb") as out_f:
+                shutil.copyfileobj(in_f, out_f)
+        fasta_file = decompressed_file
+    elif fasta_file.endswith(".xz"):
+        decompressed_file = fasta_file.rstrip(".xz")
+        os.system(f"xz -d -c {fasta_file} > {decompressed_file}")
+        fasta_file = decompressed_file
+    elif fasta_file.endswith(".zip"):
+        decompressed_file = fasta_file.rstrip(".zip")
+        with shutil.ZipFile(fasta_file, "r") as zip_ref:
+            zip_ref.extractall(Path(fasta_file).parent)
+            decompressed_file = str(
+                Path(fasta_file).with_suffix("")
+            )  # Assuming single file in zip
+        fasta_file = decompressed_file
 
     for record in SeqIO.parse(fasta_file, "fasta"):
         sig = _create_signature(str(record.seq), record.id, ksize, scaled)
@@ -85,6 +106,8 @@ def perform_search(fasta_file: str, db_path: str, ksize: int = 11, scaled: int =
             out_file.write(f"{sample_id}\t{best_match}\n")
             # print(f"Best match for {sample_id}: {best_match}")
 
+    # rm the copy file
+    os.remove(decompressed_file)
     return best_alignments
 
 
