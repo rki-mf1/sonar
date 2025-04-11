@@ -148,3 +148,41 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
     code = run_cli(command)
 
     assert code == 0
+
+
+@pytest.mark.xdist_group(name="group3")
+@pytest.mark.order(1)
+def test_add_influ_gbk(monkeypatch, capfd, api_url):
+    """Test import command using parasail method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    # multiple segments  join with 1 whitespace
+    new_ref_file = "../../../test-data/influenza/H1N1/NC_026438_seg1.gb"
+    new_ref_file += "../../../test-data/influenza/H1N1/NC_026435_seg2.gb"
+    new_ref_file += "../../../test-data/influenza/H1N1/NC_026437_seg3.gb"
+    new_ref_file += "../../../test-data/influenza/H1N1/NC_026433_seg4.gb"
+    new_ref_file += "../../../test-data/influenza/H1N1/NC_026436_seg5.gb"
+    new_ref_file += "../../../test-data/influenza/H1N1/NC_026434_seg6.gb"
+    new_ref_file += "../../../test-data/influenza/H1N1/NC_026431_seg7.gb"
+    new_ref_file += "../../../test-data/influenza/H1N1/NC_026432_seg8.gb"
+
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group3")
+@pytest.mark.order(2)
+def test_add_influ_segment(monkeypatch, api_url, tmpfile_name):
+    """Test import command using parasail method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.map_unordered",
+        lambda self, func, args=(), progress_bar=True, progress_bar_options={}, kwds={}, callback=None, error_callback=None: (
+            func(arg) for arg in args
+        ),
+    )
+    command = f"import --db {api_url} -r NC_026438.1 --method 1 --cache {tmpfile_name}/mafft_influ -t 2 --tsv sars-cov-2/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE"
+    code = run_cli(command)
+
+    assert code == 0
