@@ -659,8 +659,6 @@ class sonarCache:
             df = df.reindex(df.columns.tolist(), axis=1)
             # df.to_pickle(fname)
 
-            # for debug
-            df.to_csv(f"new_{refmol_acc}" + ".csv")
             self._lifts[refmol_acc] = df
             return df
 

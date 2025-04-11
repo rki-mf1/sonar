@@ -157,13 +157,13 @@ def test_add_influ_gbk(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     # multiple segments  join with 1 whitespace
     new_ref_file = "../../../test-data/influenza/H1N1/NC_026438_seg1.gb"
-    new_ref_file += "../../../test-data/influenza/H1N1/NC_026435_seg2.gb"
-    new_ref_file += "../../../test-data/influenza/H1N1/NC_026437_seg3.gb"
-    new_ref_file += "../../../test-data/influenza/H1N1/NC_026433_seg4.gb"
-    new_ref_file += "../../../test-data/influenza/H1N1/NC_026436_seg5.gb"
-    new_ref_file += "../../../test-data/influenza/H1N1/NC_026434_seg6.gb"
-    new_ref_file += "../../../test-data/influenza/H1N1/NC_026431_seg7.gb"
-    new_ref_file += "../../../test-data/influenza/H1N1/NC_026432_seg8.gb"
+    new_ref_file += " ../../../test-data/influenza/H1N1/NC_026435_seg2.gb"
+    new_ref_file += " ../../../test-data/influenza/H1N1/NC_026437_seg3.gb"
+    new_ref_file += " ../../../test-data/influenza/H1N1/NC_026433_seg4.gb"
+    new_ref_file += " ../../../test-data/influenza/H1N1/NC_026436_seg5.gb"
+    new_ref_file += " ../../../test-data/influenza/H1N1/NC_026434_seg6.gb"
+    new_ref_file += " ../../../test-data/influenza/H1N1/NC_026431_seg7.gb"
+    new_ref_file += " ../../../test-data/influenza/H1N1/NC_026432_seg8.gb"
 
     code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
     out, err = capfd.readouterr()
@@ -182,7 +182,7 @@ def test_add_influ_segment(monkeypatch, api_url, tmpfile_name):
             func(arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r NC_026438.1 --method 1 --cache {tmpfile_name}/mafft_influ -t 2 --tsv sars-cov-2/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE"
+    command = f"import --db {api_url} -r NC_026438.1 --method 1 --cache {tmpfile_name}/mafft_influ -t 2 --auto-anno"
     code = run_cli(command)
 
     assert code == 0
