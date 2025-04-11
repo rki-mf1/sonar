@@ -562,12 +562,13 @@ def test_match_aa_mut_hiv(capfd, api_url):
     assert "4" == lines[-1]
     assert code == 0
 
+
 @pytest.mark.xdist_group(name="group3")
 @pytest.mark.order(3)
 def test_match_aa_influ(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r NC_026438.1 --profile HA:S220T --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    # assert "1" == lines[-1]
+
     assert "16" == lines[-1]
     assert code == 0
