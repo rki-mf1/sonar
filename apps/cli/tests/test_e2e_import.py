@@ -341,7 +341,7 @@ def test_add_influ_segment(monkeypatch, api_url, tmpfile_name):
             func(arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r NC_026438.1 --method 1 --cache {tmpfile_name}/mafft_influ -t 2 --auto-anno"
+    command = f"import --db {api_url} -r NC_026438.1 --method 1 --fasta ../../../test-data/influenza/H1N1/H1N1.sequences.fasta.xz --cache {tmpfile_name}/mafft_influ -t 2 --auto-anno"
     code = run_cli(command)
 
     assert code == 0
