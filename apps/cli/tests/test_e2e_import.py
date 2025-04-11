@@ -335,12 +335,6 @@ def test_add_influ_gbk(monkeypatch, capfd, api_url):
 def test_add_influ_segment(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
-    monkeypatch.setattr(
-        "mpire.WorkerPool.map_unordered",
-        lambda self, func, args=(), progress_bar=True, progress_bar_options={}, kwds={}, callback=None, error_callback=None: (
-            func(arg) for arg in args
-        ),
-    )
     command = f"import --db {api_url} -r NC_026438.1 --method 1 --fasta ../../../test-data/influenza/H1N1/H1N1.sequences.fasta.xz --cache {tmpfile_name}/mafft_influ -t 2 --auto-anno"
     code = run_cli(command)
 
