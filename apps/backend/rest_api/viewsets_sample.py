@@ -152,7 +152,7 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
-        fetch samples and genomic profiles based on provided filters and optional parameters
+        fetch proteomic and genomic profiles based on provided filters and optional parameters
 
         TODO:
         1. Optimize the query (reduce the database hit)
@@ -186,7 +186,9 @@ class SampleViewSet(
                 models.AminoAcidMutation.objects.only(
                     "ref", "alt", "start", "end", "cds"
                 )
-                .prefetch_related("cds")
+                .prefetch_related(
+                    "cds__peptides__peptide_segments", "cds__cds_segments"
+                )
                 .order_by("cds", "start")
             )
             annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")

@@ -122,6 +122,9 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 if gene_symbol is None:
                     raise ValueError("No gene symbol found.")
                 cds_objects = gene_id_to_cds_obj.get(gene_symbol, None)
+                cds_segments = CDSSegment.objects.filter(
+                    cds__in=[cds.pk for cds in cds_objects]
+                )
                 if cds is None:
                     raise ValueError("No gene found for peptide.")
                 elif len(cds_objects) > 1:
@@ -131,7 +134,7 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 elif len(cds_objects) == 1:
                     cds = cds_objects[0]
                     peptide = _put_peptide_from_feature(peptide_feature, cds)
-                    _create_peptide_segments(peptide_feature, peptide)
+                    _create_peptide_segments(peptide_feature, peptide, cds_segments)
 
     return records
 
@@ -399,10 +402,74 @@ def _create_cds_segments(feature: SeqFeature.SeqFeature, cds: CDS):
         find_or_create(elempart_data, CDSSegment, CDSSegmentSerializer)
 
 
-def _create_peptide_segments(feature: SeqFeature.SeqFeature, peptide: Peptide):
-    for elempart in _process_segments(feature.location.parts):
+def calculate_cds_start_end(
+    seq_feature: SeqFeature.SeqFeature,
+    cds_segments: list[CDSSegment],
+    cds_accession: str | None = None,
+) -> tuple[int, int]:
+    """
+    Calculate the start and end positions of a peptide segment in relation to the CDS amino acid sequence.
+
+    Args:
+        seq_feature (SeqFeature.SeqFeature): The peptide feature with location information.
+        cds_segments (list[CDSSegment]): List of CDS segments (start, end, strand, order).
+
+    Returns:
+        tuple[int, int]: Start and end positions of the peptide in the CDS amino acid sequence.
+    """
+    # Flatten the CDS segments into a continuous nucleotide position list
+    cds_nt_positions = []
+    for segment in cds_segments:
+        if segment.forward_strand:
+            cds_nt_positions.extend(range(segment.start, segment.end + 1))
+        else:
+            cds_nt_positions.extend(range(segment.end, segment.start - 1, -1))
+
+    # Map peptide segment positions to CDS nucleotide positions
+    peptide_start_nt = int(seq_feature.location.start)
+    peptide_end_nt = int(seq_feature.location.end)
+
+    # Find the peptide's start and end positions in the CDS nucleotide sequence
+    try:
+        start_cds_nt = cds_nt_positions.index(peptide_start_nt) + 1
+        end_cds_nt = cds_nt_positions.index(peptide_end_nt) + 1
+    except ValueError:
+        raise ValueError("Peptide segment is not part of the CDS segments.")
+
+    # Convert nucleotide positions to amino acid positions
+    start_cds_aa = (start_cds_nt + 2) // 3  # Convert to 1-based AA position
+    end_cds_aa = (end_cds_nt + 2) // 3  # Convert to 1-based AA position
+    if start_cds_aa < 0 or end_cds_aa < 0:
+        raise ValueError(
+            f"Start or end cds position of peptide segment is out of range for CDS {cds_accession}."
+        )
+    if start_cds_aa == end_cds_aa:
+        raise ValueError(
+            f"Start and end position (start_cds, end_cds) of peptide segment are equal for CDS {cds_accession}."
+        )
+    return start_cds_aa, end_cds_aa
+
+
+def _create_peptide_segments(
+    seq_feature: SeqFeature.SeqFeature, peptide, cds_segments: list[CDSSegment]
+):
+    """
+    Create peptide segments based on the provided sequence feature and peptide object.
+    Args:
+        seq_feature (SeqFeature.SeqFeature): The sequence feature containing location information.
+        peptide (Peptide): The associated peptide object.
+        cds_segments (list[CDSSegment]): List of CDS segments (start, end, strand, order) of associated CDS
+    """
+    for elempart in _process_segments(seq_feature.location.parts):
+        start_cds_aa, end_cds_aa = calculate_cds_start_end(
+            seq_feature,
+            cds_segments,
+            peptide.cds.accession,
+        )
         elempart_data = {
             "peptide": peptide.pk,
+            "start_cds": start_cds_aa,
+            "end_cds": end_cds_aa,
             **elempart,
         }
         find_or_create(elempart_data, PeptideSegment, PeptideSegmentSerializer)

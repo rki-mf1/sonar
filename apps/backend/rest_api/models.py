@@ -211,7 +211,7 @@ class CDSSegment(models.Model):
         - Ensures each segment of a CDS has a unique order within the same CDS.
     """
 
-    cds = models.ForeignKey(CDS, models.CASCADE)
+    cds = models.ForeignKey(CDS, models.CASCADE, related_name="cds_segments")
     order = models.BigIntegerField()
     start = models.BigIntegerField()
     end = models.BigIntegerField()
@@ -238,7 +238,7 @@ class Peptide(models.Model):
 
     """
 
-    cds = models.ForeignKey(CDS, models.CASCADE)
+    cds = models.ForeignKey(CDS, models.CASCADE, related_name="peptides")
     description = models.CharField(max_length=100, blank=True, null=True)
 
     class PeptideTypes(models.TextChoices):
@@ -268,13 +268,17 @@ class PeptideSegment(models.Model):
         - Ensures each segment of a CDS has a unique order within the same CDS.
     """
 
-    peptide = models.ForeignKey(Peptide, models.CASCADE)
+    peptide = models.ForeignKey(
+        Peptide, models.CASCADE, related_name="peptide_segments"
+    )
     order = models.BigIntegerField()
     start = models.BigIntegerField()
     end = models.BigIntegerField()
+    start_cds = models.BigIntegerField()
+    end_cds = models.BigIntegerField()
 
     class Meta:
-        db_table = "peptide_segement"
+        db_table = "peptide_segment"
         constraints = [
             UniqueConstraint(
                 name="unique_peptide_segment",
@@ -602,6 +606,7 @@ class AminoAcidMutation(models.Model):
         start (BigIntegerField): The start position of the mutation in ref.
         end (BigIntegerField): The end position of the mutation in ref.
         parent (ManyToManyField): Many-to-many relationship with nucleotide mutations (multiple mutations can result in one amino acid mutation).
+        is_frameshift (BooleanField): Indicates if the mutation is a frameshift mutation.
         alignments (ManyToManyField): Many-to-many relationship with alignments (samples) containing this mutation.
 
     Constraints:
@@ -615,6 +620,7 @@ class AminoAcidMutation(models.Model):
     start = models.BigIntegerField()
     end = models.BigIntegerField()
     parent = models.ManyToManyField(NucleotideMutation)
+    is_frameshift = models.BooleanField(default=False)
     alignments = models.ManyToManyField(
         Alignment,
         related_name="amino_acid_mutations",

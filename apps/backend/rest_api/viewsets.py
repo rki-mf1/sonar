@@ -265,7 +265,7 @@ class GeneViewSet(viewsets.ModelViewSet):
                     "cds.description": cds.description,
                 }
                 cds_segments = []
-                for segment in cds.cdssegment_set.all():
+                for segment in cds.cds_segments.all():
                     segment_data = {
                         "cds_segment.id": segment.id,
                         "cds_segment.order": segment.order,
@@ -278,14 +278,14 @@ class GeneViewSet(viewsets.ModelViewSet):
 
                 # Add Peptide information
                 peptide_list = []
-                for peptide in cds.peptide_set.all():
+                for peptide in cds.peptides.all():
                     peptide_data = {
                         "peptide.id": peptide.id,
                         "peptide.description": peptide.description,
                         "peptide.type": peptide.type,
                     }
                     peptide_segments = []
-                    for segment in peptide.peptidesegment_set.all().order_by("order"):
+                    for segment in peptide.peptide_segments.all().order_by("order"):
                         segment_data = {
                             "peptide_segment.id": segment.id,
                             "peptide_segment.order": segment.order,
