@@ -9,6 +9,7 @@ import {
   type Statistics,
   type FilteredStatistics,
   type FilteredStatisticsPlots,
+  type FilteredStatisticsPlotsCustom,
   DjangoFilterType,
   StringDjangoFilterType,
   DateDjangoFilterType,
@@ -108,6 +109,7 @@ export const useSamplesStore = defineStore('samples', {
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
     filteredStatisticsPlots: {} as FilteredStatisticsPlots,
+    filteredStatisticsPlotsCustom: {} as FilteredStatisticsPlotsCustom,
     filteredCount: 0,
     loading: false,
     perPage: 10,
@@ -240,17 +242,7 @@ export const useSamplesStore = defineStore('samples', {
       const emptyStatistics = {
         samples_per_week: {},
         meta_data_coverage: {},
-        genomecomplete_chart: {},
-        lineage_area_chart: [],
-        lineage_bar_chart: [],
-        lineage_grouped_bar_chart: [],
-        sequencing_tech: {},
-        sequencing_reason: {},
-        sample_type: {},
-        length: {},
-        lab: {},
-        zip_code: {},
-        host: {},
+        grouped_lineages_per_week: [],
       }
       try {
         const filteredStatisticsPlots = await API.getInstance().getFilteredStatisticsPlots(
@@ -265,6 +257,31 @@ export const useSamplesStore = defineStore('samples', {
         // TODO how to handle request failure
         console.error('Error fetching filtered statistics plots:', error)
         this.filteredStatisticsPlots = emptyStatistics
+      }
+    },
+    async updateFilteredStatisticsPlotsCustom() {
+      const emptyStatistics = {
+        genomecomplete_chart: {},
+        sequencing_tech: {},
+        sequencing_reason: {},
+        sample_type: {},
+        length: {},
+        lab: {},
+        zip_code: {},
+        host: {},
+      }
+      try {
+        const filteredStatisticsPlotsCustom =
+          await API.getInstance().getFilteredStatisticsPlotsCustom(this.filters)
+        if (!filteredStatisticsPlotsCustom) {
+          this.filteredStatisticsPlotsCustom = emptyStatistics
+        } else {
+          this.filteredStatisticsPlotsCustom = filteredStatisticsPlotsCustom
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching filtered statistics plots:', error)
+        this.filteredStatisticsPlotsCustom = emptyStatistics
       }
     },
     async setDefaultTimeRange() {

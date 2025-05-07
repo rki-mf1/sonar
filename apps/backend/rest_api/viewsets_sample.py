@@ -749,9 +749,11 @@ class SampleViewSet(
 
         return result
 
-    def get_weekly_lineage_grouped_percentage_bar_chart(self, queryset):
+    def _get_grouped_lineages_per_week(self, queryset):
 
         present_lineages = {entry["lineage"] for entry in queryset.values("lineage")}
+
+        print(present_lineages)
 
         # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
         lineage_groups = {
@@ -783,7 +785,7 @@ class SampleViewSet(
         )
 
         weekly_data = (
-            queryset.values("year", "week", "lineage_group")
+            queryset.values("year", "week", "lineage_group", "lineage")
             .annotate(lineage_count=Count("lineage_group"))
             .order_by("year", "week", "lineage_group")
         )
@@ -804,6 +806,7 @@ class SampleViewSet(
             result.append(
                 {
                     "week": week_str,
+                    "lineage": item["lineage"],
                     "lineage_group": item["lineage_group"],
                     "count": item["lineage_count"],
                     "percentage": round(percentage, 2),
@@ -829,38 +832,30 @@ class SampleViewSet(
         # check if queryset has any records with a collection_date -> if not, return empty object
         if not queryset.filter(collection_date__isnull=False).exists():
             result_dict["samples_per_week"] = {}
-            result_dict["lineage_area_chart"] = {}
-            result_dict["lineage_bar_chart"] = {}
-            result_dict["lineage_grouped_bar_chart"] = {}
+            result_dict["grouped_lineages_per_week"] = {}
         else:
-            queryset = queryset.annotate(
-                lineage_parent=Subquery(
-                    models.Lineage.objects.filter(name=OuterRef("lineage")).values(
-                        "parent"
-                    )[:1]
-                )
-            )
             queryset = queryset.extra(
                 select={
                     "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                    "month": 'EXTRACT(\'month\' FROM "sample"."collection_date")',
                     "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
                 }
             )
             result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
-            result_dict["lineage_area_chart"] = (
-                self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
-            )
-            result_dict["lineage_bar_chart"] = (
-                self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
-            )
-            result_dict["lineage_grouped_bar_chart"] = (
-                self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
+            result_dict["grouped_lineages_per_week"] = (
+                self._get_grouped_lineages_per_week(queryset)
             )
 
         result_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
             queryset
         )
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def filtered_statistics_plots_custom(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+
+        result_dict = {}
+
         result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
         result_dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
         result_dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
