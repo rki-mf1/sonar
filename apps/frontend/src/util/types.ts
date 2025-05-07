@@ -132,11 +132,12 @@ export type FilteredStatistics = {
 // TODO: too unflexibel, change to more flexible structure allowing different properties
 export type FilteredStatisticsPlots = {
   samples_per_week: { [key: string]: number }
+  grouped_lineages_per_week: Array<{ week: string; lineage_group: string; percentage: number }>
   meta_data_coverage: { [key: string]: number }
+}
+
+export type FilteredStatisticsPlotsCustom = {
   genomecomplete_chart: { [key: string]: number }
-  lineage_area_chart: Array<{ date: string; lineage: string; percentage: number }>
-  lineage_bar_chart: LineageBarChartData[]
-  lineage_grouped_bar_chart: Array<{ week: string; lineage_group: string; percentage: number }>
   sequencing_tech: { [key: string]: number }
   sequencing_reason: { [key: string]: number }
   sample_type: { [key: string]: number }
