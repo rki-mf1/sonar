@@ -15,9 +15,11 @@ from dateutil.rrule import rrule
 from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
+from django.db.models import BooleanField
 from django.db.models import Case
 from django.db.models import CharField
 from django.db.models import Count
+from django.db.models import Exists
 from django.db.models import IntegerField
 from django.db.models import Min
 from django.db.models import OuterRef
@@ -119,8 +121,10 @@ class SampleViewSet(
         response_dict["latest_sample_date"] = (
             latest_sample.collection_date if latest_sample else None
         )
-        response_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
-            queryset=models.Sample.objects.all()
+        response_dict["populated_metadata_fields"] = (
+            SampleViewSet.get_populated_metadata_fields(
+                queryset=models.Sample.objects.all()
+            )
         )
 
         return response_dict
@@ -323,89 +327,157 @@ class SampleViewSet(
                 yield writer.writerow(serialized["row"])
 
     @staticmethod
-    def get_meta_data_coverage(queryset):
-        dict = {}
+    def get_populated_metadata_fields(queryset):
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
-        annotations["not_null_count_genomic_profiles"] = Count(
-            Subquery(
-                models.Sample.objects.filter(
-                    sequence__alignments__nucleotide_mutations__isnull=False,
-                    id=OuterRef("id"),
-                ).values("id")[
-                    :1
-                ]  # Return only one to indicate existence
+
+        # check genomic profiles
+        annotations["has_genomic_profiles"] = Exists(
+            models.Sample.objects.filter(
+                sequence__alignments__nucleotide_mutations__isnull=False,
+                id=OuterRef("id"),
             )
         )
-        annotations["not_null_count_proteomic_profiles"] = Count(
-            Subquery(
-                models.Sample.objects.filter(
-                    sequence__alignments__amino_acid_mutations__isnull=False,
-                    id=OuterRef("id"),
-                ).values("id")[
-                    :1
-                ]  # Return only one to indicate existence
+
+        # check proteomic profiles
+        annotations["has_proteomic_profiles"] = Exists(
+            models.Sample.objects.filter(
+                sequence__alignments__amino_acid_mutations__isnull=False,
+                id=OuterRef("id"),
             )
         )
+
+        # check sample fields
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
                 field_name = field.name
                 if field.get_internal_type() == "CharField":
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        Case(
-                            When(
-                                Q(**{f"{field_name}__isnull": False})
-                                & ~Q(**{f"{field_name}": ""}),
-                                then=1,
-                            ),
-                            output_field=IntegerField(),
-                        )
+                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
+                        **{field_name: ""}
                     )
                 else:
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        Case(
-                            When(**{f"{field_name}__isnull": False}, then=1),
-                            output_field=IntegerField(),
-                        )
-                    )
-        property_to_datatype = {
-            property.name: property.datatype
-            for property in models.Property.objects.all()
-        }
-        property_names = PropertyViewSet.get_custom_property_names()
-        for property_name in property_names:
+                    condition = Q(**{f"{field_name}__isnull": False})
+
+                annotations[f"has_{field_name}"] = Case(
+                    When(condition, then=True),
+                    default=False,
+                    output_field=BooleanField(),
+                )
+
+        # check properties
+        property_to_datatype = dict(
+            models.Property.objects.values_list("name", "datatype")
+        )
+        for property_name in PropertyViewSet.get_custom_property_names():
+            datatype = property_to_datatype.get(property_name)
+            if not datatype:
+                LOGGER.warning(f"Property {property_name} not found")
+                continue
+
             try:
-                if property_name not in property_to_datatype:
-                    print(f"Property {property_name} not found")
-                    continue
-                datatype = property_to_datatype[property_name]
-                # Determine the exclusion value based on the datatype
-                annotations[f"not_null_count_{property_name}"] = Count(
-                    Subquery(
-                        models.Sample.objects.filter(
-                            properties__property__name=property_name,
-                            **{f"properties__{datatype}__isnull": False},
-                            id=OuterRef("id"),
-                        ).values("id")[:1]
+                annotations[f"has_{property_name}"] = Exists(
+                    models.Sample.objects.filter(
+                        id=OuterRef("id"),
+                        properties__property__name=property_name,
+                        **{f"properties__{datatype}__isnull": False},
                     )
                 )
-            except ValueError as e:
+            except Exception as e:
                 LOGGER.error(
-                    f"Error with property_name: {property_name}, datatype: {datatype}"
+                    f"Error processing property {property_name} (datatype: {datatype}): {e}"
                 )
-                LOGGER.error(f"Error message: {e}")
 
-        # Use the aggregate method with the dynamically created dictionary
+        # apply annotations and check existence (True/False)
+        result = queryset.annotate(**annotations).values(*annotations.keys()).first()
+
+        return (
+            [k.replace("has_", "") for k in filter(result.get, result)]
+            if result
+            else []
+        )
+
+    @staticmethod
+    def get_meta_data_coverage(queryset):
+        queryset = queryset.prefetch_related("properties__property")
+        annotations = {}
+
+        def add_annotation(name, filter_kwargs):
+            annotations[f"not_null_count_{name}"] = Count(
+                Case(
+                    When(
+                        Exists(
+                            models.Sample.objects.filter(
+                                id=OuterRef("id"), **filter_kwargs
+                            )
+                        ),
+                        then=1,
+                    ),
+                    output_field=IntegerField(),
+                )
+            )
+
+        # check genomic and proteomic profiles
+        add_annotation(
+            "genomic_profiles",
+            {"sequence__alignments__nucleotide_mutations__isnull": False},
+        )
+        add_annotation(
+            "proteomic_profiles",
+            {"sequence__alignments__amino_acid_mutations__isnull": False},
+        )
+
+        for field in models.Sample._meta.get_fields():
+            if field.concrete and not field.is_relation:
+                field_name = field.name
+                if field.get_internal_type() == "CharField":
+                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
+                        **{field_name: ""}
+                    )
+                else:
+                    condition = Q(**{f"{field_name}__isnull": False})
+
+                annotations[f"not_null_count_{field_name}"] = Count(
+                    Case(When(condition, then=1), output_field=IntegerField())
+                )
+
+        # mapping from property name to datatype
+        property_to_datatype = dict(
+            models.Property.objects.values_list("name", "datatype")
+        )
+        property_names = PropertyViewSet.get_custom_property_names()
+        # annotate custom properties based on datatype
+        for property_name in property_names:
+            datatype = property_to_datatype.get(property_name)
+            if not datatype:
+                LOGGER.warning(f"Property {property_name} not found")
+                continue
+            try:
+                annotations[f"not_null_count_{property_name}"] = Count(
+                    Case(
+                        When(
+                            Exists(
+                                models.Sample.objects.filter(
+                                    id=OuterRef("id"),
+                                    properties__property__name=property_name,
+                                    **{f"properties__{datatype}__isnull": False},
+                                )
+                            ),
+                            then=1,
+                        ),
+                        output_field=IntegerField(),
+                    )
+                )
+            except Exception as e:
+                LOGGER.error(
+                    f"Error with property {property_name} (datatype: {datatype}): {e}"
+                )
+
         result = queryset.aggregate(**annotations)
-
-        # Print or use the result
-        dict = {
+        return {
             key.replace("not_null_count_", ""): value
             for key, value in result.items()
-            if key.startswith("not_null_count")
+            if key.startswith("not_null_count_")
         }
-
-        return dict
 
     def _get_genomecomplete_chart(self, queryset):
         result_dict = {}

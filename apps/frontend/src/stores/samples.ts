@@ -176,7 +176,7 @@ export const useSamplesStore = defineStore('samples', {
         samples_total: 0,
         first_sample_date: '',
         latest_sample_date: '',
-        meta_data_coverage: {},
+        populated_metadata_fields: [],
       }
       try {
         const statistics = await API.getInstance().getSampleStatistics()
@@ -313,7 +313,7 @@ export const useSamplesStore = defineStore('samples', {
           console.error('API request failed')
           return
         }
-        const metaData = this.statistics?.meta_data_coverage ?? {}
+        const metaData = this.statistics?.populated_metadata_fields ?? []
         this.propertiesDict = {}
         res.values.forEach(
           (property: { name: string; query_type: string; description: string }) => {
@@ -326,10 +326,10 @@ export const useSamplesStore = defineStore('samples', {
             }
           },
         )
-        // keep only those properties that have a non-zero coverage, i.e. that are not entirly empty
+        // keep only those properties that have a coverage, i.e. that are not entirly empty
         // & drop the 'name' column because the ID column is fixed
         this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-          (key) => key !== 'name' && metaData[key] > 0,
+          (key) => key !== 'name' && metaData.includes(key),
         )
         this.propertyMenuOptions = [
           'name',
@@ -344,7 +344,6 @@ export const useSamplesStore = defineStore('samples', {
         ]
       } catch (error) {
         console.error('Failed to update property options:', error)
-        // Optionally, you can show a user-friendly message or take other actions
       }
     },
     async updateRepliconAccessionOptions() {

@@ -1,0 +1,63 @@
+name: Support an organism
+description: Record relevant details needed to add Sonar support for an organism
+title: "[Organism]: "
+labels: ["organism"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form records important details required to add support for a new organism/pathogen to Sonar.
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      description: What is the scientific name of the organism
+      placeholder: eg. Severe acute respiratory syndrome coronavirus 2
+    validations:
+      required: true
+  - type: input
+    id: short-name
+    attributes:
+      label: Short name
+      description: What is the standard short name for this organism
+      placeholder: eg. SARS-CoV-2
+    validations:
+      required: true
+  - type: textarea
+    id: reference-genomes
+    attributes:
+      label: Reference genomes
+      description: Links to all commonly used reference genomes. If possible, indicate which is the most commonly used/default.
+    validations:
+      required: true
+  - type: textarea
+    id: gene-annotation
+    attributes:
+      label: Gene annotation
+      description: A list of GFF3 or Genbank format gene annotation files
+    validations:
+      required: true
+  - type: textarea
+    id: variant-calling
+    attributes:
+      label: Variant calling
+      description: Is there a standardized process/tool for calling variants in this organism (SNPs, indels)? If so provide links.
+      placeholder: eg. Nextclade https://github.com/nextstrain/nextclade
+  - type: textarea
+    id: public-sequence-data
+    attributes:
+      label: Public sequence data
+      description: Links to (publicly available) genomic sequencing data for this organism. Assembled genomes, not raw reads.
+      placeholder: eg. https://gisaid.org/ https://www.ncbi.nlm.nih.gov/labs/virus/vssi/#/virus?SeqType_s=Nucleotide&VirusLineage_ss=taxid:2697049
+  - type: textarea
+    id: lineage-assignment
+    attributes:
+      label: Lineage/clade assignment
+      description: Is there an existing standard for assigning lineages/clades to this organism (both information about the clades and any tool that might be used to assign them would be useful)
+      placeholder: eg. tool https://github.com/cov-lineages/pangolin, lineage description https://cov-lineages.org/index.html
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: Are there any special properties of this organism that we might need to know about?
+      placeholder: eg. circular or segmented genome
