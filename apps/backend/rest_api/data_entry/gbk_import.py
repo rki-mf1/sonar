@@ -1,3 +1,4 @@
+import calendar
 from datetime import datetime
 import os
 import pathlib
@@ -322,6 +323,24 @@ def _put_peptide_from_feature(feature: SeqFeature.SeqFeature, cds: CDS) -> Pepti
     return PeptideSerializer(peptide).update(peptide, peptide_update_data)
 
 
+def parse_date(date_string: str) -> datetime.date:
+    date_formats = ["%Y-%m", "%d-%b-%Y", "%Y", "%Y-%m-%d", "%Y-%b-%d"]
+    for date_format in date_formats:
+        try:
+            return datetime.strptime(date_string, date_format).date()
+        except ValueError:
+            continue
+    # Handle custom format "Dec-2019" without relying on locale (problems can occur in some settings)
+    try:
+        month_str, year = date_string.split("-")
+        month = list(calendar.month_abbr).index(month_str[:3])
+        return datetime(year=int(year), month=month, day=1).date()
+    except (ValueError, IndexError):
+        pass
+
+    raise ValueError(f"Date string '{date_string}' does not match any known formats.")
+
+
 def _put_reference_from_record(
     record: SeqRecord.SeqRecord, translation_id: int, file_path: str
 ) -> Reference:
@@ -354,28 +373,12 @@ def _put_reference_from_record(
     ]:
         if attr_name in source.qualifiers:
             if attr_name == "collection_date":
-                # handle both date formats
                 date_string = source.qualifiers[attr_name][0]
-                try:
-                    reference[attr_name] = datetime.strptime(
-                        date_string, "%Y-%m"
-                    ).date()
-                except ValueError:
-                    try:
-                        reference[attr_name] = datetime.strptime(
-                            date_string, "%d-%b-%Y"
-                        ).date()
-                    except ValueError:
-                        try:
-                            reference[attr_name] = datetime.strptime(
-                                date_string, "%b-%Y"
-                            ).date()
-                        except ValueError:
-                            reference[attr_name] = datetime.strptime(
-                                date_string, "%Y"
-                            ).date()
+                reference[attr_name] = parse_date(date_string).strftime("%Y-%m-%d")
             else:
                 reference[attr_name] = source.qualifiers[attr_name][0]
+        else:
+            reference[attr_name] = None
     try:
         return Reference.objects.get(db_xref=reference["db_xref"])
     except Reference.DoesNotExist:

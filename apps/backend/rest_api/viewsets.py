@@ -1,4 +1,5 @@
 from datetime import datetime
+from datetime import timezone
 from functools import reduce
 import json
 import operator
@@ -731,7 +732,6 @@ class FileUploadViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
-
         # Step 1: Check if zip file is present in the request
         if "zip_file" not in request.FILES:
             return Response(
@@ -774,7 +774,9 @@ class FileUploadViewSet(viewsets.ViewSet):
                 )
 
             filename = (
-                datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3] + "." + jobID
+                datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
+                + "."
+                + jobID
             )
             pickle_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, f"{filename}.pkl")
             with open(pickle_path, "wb") as pickle_file:

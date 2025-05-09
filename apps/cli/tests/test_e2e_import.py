@@ -21,7 +21,7 @@ def test_add_cov19_ref(monkeypatch, capfd, api_url):
 @pytest.mark.order(1)
 def test_add_mpox_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
-    new_ref_file = "../../../test-data/mpox/NC_063383.1.gb"
+    new_ref_file = "../../../test-data/mpox/clade-IIb-NC_063383.1.gb"
     code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
@@ -32,7 +32,7 @@ def test_add_mpox_ref(monkeypatch, capfd, api_url):
 @pytest.mark.order(1)
 def test_add_rsv_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
-    new_ref_file = "../../../test-data/RSV/AF013254.gb"
+    new_ref_file = "../../../test-data/RSV/RSV-B/OP975389.1.gb"
     code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
@@ -54,7 +54,7 @@ def test_add_measels_ref(monkeypatch, capfd, api_url):
 @pytest.mark.order(1)
 def test_add_hiv_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
-    new_ref_file = "../../../test-data/HIV/AF033819.3.gb"
+    new_ref_file = "../../../test-data/HIV/NC_001802.1.gb"
     code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
@@ -189,7 +189,7 @@ def test_mafft_anno_upload_rsv(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r AF013254.1 --method 1 --fasta ../../../test-data/RSV/RSV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    command = f"import --db {api_url} -r OP975389.1 --method 1 --fasta ../../../test-data/RSV/RSV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
     code = run_cli(command)
     assert code == 0
 
@@ -253,7 +253,7 @@ def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r AF033819.3 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    command = f"import --db {api_url} -r NC_001802.1 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
     code = run_cli(command)
     assert code == 0
 

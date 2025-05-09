@@ -227,6 +227,17 @@ def get_distinct_gene_symbols(reference=None):
     return [item["symbol"] for item in queryset]
 
 
+def get_distinct_peptide_descriptions(reference=None):
+    """
+    Helper method to get distinct gene symbols.
+    This method can be called from anywhere.
+    """
+    queryset = models.Peptide.objects.distinct("description").values("description")
+    if reference:
+        queryset = queryset.filter(replicon__reference__accession=reference)
+    return [item["description"] for item in queryset]
+
+
 def parse_default_data(value):
     # Convert "None", "null", or empty strings to Python None
     if value in {"None", "null", ""}:

@@ -465,7 +465,7 @@ def test_match_anno_impact_and_type(capfd, api_url):
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(15)
 def test_match_profile_count_rsv(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r AF013254.1  --count")
+    code = run_cli(f"match --db {api_url} -r OP975389.1  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "20" == lines[-1]
@@ -473,10 +473,10 @@ def test_match_profile_count_rsv(capfd, api_url):
 
 
 def test_match_aa_mut_rsv(capfd, api_url):
-    code = run_cli(f"match --db {api_url}  -r AF013254.1 --profile SH:N53E --count")
+    code = run_cli(f"match --db {api_url}  -r OP975389.1 --profile SH:K53E --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "16" == lines[-1]
+    assert "1" == lines[-1]
     assert code == 0
 
 
@@ -529,7 +529,7 @@ def test_match_profile_count_dengue(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r NC_001474.2 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "20" == lines[-1]
+    assert "13" == lines[-1]
     assert code == 0
 
 
@@ -546,7 +546,7 @@ def test_match_aa_mut_dengue(capfd, api_url):
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(15)
 def test_match_profile_count_hiv(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r AF033819.3 --count")
+    code = run_cli(f"match --db {api_url} -r NC_001802.1 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "20" == lines[-1]
@@ -555,9 +555,30 @@ def test_match_profile_count_hiv(capfd, api_url):
 
 def test_match_aa_mut_hiv(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url}  -r AF033819.3 --profile env:Q344R nef:R29E --count"
+        f"match --db {api_url}  -r NC_001802.1 --profile env:Q344R nef:R29E --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "4" == lines[-1]
+    assert code == 0
+
+
+# test peptide_segment (joined peptide segments)
+def test_match_multiple_genes_in_same_region_hiv(capfd, api_url):
+    # test muttions with gene name. 2 genes in same region: gene gag-pol (336..1637,1637..4642), gene gag: 336..1838,
+    # mat_peptides starting Nt 1632 = AA 433
+    code = run_cli(
+        f"match --db {api_url}  -r NC_001802.1 --profile gag-pol:K424I gag:K424I --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "1" == lines[-1]
+    assert code == 0
+    # multiple genes in same region: gene gag-pol (336..1637,1637..4642), gene gag: 336..1838 different translation part
+    code = run_cli(
+        f"match --db {api_url}  -r NC_001802.1 --profile gag-pol:L441P gag:Y441R --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "3" == lines[-1]
     assert code == 0
