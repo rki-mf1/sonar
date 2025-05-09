@@ -1,11 +1,13 @@
 from datetime import datetime
 from datetime import timezone
 from functools import reduce
+import io
 import json
 import operator
 import os
 import pickle
 import uuid
+import zipfile
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models import Count
@@ -221,6 +223,10 @@ class GeneViewSet(viewsets.ModelViewSet):
 
         elif replicon_id := request.query_params.get("replicon_id"):
             queryset = self.queryset.filter(replicon_id=replicon_id)
+        elif replicon_acc := request.query_params.get("replicon_acc"):
+            queryset = models.GeneSegment.objects.select_related(
+                "gene__replicon"
+            ).filter(gene__replicon__accession=replicon_acc)
         else:
             return Response(
                 {"detail": "Searchable field is missing"},
@@ -326,8 +332,14 @@ class ReferenceViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
         translation_id = int(request.data.get("translation_id"))
-        gbk_file = request.FILES.get("gbk_file")
+        enable_segment = strtobool(request.data.get("segment"))
+        # if enable_segment:
+        #     gbk_files = request.FILES.getlist("gbk_file")
+        #     import_gbk_files(gbk_files, translation_id)
+        # else:
+        gbk_file = request.FILES.getlist("gbk_file")
         import_gbk_file(gbk_file, translation_id)
+
         return Response(
             {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
@@ -364,14 +376,45 @@ class ReferenceViewSet(
         queryset = models.Reference.objects.filter(accession=reference)
         if queryset.exists():
             reference_obj = queryset.first()
-            reference_file = reference_obj.name
-            # with open(reference_file, "r") as file:
-            #     data = file.read()
-            return FileResponse(
-                open(reference_file, "rb"),
-                as_attachment=True,
-                filename=os.path.basename(reference_file),
-            )
+            reference_files = reference_obj.name.split(
+                ", "
+            )  # Split the stored file paths
+
+            # Fetch associated replicon accessions
+            replicons = models.Replicon.objects.filter(reference=reference_obj)
+            replicon_accessions = list(replicons.values_list("accession", flat=True))
+            if len(reference_files) == 1:
+                # Only one file, send it directly
+                reference_file = reference_files[0]
+                response = FileResponse(
+                    open(reference_file, "rb"),
+                    as_attachment=True,
+                    filename=os.path.basename(reference_file),
+                )
+
+                # Add replicon_accessions to the response headers
+                response["Replicon-Accessions"] = ",".join(replicon_accessions)
+                return response
+            else:
+                # Multiple files -> Zip them
+                zip_buffer = io.BytesIO()
+
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+                    for ref_file in reference_files:
+                        with open(ref_file, "rb") as f:
+                            zipf.writestr(os.path.basename(ref_file), f.read())
+
+                zip_buffer.seek(0)
+
+                response = FileResponse(
+                    zip_buffer,
+                    as_attachment=True,
+                    filename=f"{reference}.segment.zip",
+                    content_type="application/zip",
+                )
+                # Add replicon_accessions to the response headers
+                response["Replicon-Accessions"] = ",".join(replicon_accessions)
+                return response
         else:
             return Response(
                 {"detail": "No reference found"}, status=status.HTTP_404_NOT_FOUND

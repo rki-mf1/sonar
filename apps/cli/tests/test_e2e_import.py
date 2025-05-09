@@ -307,3 +307,34 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
     code = run_cli(command)
 
     assert code == 0
+
+
+@pytest.mark.xdist_group(name="group3")
+@pytest.mark.order(1)
+def test_add_influ_gbk(monkeypatch, capfd, api_url):
+    """Test import command using parasail method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    # multiple segments  join with 1 whitespace
+    new_ref_file = "../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_1_NC_026438.1.gb"
+    new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_2_NC_026435.1.gb"
+    new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_3_NC_026437.1.gb"
+    new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_4_CY121680.1.gb"
+    new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_5_NC_026436.1.gb"
+    new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_6_NC_026434.gb"
+    new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_7_NC_026431.gb"
+    new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_8_NC_026432.1.gb"
+
+    code = run_cli(f" add-ref --db {api_url} --gb {new_ref_file} ")
+    out, err = capfd.readouterr()
+    assert "successfully." in err
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group3")
+@pytest.mark.order(2)
+def test_add_influ_segment(monkeypatch, api_url, tmpfile_name):
+    monkeypatch.chdir(Path(__file__).parent)
+    command = f"import --db {api_url} -r NC_026438.1 --method 1 --fasta ../../../test-data/influenza/influenza-A/H1N1PDM_California/H1N1.sequences.fasta.xz --cache {tmpfile_name}/mafft_influ -t 7 --auto-anno"
+    code = run_cli(command)
+
+    assert code == 0

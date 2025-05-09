@@ -23,7 +23,7 @@ def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     NOTE: Right now, we allows adding a duplicated reference and updates it if it already exists
     """
     monkeypatch.chdir(Path(__file__).parent)
-    new_ref_file = "../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_6_NC_007368.1.gb"
+    new_ref_file = "../../../test-data/HIV/NC_001802.1.gb"
 
     # Add the reference for the first time
     code = run_cli(f"add-ref --db {api_url} --gb {new_ref_file}")

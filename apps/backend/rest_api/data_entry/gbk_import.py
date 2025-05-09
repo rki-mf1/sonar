@@ -29,11 +29,26 @@ from rest_api.serializers import ReferenceSerializer
 from rest_api.serializers import RepliconSerializer
 
 
-def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
-    file_path = _temp_save_file(uploaded_file)
-    records = list(SeqIO.parse(file_path, "genbank"))
+def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: int):
+    """
+    Import GenBank file. or Import multiple GenBank files as segments.
+
+    Args:
+        - uploaded_files (list): List of InMemoryUploadedFile objects.
+        - translation_id (int): ID for translation.
+    """
+    records = []
+    file_paths = []
+    for uploaded_file in uploaded_files:
+        file_path = _temp_save_file(uploaded_file)
+        file_paths.append(str(file_path))
+        records.extend(list(SeqIO.parse(file_path, "genbank")))
+
+    file_path_str = ", ".join(
+        file_paths
+    )  # join multiple file paths into a comma-space separated string
     records: list[SeqRecord.SeqRecord]
-    reference = _put_reference_from_record(records[0], translation_id, file_path)
+    reference = _put_reference_from_record(records[0], translation_id, file_path_str)
     with transaction.atomic():
         # record = complete gbk file
         for record in records:
@@ -54,10 +69,21 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 "sequence": str(source_feature.extract(record.seq)),
                 "reference": reference.id,
             }
+            # If the record has a segment number at the top level, use that
+            # else look at the source feature for segment number
             if "segment_number" in record.annotations:
-                replicon_data["segment_number"] = record.annotations[
-                    "segment_number"
-                ]  # TODO ?? id
+                replicon_data["segment_number"] = record.annotations["segment_number"]
+            else:
+                source_features = [f for f in record.features if f.type == "source"]
+
+                if (
+                    len(source_features) == 1
+                    and "segment" in source_features[0].qualifiers
+                ):
+                    replicon_data["segment_number"] = source_features[0].qualifiers[
+                        "segment"
+                    ][0]
+
             replicon = find_or_create(replicon_data, Replicon, RepliconSerializer)
             # features with gene qualifier
             gene_features = [
@@ -91,7 +117,7 @@ def import_gbk_file(uploaded_file: InMemoryUploadedFile, translation_id: int):
                 _create_gene_segments(gene_feature, gene_obj)
 
             # features with CDS qualifier
-            gene_id_to_cds_obj: dict[str, list(CDS)] = {}
+            gene_id_to_cds_obj: dict[str, list[CDS]] = {}
             cds_features = [
                 f
                 for f in record.features
