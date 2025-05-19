@@ -282,49 +282,28 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         # proteomic_profiles are prefetched
         label_list = []
         alignments = obj.sequence.alignments.prefetch_related(
-            "amino_acid_mutations__cds__peptides__peptide_segments",
             "amino_acid_mutations__cds__gene",
         )
         for alignment in alignments:
             for mutation in alignment.amino_acid_mutations.all():
                 try:
-                    gene_symbol = ""
-                    # Collect all peptide segments for the mutation's CDS in memory
-                    peptide_segments = [
-                        (peptide.description, segment.start_cds, segment.end_cds)
-                        for peptide in mutation.cds.peptides.all()
-                        for segment in peptide.peptide_segments.all()
-                    ]
-                    # Check if the mutation's position is within any peptide segment
-                    for peptide_description, start_cds, end_cds in peptide_segments:
-                        if start_cds <= mutation.start <= end_cds:
-                            # Use peptide description and adjust mutation positions
-                            gene_symbol = peptide_description
-                            mutation_start = mutation.start - start_cds + 1
-                            mutation_end = mutation.end - start_cds + 1
-                            label = self.define_proteomic_label(
-                                mutation, gene_symbol, mutation_start, mutation_end
-                            )
-                            label_list.append((gene_symbol, mutation_start, label))
-                    # Fallback to gene symbol if no peptide match is found
-                    if not gene_symbol:
-                        gene_symbol = mutation.cds.gene.symbol
-                        mutation_start = mutation.start
-                        mutation_end = mutation.end
-                        label = self.define_proteomic_label(
-                            mutation, gene_symbol, mutation_start, mutation_end
-                        )
-                        label_list.append((gene_symbol, mutation_start, label))
-                    sorted_label_list = [
-                        item[2]
-                        for item in sorted(label_list, key=lambda x: (x[0], x[1]))
-                    ]
+                    gene_symbol = mutation.cds.gene.symbol
+                    mutation_start = mutation.start
+                    mutation_end = mutation.end
+                    label = self.define_proteomic_label(
+                        mutation, gene_symbol, mutation_start, mutation_end
+                    )
+                    label_list.append((gene_symbol, mutation_start, label))
+
                 except AttributeError as e:
                     # most of the time this AttributeError outputs
                     # 'NoneType' object has no attribute 'gene_symbol'
                     print(e)
                     print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue
+            sorted_label_list = [
+                item[2] for item in sorted(label_list, key=lambda x: (x[0], x[1]))
+            ]
         return sorted_label_list
 
     def create_NT_format(self, mutation: models.NucleotideMutation):

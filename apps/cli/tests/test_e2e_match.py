@@ -563,10 +563,8 @@ def test_match_aa_mut_hiv(capfd, api_url):
     assert code == 0
 
 
-# test peptide_segment (joined peptide segments)
 def test_match_multiple_genes_in_same_region_hiv(capfd, api_url):
-    # test muttions with gene name. 2 genes in same region: gene gag-pol (336..1637,1637..4642), gene gag: 336..1838,
-    # mat_peptides starting Nt 1632 = AA 433
+    # test mutations within 2 genes in same region: gene gag-pol (336..1637,1637..4642), gene gag: 336..1838,
     code = run_cli(
         f"match --db {api_url}  -r NC_001802.1 --profile gag-pol:K424I gag:K424I --count"
     )

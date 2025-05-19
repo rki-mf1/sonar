@@ -190,9 +190,7 @@ class SampleViewSet(
                 models.AminoAcidMutation.objects.only(
                     "ref", "alt", "start", "end", "cds"
                 )
-                .prefetch_related(
-                    "cds__peptides__peptide_segments", "cds__cds_segments"
-                )
+                .prefetch_related("cds__cds_segments")
                 .order_by("cds", "start")
             )
             annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")
