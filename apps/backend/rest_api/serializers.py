@@ -279,33 +279,59 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         return label
 
     def get_proteomic_profiles(self, obj: models.Sample):
+        """Get proteomic profiles for a sample."""
         # proteomic_profiles are prefetched
-        label_list = []
+        label_set = set()
+
         alignments = obj.sequence.alignments.prefetch_related(
             "amino_acid_mutations__cds__peptides__peptide_segments",
             "amino_acid_mutations__cds__gene",
         )
         for alignment in alignments:
-            for mutation in alignment.amino_acid_mutations.all():
+            amino_acid_mutations = alignment.amino_acid_mutations.all()
+            # Prefetch peptides and peptide_segments for all CDS objects in the alignment
+            cds_with_peptides = (
+                models.CDS.objects.filter(aminoacidmutation__alignments__in=alignments)
+                .prefetch_related(
+                    "peptides__peptide_segments",  # Prefetch peptide_segments for peptides
+                    "gene",  # Prefetch gene for CDS
+                )
+                .distinct()
+            )
+
+            # Build a dictionary {cds.id: [peptides]} for all alignments
+            cds_to_peptides = {
+                cds.id: list(cds.peptides.all())
+                for cds in cds_with_peptides
+                if cds.peptides.exists()  # Filter out CDS objects with no peptides
+            }
+            for mutation in amino_acid_mutations:
+                gene_symbol = ""
                 try:
-                    gene_symbol = ""
-                    # Collect all peptide segments for the mutation's CDS in memory
-                    peptide_segments = [
-                        (peptide.description, segment.start_cds, segment.end_cds)
-                        for peptide in mutation.cds.peptides.all()
-                        for segment in peptide.peptide_segments.all()
-                    ]
-                    # Check if the mutation's position is within any peptide segment
-                    for peptide_description, start_cds, end_cds in peptide_segments:
-                        if start_cds <= mutation.start <= end_cds:
-                            # Use peptide description and adjust mutation positions
-                            gene_symbol = peptide_description
-                            mutation_start = mutation.start - start_cds + 1
-                            mutation_end = mutation.end - start_cds + 1
-                            label = self.define_proteomic_label(
-                                mutation, gene_symbol, mutation_start, mutation_end
-                            )
-                            label_list.append((gene_symbol, mutation_start, label))
+                    if cds_to_peptides:
+                        # Get peptides for the mutation's CDS from the prebuilt dictionary
+                        peptide_segments = set()
+                        peptides = cds_to_peptides.get(mutation.cds.id, [])
+                        for peptide in peptides:
+                            for segment in peptide.peptide_segments.all():
+                                peptide_segments.add(
+                                    (
+                                        peptide.description,
+                                        segment.start_cds,
+                                        segment.end_cds,
+                                    )
+                                )
+                        # Check if the mutation's position is within any peptide segment
+                        for peptide_description, start_cds, end_cds in peptide_segments:
+                            if start_cds <= mutation.start <= end_cds:
+                                # Use peptide description and adjust mutation positions
+                                gene_symbol = peptide_description
+                                mutation_start = mutation.start - start_cds + 1
+                                mutation_end = mutation.end - start_cds + 1
+                                label = self.define_proteomic_label(
+                                    mutation, gene_symbol, mutation_start, mutation_end
+                                )
+                                label_set.add((gene_symbol, mutation_start, label))
                     # Fallback to gene symbol if no peptide match is found
                     if not gene_symbol:
                         gene_symbol = mutation.cds.gene.symbol
@@ -314,17 +340,17 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                         label = self.define_proteomic_label(
                             mutation, gene_symbol, mutation_start, mutation_end
                         )
-                        label_list.append((gene_symbol, mutation_start, label))
-                    sorted_label_list = [
-                        item[2]
-                        for item in sorted(label_list, key=lambda x: (x[0], x[1]))
-                    ]
+                        label_set.add((gene_symbol, mutation_start, label))
+
                 except AttributeError as e:
                     # most of the time this AttributeError outputs
                     # 'NoneType' object has no attribute 'gene_symbol'
                     print(e)
                     print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue
+            sorted_label_list = [
+                item[2] for item in sorted(label_set, key=lambda x: (x[0], x[1]))
+            ]
         return sorted_label_list
 
     def create_NT_format(self, mutation: models.NucleotideMutation):

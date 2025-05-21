@@ -593,3 +593,29 @@ def test_match_aa_influ(capfd, api_url):
 
     assert "16" == lines[-1]
     assert code == 0
+
+
+def test_match_multiple_overlapping_peptides_hiv(capfd, api_url):
+    # multple mat_peptide (in slippage region with 2 peptide_segments) and in another mat_peptide
+    # Nt  A1664G in Gene gag-pol; (CDS gag-pol;K444E), peptides: Gag-Pol Transframe peptide and Pol
+    # Nt  A1664G in Gene gag; (CDS gag;K459K), silent mutation
+    code = run_cli(f"match --db {api_url}  -r NC_001802.1 --profile A1664G ")
+    out, err = capfd.readouterr()
+    assert "Gag-Pol Transframe peptide:K12E" in out
+    assert "Pol:K4E" in out
+    assert code == 0
+
+
+def test_match_multiple_overlapping_genes_and_peptides_hiv(capfd, api_url):
+    # Nt T1677TTTCCTCAGAGCCGACCAGAAA in Gene gag-pol and in gene gag -> mutations in 3 different peptides
+    # gag-pol: AA mutation in mat_peptides: Gag-Pol Transframe peptide & in Pol: Gag-Pol Transframe peptide:F16LSSEPTRN, Pol:F8LSSEPTRN
+    # gag: in peptide p1: p1:F16FPQSRPEI
+    # MT929391.1
+    code = run_cli(
+        f"match --db {api_url}  -r NC_001802.1 --profile 1677TTTCCTCAGAGCCGACCAGAAA"
+    )
+    out, err = capfd.readouterr()
+    assert "Gag-Pol Transframe peptide:F16LSSEPTRN" in out
+    assert "Pol:F8LSSEPTRN" in out
+    assert "p1:F16FPQSRPEI" in out
+    assert code == 0

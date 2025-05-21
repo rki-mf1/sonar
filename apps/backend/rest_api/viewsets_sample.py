@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 import os
-import pathlib
 import re
 import traceback
 from typing import Generator
@@ -20,6 +19,8 @@ from django.db.models import Case
 from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
+from django.db.models import ExpressionWrapper
+from django.db.models import F
 from django.db.models import IntegerField
 from django.db.models import Min
 from django.db.models import OuterRef
@@ -48,7 +49,6 @@ from rest_api.serializers import SampleSerializer
 from rest_api.utils import define_profile
 from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import resolve_ambiguous_NT_AA
-from rest_api.utils import Response
 from rest_api.utils import strtobool
 from rest_api.viewsets import PropertyViewSet
 from . import models
@@ -156,6 +156,7 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
+        /api/samples/genomes/
         fetch proteomic and genomic profiles based on provided filters and optional parameters
 
         TODO:
@@ -173,7 +174,6 @@ class SampleViewSet(
             LOGGER.info(
                 f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}"
             )
-
             self.has_property_filter = False
 
             queryset = self._get_filtered_queryset(request)
@@ -200,7 +200,7 @@ class SampleViewSet(
             if DEBUG:
                 LOGGER.info(queryset.query)
 
-            # filter out ambiguous nucleotides or unspecified amino acids
+            # filter out unspecified nucleotides or unspecified amino acids
             if not showNX:
                 genomic_profiles_qs = genomic_profiles_qs.exclude(alt="N")
                 proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
@@ -224,7 +224,6 @@ class SampleViewSet(
                     to_attr="alignment_annotations",
                 ),
             )
-
             # apply ordering if specified
             ordering = request.query_params.get("ordering")
             if ordering:
@@ -980,6 +979,39 @@ class SampleViewSet(
             final_query = ~final_query
 
         return final_query
+
+    def filter_peptide_mutations(
+        self,
+        peptide_description,
+        peptide_end_position,
+        ref_aa,
+        alt_aa,
+        exclude: bool = False,
+    ) -> Q:
+        # TODO Check if reference filtering is needed, check if this works:
+        # Ensure peptide_segments__start_cds is a valid F() reference—this assumes there's a one-to-one or single segment per peptide.
+        # You might need to adjust the .annotate() or .values() depending on whether a Peptide has multiple peptide_segments.
+
+        peptide_qs = models.Peptide.objects.filter(description=peptide_description)
+        peptide_qs = peptide_qs.annotate(
+            aa_end_pos=ExpressionWrapper(
+                F("peptide_segments__start_cds") + peptide_end_position,
+                output_field=IntegerField(),
+            )
+        )
+        aa_end_subquery = peptide_qs.values("aa_end_pos")[:1]
+        gene_symbol_subquery = peptide_qs.values("cds__gene__symbol")[:1]
+
+        mutation_condition = (
+            Q(amino_acid_mutations__end=Subquery(aa_end_subquery))
+            & Q(amino_acid_mutations__ref=ref_aa)
+            & Q(amino_acid_mutations__alt=alt_aa)
+            & Q(amino_acid_mutations__cds__gene__symbol=Subquery(gene_symbol_subquery))
+        )
+        alignment_qs = models.Alignment.objects.filter(mutation_condition)
+
+        filters = {"sequence__alignments__in": alignment_qs}
+        return ~Q(**filters) if exclude else Q(**filters)
 
     def filter_annotation(
         self,
