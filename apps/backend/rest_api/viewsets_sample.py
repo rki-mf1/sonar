@@ -48,6 +48,8 @@ from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
 from rest_api.utils import define_profile
 from rest_api.utils import get_distinct_gene_symbols
+from rest_api.utils import get_distinct_peptide_descriptions
+from rest_api.utils import regexes
 from rest_api.utils import resolve_ambiguous_NT_AA
 from rest_api.utils import strtobool
 from rest_api.viewsets import PropertyViewSet
@@ -900,6 +902,25 @@ class SampleViewSet(
         serializer = SampleGenomesSerializer(sample)
         return Response(serializer.data)
 
+    def split_mutations(self, value):
+        # Match all valid mutations using the regexes
+        matches = []
+        value = value.strip()
+        for mutation_type, regex in regexes.items():
+            matches.extend(regex.findall(value))
+
+        # Extract the full matches from the regex groups
+        mutations = [
+            match[0]
+            + (match[1] or "")
+            + (match[2] or "")
+            + match[3]
+            + match[4]
+            + match[5]
+            for match in matches
+        ]
+        return mutations
+
     def filter_label(
         self,
         value,
@@ -911,14 +932,17 @@ class SampleViewSet(
 
         # Split the input value by either commas, semicolom, whitespace, or combinations of these,
         # remove seperators from string end
-        mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
+        mutations = self.split_mutations(value)
         for mutation in mutations:
             parsed_mutation = define_profile(mutation)
-            # check valid protien name
-            if (
-                "protein_symbol" in parsed_mutation
-                and parsed_mutation["protein_symbol"] not in get_distinct_gene_symbols()
-            ):
+            is_gene_name = (
+                parsed_mutation["protein_symbol"] in get_distinct_gene_symbols()
+            )
+            is_peptide_desc = (
+                parsed_mutation["protein_symbol"] in get_distinct_peptide_descriptions()
+            )
+            # check valid protein name
+            if not is_gene_name and not is_peptide_desc:
                 raise ValueError(
                     f"Invalid protein name: {parsed_mutation['protein_symbol']}."
                 )
@@ -931,12 +955,22 @@ class SampleViewSet(
                 )
 
             elif parsed_mutation.get("label") == "SNP AA":
-                q_obj = self.filter_snp_profile_aa(
-                    protein_symbol=parsed_mutation["protein_symbol"],
-                    ref_aa=parsed_mutation["ref_aa"],
-                    ref_pos=int(parsed_mutation["ref_pos"]),
-                    alt_aa=parsed_mutation["alt_aa"],
-                )
+                if is_gene_name:
+                    q_obj = self.filter_snp_profile_aa(
+                        protein_symbol=parsed_mutation["protein_symbol"],
+                        ref_aa=parsed_mutation["ref_aa"],
+                        ref_pos=int(parsed_mutation["ref_pos"]),
+                        alt_aa=parsed_mutation["alt_aa"],
+                    )
+                elif is_peptide_desc:
+                    q_obj = self.filter_snp_peptide_mutations(
+                        peptide_description=parsed_mutation["protein_symbol"],
+                        peptide_end_position=int(parsed_mutation["ref_pos"]),
+                        ref_aa=parsed_mutation["ref_aa"],
+                        alt_aa=parsed_mutation["alt_aa"],
+                    )
+                    print("Peptide mut")
+                    print(q_obj)
 
             elif parsed_mutation.get("label") == "Del Nt":
                 q_obj = self.filter_del_profile_nt(
@@ -980,7 +1014,7 @@ class SampleViewSet(
 
         return final_query
 
-    def filter_peptide_mutations(
+    def filter_snp_peptide_mutations(
         self,
         peptide_description,
         peptide_end_position,
@@ -995,7 +1029,7 @@ class SampleViewSet(
         peptide_qs = models.Peptide.objects.filter(description=peptide_description)
         peptide_qs = peptide_qs.annotate(
             aa_end_pos=ExpressionWrapper(
-                F("peptide_segments__start_cds") + peptide_end_position,
+                F("peptide_segments__start_cds") + peptide_end_position - 1,
                 output_field=IntegerField(),
             )
         )
@@ -1009,7 +1043,6 @@ class SampleViewSet(
             & Q(amino_acid_mutations__cds__gene__symbol=Subquery(gene_symbol_subquery))
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
-
         filters = {"sequence__alignments__in": alignment_qs}
         return ~Q(**filters) if exclude else Q(**filters)
 

@@ -114,6 +114,8 @@ def define_profile(mutation):  # noqa: C901
     match = None
     for mutation_type, regex in regexes.items():
         match = regex.match(mutation)
+        print(mutation)
+        print(f"Match: {match}")
         if match:
             gene_name = match.group(3)[:-1] if match.group(3) else None
 
