@@ -69,7 +69,7 @@ IUPAC_CODES = {
 
 regexes = {
     "snv": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$"),
-    "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$"),
+    "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?(del:)([0-9]+)(|-?[0-9]+)?$"),
 }
 
 
@@ -114,8 +114,6 @@ def define_profile(mutation):  # noqa: C901
     match = None
     for mutation_type, regex in regexes.items():
         match = regex.match(mutation)
-        print(mutation)
-        print(f"Match: {match}")
         if match:
             gene_name = match.group(3)[:-1] if match.group(3) else None
 
@@ -157,16 +155,14 @@ def define_profile(mutation):  # noqa: C901
                             )
                         raise ValueError(error_message)
 
-                        sys.exit(1)
                     _query["alt_nuc"] = alt
                     _query["ref_nuc"] = ref
                     _query["ref_pos"] = match.group(5)
                     _query["label"] = "SNP Nt" if len(alt) == 1 else "Ins Nt"
 
             elif mutation_type == "del":
-                _query["first_deleted"] = match.group(4)
-                _query["last_deleted"] = match.group(5)[1:]
-
+                _query["first_deleted"] = match.group(5)
+                _query["last_deleted"] = match.group(6)[1:]
                 if gene_name:  # AA deletion
                     _query["protein_symbol"] = gene_name
                     _query["label"] = "Del AA"

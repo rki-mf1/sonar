@@ -619,3 +619,17 @@ def test_match_multiple_overlapping_genes_and_peptides_hiv(capfd, api_url):
     assert "Pol:F8LSSEPTRN" in out
     assert "p1:F16FPQSRPEI" in out
     assert code == 0
+
+
+def test_profile_with_peptide_search(capfd, api_url):
+    # multple mat_peptide (in slippage region with 2 peptide_segments) and in another mat_peptide
+    # Nt  A1664G in Gene gag-pol; (CDS gag-pol;K444E), peptides: Gag-Pol Transframe peptide and Pol
+    # Nt  A1664G in Gene gag; (CDS gag;K459K), silent mutation
+    code = run_cli(
+        f"match --db {api_url}  -r NC_001802.1 --profile matrix:K114KAQQAA --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+
+    assert "14" == lines[-1]
+    assert code == 0

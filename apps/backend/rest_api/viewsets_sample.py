@@ -89,11 +89,11 @@ class SampleViewSet(
         return {
             "Property": self.filter_property,
             "SNP Nt": self.filter_snp_profile_nt,
-            "SNP AA": self.filter_snp_profile_aa,
+            "SNP AA": self.filter_snp_and_ins_profile_aa,
             "Del Nt": self.filter_del_profile_nt,
             "Del AA": self.filter_del_profile_aa,
             "Ins Nt": self.filter_ins_profile_nt,
-            "Ins AA": self.filter_ins_profile_aa,
+            "Ins AA": self.filter_snp_and_ins_profile_aa,
             "Replicon": self.filter_replicon,
             "Sample": self.filter_sample,
             "Lineages": self.filter_sublineages,
@@ -908,7 +908,6 @@ class SampleViewSet(
         value = value.strip()
         for mutation_type, regex in regexes.items():
             matches.extend(regex.findall(value))
-
         # Extract the full matches from the regex groups
         mutations = [
             match[0]
@@ -954,23 +953,22 @@ class SampleViewSet(
                     alt_nuc=parsed_mutation["alt_nuc"],
                 )
 
-            elif parsed_mutation.get("label") == "SNP AA":
+            elif parsed_mutation.get("label") in ["SNP AA", "Ins AA"]:
                 if is_gene_name:
-                    q_obj = self.filter_snp_profile_aa(
+                    q_obj = self.filter_snp_and_ins_profile_aa(
                         protein_symbol=parsed_mutation["protein_symbol"],
                         ref_aa=parsed_mutation["ref_aa"],
                         ref_pos=int(parsed_mutation["ref_pos"]),
                         alt_aa=parsed_mutation["alt_aa"],
                     )
                 elif is_peptide_desc:
-                    q_obj = self.filter_snp_peptide_mutations(
+                    q_obj = self.filter_peptide_mutations(
                         peptide_description=parsed_mutation["protein_symbol"],
                         peptide_end_position=int(parsed_mutation["ref_pos"]),
                         ref_aa=parsed_mutation["ref_aa"],
                         alt_aa=parsed_mutation["alt_aa"],
+                        filter_type="SNP",
                     )
-                    print("Peptide mut")
-                    print(q_obj)
 
             elif parsed_mutation.get("label") == "Del Nt":
                 q_obj = self.filter_del_profile_nt(
@@ -979,11 +977,21 @@ class SampleViewSet(
                 )
 
             elif parsed_mutation.get("label") == "Del AA":
-                q_obj = self.filter_del_profile_aa(
-                    protein_symbol=parsed_mutation["protein_symbol"],
-                    first_deleted=parsed_mutation["first_deleted"],
-                    last_deleted=parsed_mutation.get("last_deleted", ""),
-                )
+                if is_gene_name:
+                    q_obj = self.filter_del_profile_aa(
+                        protein_symbol=parsed_mutation["protein_symbol"],
+                        first_deleted=parsed_mutation["first_deleted"],
+                        last_deleted=parsed_mutation.get("last_deleted", ""),
+                    )
+                elif is_peptide_desc:
+                    q_obj = self.filter_peptide_mutations(
+                        peptide_description=parsed_mutation["protein_symbol"],
+                        peptide_end_position=parsed_mutation.get("last_deleted", ""),
+                        ref_aa="",
+                        alt_aa="",
+                        peptide_start_position=int(parsed_mutation["first_deleted"]),
+                        filter_type="Del",
+                    )
 
             elif parsed_mutation.get("label") == "Ins Nt":
                 q_obj = self.filter_ins_profile_nt(
@@ -991,15 +999,6 @@ class SampleViewSet(
                     ref_pos=int(parsed_mutation["ref_pos"]),
                     alt_nuc=parsed_mutation["alt_nuc"],
                 )
-
-            elif parsed_mutation.get("label") == "Ins AA":
-                q_obj = self.filter_ins_profile_aa(
-                    protein_symbol=parsed_mutation["protein_symbol"],
-                    ref_aa=parsed_mutation["ref_aa"],
-                    ref_pos=int(parsed_mutation["ref_pos"]),
-                    alt_aa=parsed_mutation["alt_aa"],
-                )
-
             else:
 
                 raise ValueError(
@@ -1014,12 +1013,14 @@ class SampleViewSet(
 
         return final_query
 
-    def filter_snp_peptide_mutations(
+    def filter_peptide_mutations(
         self,
         peptide_description,
         peptide_end_position,
         ref_aa,
         alt_aa,
+        peptide_start_position=None,
+        filter_type="SNP",  # or "Del" or "Ins"
         exclude: bool = False,
     ) -> Q:
         # TODO Check if reference filtering is needed, check if this works:
@@ -1027,21 +1028,70 @@ class SampleViewSet(
         # You might need to adjust the .annotate() or .values() depending on whether a Peptide has multiple peptide_segments.
 
         peptide_qs = models.Peptide.objects.filter(description=peptide_description)
-        peptide_qs = peptide_qs.annotate(
-            aa_end_pos=ExpressionWrapper(
-                F("peptide_segments__start_cds") + peptide_end_position - 1,
-                output_field=IntegerField(),
-            )
-        )
-        aa_end_subquery = peptide_qs.values("aa_end_pos")[:1]
-        gene_symbol_subquery = peptide_qs.values("cds__gene__symbol")[:1]
 
-        mutation_condition = (
-            Q(amino_acid_mutations__end=Subquery(aa_end_subquery))
-            & Q(amino_acid_mutations__ref=ref_aa)
-            & Q(amino_acid_mutations__alt=alt_aa)
-            & Q(amino_acid_mutations__cds__gene__symbol=Subquery(gene_symbol_subquery))
-        )
+        # Build mutation condition based on filter_type
+        if filter_type == "SNP" or filter_type == "Ins":
+            peptide_qs = peptide_qs.annotate(
+                aa_end_pos=ExpressionWrapper(
+                    F("peptide_segments__start_cds") + peptide_end_position - 1,
+                    output_field=IntegerField(),
+                )
+            )
+            aa_end_subquery = peptide_qs.values("aa_end_pos")[:1]
+            gene_symbol_subquery = peptide_qs.values("cds__gene__symbol")[:1]
+            mutation_condition = (
+                Q(amino_acid_mutations__end=Subquery(aa_end_subquery))
+                & Q(amino_acid_mutations__ref=ref_aa)
+                & Q(amino_acid_mutations__alt=alt_aa)
+                & Q(
+                    amino_acid_mutations__cds__gene__symbol=Subquery(
+                        gene_symbol_subquery
+                    )
+                )
+            )
+        elif filter_type == "Del":
+            peptide_qs = peptide_qs.annotate(
+                del_start_pos=ExpressionWrapper(
+                    F("peptide_segments__start_cds") + peptide_start_position - 2,
+                    output_field=IntegerField(),
+                ),
+            )
+            del_start_pos = peptide_qs.values_list("del_start_pos", flat=True).first()
+            if peptide_end_position:
+                peptide_qs = peptide_qs.annotate(
+                    del_end_pos=ExpressionWrapper(
+                        F("peptide_segments__start_cds") + peptide_end_position - 1,
+                        output_field=IntegerField(),
+                    ),
+                )
+                del_end_pos = peptide_qs.values_list("del_end_pos", flat=True).first()
+            else:
+                del_end_pos = del_start_pos + 1
+            gene_symbol_subquery = peptide_qs.values("cds__gene__symbol")[:1]
+            mutation_condition = (
+                Q(amino_acid_mutations__start=del_start_pos)
+                & Q(amino_acid_mutations__end=del_end_pos)
+                & Q(amino_acid_mutations__alt="")
+                & Q(
+                    amino_acid_mutations__cds__gene__symbol=Subquery(
+                        gene_symbol_subquery
+                    )
+                )
+            )
+        elif filter_type == "Ins":
+            mutation_condition = (
+                Q(amino_acid_mutations__end=Subquery(aa_end_subquery))
+                & Q(amino_acid_mutations__ref=ref_aa)
+                & Q(amino_acid_mutations__alt=alt_aa)
+                & Q(
+                    amino_acid_mutations__cds__gene__symbol=Subquery(
+                        gene_symbol_subquery
+                    )
+                )
+            )
+        else:
+            raise ValueError(f"Unsupported filter type: {filter_type}")
+
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
         filters = {"sequence__alignments__in": alignment_qs}
         return ~Q(**filters) if exclude else Q(**filters)
@@ -1141,7 +1191,7 @@ class SampleViewSet(
             return ~Q(**filters)
         return Q(**filters)
 
-    def filter_snp_profile_aa(
+    def filter_snp_and_ins_profile_aa(
         self,
         protein_symbol: str,
         ref_aa: str,
@@ -1154,6 +1204,7 @@ class SampleViewSet(
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aa (e.g. OPG098:E162K)
         if protein_symbol not in get_distinct_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
+        # for SNPs
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
@@ -1246,30 +1297,6 @@ class SampleViewSet(
             nucleotide_mutations__end=ref_pos,
             nucleotide_mutations__ref=ref_nuc,
             nucleotide_mutations__alt=alt_nuc,
-        )
-        filters = {"sequence__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
-
-    def filter_ins_profile_aa(
-        self,
-        protein_symbol: str,
-        ref_aa: str,
-        ref_pos: int,
-        alt_aa: str,
-        exclude: bool = False,
-        *args,
-        **kwargs,
-    ) -> Q:
-        # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aas (e.g. OPG197:A34AK)
-        if protein_symbol not in get_distinct_gene_symbols():
-            raise ValueError(f"Invalid protein name: {protein_symbol}.")
-        alignment_qs = models.Alignment.objects.filter(
-            amino_acid_mutations__end=ref_pos,
-            amino_acid_mutations__ref=ref_aa,
-            amino_acid_mutations__alt=alt_aa,
-            amino_acid_mutations__cds__gene__symbol=protein_symbol,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:
