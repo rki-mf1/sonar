@@ -114,7 +114,7 @@ export const useSamplesStore = defineStore('samples', {
     plotGroupedLineagesPerWeek: {} as PlotGroupedLineagesPerWeek,
     plotMetaDataCoverage: {} as PlotMetaDataCoverage,
     plotCustom: {} as PlotCustom,
-    selectedCustomProperty: "lab",
+    selectedCustomProperty: 'lab',
     filteredCount: 0,
     loading: false,
     perPage: 10,
@@ -245,12 +245,10 @@ export const useSamplesStore = defineStore('samples', {
     },
     async updatePlotSamplesPerWeek() {
       const emptyStatistics = {
-        samples_per_week: {}
+        samples_per_week: {},
       }
       try {
-        const plotSamplesPerWeek = await API.getInstance().getPlotSamplesPerWeek(
-          this.filters,
-        )
+        const plotSamplesPerWeek = await API.getInstance().getPlotSamplesPerWeek(this.filters)
         if (!plotSamplesPerWeek) {
           this.plotSamplesPerWeek = emptyStatistics
         } else {
@@ -264,7 +262,7 @@ export const useSamplesStore = defineStore('samples', {
     },
     async updatePlotGroupedLineagesPerWeek() {
       const emptyStatistics = {
-        grouped_lineages_per_week: []
+        grouped_lineages_per_week: [],
       }
       try {
         const plotGroupedLineagesPerWeek = await API.getInstance().getPlotGroupedLineagesPerWeek(
@@ -283,12 +281,10 @@ export const useSamplesStore = defineStore('samples', {
     },
     async updatePlotMetaDataCoverage() {
       const emptyStatistics = {
-        meta_data_coverage: {}
+        meta_data_coverage: {},
       }
       try {
-        const plotMetaDataCoverage = await API.getInstance().getPlotMetaDataCoverage(
-          this.filters,
-        )
+        const plotMetaDataCoverage = await API.getInstance().getPlotMetaDataCoverage(this.filters)
         if (!plotMetaDataCoverage) {
           this.plotMetaDataCoverage = emptyStatistics
         } else {
@@ -305,8 +301,10 @@ export const useSamplesStore = defineStore('samples', {
         custom_property: {},
       }
       try {
-        const plotCustom =
-          await API.getInstance().getPlotCustom({...this.filters, property: this.selectedCustomProperty})
+        const plotCustom = await API.getInstance().getPlotCustom(
+          this.filters,
+          this.selectedCustomProperty,
+        )
         if (!plotCustom) {
           this.plotCustom = emptyStatistics
         } else {
