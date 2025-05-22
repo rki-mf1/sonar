@@ -129,22 +129,17 @@ export type FilteredStatistics = {
   filtered_total_count: number
 }
 
-// TODO: too unflexibel, change to more flexible structure allowing different properties
-export type FilteredStatisticsPlots = {
+export type PlotSamplesPerWeek = {
   samples_per_week: { [key: string]: number }
+}
+export type PlotGroupedLineagesPerWeek = {
   grouped_lineages_per_week: Array<{ week: string; lineage_group: string; percentage: number }>
+}
+export type PlotMetaDataCoverage = {
   meta_data_coverage: { [key: string]: number }
 }
-
-export type FilteredStatisticsPlotsCustom = {
-  genomecomplete_chart: { [key: string]: number }
-  sequencing_tech: { [key: string]: number }
-  sequencing_reason: { [key: string]: number }
-  sample_type: { [key: string]: number }
-  length: { [key: string]: number }
-  lab: { [key: string]: number }
-  zip_code: { [key: string]: number }
-  host: { [key: string]: number }
+export type PlotCustom = {
+  custom_property: { [key: string]: number }
 }
 
 export type CustomPercentageLabelsOptions = {

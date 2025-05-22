@@ -92,9 +92,27 @@ export default class API {
     return this.getRequest(url, {} as JSON, false)
   }
 
-  getFilteredStatisticsPlots(params: FilterGroupRoot) {
+  getPlotSamplesPerWeek(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/filtered_statistics_plots/${queryString}`
+    const url = `samples/plot_samples_per_week/${queryString}`
+    return this.getRequest(url, {} as JSON, false)
+  }
+
+  getPlotGroupedLineagesPerWeek(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_grouped_lineages_per_week/${queryString}`
+    return this.getRequest(url, {} as JSON, false)
+  }
+
+  getPlotMetaDataCoverage(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_meta_data_coverage/${queryString}`
+    return this.getRequest(url, {} as JSON, false)
+  }
+
+  getPlotCustom(params: FilterGroupRoot & { property?: string }) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_custom/${queryString}`
     return this.getRequest(url, {} as JSON, false)
   }
 

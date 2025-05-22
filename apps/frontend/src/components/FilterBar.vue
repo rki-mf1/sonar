@@ -334,7 +334,10 @@ export default {
         this.samplesStore.updateSamples()
         this.samplesStore.updateFilteredStatistics()
         if (this.$route.name === 'Plots') {
-          this.samplesStore.updateFilteredStatisticsPlots()
+          this.samplesStore.updatePlotSamplesPerWeek()
+          this.samplesStore.updatePlotGroupedLineagesPerWeek()
+          this.samplesStore.updatePlotMetaDataCoverage()
+          this.samplesStore.updatePlotCustom()
         }
       }
     },
@@ -352,7 +355,10 @@ export default {
     updateSamplesInTableAndFilteredStatistics() {
       this.samplesStore.updateFilteredStatistics()
       if (this.$route.name === 'Plots') {
-        this.samplesStore.updateFilteredStatisticsPlots()
+        this.samplesStore.updatePlotSamplesPerWeek()
+        this.samplesStore.updatePlotGroupedLineagesPerWeek()
+        this.samplesStore.updatePlotMetaDataCoverage()
+        this.samplesStore.updatePlotCustom()
       }
       return this.samplesStore.updateSamples()
     },
