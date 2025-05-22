@@ -18,12 +18,12 @@
     <!-- sample count plot-->
     <div class="panel">
       <PrimePanel header="Number of Samples per Calendar Week" class="w-full shadow-2">
-        <div style="height: 100%; width: 100%; display: flex; justify-content: center">
+        <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
             type="bar"
             :data="samplesPerWeekData()"
             :options="samplesPerWeekOptions()"
-            style="width: 100%"
+            style="width: 100%; height: 25vh"
           />
         </div>
       </PrimePanel>
@@ -35,12 +35,12 @@
         header="Distribution of grouped Lineages per Calendar Week"
         class="w-full shadow-2"
       >
-        <div style="height: 100%; width: 100%; display: flex; justify-content: center">
+        <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
             type="bar"
             :data="lineagesPerWeekData()"
             :options="lineagesPerWeekOptions()"
-            style="width: 100%"
+            style="width: 100%; height: 50vh"
           />
         </div>
       </PrimePanel>
@@ -49,12 +49,12 @@
     <!-- meta data plot-->
     <div class="panel">
       <PrimePanel header="Coverage of Meta Data" class="w-full shadow-2">
-        <div style="height: 100%; width: 100%; display: flex; justify-content: center">
+        <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
             type="bar"
             :data="metaDataCoverageData()"
             :options="metaDataCoverageOptions()"
-            style="width: 100%"
+            style="width: 100%; height: 25vh"
           />
         </div>
       </PrimePanel>
@@ -72,12 +72,12 @@
             @change="samplesStore.updatePlotCustom"
           />
         </div>
-        <div style="height: 100%; width: 100%; display: flex; justify-content: center">
+        <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
             type="doughnut"
             :data="customPlotData()"
             :options="customPlotOptions()"
-            style="width: 100%"
+            style="width: 100%; height: 25vh"
           />
         </div>
       </PrimePanel>
@@ -96,7 +96,12 @@ export default {
       samplesStore: useSamplesStore(),
     }
   },
-  mounted() {},
+  mounted() {
+    this.samplesStore.updatePlotSamplesPerWeek()
+    this.samplesStore.updatePlotGroupedLineagesPerWeek()
+    this.samplesStore.updatePlotMetaDataCoverage()
+    this.samplesStore.updatePlotCustom()
+  },
   methods: {
     isDataEmpty(
       data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>,
@@ -231,7 +236,7 @@ export default {
     lineagesPerWeekOptions() {
       return {
         animation: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: {
             display: true,
