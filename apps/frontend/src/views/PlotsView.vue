@@ -65,16 +65,17 @@
       <PrimePanel header="Custom Plot" class="w-full shadow-2">
         <div style="width: 20%; display: flex; justify-content: flex-end">
           <PrimeDropdown
-            v-model="selectedProperty"
+            v-model="samplesStore.selectedCustomProperty"
             :options="samplesStore.propertyTableOptions"
             placeholder="Select a Property"
             class="w-full md:w-56"
+            @change="samplesStore.updatePlotCustom"
           />
         </div>
         <div style="height: 100%; width: 100%; display: flex; justify-content: center">
           <PrimeChart
             type="doughnut"
-            :data="customPlotData(selectedProperty)"
+            :data="customPlotData(samplesStore.selectedCustomProperty)"
             :options="customPlotOptions()"
             style="width: 100%"
           />
@@ -93,7 +94,6 @@ export default {
   data() {
     return {
       samplesStore: useSamplesStore(),
-      selectedProperty: '',
     }
   },
   mounted() {},
@@ -144,8 +144,8 @@ export default {
     },
 
     samplesPerWeekData() {
-      const samples_per_week = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['samples_per_week']
+      const samples_per_week = this.samplesStore.plotSamplesPerWeek
+        ? this.samplesStore.plotSamplesPerWeek['samples_per_week']
         : {}
       if (this.isDataEmpty(samples_per_week)) {
         return this.emptyChart()
@@ -186,8 +186,8 @@ export default {
     },
 
     lineagesPerWeekData() {
-      const lineages_per_week = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['grouped_lineages_per_week']
+      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek
+        ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
         : []
       if (this.isDataEmpty(lineages_per_week)) {
         return this.emptyChart()
@@ -237,9 +237,9 @@ export default {
       // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
       // what about the property 'name' ?? its not in the list, but its always shown in the table
       const meta_data_coverage = Object.fromEntries(
-        Object.entries(
-          this.samplesStore.filteredStatisticsPlots?.['meta_data_coverage'] || {},
-        ).filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key)),
+        Object.entries(this.samplesStore.plotMetaDataCoverage?.['meta_data_coverage'] || {}).filter(
+          ([key]) => this.samplesStore.metaCoverageOptions.includes(key),
+        ),
       )
       if (this.isDataEmpty(meta_data_coverage)) {
         return this.emptyChart()
@@ -290,8 +290,8 @@ export default {
     },
 
     customPlotData(property: string) {
-      const property_data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots[property]
+      const property_data = this.samplesStore.plotCustom
+        ? this.samplesStore.plotCustom['custom_property'][property]
         : {}
       if (this.isDataEmpty(property_data)) {
         return this.emptyChart()

@@ -477,94 +477,39 @@ class SampleViewSet(
             if key.startswith("not_null_count_")
         }
 
-    def _get_genomecomplete_chart(self, queryset):
+    def _get_custom_property_plot(self, queryset, property):
         result_dict = {}
+        # result_dict["property"] = property
         grouped_queryset = (
-            queryset.values("genome_completeness")
-            .annotate(total=Count("genome_completeness"))
-            .order_by()
+            queryset.values(property).annotate(total=Count(property)).order_by()
         )
-        result_dict = {
-            item["genome_completeness"]: item["total"] for item in grouped_queryset
-        }
-        return result_dict
+        ## special cases:
+        # queryset = queryset.filter(properties__property__name="sequencing_reason")
 
-    def _get_length_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("length").annotate(total=Count("length")).order_by()
-        )
-        result_dict = {item["length"]: item["total"] for item in grouped_queryset}
-        return result_dict
+        # # the value_char" holds the sequencing reason values
+        # grouped_queryset = (
+        #     queryset.values("properties__value_varchar")
+        #     .annotate(total=Count("properties__value_varchar"))
+        #     .order_by()
+        # )
+        # # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
+        # result_dict = {
+        #     item["properties__value_varchar"]: item["total"]
+        #     for item in grouped_queryset
+        # }
+        # # the value_char" holds the sample type values
+        # grouped_queryset = (
+        #     queryset.values("properties__value_varchar")
+        #     .annotate(total=Count("properties__value_varchar"))
+        #     .order_by()
+        # )
+        # # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
+        # result_dict = {
+        #     item["properties__value_varchar"]: item["total"]
+        #     for item in grouped_queryset
+        # }
 
-    def _get_lab_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("lab").annotate(total=Count("lab")).order_by()
-        )
-        result_dict = {item["lab"]: item["total"] for item in grouped_queryset}
-        return result_dict
-
-    def _get_host_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("host").annotate(total=Count("host")).order_by()
-        )
-        result_dict = {item["host"]: item["total"] for item in grouped_queryset}
-        return result_dict
-
-    def _get_zip_code_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("zip_code").annotate(total=Count("zip_code")).order_by()
-        )
-        result_dict = {item["zip_code"]: item["total"] for item in grouped_queryset}
-        return result_dict
-
-    def _get_sequencingReason_chart(self, queryset):
-        result_dict = {}
-        queryset = queryset.filter(properties__property__name="sequencing_reason")
-
-        # the value_char" holds the sequencing reason values
-        grouped_queryset = (
-            queryset.values("properties__value_varchar")
-            .annotate(total=Count("properties__value_varchar"))
-            .order_by()
-        )
-        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
-        result_dict = {
-            item["properties__value_varchar"]: item["total"]
-            for item in grouped_queryset
-        }
-        return result_dict
-
-    def _get_sampleType_chart(self, queryset):
-        result_dict = {}
-        queryset = queryset.filter(properties__property__name="sample_type")
-
-        # the value_char" holds the sample type values
-        grouped_queryset = (
-            queryset.values("properties__value_varchar")
-            .annotate(total=Count("properties__value_varchar"))
-            .order_by()
-        )
-        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
-        result_dict = {
-            item["properties__value_varchar"]: item["total"]
-            for item in grouped_queryset
-        }
-        return result_dict
-
-    def _get_sequencingTech_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("sequencing_tech")
-            .annotate(total=Count("sequencing_tech"))
-            .order_by()
-        )
-        result_dict = {
-            item["sequencing_tech"]: item["total"] for item in grouped_queryset
-        }
+        result_dict = {item[property]: item["total"] for item in grouped_queryset}
         return result_dict
 
     def _get_samples_per_week(self, queryset):
@@ -825,14 +770,13 @@ class SampleViewSet(
         return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
-    def filtered_statistics_plots(self, request: Request, *args, **kwargs):
+    def plot_samples_per_week(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
 
         result_dict = {}
         # check if queryset has any records with a collection_date -> if not, return empty object
         if not queryset.filter(collection_date__isnull=False).exists():
             result_dict["samples_per_week"] = {}
-            result_dict["grouped_lineages_per_week"] = {}
         else:
             queryset = queryset.extra(
                 select={
@@ -841,29 +785,49 @@ class SampleViewSet(
                 }
             )
             result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
+
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def plot_grouped_lineages_per_week(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+
+        result_dict = {}
+        # check if queryset has any records with a collection_date -> if not, return empty object
+        if not queryset.filter(collection_date__isnull=False).exists():
+            result_dict["grouped_lineages_per_week"] = {}
+        else:
+            queryset = queryset.extra(
+                select={
+                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
+                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
+                }
+            )
             result_dict["grouped_lineages_per_week"] = (
                 self._get_grouped_lineages_per_week(queryset)
             )
 
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def plot_meta_data_coverage(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+
+        result_dict = {}
         result_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
             queryset
         )
         return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
-    def filtered_statistics_plots_custom(self, request: Request, *args, **kwargs):
+    def plot_custom(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
+        property = request.query_params.get("property", None)
 
         result_dict = {}
-
-        result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
-        result_dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
-        result_dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
-        result_dict["sample_type"] = self._get_sampleType_chart(queryset)
-        result_dict["host"] = self._get_host_chart(queryset)
-        result_dict["length"] = self._get_length_chart(queryset)
-        result_dict["lab"] = self._get_lab_chart(queryset)
-        result_dict["zip_code"] = self._get_zip_code_chart(queryset)
+        result_dict["custom_property"] = self._get_custom_property_plot(
+            queryset, property
+        )
 
         return Response(data=result_dict)
 
