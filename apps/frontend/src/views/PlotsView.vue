@@ -258,7 +258,8 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar'>) => `${context.dataset.label}: ${context.parsed.y}%`,
+              label: (context: TooltipItem<'bar'>) =>
+                `${context.dataset.label}: ${context.parsed.y}%`,
             },
           },
         },
@@ -336,7 +337,8 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar'>) => `${context.dataset.label}: ${context.parsed.y}%`,
+              label: (context: TooltipItem<'bar'>) =>
+                `${context.dataset.label}: ${context.parsed.y}%`,
             },
           },
         },
