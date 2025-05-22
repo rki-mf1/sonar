@@ -167,7 +167,7 @@ export default {
               borderColor: this.generateColorPalette(1).map((color) =>
                 chroma(color).darken(1.5).hex(),
               ),
-              borderWidth: 1,
+              borderWidth: 1.5,
             },
           ],
         }
@@ -204,21 +204,33 @@ export default {
         ),
         backgroundColor: colors[index],
         borderColor: chroma(colors[index]).darken(0.5).hex(),
-        borderWidth: 2,
+        borderWidth: 2.5,
       }))
       return { labels: weeks, datasets: datasets }
     },
     lineagesPerWeekOptions() {
       return {
         animation: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,
         plugins: {
           legend: {
             display: true,
             position: 'bottom',
           },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.dataset.label}: ${context.parsed.y}%`,
+            },
+          },
         },
         scales: {
+          x: {
+            stacked: true,
+            title: {
+              display: true,
+              text: 'Calendar Week',
+            },
+          },
           y: {
             stacked: true,
             min: 0,
@@ -259,7 +271,7 @@ export default {
             borderColor: this.generateColorPalette(1).map((color) =>
               chroma(color).darken(1.5).hex(),
             ),
-            borderWidth: 1,
+            borderWidth: 1.5,
           },
         ],
       }
@@ -305,7 +317,7 @@ export default {
             data,
             backgroundColor: colors,
             borderColor: colors.map((color) => chroma(color).darken(1.0).hex()),
-            borderWidth: 1,
+            borderWidth: 1.5,
           },
         ],
       }

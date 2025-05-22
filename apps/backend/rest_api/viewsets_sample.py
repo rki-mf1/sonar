@@ -698,8 +698,6 @@ class SampleViewSet(
 
         present_lineages = {entry["lineage"] for entry in queryset.values("lineage")}
 
-        print(present_lineages)
-
         # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
         lineage_groups = {
             ".".join(lineage.split(".")[:2])
@@ -730,9 +728,11 @@ class SampleViewSet(
         )
 
         weekly_data = (
-            queryset.values("year", "week", "lineage_group", "lineage")
+            queryset.values(
+                "year", "week", "lineage_group"
+            )  # for debugging add: "lineage"
             .annotate(lineage_count=Count("lineage_group"))
-            .order_by("year", "week", "lineage_group")
+            .order_by("lineage_group", "year", "week")
         )
 
         week_totals = {
@@ -751,7 +751,7 @@ class SampleViewSet(
             result.append(
                 {
                     "week": week_str,
-                    "lineage": item["lineage"],
+                    # "lineage": item["lineage"], # for debugging
                     "lineage_group": item["lineage_group"],
                     "count": item["lineage_count"],
                     "percentage": round(percentage, 2),
