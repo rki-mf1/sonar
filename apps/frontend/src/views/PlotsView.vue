@@ -66,7 +66,7 @@
         <div style="width: 20%; display: flex; justify-content: flex-end">
           <PrimeDropdown
             v-model="samplesStore.selectedCustomProperty"
-            :options="samplesStore.propertyTableOptions"
+            :options="samplesStore.metaCoverageOptions"
             placeholder="Select a Property"
             class="w-full md:w-56"
             @change="samplesStore.updatePlotCustom"
@@ -181,6 +181,26 @@ export default {
           legend: {
             display: false,
           },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            title: {
+              display: true,
+              text: 'Calendar Week',
+            },
+          },
         },
       }
     },
@@ -216,6 +236,17 @@ export default {
           legend: {
             display: true,
             position: 'bottom',
+          },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
           },
           tooltip: {
             callbacks: {
@@ -284,12 +315,25 @@ export default {
           legend: {
             display: false,
           },
-          // customPercentageLabels: {
-          //   enabled: true,
-          //   threshold: 40,
-          // },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+          },
         },
         scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Property',
+            },
+          },
           y: {
             ticks: {
               callback: function (value: number) {
@@ -330,6 +374,17 @@ export default {
           legend: {
             display: true,
             position: 'bottom',
+          },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
           },
         },
       }

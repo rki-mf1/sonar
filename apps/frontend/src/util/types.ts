@@ -147,11 +147,6 @@ export type PlotCustom = {
   custom_property: { [key: string]: number }
 }
 
-export type CustomPercentageLabelsOptions = {
-  enabled: boolean
-  threshold: number
-}
-
 export type RowSelectEvent<T = unknown> = {
   data: T
   index: number
