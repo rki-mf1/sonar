@@ -114,7 +114,7 @@ export const useSamplesStore = defineStore('samples', {
     plotGroupedLineagesPerWeek: {} as PlotGroupedLineagesPerWeek,
     plotMetaDataCoverage: {} as PlotMetaDataCoverage,
     plotCustom: {} as PlotCustom,
-    selectedCustomProperty: 'lab',
+    selectedCustomProperty: 'sequencing_reason',
     filteredCount: 0,
     loading: false,
     perPage: 10,

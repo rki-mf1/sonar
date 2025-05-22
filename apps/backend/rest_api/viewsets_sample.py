@@ -478,38 +478,31 @@ class SampleViewSet(
         }
 
     def _get_custom_property_plot(self, queryset, property):
-        result_dict = {}
-        # result_dict["property"] = property
-        grouped_queryset = (
-            queryset.values(property).annotate(total=Count(property)).order_by()
-        )
-        ## special cases:
-        # queryset = queryset.filter(properties__property__name="sequencing_reason")
+        if property == "":
+            result_dict = {}
+        elif property == "sequencing_reason":
+            queryset = queryset.filter(properties__property__name="sequencing_reason")
+            # the value_char holds the sequencing reason values
+            grouped_queryset = (
+                queryset.values("properties__value_varchar")
+                .annotate(total=Count("properties__value_varchar"))
+                .order_by()
+            )
+            result_dict = {
+                item["properties__value_varchar"]: item["total"]
+                for item in grouped_queryset
+            }
 
-        # # the value_char" holds the sequencing reason values
-        # grouped_queryset = (
-        #     queryset.values("properties__value_varchar")
-        #     .annotate(total=Count("properties__value_varchar"))
-        #     .order_by()
-        # )
-        # # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
-        # result_dict = {
-        #     item["properties__value_varchar"]: item["total"]
-        #     for item in grouped_queryset
-        # }
-        # # the value_char" holds the sample type values
-        # grouped_queryset = (
-        #     queryset.values("properties__value_varchar")
-        #     .annotate(total=Count("properties__value_varchar"))
-        #     .order_by()
-        # )
-        # # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
-        # result_dict = {
-        #     item["properties__value_varchar"]: item["total"]
-        #     for item in grouped_queryset
-        # }
+        else:
+            grouped_queryset = (
+                queryset.values(property)
+                .annotate(total=Count(property))
+                .order_by(property)
+            )
+            result_dict = {
+                str(item[property]): item["total"] for item in grouped_queryset
+            }  # str required for properties in date format
 
-        result_dict = {item[property]: item["total"] for item in grouped_queryset}
         return result_dict
 
     def _get_samples_per_week(self, queryset):
