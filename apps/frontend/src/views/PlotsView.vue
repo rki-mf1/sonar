@@ -46,41 +46,43 @@
       </PrimePanel>
     </div>
 
-    <!-- meta data plot-->
-    <div class="panel">
-      <PrimePanel header="Coverage of Meta Data" class="w-full shadow-2">
-        <div style="width: 100%; display: flex; justify-content: center">
-          <PrimeChart
-            type="bar"
-            :data="metaDataCoverageData()"
-            :options="metaDataCoverageOptions()"
-            style="width: 100%; height: 25vh"
-          />
-        </div>
-      </PrimePanel>
-    </div>
+    <div style="display: flex; gap: 1rem; width: 100%">
+      <!-- meta data plot-->
+      <div class="panel">
+        <PrimePanel header="Coverage of Meta Data" class="w-full shadow-2">
+          <div style="width: 100%; display: flex; justify-content: center">
+            <PrimeChart
+              type="bar"
+              :data="metaDataCoverageData()"
+              :options="metaDataCoverageOptions()"
+              style="width: 100%; height: 25vh"
+            />
+          </div>
+        </PrimePanel>
+      </div>
 
-    <!-- custom property plot-->
-    <div class="panel">
-      <PrimePanel header="Custom Plot" class="w-full shadow-2">
-        <div style="width: 20%; display: flex; justify-content: flex-end">
-          <PrimeDropdown
-            v-model="samplesStore.selectedCustomProperty"
-            :options="samplesStore.metaCoverageOptions"
-            placeholder="Select a Property"
-            class="w-full md:w-56"
-            @change="samplesStore.updatePlotCustom"
-          />
-        </div>
-        <div style="width: 100%; display: flex; justify-content: center">
-          <PrimeChart
-            type="doughnut"
-            :data="customPlotData()"
-            :options="customPlotOptions()"
-            style="width: 100%; height: 25vh"
-          />
-        </div>
-      </PrimePanel>
+      <!-- custom property plot-->
+      <div class="panel">
+        <PrimePanel header="Distrubtion of Properties" class="w-full shadow-2">
+          <div style="width: 25%; display: flex; justify-content: flex-end">
+            <PrimeDropdown
+              v-model="samplesStore.selectedCustomProperty"
+              :options="samplesStore.metaCoverageOptions"
+              placeholder="Select a Property"
+              class="w-full md:w-56"
+              @change="samplesStore.updatePlotCustom"
+            />
+          </div>
+          <div style="width: 100%; display: flex; justify-content: center">
+            <PrimeChart
+              type="doughnut"
+              :data="customPlotData()"
+              :options="customPlotOptions()"
+              style="width: 100%; height: 25vh"
+            />
+          </div>
+        </PrimePanel>
+      </div>
     </div>
   </div>
 </template>
@@ -301,7 +303,7 @@ export default {
         labels: labels,
         datasets: [
           {
-            label: 'Coverage (in %)',
+            label: 'Coverage',
             data: data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map((color) =>
@@ -329,6 +331,11 @@ export default {
               wheel: { enabled: true },
               pinch: { enabled: true },
               mode: 'x',
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.dataset.label}: ${context.parsed.y}%`,
             },
           },
         },
