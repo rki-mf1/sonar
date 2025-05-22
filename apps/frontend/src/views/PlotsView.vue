@@ -75,7 +75,7 @@
         <div style="height: 100%; width: 100%; display: flex; justify-content: center">
           <PrimeChart
             type="doughnut"
-            :data="customPlotData(samplesStore.selectedCustomProperty)"
+            :data="customPlotData()"
             :options="customPlotOptions()"
             style="width: 100%"
           />
@@ -289,9 +289,9 @@ export default {
       }
     },
 
-    customPlotData(property: string) {
+    customPlotData() {
       const property_data = this.samplesStore.plotCustom
-        ? this.samplesStore.plotCustom['custom_property'][property]
+        ? this.samplesStore.plotCustom['custom_property']
         : {}
       if (this.isDataEmpty(property_data)) {
         return this.emptyChart()

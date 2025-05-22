@@ -822,7 +822,7 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def plot_custom(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-        property = request.query_params.get("property", None)
+        property = request.query_params["property"]
 
         result_dict = {}
         result_dict["custom_property"] = self._get_custom_property_plot(
