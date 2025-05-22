@@ -90,6 +90,7 @@
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples'
 import chroma from 'chroma-js'
+import type { TooltipItem } from 'chart.js'
 
 export default {
   name: 'PlotsView',
@@ -257,7 +258,7 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context) => `${context.dataset.label}: ${context.parsed.y}%`,
+              label: (context: TooltipItem<'bar'>) => `${context.dataset.label}: ${context.parsed.y}%`,
             },
           },
         },
@@ -335,7 +336,7 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context) => `${context.dataset.label}: ${context.parsed.y}%`,
+              label: (context: TooltipItem<'bar'>) => `${context.dataset.label}: ${context.parsed.y}%`,
             },
           },
         },
