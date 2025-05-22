@@ -64,7 +64,7 @@
       <!-- custom property plot-->
       <div class="panel">
         <PrimePanel header="Distrubtion of Properties" class="w-full shadow-2">
-          <div style="width: 25%; display: flex; justify-content: flex-end">
+          <div style="width: 30%; display: flex; justify-content: flex-end">
             <PrimeDropdown
               v-model="samplesStore.selectedCustomProperty"
               :options="samplesStore.metaCoverageOptions"
