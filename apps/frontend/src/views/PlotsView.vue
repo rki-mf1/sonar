@@ -36,7 +36,7 @@
         class="w-full shadow-2"
       >
         <!-- Toggle for chart type -->
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem">
           <PrimeToggleButton
             v-model="isBarChart"
             :on-label="'Bar Chart'"
@@ -48,12 +48,12 @@
         </div>
         <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
-          ref="lineageChart"
-          :type="isBarChart ? 'bar' : 'line'"
-          :data="isBarChart ? lineageBarData() : lineageAreaData()"
-          :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
-          :key="isBarChart"
-          style="width: 100%; height: 50vh"
+            ref="lineageChart"
+            :type="isBarChart ? 'bar' : 'line'"
+            :data="isBarChart ? lineageBarData() : lineageAreaData()"
+            :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
+            :key="isBarChart"
+            style="width: 100%; height: 50vh"
           />
         </div>
       </PrimePanel>
@@ -233,53 +233,54 @@ export default {
 
     lineageBarData() {
       const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek
-      ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
-      : [];
+        ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
+        : []
       if (this.isDataEmpty(lineages_per_week)) {
-        return this.emptyChart();
+        return this.emptyChart()
       }
-      const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))];
-      const weeks = [...new Set(lineages_per_week.map((item) => item.week))];
-      const colors = this.generateColorPalette(lineages.length);
+      const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
+      const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
+      const colors = this.generateColorPalette(lineages.length)
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: weeks.map(
           (week) =>
             lineages_per_week.find((item) => item.week === week && item.lineage_group === lineage)
-              ?.percentage || 0
+              ?.percentage || 0,
         ),
         backgroundColor: colors[index],
         borderColor: chroma(colors[index]).darken(0.5).hex(),
         borderWidth: 1.5,
-      }));
-      return { labels: weeks, datasets };
+      }))
+      return { labels: weeks, datasets }
     },
 
     lineageAreaData() {
       const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek
-      ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
-      : [];
+        ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
+        : []
       if (this.isDataEmpty(lineages_per_week)) {
-        return this.emptyChart();
+        return this.emptyChart()
       }
-        const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))];
-        const weeks = [...new Set(lineages_per_week.map((item) => item.week))];
-        const colors = this.generateColorPalette(lineages.length);
-        // Normalize data so that percentages for each week sum up to 100%
-        const datasets = lineages.map((lineage, index) => ({
-          label: lineage,
-          data: weeks.map((week) => {
-            const weekData = lineages_per_week.filter((item) => item.week === week);
-            const totalPercentage = weekData.reduce((sum, item) => sum + item.percentage, 0);
-            const lineageData = weekData.find((item) => item.lineage_group === lineage)?.percentage || 0;
-            return (lineageData / totalPercentage) * 100; // Normalize to 100%
-          }),
-          borderColor: colors[index],
-          backgroundColor: chroma(colors[index]).alpha(0.3).hex(),
-          fill: true,
-          borderWidth: 2.5,
-        }));
-        return { labels: weeks, datasets };
+      const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
+      const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
+      const colors = this.generateColorPalette(lineages.length)
+      // Normalize data so that percentages for each week sum up to 100%
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: weeks.map((week) => {
+          const weekData = lineages_per_week.filter((item) => item.week === week)
+          const totalPercentage = weekData.reduce((sum, item) => sum + item.percentage, 0)
+          const lineageData =
+            weekData.find((item) => item.lineage_group === lineage)?.percentage || 0
+          return (lineageData / totalPercentage) * 100 // Normalize to 100%
+        }),
+        borderColor: colors[index],
+        backgroundColor: chroma(colors[index]).alpha(0.3).hex(),
+        fill: true,
+        borderWidth: 2.5,
+      }))
+      return { labels: weeks, datasets }
     },
 
     lineageBarChartOptions() {
@@ -315,7 +316,7 @@ export default {
             },
           },
         },
-      };
+      }
     },
 
     lineageAreaChartOptions() {
@@ -344,7 +345,7 @@ export default {
             },
           },
         },
-      };
+      }
     },
 
     metaDataCoverageData() {
