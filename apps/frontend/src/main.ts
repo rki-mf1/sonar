@@ -1,7 +1,7 @@
 import 'primeflex/primeflex.css'
 import 'primevue/resources/themes/aura-light-blue/theme.css'
 import './util/custom_theme.css'
-import 'primevue/resources/primevue.min.css'; // Core CSS
+import 'primevue/resources/primevue.min.css' // Core CSS
 import 'primeicons/primeicons.css' //icons
 import ToastMixin from './util/toastMixin'
 
