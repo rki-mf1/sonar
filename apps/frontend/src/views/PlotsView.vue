@@ -35,12 +35,25 @@
         header="Distribution of grouped Lineages per Calendar Week"
         class="w-full shadow-2"
       >
+        <!-- Toggle for chart type -->
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+          <PrimeToggleButton
+            v-model="isBarChart"
+            :on-label="'Bar Chart'"
+            :off-label="'Area Chart'"
+            :on-icon="'pi pi-chart-bar'"
+            :off-icon="'pi pi-chart-line'"
+            class="w-full md:w-56"
+          />
+        </div>
         <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
-            type="bar"
-            :data="lineagesPerWeekData()"
-            :options="lineagesPerWeekOptions()"
-            style="width: 100%; height: 50vh"
+          ref="lineageChart"
+          :type="isBarChart ? 'bar' : 'line'"
+          :data="isBarChart ? lineageBarData() : lineageAreaData()"
+          :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
+          :key="isBarChart"
+          style="width: 100%; height: 50vh"
           />
         </div>
       </PrimePanel>
@@ -91,12 +104,17 @@
 import { useSamplesStore } from '@/stores/samples'
 import chroma from 'chroma-js'
 import type { TooltipItem } from 'chart.js'
+import PrimeToggleButton from 'primevue/togglebutton'
 
 export default {
   name: 'PlotsView',
+  components: {
+    PrimeToggleButton,
+  },
   data() {
     return {
       samplesStore: useSamplesStore(),
+      isBarChart: true, // Toggle for lineage chart type
     }
   },
   mounted() {
@@ -213,30 +231,58 @@ export default {
       }
     },
 
-    lineagesPerWeekData() {
+    lineageBarData() {
       const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek
-        ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
-        : []
+      ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
+      : [];
       if (this.isDataEmpty(lineages_per_week)) {
-        return this.emptyChart()
+        return this.emptyChart();
       }
-      const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
-      const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
-      const colors = this.generateColorPalette(lineages.length)
+      const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))];
+      const weeks = [...new Set(lineages_per_week.map((item) => item.week))];
+      const colors = this.generateColorPalette(lineages.length);
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: weeks.map(
           (week) =>
             lineages_per_week.find((item) => item.week === week && item.lineage_group === lineage)
-              ?.percentage || 0,
+              ?.percentage || 0
         ),
         backgroundColor: colors[index],
         borderColor: chroma(colors[index]).darken(0.5).hex(),
-        borderWidth: 2.5,
-      }))
-      return { labels: weeks, datasets: datasets }
+        borderWidth: 1.5,
+      }));
+      return { labels: weeks, datasets };
     },
-    lineagesPerWeekOptions() {
+
+    lineageAreaData() {
+      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek
+      ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
+      : [];
+      if (this.isDataEmpty(lineages_per_week)) {
+        return this.emptyChart();
+      }
+        const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))];
+        const weeks = [...new Set(lineages_per_week.map((item) => item.week))];
+        const colors = this.generateColorPalette(lineages.length);
+        // Normalize data so that percentages for each week sum up to 100%
+        const datasets = lineages.map((lineage, index) => ({
+          label: lineage,
+          data: weeks.map((week) => {
+            const weekData = lineages_per_week.filter((item) => item.week === week);
+            const totalPercentage = weekData.reduce((sum, item) => sum + item.percentage, 0);
+            const lineageData = weekData.find((item) => item.lineage_group === lineage)?.percentage || 0;
+            return (lineageData / totalPercentage) * 100; // Normalize to 100%
+          }),
+          borderColor: colors[index],
+          backgroundColor: chroma(colors[index]).alpha(0.3).hex(),
+          fill: true,
+          borderWidth: 2.5,
+        }));
+        return { labels: weeks, datasets };
+    },
+
+    lineageBarChartOptions() {
       return {
         animation: true,
         maintainAspectRatio: false,
@@ -244,17 +290,6 @@ export default {
           legend: {
             display: true,
             position: 'bottom',
-          },
-          zoom: {
-            pan: {
-              enabled: true,
-              mode: 'x',
-            },
-            zoom: {
-              wheel: { enabled: true },
-              pinch: { enabled: true },
-              mode: 'x',
-            },
           },
           tooltip: {
             callbacks: {
@@ -276,13 +311,40 @@ export default {
             min: 0,
             max: 100,
             ticks: {
-              callback: function (value: number) {
-                return value + '%'
-              },
+              callback: (value: number) => `${value}%`,
             },
           },
         },
-      }
+      };
+    },
+
+    lineageAreaChartOptions() {
+      return {
+        animation: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+          },
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Calendar Week',
+            },
+          },
+          y: {
+            stacked: true, // Enable stacking
+            min: 0,
+            max: 100,
+            ticks: {
+              callback: (value: number) => `${value}%`,
+            },
+          },
+        },
+      };
     },
 
     metaDataCoverageData() {
@@ -316,6 +378,7 @@ export default {
         ],
       }
     },
+
     metaDataCoverageOptions() {
       return {
         animation: true,
@@ -367,13 +430,13 @@ export default {
       if (this.isDataEmpty(property_data)) {
         return this.emptyChart()
       }
-      const { labels, data } = this.cleanDataAndAddNullSamples(property_data)
-      const colors = this.generateColorPalette(labels.length)
+      const cleanedData = this.cleanDataAndAddNullSamples(property_data)
+      const colors = this.generateColorPalette(cleanedData.labels.length)
       return {
-        labels,
+        labels: cleanedData.labels,
         datasets: [
           {
-            data,
+            data: cleanedData.data,
             backgroundColor: colors,
             borderColor: colors.map((color) => chroma(color).darken(1.0).hex()),
             borderWidth: 1.5,
