@@ -75,6 +75,7 @@ class sonarUtils:
     @staticmethod
     def import_data(  # noqa: C901
         db: str,
+        nextclade_json: List[str] = [],
         fasta: List[str] = [],
         csv_files: List[str] = [],
         tsv_files: List[str] = [],
@@ -112,12 +113,12 @@ class sonarUtils:
         reference = _check_reference(db, reference)
         start_import_time = get_current_time()
         # checks
+        nextclade_json = nextclade_json or []
         fasta = fasta or []
         tsv_files = tsv_files or []
         csv_files = csv_files or []
-
-        _files_exist(*fasta, *tsv_files, *csv_files)
-        if not _is_import_required(fasta, tsv_files, csv_files, update):
+        _files_exist(*nextclade_json, *fasta, *tsv_files, *csv_files)
+        if not _is_import_required(nextclade_json, fasta, tsv_files, csv_files, update):
             LOGGER.info("Nothing to import.")
             sys.exit(0)
 
@@ -162,7 +163,6 @@ class sonarUtils:
 
         # importing sequences
         if fasta:
-
             # Segment genome detection
             if cache.cluster_db is not None:
                 for fname in fasta:
@@ -191,6 +191,15 @@ class sonarUtils:
                 method,
                 no_upload_sample,
                 must_pass_paranoid,
+            )
+        if nextclade_json:
+            LOGGER.info("Importing Nextclade JSON files.")
+            sonarUtils.nextclade_import(
+                nextclade_json,
+                cache,
+                threads,
+                progress=progress,
+                no_upload_sample=no_upload_sample,
             )
 
         # importing properties
@@ -247,6 +256,156 @@ class sonarUtils:
             refacc=reference,
             include_nx=include_nx,
             auto_anno=auto_anno,
+        )
+
+    @staticmethod
+    def nextclade_import(  # noqa: C901
+        nextclade_json: List[str],
+        cache: sonarCache,
+        threads: int = 1,
+        progress: bool = False,
+        no_upload_sample: bool = False,
+    ):
+        if not no_upload_sample:
+            json_resp = APIClient(base_url=BASE_URL).get_jobID()
+            job_id = json_resp["job_id"]
+
+        if not nextclade_json:
+            return
+
+        passed_samples_list = []
+
+        start_seqcheck_time = get_current_time()
+        passed_samples_list = cache.add_nextclade_json(
+            *nextclade_json, chunk_size=CHUNK_SIZE
+        )
+
+        prepare_seq_time = calculate_time_difference(
+            start_seqcheck_time, get_current_time()
+        )
+        LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
+        cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
+        LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
+
+        # SKIP PARANOID TEST
+
+        n = ANNO_CHUNK_SIZE
+        passed_samples_chunk_list = [
+            tuple(
+                list(passed_samples_list[i : i + n]),
+            )
+            for i in range(0, len(passed_samples_list), n)
+        ]
+        if cache.auto_anno:
+            anno_result_list = []
+            start_anno_time = get_current_time()
+            try:
+                with WorkerPool(
+                    n_jobs=threads,
+                    start_method="fork",
+                    shared_objects=cache,
+                    pass_worker_id=True,
+                    use_worker_state=False,
+                ) as pool:
+                    pool.set_shared_objects(cache)
+                    raw_anno_result_list = pool.map_unordered(
+                        sonarUtils.annotate_sample,
+                        passed_samples_chunk_list,
+                        progress_bar=True,
+                        progress_bar_options={
+                            "position": 0,
+                            "desc": "Annotate samples...",
+                            "unit": "chunks",
+                            "bar_format": bar_format,
+                        },
+                    )
+                    # Flatten the list of lists into a single list
+                    anno_result_list = flatten_list(raw_anno_result_list)
+            except Exception as e:
+                tb = traceback.format_exc()
+                LOGGER.error(
+                    f"Annotation process failed with error: {e}, abort all workers. Traceback:\n{tb}"
+                )
+                # Abort all pool workers
+                pool.terminate()  # Or pool.close()
+                sys.exit(1)  # raise # Re-raise to stop the program entirely
+
+            LOGGER.info(
+                f"[runtime] Sample annotation: {calculate_time_difference(start_anno_time, get_current_time())}"
+            )
+            cache.logfile_obj.write(
+                f"Sample anno usage time: {calculate_time_difference(start_anno_time, get_current_time())}\n"
+            )
+
+        else:
+            LOGGER.info("Skipping annotation step.")
+
+        # Send Result over network.
+        if not no_upload_sample:
+            start_upload_time = get_current_time()
+            # NOTE: reuse the chunk size from anno
+            # n = 500
+            LOGGER.info(
+                "Uploading and importing sequence mutation profiles into backend..."
+            )
+            cache_dict = {"job_id": job_id}
+            for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+                LOGGER.debug(f"Uploading chunk {chunk_number}.")
+                sonarUtils.zip_import_upload_sample_singlethread(
+                    cache_dict, sample_chunk, chunk_number
+                )
+            # Wait for all chunk to be processed
+            incomplete_chunks = set(range(1, len(passed_samples_chunk_list)))
+            while len(incomplete_chunks) > 0:
+                chunks_tmp = incomplete_chunks.copy()
+                for chunk_number in chunks_tmp:
+                    job_with_chunk = f"{job_id}_chunk{chunk_number}"
+                    resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                    job_status = resp["status"]
+                    if job_status in ["Q", "IP"]:
+                        next
+                    if job_status == "F":
+                        LOGGER.error(
+                            f"Job {job_with_chunk} failed (status={job_status}). Aborting."
+                        )
+                        sys.exit(1)
+                    if job_status == "C":
+                        incomplete_chunks.remove(chunk_number)
+                if len(incomplete_chunks) > 0:
+                    LOGGER.debug(
+                        f"Waiting for {len(incomplete_chunks)} chunks to finish being processed."
+                    )
+                    sleep_time = 3
+                    time.sleep(sleep_time)
+
+            if cache.auto_anno:
+                for chunk_number, each_file in enumerate(
+                    tqdm(
+                        anno_result_list,
+                        desc="Uploading and importing annotations",
+                        unit="file",
+                        bar_format=bar_format,
+                        position=0,
+                        disable=not progress,
+                    )
+                ):
+                    sonarUtils.zip_import_upload_annotation_singlethread(
+                        cache_dict, each_file, chunk_number
+                    )
+
+            LOGGER.info(
+                f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
+            )
+            cache.logfile_obj.write(
+                f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}\n"
+            )
+            LOGGER.debug("Job ID: %s", job_id)
+        else:
+            LOGGER.info("Disable sending samples.")
+        start_clean_time = get_current_time()
+        clear_unnecessary_cache(passed_samples_list, threads)
+        LOGGER.info(
+            f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
 
     @staticmethod
@@ -436,7 +595,6 @@ class sonarUtils:
                     time.sleep(sleep_time)
 
             if cache.auto_anno:
-
                 for chunk_number, each_file in enumerate(
                     tqdm(
                         anno_result_list,
@@ -524,12 +682,10 @@ class sonarUtils:
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
             for file_path in files_to_compress:
-
                 if isinstance(file_path, tuple):
                     # Add the dictionary data to the archive with pickle extension
                     zipf.writestr(file_path[0], file_path[1])
                 else:
-
                     # Find the index of 'var'
                     path_parts = file_path.split("/")
                     var_index = path_parts.index("var")
@@ -864,7 +1020,6 @@ class sonarUtils:
             )
             # Annotate each group of VCFs by replicon accession
             for replicon_accession, vcf_files in input_vcf_dict.items():
-
                 merged_vcf = os.path.join(
                     cache.anno_dir,
                     get_fname(f"{_unique_name}_{replicon_accession}", extension=".vcf"),
@@ -1449,7 +1604,6 @@ def _write_vcf_records(handle, records: Dict, all_samples: List[str]):  # noqa: 
     for chrom in records:
         for pos in records[chrom]:
             for ref in records[chrom][pos]:
-
                 if ref == "pre_ref":  # skip pre_ref key
                     continue
                 # snps and inserts (combined output)

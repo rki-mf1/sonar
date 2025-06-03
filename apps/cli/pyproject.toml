@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sonar-cli"
-version = "1.0.1"
+version = "1.0.2"
 description = "Sonar command line tool to interface with the sonar-backend and PostgreSQL version."
 authors = ["Stephan Fuchs <FuchsS@rki.de>", "Kunaphas Kongkitimanon <KongkitimanonK@hpi.de>", "Matthew Huska <HuskaM@rki.de>"]
 license = "GPL3"

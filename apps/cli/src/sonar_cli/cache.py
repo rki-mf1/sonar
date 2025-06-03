@@ -1,4 +1,5 @@
-import concurrent
+from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
 import glob
 import hashlib
 from itertools import zip_longest
@@ -32,6 +33,8 @@ from sonar_cli.config import KSIZE
 from sonar_cli.config import SCALED
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
+from sonar_cli.nextclade_ext import process_single_sample
+from sonar_cli.nextclade_ext import read_nextclade_json_streaming
 from sonar_cli.sourmash_ext import create_cluster_db
 from tqdm import tqdm
 
@@ -177,12 +180,182 @@ class sonarCache:
         if self.logfile_obj:
             self.logfile_obj.close()
 
+    def add_nextclade_json(self, *fnames, chunk_size=1000, max_workers=8):  # noqa: C901
+        """
+
+        For each sample, extract the sequence name to construct a data dictionary similar to cache_sample.
+        However, we do not need to create it exactly like cache_sample because some variables are unnecessary.
+
+        These are the variables that we need to create :
+        name, refmol refmolid refseq_id source_acc sourceid translationid
+        algnid header sample_sequence_length nextclade_json_file, vcffile,  anno_vcf_file
+        ref_file var_parquet_file var_file include_nx
+
+        """
+
+        refmol_acc = self.refacc
+        sample_data: List[Dict[str, Union[str, int]]] = []
+
+        # Make API call with the batch_data
+        api_client = APIClient(base_url=self.base_url)
+
+        if self.is_segment_import:
+            gene_rows = api_client.get_elements(molecule_acc=refmol_acc)
+        else:
+            gene_rows = api_client.get_elements(ref_acc=refmol_acc)
+
+        # Construct a dictionary from gene_rows
+        gene_cds_lookup = {}
+
+        for row in gene_rows:
+            gene_symbol = row.get("gene.gene_symbol")
+            replicon_acc = row.get("replicon.accession")
+            cds_list = row.get("cds_list", [])
+
+            for cds in cds_list:
+                cds_accession = cds.get("cds.accession")
+                if gene_symbol and replicon_acc and cds_accession:
+                    gene_cds_lookup[(gene_symbol, replicon_acc)] = cds_accession
+
+        # Process data in chunks
+        def process_sample_batch(sample_batch, sample_lookup_dict):
+            """Process a batch of samples with their corresponding lookup data"""
+            batch_results = []
+
+            for sample_data_dict in sample_batch:
+                seqName = sample_data_dict["seqName"]
+
+                # Skip if sample not found in lookup
+                if seqName not in sample_lookup_dict:
+                    print(
+                        f"Warning: Sample {seqName} not found in API response, skipping"
+                    )
+                    continue
+
+                try:
+                    data = {
+                        "name": seqName,
+                        "sampleid": sample_lookup_dict[seqName]["sample_id"],
+                        "refmol": refmol_acc,
+                        "refmolid": self.refmols[refmol_acc]["id"],
+                        "source_acc": self.refmols[refmol_acc]["accession"],
+                        "sourceid": self.refmols[refmol_acc]["id"],
+                        "translationid": self.refmols[refmol_acc]["translation_id"],
+                        "algnid": None,
+                        "header": seqName,
+                        "seqhash": None,
+                        "sample_sequence_length": sample_data_dict["lenUnaligned"],
+                        "seq_file": None,
+                        "vcffile": os.path.join(
+                            self.anno_dir,
+                            get_fname(
+                                f"{refmol_acc}@{seqName}",
+                                extension=".vcf",
+                                enable_parent_dir=True,
+                            ),
+                        ),
+                        "anno_vcf_file": os.path.join(
+                            self.anno_dir,
+                            get_fname(
+                                f"{refmol_acc}@{seqName}",
+                                extension=".anno.vcf",
+                                enable_parent_dir=True,
+                            ),
+                        ),
+                        "ref_file": None,
+                        "var_parquet_file": self.get_var_parquet_fname(
+                            f"{seqName}@{self.get_refhash(refmol_acc)}"
+                        ),
+                        "var_file": self.get_var_fname(
+                            f"{seqName}@{self.get_refhash(refmol_acc)}"
+                        ),
+                        "lift_file": None,
+                        "cds_file": None,
+                        "properties": "",
+                        "include_nx": self.include_nx,
+                    }
+
+                    # Process the sample
+                    process_single_sample(
+                        sample_data_dict,
+                        refmol_acc,
+                        gene_to_cds=gene_cds_lookup,
+                        reference_seq=self.refmols[refmol_acc]["sequence"],
+                        output_file=data["var_file"],
+                        output_parquet_file=data["var_parquet_file"],
+                    )
+
+                    batch_results.append(data)
+
+                except Exception as e:
+                    print(f"Error processing sample {seqName}: {str(e)}")
+                    continue
+
+            return batch_results
+
+        # Process each file in streaming fashion
+        for fname in fnames:
+            print(f"Processing file: {fname}")
+
+            # Stream through the JSON file in chunks
+            for file_chunk in read_nextclade_json_streaming(fname, chunk_size):
+                if not file_chunk:
+                    continue
+
+                # Extract sequence names for API lookup
+                seq_names = [sample["seqName"] for sample in file_chunk]
+
+                try:
+                    # Get sample data from API for this chunk
+                    json_response = api_client.get_bulk_sample_data(seq_names)
+
+                    # Create lookup dictionary
+                    sample_lookup_dict = {
+                        sample_info["name"]: {
+                            "sample_id": sample_info["sample_id"],
+                            "sequence_seqhash": sample_info["sequence__seqhash"],
+                        }
+                        for sample_info in json_response
+                    }
+
+                    # Split chunk into smaller batches for parallel processing
+                    batch_size = min(
+                        chunk_size // max_workers, 100
+                    )  # Smaller batches for parallel processing
+                    batches = [
+                        file_chunk[i : i + batch_size]
+                        for i in range(0, len(file_chunk), batch_size)
+                    ]
+
+                    # Process batches in parallel
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        future_to_batch = {
+                            executor.submit(
+                                process_sample_batch, batch, sample_lookup_dict
+                            ): batch
+                            for batch in batches
+                        }
+
+                        # Collect results
+                        for future in as_completed(future_to_batch):
+                            try:
+                                batch_results = future.result()
+                                sample_data.extend(batch_results)
+                            except Exception as e:
+                                print(f"Error processing batch: {str(e)}")
+                                continue
+
+                except Exception as e:
+                    print(f"Error processing chunk from {fname}: {str(e)}")
+                    continue
+        return sample_data
+
     def add_fasta_v2(
         self, *fnames, method=1, chunk_size=1000, max_workers=8
     ):  # noqa: C901
         """ """
         sample_data: List[Dict[str, Union[str, int]]] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for fname in fnames:
                 batch_data = []
                 for data in self.iter_fasta(fname):
@@ -239,7 +412,6 @@ class sonarCache:
         }
 
         for i, data in enumerate(batch_data):
-
             # get sample
             batch_data[i]["sampleid"], seqhash_from_DB = (
                 sample_dict[data["name"]]["sample_id"],
@@ -650,7 +822,6 @@ class sonarCache:
                     # seq = list(reversed(cds["sequence"] + "*"))
                     seq = list(full_seq)  # Convert AA sequence to list for tracking
                     for aa_pos, nuc_pos_list in enumerate(coords):
-
                         rows.append(
                             [elemid]
                             + nuc_pos_list
@@ -724,7 +895,6 @@ class sonarCache:
 
         for row in gene_rows:
             for cds_entry in row["cds_list"]:  # Iterate through cds_list
-
                 if prev_elem is None:
                     prev_elem = cds_entry["cds.id"]
                 elif cds_entry["cds.id"] != prev_elem:

@@ -368,7 +368,6 @@ def construct_query(  # noqa: C901
     annotation_type: List[str] = [],
     annotation_impact: List[str] = [],
 ):
-
     int_pattern_single = re.compile(r"^(\^*)((?:>|>=|<|<=|!=|=)?)(-?[1-9]+[0-9]*)$")
     int_pattern_range = re.compile(r"^(\^*)(-?[1-9]+[0-9]*):(-?[1-9]+[0-9]*)$")
     date_pattern_single = re.compile(
@@ -414,7 +413,6 @@ def construct_query(  # noqa: C901
         # combine AND with different prop_name
         _prop_query = {"andFilter": []}
         for prop_name, prop_value_list in properties.items():
-
             if prop_value_list is None:
                 continue
 
@@ -453,7 +451,6 @@ def construct_query(  # noqa: C901
                         }
 
                     else:
-
                         # Determine the operator
                         operator = get_operator(
                             (
@@ -707,10 +704,14 @@ def _log_import_mode(update: bool, quiet: bool):
 
 
 def _is_import_required(
-    fasta: List[str], tsv_files: List[str], csv_files: List[str], update: bool
+    nextclade_json: List[str],
+    fasta: List[str],
+    tsv_files: List[str],
+    csv_files: List[str],
+    update: bool,
 ) -> bool:
     """Check if import is required."""
-    if not fasta:
+    if not fasta and not nextclade_json:
         if tsv_files or csv_files or update:
             return True
         else:
