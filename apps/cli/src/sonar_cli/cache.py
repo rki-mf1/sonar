@@ -180,7 +180,9 @@ class sonarCache:
         if self.logfile_obj:
             self.logfile_obj.close()
 
-    def add_nextclade_json(self, *fnames, chunk_size=1000, max_workers=8):  # noqa: C901
+    def add_nextclade_json(  # noqa: C901
+        self, *fnames, data_dict_list, chunk_size=100, max_workers=8
+    ):
         """
 
         For each sample, extract the sequence name to construct a data dictionary similar to cache_sample.
@@ -192,7 +194,10 @@ class sonarCache:
         ref_file var_parquet_file var_file include_nx
 
         """
-
+        # Create lookup dictionary
+        sample_lookup_dict = {
+            sample_info["name"]: sample_info for sample_info in data_dict_list
+        }
         refmol_acc = self.refacc
         sample_data: List[Dict[str, Union[str, int]]] = []
 
@@ -227,54 +232,10 @@ class sonarCache:
 
                 # Skip if sample not found in lookup
                 if seqName not in sample_lookup_dict:
-                    print(
-                        f"Warning: Sample {seqName} not found in API response, skipping"
-                    )
+                    # print(f"Warning: Sample {seqName} not found in fasta, skipping")
                     continue
-
+                data = sample_lookup_dict[seqName]
                 try:
-                    data = {
-                        "name": seqName,
-                        "sampleid": sample_lookup_dict[seqName]["sample_id"],
-                        "refmol": refmol_acc,
-                        "refmolid": self.refmols[refmol_acc]["id"],
-                        "source_acc": self.refmols[refmol_acc]["accession"],
-                        "sourceid": self.refmols[refmol_acc]["id"],
-                        "translationid": self.refmols[refmol_acc]["translation_id"],
-                        "algnid": None,
-                        "header": seqName,
-                        "seqhash": None,
-                        "sample_sequence_length": sample_data_dict["lenUnaligned"],
-                        "seq_file": None,
-                        "vcffile": os.path.join(
-                            self.anno_dir,
-                            get_fname(
-                                f"{refmol_acc}@{seqName}",
-                                extension=".vcf",
-                                enable_parent_dir=True,
-                            ),
-                        ),
-                        "anno_vcf_file": os.path.join(
-                            self.anno_dir,
-                            get_fname(
-                                f"{refmol_acc}@{seqName}",
-                                extension=".anno.vcf",
-                                enable_parent_dir=True,
-                            ),
-                        ),
-                        "ref_file": None,
-                        "var_parquet_file": self.get_var_parquet_fname(
-                            f"{seqName}@{self.get_refhash(refmol_acc)}"
-                        ),
-                        "var_file": self.get_var_fname(
-                            f"{seqName}@{self.get_refhash(refmol_acc)}"
-                        ),
-                        "lift_file": None,
-                        "cds_file": None,
-                        "properties": "",
-                        "include_nx": self.include_nx,
-                    }
-
                     # Process the sample
                     process_single_sample(
                         sample_data_dict,
@@ -283,7 +244,10 @@ class sonarCache:
                         reference_seq=self.refmols[refmol_acc]["sequence"],
                         output_file=data["var_file"],
                         output_parquet_file=data["var_parquet_file"],
+                        debug=self.debug,
                     )
+
+                    del data["var_file"]
 
                     batch_results.append(data)
 
@@ -302,22 +266,17 @@ class sonarCache:
                 if not file_chunk:
                     continue
 
-                # Extract sequence names for API lookup
-                seq_names = [sample["seqName"] for sample in file_chunk]
-
+                # TODO: Extract sequence names for sampledict_lookup (in chunk)
+                # right now we send the whole sample data dict to the process_sample_batch
+                #  sequence names for this chunk and filter sample_lookup_dict
+                seq_names_in_chunk = [sample["seqName"] for sample in file_chunk]
+                # Create filtered sample data dict containing only samples in this chunk
+                filtered_sample_data = {
+                    seq_name: sample_lookup_dict[seq_name]
+                    for seq_name in seq_names_in_chunk
+                    if seq_name in sample_lookup_dict
+                }
                 try:
-                    # Get sample data from API for this chunk
-                    json_response = api_client.get_bulk_sample_data(seq_names)
-
-                    # Create lookup dictionary
-                    sample_lookup_dict = {
-                        sample_info["name"]: {
-                            "sample_id": sample_info["sample_id"],
-                            "sequence_seqhash": sample_info["sequence__seqhash"],
-                        }
-                        for sample_info in json_response
-                    }
-
                     # Split chunk into smaller batches for parallel processing
                     batch_size = min(
                         chunk_size // max_workers, 100
@@ -331,7 +290,7 @@ class sonarCache:
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
                         future_to_batch = {
                             executor.submit(
-                                process_sample_batch, batch, sample_lookup_dict
+                                process_sample_batch, batch, filtered_sample_data
                             ): batch
                             for batch in batches
                         }
@@ -361,11 +320,11 @@ class sonarCache:
                 for data in self.iter_fasta(fname):
                     batch_data.append(data)
                     if len(batch_data) == chunk_size:
-                        executor.submit(self.process_data_batch, batch_data, method)
+                        executor.submit(self.process_data_batch, batch_data)
                         batch_data = []
                 # Process any remaining data in the last batch
                 if batch_data:
-                    executor.submit(self.process_data_batch, batch_data, method)
+                    executor.submit(self.process_data_batch, batch_data)
             # Block until all tasks are done
             executor.shutdown(wait=True)
 
@@ -376,11 +335,12 @@ class sonarCache:
         return sample_data
 
     def process_data_batch(
-        self, batch_data: List[Dict[str, Union[str, int]]], method: str
+        self,
+        batch_data: List[Dict[str, Union[str, int]]],
     ):
         current_thread = threading.current_thread()
         LOGGER.debug(
-            f"Thread {current_thread.name} started processing batch of size {len(batch_data)} , method {method} "
+            f"Thread {current_thread.name} started processing batch of size {len(batch_data)} "
         )
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
@@ -439,7 +399,7 @@ class sonarCache:
             # Create  path for cache file (e.g., .seq, .ref) and write them.
             # Data variable already point to the original batch_data[i], which if we update
             # the varaible, they altomatically update the original batch_data[i]
-            self.add_data_files(data, seqhash_from_DB, refseq_accession, method)
+            self.add_data_files(data, seqhash_from_DB, refseq_accession)
 
             # TODO: will exam how to work directly in memory
             # del batch_data[i]["sequence"]
@@ -664,7 +624,7 @@ class sonarCache:
             return None
 
     def add_data_files(
-        self, data: Dict[str, Any], seqhash: str, refseq_acc: str, method: int
+        self, data: Dict[str, Any], seqhash: str, refseq_acc: str
     ) -> Dict[str, Any]:
         """This function linked to the add_fasta
 

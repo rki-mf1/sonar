@@ -8,7 +8,7 @@ from mpire import WorkerPool
 import pandas as pd
 
 
-def read_nextclade_json_streaming(json_file: str, chunk_size: int = 1000):  # noqa: C901
+def read_nextclade_json_streaming(json_file: str, chunk_size: int = 100):  # noqa: C901
     """
     Generator that reads Nextclade JSON output file in chunks to avoid memory issues
     Yields chunks of sample data instead of loading everything into memory
@@ -107,8 +107,8 @@ def read_nextclade_json(json_file: str) -> Dict:
 def is_frameshifted(data: Dict, pos: int) -> bool:
     """Check if the NT mutation is a frameshift
     deletion: nucAbs begin position = deletion end pos
-    insertion: nucAbs begin position = insertion pos +1
-
+    insertion: nucAbs begin position = insertion pos +1.
+    The pos is already precalculated.
     """
     for frameshift in data.get("frameShifts", []):
         if frameshift["nucAbs"][0]["begin"] == pos:
@@ -237,7 +237,12 @@ def process_aa_mutations(  # noqa: C901
     # previous function
     nt_pos_to_id = {mut["nt_pos"]: mut["id"] for mut in nt_mutations}
 
-    # list of possition that cause framshift
+    # Create a mapping of NT mutation IDs to their frameshift status
+    frameshift_nt_ids = {
+        mut["id"]: mut["frameshift"]
+        for mut in nt_mutations
+        if mut.get("frameshift", 0) != 0
+    }
 
     # ----------------- Create AA Deletion
     deletion_groups = {}
@@ -362,6 +367,7 @@ def process_aa_mutations(  # noqa: C901
                             )
                             break
 
+            frameshift_status = frameshift_nt_ids.get(parent_id, 0)
             mut = {
                 "id": id_counter,
                 "ref": del_info["ref"],
@@ -371,7 +377,7 @@ def process_aa_mutations(  # noqa: C901
                 "reference_acc": cds_name,
                 "label": label,
                 "type": "cds",
-                "frameshift": 0,
+                "frameshift": frameshift_status,
                 "parent_id": parent_id,
             }
             aa_mutations.append(mut)
@@ -414,7 +420,7 @@ def process_aa_mutations(  # noqa: C901
                     alt = inserted_aa
                 else:
                     alt = position_info["qryAa"] + inserted_aa
-
+                frameshift_status = frameshift_nt_ids.get(parent_id, 0)
                 mut = {
                     "id": id_counter,
                     "ref": aa_info["refAa"],
@@ -424,10 +430,11 @@ def process_aa_mutations(  # noqa: C901
                     "reference_acc": aa_info["cdsName"],
                     "label": f"{aa_info['refAa']}{aa_info['pos']}{alt}",
                     "type": "cds",
-                    "frameshift": 0,
+                    "frameshift": frameshift_status,
                     "parent_id": parent_id,
                 }
             else:
+                frameshift_status = frameshift_nt_ids.get(parent_id, 0)
                 mut = {
                     "id": id_counter,
                     "ref": aa_info["refAa"],
@@ -437,7 +444,7 @@ def process_aa_mutations(  # noqa: C901
                     "reference_acc": aa_info["cdsName"],
                     "label": f"{aa_info['refAa']}{aa_info['pos'] + 1}{aa_info['qryAa']}",
                     "type": "cds",
-                    "frameshift": 0,
+                    "frameshift": frameshift_status,
                     "parent_id": parent_id,
                 }
 
@@ -471,6 +478,7 @@ def process_aa_mutations(  # noqa: C901
             if parent_id is None:
                 # This time, if it doesn't exist, we cannot do anything.
                 continue
+            frameshift_status = frameshift_nt_ids.get(parent_id, 0)
             mut = {
                 "id": id_counter,
                 "ref": position_info["refAa"],
@@ -480,7 +488,7 @@ def process_aa_mutations(  # noqa: C901
                 "reference_acc": cds_name,
                 "label": f"{position_info['refAa']}{position_info['aaPos'] + 1}{alt}",
                 "type": "cds",
-                "frameshift": 0,
+                "frameshift": frameshift_status,
                 "parent_id": parent_id,
             }
             aa_mutations.append(mut)
@@ -558,6 +566,7 @@ def process_single_sample(  # noqa: C901
     output_dir: str = None,
     output_file: str = None,
     output_parquet_file: str = None,
+    debug: bool = False,
 ) -> None:
     """Process a single sample and create its .var file"""
     try:
@@ -588,22 +597,29 @@ def process_single_sample(  # noqa: C901
         # Log for debugging
         for mut in all_mutations:
             if mut.get("parent_id") is None:
-                print(f"Warning {sample_id}: MutationID {mut['id']} has no parent_id")
+                print(
+                    f"Warning {sample_id}: MutationID {mut['id']} has no parent_id, see {output_file} "
+                )
 
         if output_dir is not None:
             # Create output filename
             output_file = os.path.join(output_dir, f"{sample_id}.var")
 
-        # create parent directory if not exist
-        if output_file:
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
         # Create DataFrame
         df = pd.DataFrame(all_mutations)
-        if output_file:
+        # NOTE: tmp remove row where parent_id where is none
+
+        df = df[df["parent_id"].notna()]
+        # Ensure correct column order and types
+        df["parent_id"] = df["parent_id"].astype(int).astype(str)
+        if debug:
             # Save to TSV file
+            if output_file:
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
             df.to_csv(output_file, sep="\t", index=False)
+
         if output_parquet_file:
+            os.makedirs(os.path.dirname(output_parquet_file), exist_ok=True)
             df.to_parquet(
                 output_parquet_file,
                 compression="zstd",

@@ -56,6 +56,7 @@ class VarRaw:
     replicon_or_cds_accession: str
     # lable: str
     type: str
+    frameshift: int
     parent_id: list[int] | None
 
 
@@ -234,6 +235,7 @@ class SampleImport:
                     "alt": var_raw.alt if var_raw.alt else "",
                     "start": var_raw.start if var_raw.start else 0,
                     "end": var_raw.end if var_raw.end else 0,
+                    "is_frameshift": var_raw.frameshift,
                 }
                 mutation = next(
                     filter(
@@ -305,6 +307,7 @@ class SampleImport:
                     row["alt"],
                     row["reference_acc"],
                     row["type"],
+                    row["frameshift"],
                     (
                         [int(x) for x in row["parent_id"].split(",")]
                         if pd.notna(row["parent_id"]) and row["parent_id"].strip() != ""

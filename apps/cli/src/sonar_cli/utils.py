@@ -162,7 +162,7 @@ class sonarUtils:
         )
 
         # importing sequences
-        if fasta:
+        if fasta and not nextclade_json:
             # Segment genome detection
             if cache.cluster_db is not None:
                 for fname in fasta:
@@ -192,9 +192,10 @@ class sonarUtils:
                 no_upload_sample,
                 must_pass_paranoid,
             )
-        if nextclade_json:
+        elif fasta and nextclade_json:
             LOGGER.info("Importing Nextclade JSON files.")
             sonarUtils.nextclade_import(
+                fasta,
                 nextclade_json,
                 cache,
                 threads,
@@ -260,6 +261,7 @@ class sonarUtils:
 
     @staticmethod
     def nextclade_import(  # noqa: C901
+        fasta_files: List[str],
         nextclade_json: List[str],
         cache: sonarCache,
         threads: int = 1,
@@ -270,16 +272,11 @@ class sonarUtils:
             json_resp = APIClient(base_url=BASE_URL).get_jobID()
             job_id = json_resp["job_id"]
 
-        if not nextclade_json:
+        if not fasta_files:
             return
 
-        passed_samples_list = []
-
         start_seqcheck_time = get_current_time()
-        passed_samples_list = cache.add_nextclade_json(
-            *nextclade_json, chunk_size=CHUNK_SIZE
-        )
-
+        sample_data_dict_list = cache.add_fasta_v2(*fasta_files, chunk_size=CHUNK_SIZE)
         prepare_seq_time = calculate_time_difference(
             start_seqcheck_time, get_current_time()
         )
@@ -287,8 +284,24 @@ class sonarUtils:
         cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
         LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
 
-        # SKIP PARANOID TEST
+        # Map Nextclade JSON files and Fasta files (sequence names)
+        start_align_time = get_current_time()
+        passed_samples_list = cache.add_nextclade_json(
+            *nextclade_json, data_dict_list=sample_data_dict_list, chunk_size=100
+        )
+        LOGGER.info(
+            f"Numer of samples that passed Nextclade JSON mapping: {len(passed_samples_list)}"
+        )
+        LOGGER.info(
+            f"[runtime] JSON mapping: {calculate_time_difference(start_align_time, get_current_time())}"
+        )
+        cache.logfile_obj.write(
+            f"[runtime] JSON mapping: {calculate_time_difference(start_align_time, get_current_time())}\n"
+        )
 
+        # SKIP PARANOID TEST
+        # because now we skip N and some deletion insetion mutations
+        # cannot be matched with parent_id
         n = ANNO_CHUNK_SIZE
         passed_samples_chunk_list = [
             tuple(
