@@ -423,4 +423,51 @@ export default {
   margin-bottom: 1em;
   width: 100%;
 }
+
+/* for default screen size */
+.row:nth-child(1),
+.row:nth-child(2) {
+  .col {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* Media Queries for different screen sizes */
+@media (max-width: 1024px) {
+  .row:nth-child(3),
+  .row:nth-child(4) {
+    .col {
+      flex: 1 1 50%;
+      max-width: 50%;
+    }
+  }
+
+  .row:nth-child(1),
+  .row:nth-child(2) {
+    .col {
+      flex: 1 1 90%;
+      max-width: 90%;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .row:nth-child(3),
+  .row:nth-child(4) {
+    .col {
+      flex: 1 1 50%;
+      max-width: 50%;
+    }
+  }
+
+  .row:nth-child(1),
+  .row:nth-child(2) {
+    .col {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
+  }
+}
+
 </style>
