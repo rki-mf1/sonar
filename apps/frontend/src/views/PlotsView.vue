@@ -221,6 +221,8 @@ export default {
         return this.emptyChart()
       }
       const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
+        .filter((l) => l !== null)
+        .sort()
       const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
       const colors = this.generateColorPalette(lineages.length)
       const datasets = lineages.map((lineage, index) => ({
