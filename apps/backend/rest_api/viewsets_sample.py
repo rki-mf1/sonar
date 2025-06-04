@@ -1,5 +1,6 @@
 import ast
 from collections import defaultdict
+from collections import OrderedDict
 import csv
 from dataclasses import dataclass
 from datetime import datetime
@@ -478,36 +479,56 @@ class SampleViewSet(
         }
 
     def _get_samples_per_week(self, queryset):
-        result_dict = {}
-        queryset = (
+        """
+        Return a dict mapping calendar week to count, for every week between
+        the earliest and latest non-null collection_date in `queryset`.
+        Weeks with zero records will be present with value 0.
+        """
+        weekly_qs = (
             queryset.values("year", "week")
             .annotate(count=Count("id"), collection_date=Min("collection_date"))
             .order_by("year", "week")
         )
-        filtered_queryset = queryset.filter(collection_date__isnull=False)
-        if len(filtered_queryset) != 0:
-            start_date = filtered_queryset.first()["collection_date"]
-            end_date = filtered_queryset.last()["collection_date"]
-            if start_date and end_date:
-                for dt in rrule(
-                    WEEKLY, dtstart=start_date, until=end_date
-                ):  # generate all weeks between start and end dates and assign default value 0
-                    result_dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
-                for item in filtered_queryset:  # fill in count values of present weeks
-                    result_dict[f"{item['year']}-W{int(item['week']):02}"] = item[
-                        "count"
-                    ]
-        return result_dict
+
+        filtered_qs = weekly_qs.filter(collection_date__isnull=False)
+        if not filtered_qs:
+            return {}
+
+        start_date = filtered_qs.first()["collection_date"]
+        end_date = filtered_qs.last()["collection_date"]
+
+        result = OrderedDict()
+        # ordered dict with every week in [start_date..end_date], default 0
+        for dt in rrule(WEEKLY, dtstart=start_date, until=end_date):
+            week = dt.isocalendar()[1]
+            year = dt.isocalendar()[0]
+            week_str = f"{year}-W{week:02}"
+            result[week_str] = 0
+
+        # overwrite with actual counts
+        for item in filtered_qs:
+            week = int(item["week"])
+            year = item["year"]
+            week_str = f"{year}-W{week:02}"
+            result[week_str] = item["count"]
+
+        return result
 
     def _get_grouped_lineages_per_week(self, queryset):
-
-        present_lineages = {entry["lineage"] for entry in queryset.values("lineage")}
-
-        # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
+        """
+        Return a LIST of dicts, contianing counts and percentages per calendar week for
+        lineage groupes (derived from the two segments of each lineage),
+        covering every week between the earliest and latest record.
+        Weeks with zero records will be present with values 0.
+        """
+        present_lineages = {
+            entry["lineage"]
+            for entry in queryset.values("lineage")
+            if entry["lineage"] is not None
+        }
+        # for each lineage, extract first two segments to form the grouping lineage (e.g. 'BA.2.9' -> 'BA.2')
         lineage_groups = {
-            ".".join(lineage.split(".")[:2])
-            for lineage in present_lineages
-            if lineage is not None
+            ".".join(lineage.split(".")[:2]) for lineage in present_lineages
         }
         lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
 
@@ -518,13 +539,12 @@ class SampleViewSet(
                 if sublineage.name in present_lineages:
                     lineage_to_group[sublineage.name] = lineage_group.name
 
-        # map lineages in data to groups using django conditions
+        # annotate querysety with lineage groups
         lineage_cases = [
             When(lineage=lineage, then=Value(group))
             for lineage, group in lineage_to_group.items()
         ]
-        # annotate queryset with lineage_group
-        queryset = queryset.annotate(
+        annotated_qs = queryset.annotate(
             lineage_group=Case(
                 *lineage_cases,
                 default=Value("Unknown"),
@@ -533,12 +553,18 @@ class SampleViewSet(
         )
 
         weekly_data = (
-            queryset.values(
+            annotated_qs.values(
                 "year", "week", "lineage_group"
             )  # for debugging add: "lineage"
-            .annotate(lineage_count=Count("lineage_group"))
-            .order_by("lineage_group", "year", "week")
+            .annotate(
+                lineage_count=Count("lineage_group"),
+                collection_date=Min("collection_date"),
+            )
+            .order_by("year", "week", "lineage_group")
         )
+
+        if not weekly_data:
+            return []
 
         week_totals = {
             item["week"]: item["total_count"]
@@ -547,22 +573,52 @@ class SampleViewSet(
             .order_by("week")
         }
 
+        min_date = min(
+            item["collection_date"] for item in weekly_data if item["collection_date"]
+        )
+        max_date = max(
+            item["collection_date"] for item in weekly_data if item["collection_date"]
+        )
+
+        all_weeks = []
+        for dt in rrule(WEEKLY, dtstart=min_date, until=max_date):
+            year, week, _ = dt.isocalendar()
+            all_weeks.append(f"{year}-W{week:02}")
+
+        seen_weeks = set()
+        empty_placeholders = {
+            week_str: {
+                "week": week_str,
+                "lineage_group": None,
+                "count": 0,
+                "percentage": 0.0,
+            }
+            for week_str in all_weeks
+        }
+
+        # append real records
         result = []
         for item in weekly_data:
-            if item["week"] is None:
+            if item["week"] is None or item["year"] is None:
                 continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
+            week_str = f"{item['year']}-W{int(item['week']):02}"
             percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
             result.append(
                 {
                     "week": week_str,
-                    # "lineage": item["lineage"], # for debugging
                     "lineage_group": item["lineage_group"],
                     "count": item["lineage_count"],
                     "percentage": round(percentage, 2),
                 }
             )
+            seen_weeks.add(week_str)
 
+        # add placeholders for empty weeks
+        for week_str, placeholder in empty_placeholders.items():
+            if week_str not in seen_weeks:
+                result.append(placeholder)
+
+        result.sort(key=lambda x: x["week"])
         return result
 
     def _get_custom_property_plot(self, queryset, property):
