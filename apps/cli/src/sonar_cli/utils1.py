@@ -40,7 +40,7 @@ class sonarUtils1:
                     "Meta Data Coverage:",
                     *[
                         f"   {key}: {value}"
-                        for key, value in data["meta_data_coverage"].items()
+                        for key, value in data["metadata_coverage"].items()
                     ],
                     f"Samples Total: {data['samples_total']}",
                     f"Earliest Sampling Date: {data['earliest_sampling_date']}",
