@@ -477,34 +477,6 @@ class SampleViewSet(
             if key.startswith("not_null_count_")
         }
 
-    def _get_custom_property_plot(self, queryset, property):
-        if property == "":
-            result_dict = {}
-        elif property == "sequencing_reason":
-            queryset = queryset.filter(properties__property__name="sequencing_reason")
-            # the value_char holds the sequencing reason values
-            grouped_queryset = (
-                queryset.values("properties__value_varchar")
-                .annotate(total=Count("properties__value_varchar"))
-                .order_by()
-            )
-            result_dict = {
-                item["properties__value_varchar"]: item["total"]
-                for item in grouped_queryset
-            }
-
-        else:
-            grouped_queryset = (
-                queryset.values(property)
-                .annotate(total=Count(property))
-                .order_by(property)
-            )
-            result_dict = {
-                str(item[property]): item["total"] for item in grouped_queryset
-            }  # str required for properties in date format
-
-        return result_dict
-
     def _get_samples_per_week(self, queryset):
         result_dict = {}
         queryset = (
@@ -526,166 +498,6 @@ class SampleViewSet(
                         "count"
                     ]
         return result_dict
-
-    def normalize_get_monthly_lineage_percentage_area_chart(self, queryset):
-        monthly_data = (
-            queryset.values("month", "year", "lineage", "lineage_parent")
-            .annotate(lineage_count=Count("id"))
-            .order_by("year", "month", "lineage")
-        )
-
-        # Organize monthly lineage data into a dictionary for processing
-        lineage_data = defaultdict(lambda: defaultdict(int))
-        for item in monthly_data:
-            month_str = (
-                f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
-            )
-            lineage_data[month_str][
-                LineageInfo(item["lineage"], item["lineage_parent"])
-            ] += item["lineage_count"]
-
-        result = []
-
-        # Process each month to apply the 10% threshold-based grouping
-        for month, lineages in lineage_data.items():
-            total_count = sum(lineages.values())
-            threshold_count = total_count * 0.10
-
-            # Use the helper function for aggregation
-            aggregated_lineages = aggregate_below_threshold_lineages(
-                lineages, threshold_count
-            )
-
-            # Calculate percentages
-            for lineage, count in aggregated_lineages.items():
-                percentage = (count / total_count) * 100
-                result.append(
-                    {
-                        "date": month,
-                        "lineage": lineage,
-                        "percentage": round(percentage, 2),
-                    }
-                )
-
-        return result
-
-    def get_monthly_lineage_percentage_area_chart(self, queryset: QuerySet):
-        # Annotate each sample with the month based on collection_date
-        monthly_data = (
-            queryset.values("month", "lineage")
-            .annotate(
-                lineage_count=Count("id")
-            )  # Count occurrences of each lineage per month
-            .order_by("month", "lineage")
-        )
-
-        # Calculate total samples per month to determine percentages
-        total_per_month = (
-            queryset.values("month").annotate(total_count=Count("id")).order_by("month")
-        )
-
-        # Create a dictionary for quick lookup of total counts per month
-        month_totals = {item["month"]: item["total_count"] for item in total_per_month}
-
-        # Construct the final result with percentages
-        result = []
-        for item in monthly_data:
-            if item["month"] is None:
-                continue
-            month_str = (
-                f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
-            )
-            percentage = (item["lineage_count"] / month_totals[item["month"]]) * 100
-            result.append(
-                {
-                    "date": month_str,
-                    "lineage": item["lineage"],
-                    "percentage": round(percentage, 2),
-                }
-            )
-
-        return result
-
-    def normalize_get_weekly_lineage_percentage_bar_chart(self, queryset):
-        # Annotate each sample with the start of the week and count occurrences per lineage
-        weekly_data = (
-            queryset.values("year", "week", "lineage", "lineage_parent")
-            .annotate(lineage_count=Count("id"))
-            .order_by("year", "week", "lineage")
-        )
-
-        # Organize lineage counts by week into a dictionary
-        lineage_data = defaultdict(lambda: defaultdict(int))
-
-        for item in weekly_data:
-            if item["week"] is None:
-                continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
-            lineage_data[week_str][
-                LineageInfo(item["lineage"], item["lineage_parent"])
-            ] += item["lineage_count"]
-
-        # Initialize final result list
-        result = []
-
-        # Process each week, applying the 10% threshold rule
-
-        for week, lineages in lineage_data.items():
-            total_count = sum(lineages.values())
-            threshold_count = total_count * 0.10
-
-            # Aggregate below-threshold lineages using the helper function
-            aggregated_lineages = aggregate_below_threshold_lineages(
-                lineages, threshold_count
-            )
-
-            # Calculate percentages
-            for lineage, count in aggregated_lineages.items():
-                percentage = (count / total_count) * 100
-                result.append(
-                    {
-                        "week": week,
-                        "lineage": lineage,
-                        "percentage": round(percentage, 2),
-                    }
-                )
-
-        return result
-
-    def get_weekly_lineage_percentage_bar_chart(self, queryset):
-        # Annotate each sample with the start of the week based on collection_date
-        weekly_data = (
-            queryset.values("week", "lineage")
-            .annotate(
-                lineage_count=Count("id")
-            )  # Count occurrences of each lineage per week
-            .order_by("week", "lineage")
-        )
-
-        # Calculate total samples per week to determine percentages
-        total_per_week = (
-            queryset.values("week").annotate(total_count=Count("id")).order_by("week")
-        )
-
-        # Create a dictionary for quick lookup of total counts per week
-        week_totals = {item["week"]: item["total_count"] for item in total_per_week}
-
-        # Construct the final result with percentages
-        result = []
-        for item in weekly_data:
-            if item["week"] is None:
-                continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
-            percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
-            result.append(
-                {
-                    "week": week_str,
-                    "lineage": item["lineage"],
-                    "percentage": round(percentage, 2),
-                }
-            )
-
-        return result
 
     def _get_grouped_lineages_per_week(self, queryset):
 
@@ -752,6 +564,34 @@ class SampleViewSet(
             )
 
         return result
+
+    def _get_custom_property_plot(self, queryset, property):
+        if property == "":
+            result_dict = {}
+        elif property == "sequencing_reason":
+            queryset = queryset.filter(properties__property__name="sequencing_reason")
+            # the value_char holds the sequencing reason values
+            grouped_queryset = (
+                queryset.values("properties__value_varchar")
+                .annotate(total=Count("properties__value_varchar"))
+                .order_by()
+            )
+            result_dict = {
+                item["properties__value_varchar"]: item["total"]
+                for item in grouped_queryset
+            }
+
+        else:
+            grouped_queryset = (
+                queryset.values(property)
+                .annotate(total=Count(property))
+                .order_by(property)
+            )
+            result_dict = {
+                str(item[property]): item["total"] for item in grouped_queryset
+            }  # str required for properties in date format
+
+        return result_dict
 
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
