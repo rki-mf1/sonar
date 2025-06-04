@@ -47,9 +47,9 @@
     </div>
 
     <div style="display: flex; gap: 1rem; width: 100%">
-      <!-- meta data plot-->
+      <!-- metadata plot-->
       <div class="panel">
-        <PrimePanel header="Coverage of Meta Data" class="w-full shadow-2">
+        <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
           <div style="width: 100%; display: flex; justify-content: center">
             <PrimeChart
               type="bar"
