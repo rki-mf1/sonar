@@ -53,8 +53,8 @@
           <div style="width: 100%; display: flex; justify-content: center">
             <PrimeChart
               type="bar"
-              :data="metaDataCoverageData()"
-              :options="metaDataCoverageOptions()"
+              :data="metadataCoverageData()"
+              :options="metadataCoverageOptions()"
               style="width: 100%; height: 25vh"
             />
           </div>
@@ -102,7 +102,7 @@ export default {
   mounted() {
     this.samplesStore.updatePlotSamplesPerWeek()
     this.samplesStore.updatePlotGroupedLineagesPerWeek()
-    this.samplesStore.updatePlotMetaDataCoverage()
+    this.samplesStore.updatePlotMetadataCoverage()
     this.samplesStore.updatePlotCustom()
   },
   methods: {
@@ -285,20 +285,20 @@ export default {
       }
     },
 
-    metaDataCoverageData() {
+    metadataCoverageData() {
       // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
       // what about the property 'name' ?? its not in the list, but its always shown in the table
-      const meta_data_coverage = Object.fromEntries(
-        Object.entries(this.samplesStore.plotMetaDataCoverage?.['meta_data_coverage'] || {}).filter(
+      const metadata_coverage = Object.fromEntries(
+        Object.entries(this.samplesStore.plotMetadataCoverage?.['metadata_coverage'] || {}).filter(
           ([key]) => this.samplesStore.metaCoverageOptions.includes(key),
         ),
       )
-      if (this.isDataEmpty(meta_data_coverage)) {
+      if (this.isDataEmpty(metadata_coverage)) {
         return this.emptyChart()
       }
       const totalCount = this.samplesStore.filteredCount
-      const labels = Object.keys(meta_data_coverage)
-      const data = Object.values(meta_data_coverage).map((value) =>
+      const labels = Object.keys(metadata_coverage)
+      const data = Object.values(metadata_coverage).map((value) =>
         ((value / totalCount) * 100).toFixed(2),
       )
       return {
@@ -316,7 +316,7 @@ export default {
         ],
       }
     },
-    metaDataCoverageOptions() {
+    metadataCoverageOptions() {
       return {
         animation: true,
         maintainAspectRatio: false,

@@ -111,9 +111,9 @@ export default class API {
     return this.getRequest(url, {}, false)
   }
 
-  getPlotMetaDataCoverage(params: FilterGroupRoot) {
+  getPlotMetadataCoverage(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/plot_meta_data_coverage/${queryString}`
+    const url = `samples/plot_metadata_coverage/${queryString}`
     return this.getRequest(url, {}, false)
   }
 

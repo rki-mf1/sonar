@@ -395,7 +395,7 @@ class SampleViewSet(
         )
 
     @staticmethod
-    def get_meta_data_coverage(queryset):
+    def get_metadata_coverage(queryset):
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
@@ -803,13 +803,11 @@ class SampleViewSet(
         return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
-    def plot_meta_data_coverage(self, request: Request, *args, **kwargs):
+    def plot_metadata_coverage(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
 
         result_dict = {}
-        result_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
-            queryset
-        )
+        result_dict["metadata_coverage"] = SampleViewSet.get_metadata_coverage(queryset)
         return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
