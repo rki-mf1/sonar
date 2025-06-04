@@ -21,7 +21,9 @@ def main():
 
     path_lineages = "https://raw.githubusercontent.com/cov-lineages/pango-designation/master/lineage_notes.txt"
     all_lineages = [
-        lineage
+        lineage.split(" ")[
+            0
+        ]  # for poorly formatted lineages (like in the case of "PN.1 ...")
         for lineage in pd.read_csv(path_lineages, sep="\t").iloc[:, 0].tolist()
         if not lineage.startswith("*")
     ]
@@ -40,14 +42,23 @@ def main():
 
     # Perform a self-join to get all DIRECT sublineages for each lineage (one per row)
     # Join each 'lineage' with matching 'parent' to get each direct sublineage
-    df = pd.merge(df, df, left_on="lineage", right_on="parent", how="left")
-    df = (
-        df[["lineage_x", "lineage_y"]]
+    df_mapping = (
+        pd.merge(df, df, left_on="lineage", right_on="parent", how="left")[
+            ["lineage_x", "lineage_y"]
+        ]
         .rename(columns={"lineage_x": "lineage", "lineage_y": "sublineage"})
         .dropna(subset=["sublineage"])
     )
 
-    df.to_csv(output_file, sep="\t", index=False)
+    # lineages without parents and without children wont be considered in the mapping and need to be appended separately
+    orphan_lineages = df[
+        (df["parent"] == "none") & (~df["lineage"].isin(df_mapping["lineage"]))
+    ].assign(sublineage="none")[["lineage", "sublineage"]]
+
+    final_df = pd.concat(
+        [df_mapping.dropna(subset=["sublineage"]), orphan_lineages], ignore_index=True
+    )
+    final_df.to_csv(output_file, sep="\t", index=False)
 
     return 0
 
