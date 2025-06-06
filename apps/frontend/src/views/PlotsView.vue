@@ -78,8 +78,8 @@
         "
       >
         <!-- metadata plot-->
-        <div class="panel meta-data-plot" style="grid-column: span 2">
-          <PrimePanel header="Coverage of Meta Data" class="w-full shadow-2">
+        <div class="panel metadata-plot" style="grid-column: span 2">
+          <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
             <div style="width: 100%; display: flex; justify-content: center">
               <PrimeChart
                 type="bar"

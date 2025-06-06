@@ -292,7 +292,7 @@ export const useSamplesStore = defineStore('samples', {
         }
       } catch (error) {
         // TODO how to handle request failure
-        console.error('Error fetching meta data coverage plot:', error)
+        console.error('Error fetching metadata coverage plot:', error)
         this.plotMetadataCoverage = emptyStatistics
       }
     },
