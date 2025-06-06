@@ -58,13 +58,13 @@ class DatabaseInfoView(
         queryset = SampleViewSet()._get_filtered_queryset(request)
         statistics = SampleViewSet.get_statistics()
         total_samples = statistics["samples_total"]
-        meta_data_coverage = SampleViewSet().get_meta_data_coverage(queryset)
+        metadata_coverage = SampleViewSet().get_metadata_coverage(queryset)
         # Add percentages
-        for key, count in meta_data_coverage.items():
+        for key, count in metadata_coverage.items():
             percentage = (count / total_samples) * 100 if total_samples > 0 else 0
-            meta_data_coverage[key] = f"{count} ({percentage:.2f}%)"
+            metadata_coverage[key] = f"{count} ({percentage:.2f}%)"
 
-        dict["meta_data_coverage"] = meta_data_coverage
+        dict["metadata_coverage"] = metadata_coverage
         dict.update(
             {
                 "samples_total": total_samples,

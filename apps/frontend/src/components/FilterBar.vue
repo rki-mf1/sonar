@@ -336,7 +336,7 @@ export default {
         if (this.$route.name === 'Plots') {
           this.samplesStore.updatePlotSamplesPerWeek()
           this.samplesStore.updatePlotGroupedLineagesPerWeek()
-          this.samplesStore.updatePlotMetaDataCoverage()
+          this.samplesStore.updatePlotMetadataCoverage()
           this.samplesStore.updatePlotCustom()
         }
       }
@@ -357,7 +357,7 @@ export default {
       if (this.$route.name === 'Plots') {
         this.samplesStore.updatePlotSamplesPerWeek()
         this.samplesStore.updatePlotGroupedLineagesPerWeek()
-        this.samplesStore.updatePlotMetaDataCoverage()
+        this.samplesStore.updatePlotMetadataCoverage()
         Object.keys(this.samplesStore.plotCustom).forEach((property) => {
           this.samplesStore.updatePlotCustom(property)
         })

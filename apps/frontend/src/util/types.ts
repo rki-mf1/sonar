@@ -140,8 +140,8 @@ export type PlotGroupedLineagesPerWeek = {
     percentage: number
   }>
 }
-export type PlotMetaDataCoverage = {
-  meta_data_coverage: { [key: string]: number }
+export type PlotMetadataCoverage = {
+  metadata_coverage: { [key: string]: number }
 }
 export type PlotCustom = {
   custom_property: { [key: string]: number }

@@ -10,7 +10,7 @@ import {
   type FilteredStatistics,
   type PlotSamplesPerWeek,
   type PlotGroupedLineagesPerWeek,
-  type PlotMetaDataCoverage,
+  type PlotMetadataCoverage,
   type PlotCustom,
   DjangoFilterType,
   StringDjangoFilterType,
@@ -112,8 +112,8 @@ export const useSamplesStore = defineStore('samples', {
     filteredStatistics: {} as FilteredStatistics,
     plotSamplesPerWeek: {} as PlotSamplesPerWeek,
     plotGroupedLineagesPerWeek: {} as PlotGroupedLineagesPerWeek,
-    plotMetaDataCoverage: {} as PlotMetaDataCoverage,
-    plotCustom: {} as { [key: string]: PlotCustom },
+    plotMetadataCoverage: {} as PlotMetadataCoverage,
+    plotCustom: {} as PlotCustom,
     selectedCustomProperty: 'sequencing_reason',
     filteredCount: 0,
     loading: false,
@@ -279,21 +279,21 @@ export const useSamplesStore = defineStore('samples', {
         this.plotGroupedLineagesPerWeek = emptyStatistics
       }
     },
-    async updatePlotMetaDataCoverage() {
+    async updatePlotMetadataCoverage() {
       const emptyStatistics = {
-        meta_data_coverage: {},
+        metadata_coverage: {},
       }
       try {
-        const plotMetaDataCoverage = await API.getInstance().getPlotMetaDataCoverage(this.filters)
-        if (!plotMetaDataCoverage) {
-          this.plotMetaDataCoverage = emptyStatistics
+        const plotMetadataCoverage = await API.getInstance().getPlotMetadataCoverage(this.filters)
+        if (!plotMetadataCoverage) {
+          this.plotMetadataCoverage = emptyStatistics
         } else {
-          this.plotMetaDataCoverage = plotMetaDataCoverage
+          this.plotMetadataCoverage = plotMetadataCoverage
         }
       } catch (error) {
         // TODO how to handle request failure
         console.error('Error fetching meta data coverage plot:', error)
-        this.plotMetaDataCoverage = emptyStatistics
+        this.plotMetadataCoverage = emptyStatistics
       }
     },
     async updatePlotCustom(sample_property: string) {
@@ -359,7 +359,7 @@ export const useSamplesStore = defineStore('samples', {
           console.error('API request failed')
           return
         }
-        const metaData = this.statistics?.populated_metadata_fields ?? []
+        const metadata = this.statistics?.populated_metadata_fields ?? []
         this.propertiesDict = {}
         res.values.forEach(
           (property: { name: string; query_type: string; description: string }) => {
@@ -375,7 +375,7 @@ export const useSamplesStore = defineStore('samples', {
         // keep only those properties that have a coverage, i.e. that are not entirly empty
         // & drop the 'name' column because the ID column is fixed
         this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-          (key) => key !== 'name' && metaData.includes(key),
+          (key) => key !== 'name' && metadata.includes(key),
         )
         this.propertyMenuOptions = [
           'name',
