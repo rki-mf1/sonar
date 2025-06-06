@@ -569,10 +569,10 @@ export default {
         colors.push('#cccccc') // Add gray color for 'Not Reported'
       }
       return {
-        labels: cleanedData.labels,
+        labels: labels,
         datasets: [
           {
-            data: cleanedData.data,
+            data: data,
             backgroundColor: colors,
             borderColor: colors.map((color) => chroma(color).darken(1.0).hex()),
             borderWidth: 1.5,
