@@ -300,8 +300,9 @@ class sonarUtils:
         )
 
         # SKIP PARANOID TEST
-        # because now we skip N and some deletion insetion mutations
+        # NOTE: because now we skip N and some deletion insetion mutations
         # cannot be matched with parent_id
+
         n = ANNO_CHUNK_SIZE
         passed_samples_chunk_list = [
             tuple(

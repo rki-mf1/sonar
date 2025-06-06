@@ -6,6 +6,9 @@ from typing import List
 
 from mpire import WorkerPool
 import pandas as pd
+from sonar_cli.logging import LoggingConfigurator
+
+LOGGER = LoggingConfigurator.get_logger()
 
 
 def read_nextclade_json_streaming(json_file: str, chunk_size: int = 100):  # noqa: C901
@@ -196,22 +199,23 @@ def process_nt_mutations(
 
     # Process "N" alternative NT
     # print(data.get('missing', []))
-    # for n_alt in data.get('missing', []):
+    # for n_alt in data.get("missing", []):
     #     # NOTE: Note: Be careful about the character. Currently, we assume that all characters are 'N'.
     #     # However, the unknownAaRanges provide the X positions but do not specify which ones correspond to the missing positions.
     #     # NOTE: not sure, Should we represent the N as deletion or just alternative snv.
-    #     for pos in range(n_alt['range']['begin'] ,n_alt['range']['end']):
+    #     for pos in range(n_alt["range"]["begin"], n_alt["range"]["end"]):
     #         mut = {
-    #         'id': id_counter,
-    #         'ref': reference_seq[pos],
-    #         'start': pos,
-    #         'end': pos + 1,
-    #         'alt': n_alt['character'],
-    #         'reference_acc': reference_acc,
-    #         'label': f"{reference_seq[pos]}{pos + 1}{n_alt['character']}",
-    #         'type': 'nt',
-    #         'nt_pos': pos  # Store for AA mapping
-    #     }
+    #             "id": id_counter,
+    #             "ref": reference_seq[pos],
+    #             "start": pos,
+    #             "end": pos + 1,
+    #             "alt": n_alt["character"],
+    #             "reference_acc": reference_acc,
+    #             "label": f"{reference_seq[pos]}{pos + 1}{n_alt['character']}",
+    #             "type": "nt",
+    #             "frameshift": 0,
+    #             "nt_pos": pos,  # Store for AA mapping
+    #         }
     #         mutations.append(mut)
     # Sort NT mutations by position
     mutations = sorted(mutations, key=lambda x: x["start"])
@@ -394,16 +398,15 @@ def process_aa_mutations(  # noqa: C901
             if parent_id is None:
                 continue
 
-            # Check both current position and position-1 for insertions
+            # Check position and position-1+1 for insertions
             insertion_keys = [
                 f"{aa_info['cdsName']}_{aa_info['pos']}",
                 f"{aa_info['cdsName']}_{aa_info['pos'] - 1}",
                 f"{aa_info['cdsName']}_{aa_info['pos'] + 1}",
             ]
 
-            # Find matching insertion key and remove it so it won't be used again, because we will know
-            # which insertion mutations didnt list in
-            # nucToAaMuts
+            # Find matching insertion key and remove it so it won't be used again,
+            # because we will know which insertion mutations didnt list in nucToAaMuts
             matching_key = None
             for key in insertion_keys:
                 if key in aa_insertions:
@@ -433,7 +436,7 @@ def process_aa_mutations(  # noqa: C901
                     "frameshift": frameshift_status,
                     "parent_id": parent_id,
                 }
-            else:
+            else:  # snp
                 frameshift_status = frameshift_nt_ids.get(parent_id, 0)
                 mut = {
                     "id": id_counter,
@@ -493,6 +496,45 @@ def process_aa_mutations(  # noqa: C901
             }
             aa_mutations.append(mut)
             id_counter += 1
+
+    # combine the parent_id with the same AA mutations (aa_mutations)
+    # for example,
+    # 91	D	2	3	L	QHD43423.2	D3L	cds	0	55
+    # 92	D	2	3	L	QHD43423.2	D3L	cds	0	56
+    # 93	D	2	3	L	QHD43423.2	D3L	cds	0	57
+    # will be combined to
+    # 91	D	2	3	L	QHD43423.2	D3L	cds	0	55,56,57
+    # Create a dictionary to group mutations by their key attributes
+    grouped_mutations = {}
+
+    for mutation in aa_mutations:
+        # Create a key tuple with all attributes except id and parent_id and frameshift
+        key = (
+            mutation["ref"],
+            mutation["start"],
+            mutation["end"],
+            mutation["alt"],
+            mutation["reference_acc"],
+            mutation["label"],
+            mutation["type"],
+        )
+
+        if key not in grouped_mutations:
+            # For new entries, keep the frameshift status
+            grouped_mutations[key] = {
+                **mutation,
+                "parent_id": str(mutation["parent_id"]),
+                "frameshift": mutation["frameshift"],  # Keep original frameshift
+            }
+        else:
+            # Append parent_id to existing mutation
+            grouped_mutations[key]["parent_id"] += f",{mutation['parent_id']}"
+            # If any mutation has frameshift=1, set the combined mutation to frameshift=1
+            if mutation["frameshift"] == 1:
+                grouped_mutations[key]["frameshift"] = 1
+
+    # Convert back to list
+    final_combined_mutations = list(grouped_mutations.values())
 
     # # print(nt_pos_to_id)
     # for frameshift in data.get('frameShifts', []):
@@ -554,8 +596,7 @@ def process_aa_mutations(  # noqa: C901
     #         print('Searching for ',frameshift["nucAbs"][0]["begin"])
     #         print(nuc_to_aa)
     #         raise ValueError(f"Reference AA not found for frameshift at {frameshift}")
-
-    return aa_mutations
+    return final_combined_mutations
 
 
 def process_single_sample(  # noqa: C901
@@ -597,8 +638,8 @@ def process_single_sample(  # noqa: C901
         # Log for debugging
         for mut in all_mutations:
             if mut.get("parent_id") is None:
-                print(
-                    f"Warning {sample_id}: MutationID {mut['id']} has no parent_id, see {output_file} "
+                LOGGER.warning(
+                    f" {sample_id}: MutationID {mut['id']} has no parent_id, see {output_file} "
                 )
 
         if output_dir is not None:
@@ -607,11 +648,13 @@ def process_single_sample(  # noqa: C901
 
         # Create DataFrame
         df = pd.DataFrame(all_mutations)
-        # NOTE: tmp remove row where parent_id where is none
-
-        df = df[df["parent_id"].notna()]
         # Ensure correct column order and types
-        df["parent_id"] = df["parent_id"].astype(int).astype(str)
+        df["parent_id"] = df["parent_id"].astype(str)
+        # NOTE: tmp remove row where parent_id where is none
+        df = df[df["parent_id"].notna()]
+        # remove parent_id where is 'None'
+        df = df[(df["parent_id"] != "None") & (df["parent_id"] != "nan")]
+
         if debug:
             # Save to TSV file
             if output_file:

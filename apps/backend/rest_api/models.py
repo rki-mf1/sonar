@@ -676,7 +676,6 @@ class FileProcessing(models.Model):
 
 
 class ImportLog(models.Model):
-
     class ImportType(models.TextChoices):
         UNKNOWN = "NUL", _("Unknown")
         SAMPLE = "SMP", _("Sample")

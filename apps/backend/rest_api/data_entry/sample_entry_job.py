@@ -134,7 +134,6 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
         .joinpath(process_file_path.stem)
     )
     try:
-
         filename_ID = process_file_path.name
         # get JOB ID based on the given files
         proJob_obj = ProcessingJob.objects.filter(files__file_name=filename_ID).first()
@@ -438,11 +437,22 @@ def process_batch_run(
                 unique_fields=["ref", "alt", "start", "end", "replicon"],
                 update_fields=["ref", "alt", "start", "end", "replicon"],
             )
+            from collections import Counter
+
+            mutation_keys = [
+                (m.cds_id, m.ref, m.alt, m.start, m.end) for m in cds_mutation_set
+            ]
+            # The problem now sometime we have same duplcated
+            # m.cds_id, m.ref, m.alt, m.start, m.end, but differnt frameshift
+            # which cause us an error, ('ENA', '', 26, 29, 11)]
+            duplicates = [v for k, v in Counter(mutation_keys).items() if v > 1]
+            print("Duplicates in cds_mutation_set:", duplicates)
+
             AminoAcidMutation.objects.bulk_create(
                 cds_mutation_set,
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "cds"],
-                update_fields=["ref", "alt", "start", "end", "cds"],
+                update_fields=["ref", "alt", "start", "end", "cds", "is_frameshift"],
             )
             AminoAcidMutation.parent.through.objects.bulk_create(
                 mutation_parent_relations,
@@ -588,7 +598,6 @@ def process_batch_single_thread(
 def import_property(
     property_file, sep, use_celery=False, column_mapping=None, batch_size=1000
 ):
-
     try:
         # Load the CSV file in batches
         properties_df = pd.read_csv(
@@ -621,7 +630,6 @@ def import_property(
         # Data preprocessing
 
         for column_name, col_info in serializable_column_mapping.items():
-
             if column_name not in properties_df.columns:
                 print(
                     f"Skipping column '{column_name}' as it is not in the property file."
@@ -632,7 +640,6 @@ def import_property(
             print(f"{column_name} :pairs with: {col_info}")
 
             if default_value is not None:
-
                 properties_df[column_name] = (
                     properties_df[column_name]
                     .replace("", default_value)  # Replace empty strings
@@ -726,7 +733,6 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
     custom_property_names = []
 
     for property_name in properties_df.columns:
-
         if property_name in column_mapping.keys():
             db_property_name = column_mapping[property_name].db_property_name
             try:
@@ -744,7 +750,6 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
     properties_df.set_index(sample_id_column, inplace=True)
     try:
         for sample in samples:
-
             row = properties_df[properties_df.index == sample.name]
 
             sample.last_update_date = timezone.now()

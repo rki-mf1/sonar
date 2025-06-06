@@ -232,7 +232,9 @@ class sonarCache:
 
                 # Skip if sample not found in lookup
                 if seqName not in sample_lookup_dict:
-                    # print(f"Warning: Sample {seqName} not found in fasta, skipping")
+                    self.error_logfile_obj.write(
+                        f"Warning: Sample {seqName} not found in fasta, skipping\n"
+                    )
                     continue
                 data = sample_lookup_dict[seqName]
                 try:
@@ -252,7 +254,10 @@ class sonarCache:
                     batch_results.append(data)
 
                 except Exception as e:
-                    print(f"Error processing sample {seqName}: {str(e)}")
+                    LOGGER.error(f"Error processing sample {seqName}: {str(e)}")
+                    self.error_logfile_obj.write(
+                        f"Error processing sample {seqName}: {str(e)}\n"
+                    )
                     continue
 
             return batch_results
@@ -266,9 +271,6 @@ class sonarCache:
                 if not file_chunk:
                     continue
 
-                # TODO: Extract sequence names for sampledict_lookup (in chunk)
-                # right now we send the whole sample data dict to the process_sample_batch
-                #  sequence names for this chunk and filter sample_lookup_dict
                 seq_names_in_chunk = [sample["seqName"] for sample in file_chunk]
                 # Create filtered sample data dict containing only samples in this chunk
                 filtered_sample_data = {
@@ -301,11 +303,17 @@ class sonarCache:
                                 batch_results = future.result()
                                 sample_data.extend(batch_results)
                             except Exception as e:
-                                print(f"Error processing batch: {str(e)}")
+                                LOGGER.error(f"Error processing batch: {str(e)}")
+                                self.error_logfile_obj.write(
+                                    f"Error processing batch: {str(e)}\n"
+                                )
                                 continue
 
                 except Exception as e:
-                    print(f"Error processing chunk from {fname}: {str(e)}")
+                    LOGGER.error(f"Error processing chunk from {fname}: {str(e)}")
+                    self.error_logfile_obj.write(
+                        f"Error processing chunk from {fname}: {str(e)}\n"
+                    )
                     continue
         return sample_data
 
