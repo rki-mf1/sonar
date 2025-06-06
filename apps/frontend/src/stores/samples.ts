@@ -113,7 +113,7 @@ export const useSamplesStore = defineStore('samples', {
     plotSamplesPerWeek: {} as PlotSamplesPerWeek,
     plotGroupedLineagesPerWeek: {} as PlotGroupedLineagesPerWeek,
     plotMetaDataCoverage: {} as PlotMetaDataCoverage,
-    plotCustom: {} as PlotCustom,
+    plotCustom: {} as { [key: string]: PlotCustom },
     selectedCustomProperty: 'sequencing_reason',
     filteredCount: 0,
     loading: false,
@@ -296,24 +296,21 @@ export const useSamplesStore = defineStore('samples', {
         this.plotMetaDataCoverage = emptyStatistics
       }
     },
-    async updatePlotCustom() {
+    async updatePlotCustom(sample_property: string) {
       const emptyStatistics = {
         custom_property: {},
       }
       try {
-        const plotCustom = await API.getInstance().getPlotCustom(
-          this.filters,
-          this.selectedCustomProperty,
-        )
-        if (!plotCustom) {
-          this.plotCustom = emptyStatistics
+        const response = await API.getInstance().getPlotCustom(this.filters, sample_property)
+        if (!response || !response[sample_property]) {
+          this.plotCustom[sample_property] = emptyStatistics
         } else {
-          this.plotCustom = plotCustom
+          this.plotCustom[sample_property] = response[sample_property] as PlotCustom
         }
       } catch (error) {
         // TODO how to handle request failure
         console.error('Error fetching filtered statistics plots:', error)
-        this.plotCustom = emptyStatistics
+        this.plotCustom[sample_property] = emptyStatistics
       }
     },
     async setDefaultTimeRange() {

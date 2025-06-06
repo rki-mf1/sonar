@@ -46,43 +46,115 @@
       </PrimePanel>
     </div>
 
-    <div style="display: flex; gap: 1rem; width: 100%">
-      <!-- meta data plot-->
-      <div class="panel">
-        <PrimePanel header="Coverage of Meta Data" class="w-full shadow-2">
-          <div style="width: 100%; display: flex; justify-content: center">
-            <PrimeChart
-              type="bar"
-              :data="metaDataCoverageData()"
-              :options="metaDataCoverageOptions()"
-              style="width: 100%; height: 25vh"
-            />
-          </div>
-        </PrimePanel>
-      </div>
+    <div
+      class="plots-container"
+      style="
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        width: 100%;
+      "
+    >
+      <div
+        class="plots-container"
+        style="
+          display: grid;
+          gap: 1rem;
+          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+          width: 100%;
+        "
+      >
+        <!-- meta data plot-->
+        <div class="panel meta-data-plot" style="grid-column: span 2">
+          <PrimePanel header="Coverage of Meta Data" class="w-full shadow-2">
+            <div style="width: 100%; display: flex; justify-content: center">
+              <PrimeChart
+                type="bar"
+                :data="metaDataCoverageData()"
+                :options="metaDataCoverageOptions()"
+                style="width: 100%; height: 25vh"
+              />
+            </div>
+          </PrimePanel>
+        </div>
 
-      <!-- custom property plot-->
-      <div class="panel">
-        <PrimePanel header="Distrubtion of Properties" class="w-full shadow-2">
-          <div style="width: 30%; display: flex; justify-content: flex-end">
-            <PrimeDropdown
-              v-model="samplesStore.selectedCustomProperty"
-              :options="samplesStore.metaCoverageOptions"
-              placeholder="Select a Property"
-              class="w-full md:w-56"
-              @change="samplesStore.updatePlotCustom"
-            />
-          </div>
-          <div style="width: 100%; display: flex; justify-content: center">
-            <PrimeChart
-              type="doughnut"
-              :data="customPlotData()"
-              :options="customPlotOptions()"
-              style="width: 100%; height: 25vh"
-            />
-          </div>
-        </PrimePanel>
+        <!-- Dynamically added property plots -->
+        <div v-for="(property, index) in additionalProperties" :key="index" class="panel">
+          <PrimePanel :header="`Distribution of ${property}`" class="w-full shadow-2">
+            <template #header>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  width: 100%;
+                "
+              >
+                <span style="font-weight: bold">Distribution of {{ property }}</span>
+                <PrimeButton
+                  icon="pi pi-times"
+                  class="p-button-danger p-button-rounded"
+                  style="height: 1.5rem; width: 1.5rem"
+                  @click="removePropertyPlot(property)"
+                />
+              </div>
+            </template>
+            <div style="width: 100%; display: flex; justify-content: center">
+              <!-- Show histogram for 'length' property -->
+              <PrimeChart
+                v-if="
+                  property === 'length' ||
+                  property === 'zip_code' ||
+                  property === 'age' ||
+                  property === 'collection_date'
+                "
+                type="bar"
+                :data="customPlotData(property)"
+                :options="customPlotOptions(false)"
+                style="width: 100%; height: 25vh"
+              />
+              <!-- Show doughnut chart for other properties -->
+              <PrimeChart
+                v-else
+                type="doughnut"
+                :data="customPlotData(property)"
+                :options="customPlotOptions(true)"
+                style="width: 100%; height: 25vh"
+              />
+            </div>
+          </PrimePanel>
+        </div>
+        <!-- + Button for Adding New Property Plots -->
+        <div class="add-property-button">
+          <PrimeButton
+            label="Add Property Plot"
+            icon="pi pi-plus"
+            class="p-button-warning"
+            @click="showPropertySelectionDialog"
+          />
+        </div>
       </div>
+      <!-- Property Selection Dialog -->
+      <PrimeDialog
+        v-model:visible="propertySelectionDialogVisible"
+        header="Select a Property"
+        modal
+      >
+        <div style="display: flex; flex-direction: column; gap: 1rem">
+          <PrimeDropdown
+            v-model="selectedPropertyToAdd"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select a Property"
+            class="w-full"
+          />
+          <PrimeButton
+            label="Add Property Plot"
+            icon="pi pi-check"
+            class="p-button-success"
+            @click="addPropertyPlot"
+          />
+        </div>
+      </PrimeDialog>
     </div>
   </div>
 </template>
@@ -91,19 +163,24 @@
 import { useSamplesStore } from '@/stores/samples'
 import chroma from 'chroma-js'
 import type { TooltipItem } from 'chart.js'
+import { toRaw } from 'vue'
+import type { PlotCustom } from '@/util/types'
 
 export default {
   name: 'PlotsView',
   data() {
     return {
       samplesStore: useSamplesStore(),
+      propertySelectionDialogVisible: false,
+      selectedPropertyToAdd: null,
+      additionalProperties: [],
     }
   },
   mounted() {
     this.samplesStore.updatePlotSamplesPerWeek()
     this.samplesStore.updatePlotGroupedLineagesPerWeek()
     this.samplesStore.updatePlotMetaDataCoverage()
-    this.samplesStore.updatePlotCustom()
+    this.samplesStore.updatePlotCustom('length')
   },
   methods: {
     isDataEmpty(
@@ -132,13 +209,16 @@ export default {
         .mode('lch') // color mode (lch is perceptually uniform)
         .colors(itemCount) // number of colors
     },
-    cleanDataAndAddNullSamples(data: { [key: string]: number }) {
+    cleanDataAndAddNullSamples(data: PlotCustom) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] }
       const cleanedData = Object.fromEntries(
         Object.entries(data).filter(([key, value]) => key !== 'null' && value !== 0),
       )
       const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0
-      const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0)
+      const metadataSamples = Object.values(cleanedData).reduce(
+        (sum, count) => sum + (typeof count === 'number' ? count : 0),
+        0,
+      )
       const noMetadataSamples = totalSamples - metadataSamples
       const labels = [...Object.keys(cleanedData)]
       const dataset = [...Object.values(cleanedData)]
@@ -149,6 +229,9 @@ export default {
         dataset.push(noMetadataSamples)
       }
       return { labels, data: dataset }
+    },
+    removePropertyPlot(property: string) {
+      this.additionalProperties = this.additionalProperties.filter((item) => item !== property)
     },
 
     samplesPerWeekData() {
@@ -360,15 +443,67 @@ export default {
       }
     },
 
-    customPlotData() {
-      const property_data = this.samplesStore.plotCustom
-        ? this.samplesStore.plotCustom['custom_property']
-        : {}
+    showPropertySelectionDialog() {
+      this.propertySelectionDialogVisible = true
+    },
+    async addPropertyPlot() {
+      if (
+        this.selectedPropertyToAdd &&
+        !this.additionalProperties.includes(this.selectedPropertyToAdd)
+      ) {
+        this.additionalProperties.push(this.selectedPropertyToAdd)
+        await this.samplesStore.updatePlotCustom(this.selectedPropertyToAdd) // Fetch data for the new property
+      }
+      this.propertySelectionDialogVisible = false
+      this.selectedPropertyToAdd = null
+    },
+
+    customPlotData(property: string) {
+      const property_data = toRaw(this.samplesStore.plotCustom[property] || {})
       if (this.isDataEmpty(property_data)) {
         return this.emptyChart()
       }
-      const { labels, data } = this.cleanDataAndAddNullSamples(property_data)
+
+      // Generate histogram bins for sequence length
+      if (property === 'length') {
+        const minLength = Math.min(...Object.keys(property_data).map(Number))
+        const maxLength = Math.max(...Object.keys(property_data).map(Number))
+        const binSize = Math.ceil((maxLength - minLength) / 20) // Calculate bin size for 20 bars
+
+        const bins = Array.from({ length: 20 }, (_, i) => minLength + i * binSize)
+
+        const histogramData = bins.map((binStart) => {
+          const binEnd = binStart + binSize
+          const count = Object.entries(property_data).reduce((sum, [key, value]) => {
+            const length = Number(key)
+            return length >= binStart && length < binEnd ? sum + value : sum
+          }, 0)
+          return count
+        })
+
+        const labels = bins.map((binStart) => `${binStart}-${binStart + binSize - 1}`)
+        const colors = this.generateColorPalette(1)
+
+        return {
+          labels,
+          datasets: [
+            {
+              label: 'Sequence Length Distribution',
+              data: histogramData,
+              backgroundColor: colors,
+              borderColor: colors.map((color) => chroma(color).darken(1.0).hex()),
+              borderWidth: 1.5,
+            },
+          ],
+        }
+      }
+      // Default behavior for other properties
+      const { labels, data } = this.cleanDataAndAddNullSamples(property_data || {})
       const colors = this.generateColorPalette(labels.length)
+      if (labels.includes('Not Reported')) {
+        colors.pop()
+        colors.push('#cccccc') // Add gray color for 'Not Reported'
+      }
       return {
         labels,
         datasets: [
@@ -381,13 +516,14 @@ export default {
         ],
       }
     },
-    customPlotOptions() {
+
+    customPlotOptions(display_legend = true) {
       return {
         animation: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: true,
+            display: display_legend,
             position: 'bottom',
           },
           zoom: {
@@ -419,8 +555,23 @@ export default {
 .panel {
   display: flex;
   flex-wrap: wrap;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   justify-content: center;
   margin-bottom: 1em;
   width: 100%;
+}
+.plots-container {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Responsive grid */
+  width: 100%;
+}
+.add-property-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 25vh;
 }
 </style>

@@ -477,10 +477,10 @@ class SampleViewSet(
             if key.startswith("not_null_count_")
         }
 
-    def _get_custom_property_plot(self, queryset, property):
-        if property == "":
+    def _get_custom_property_plot(self, queryset, sample_property):
+        if sample_property == "":
             result_dict = {}
-        elif property == "sequencing_reason":
+        elif sample_property == "sequencing_reason":
             queryset = queryset.filter(properties__property__name="sequencing_reason")
             # the value_char holds the sequencing reason values
             grouped_queryset = (
@@ -495,14 +495,13 @@ class SampleViewSet(
 
         else:
             grouped_queryset = (
-                queryset.values(property)
-                .annotate(total=Count(property))
-                .order_by(property)
+                queryset.values(sample_property)
+                .annotate(total=Count(sample_property))
+                .order_by(sample_property)
             )
             result_dict = {
-                str(item[property]): item["total"] for item in grouped_queryset
+                str(item[sample_property]): item["total"] for item in grouped_queryset
             }  # str required for properties in date format
-
         return result_dict
 
     def _get_samples_per_week(self, queryset):
@@ -815,11 +814,11 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def plot_custom(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-        property = request.query_params["property"]
+        sample_property = request.query_params["property"]
 
         result_dict = {}
-        result_dict["custom_property"] = self._get_custom_property_plot(
-            queryset, property
+        result_dict[sample_property] = self._get_custom_property_plot(
+            queryset, sample_property
         )
 
         return Response(data=result_dict)
