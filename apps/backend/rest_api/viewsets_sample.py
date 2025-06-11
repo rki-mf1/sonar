@@ -4,6 +4,7 @@ from collections import OrderedDict
 import csv
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
 import json
 import os
 import pathlib
@@ -22,6 +23,7 @@ from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
 from django.db.models import IntegerField
+from django.db.models import Max
 from django.db.models import Min
 from django.db.models import OuterRef
 from django.db.models import Prefetch
@@ -30,6 +32,7 @@ from django.db.models import QuerySet
 from django.db.models import Subquery
 from django.db.models import Value
 from django.db.models import When
+from django.db.models.functions import TruncWeek
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -480,35 +483,40 @@ class SampleViewSet(
 
     def _get_samples_per_week(self, queryset):
         """
-        Return a dict mapping calendar week to count, for every week between
-        the earliest and latest non-null collection_date in `queryset`.
+        Return a dict mapping calendar week to count, for each week between
+        the earliest and latest collection_date.
         Weeks with zero records will be present with value 0.
         """
-        weekly_qs = (
-            queryset.values("year", "week")
-            .annotate(count=Count("id"), collection_date=Min("collection_date"))
-            .order_by("year", "week")
+
+        date_range = queryset.aggregate(
+            start_date=Min("collection_date"),
+            end_date=Max("collection_date"),
         )
-
-        filtered_qs = weekly_qs.filter(collection_date__isnull=False)
-        if not filtered_qs:
+        start_date, end_date = date_range["start_date"], date_range["end_date"]
+        if not start_date or not end_date:
             return {}
+        # align to complete weeks
+        start_date -= timedelta(days=start_date.weekday())  # Monday
+        end_date += timedelta(days=(6 - end_date.weekday()))  # Sunday
 
-        start_date = filtered_qs.first()["collection_date"]
-        end_date = filtered_qs.last()["collection_date"]
+        weekly_qs = (
+            queryset.annotate(week=TruncWeek("collection_date"))
+            .values("week")
+            .annotate(count=Count("id"))
+            .order_by("week")
+        )
 
         result = OrderedDict()
         # ordered dict with every week in [start_date..end_date], default 0
         for dt in rrule(WEEKLY, dtstart=start_date, until=end_date):
-            week = dt.isocalendar()[1]
-            year = dt.isocalendar()[0]
+            year, week, _ = dt.isocalendar()
             week_str = f"{year}-W{week:02}"
             result[week_str] = 0
 
         # overwrite with actual counts
-        for item in filtered_qs:
-            week = int(item["week"])
-            year = item["year"]
+        for item in weekly_qs:
+            dt = item["week"]
+            year, week, _ = dt.isocalendar()
             week_str = f"{year}-W{week:02}"
             result[week_str] = item["count"]
 
@@ -660,19 +668,14 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def plot_samples_per_week(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
+        queryset = self._get_filtered_queryset(request).filter(
+            collection_date__isnull=False
+        )
 
         result_dict = {}
-        # check if queryset has any records with a collection_date -> if not, return empty object
-        if not queryset.filter(collection_date__isnull=False).exists():
+        if not queryset.exists():
             result_dict["samples_per_week"] = {}
         else:
-            queryset = queryset.extra(
-                select={
-                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-                }
-            )
             result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
 
         return Response(data=result_dict)
