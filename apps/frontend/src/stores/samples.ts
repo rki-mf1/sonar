@@ -8,7 +8,10 @@ import {
   type ProfileFilter,
   type Statistics,
   type FilteredStatistics,
-  type FilteredStatisticsPlots,
+  type PlotSamplesPerWeek,
+  type PlotGroupedLineagesPerWeek,
+  type PlotMetadataCoverage,
+  type PlotCustom,
   DjangoFilterType,
   StringDjangoFilterType,
   DateDjangoFilterType,
@@ -107,7 +110,11 @@ export const useSamplesStore = defineStore('samples', {
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
-    filteredStatisticsPlots: {} as FilteredStatisticsPlots,
+    plotSamplesPerWeek: {} as PlotSamplesPerWeek,
+    plotGroupedLineagesPerWeek: {} as PlotGroupedLineagesPerWeek,
+    plotMetadataCoverage: {} as PlotMetadataCoverage,
+    plotCustom: {} as PlotCustom,
+    selectedCustomProperty: 'sequencing_reason',
     filteredCount: 0,
     loading: false,
     perPage: 10,
@@ -236,35 +243,77 @@ export const useSamplesStore = defineStore('samples', {
         this.filteredCount = 0
       }
     },
-    async updateFilteredStatisticsPlots() {
+    async updatePlotSamplesPerWeek() {
       const emptyStatistics = {
         samples_per_week: {},
-        meta_data_coverage: {},
-        genomecomplete_chart: {},
-        lineage_area_chart: [],
-        lineage_bar_chart: [],
-        lineage_grouped_bar_chart: [],
-        sequencing_tech: {},
-        sequencing_reason: {},
-        sample_type: {},
-        length: {},
-        lab: {},
-        zip_code: {},
-        host: {},
       }
       try {
-        const filteredStatisticsPlots = await API.getInstance().getFilteredStatisticsPlots(
+        const plotSamplesPerWeek = await API.getInstance().getPlotSamplesPerWeek(this.filters)
+        if (!plotSamplesPerWeek) {
+          this.plotSamplesPerWeek = emptyStatistics
+        } else {
+          this.plotSamplesPerWeek = plotSamplesPerWeek
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching samples per week plot:', error)
+        this.plotSamplesPerWeek = emptyStatistics
+      }
+    },
+    async updatePlotGroupedLineagesPerWeek() {
+      const emptyStatistics = {
+        grouped_lineages_per_week: [],
+      }
+      try {
+        const plotGroupedLineagesPerWeek = await API.getInstance().getPlotGroupedLineagesPerWeek(
           this.filters,
         )
-        if (!filteredStatisticsPlots) {
-          this.filteredStatisticsPlots = emptyStatistics
+        if (!plotGroupedLineagesPerWeek) {
+          this.plotGroupedLineagesPerWeek = emptyStatistics
         } else {
-          this.filteredStatisticsPlots = filteredStatisticsPlots
+          this.plotGroupedLineagesPerWeek = plotGroupedLineagesPerWeek
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching grouped lineages per week plot:', error)
+        this.plotGroupedLineagesPerWeek = emptyStatistics
+      }
+    },
+    async updatePlotMetadataCoverage() {
+      const emptyStatistics = {
+        metadata_coverage: {},
+      }
+      try {
+        const plotMetadataCoverage = await API.getInstance().getPlotMetadataCoverage(this.filters)
+        if (!plotMetadataCoverage) {
+          this.plotMetadataCoverage = emptyStatistics
+        } else {
+          this.plotMetadataCoverage = plotMetadataCoverage
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching meta data coverage plot:', error)
+        this.plotMetadataCoverage = emptyStatistics
+      }
+    },
+    async updatePlotCustom() {
+      const emptyStatistics = {
+        custom_property: {},
+      }
+      try {
+        const plotCustom = await API.getInstance().getPlotCustom(
+          this.filters,
+          this.selectedCustomProperty,
+        )
+        if (!plotCustom) {
+          this.plotCustom = emptyStatistics
+        } else {
+          this.plotCustom = plotCustom
         }
       } catch (error) {
         // TODO how to handle request failure
         console.error('Error fetching filtered statistics plots:', error)
-        this.filteredStatisticsPlots = emptyStatistics
+        this.plotCustom = emptyStatistics
       }
     },
     async setDefaultTimeRange() {
@@ -313,7 +362,7 @@ export const useSamplesStore = defineStore('samples', {
           console.error('API request failed')
           return
         }
-        const metaData = this.statistics?.populated_metadata_fields ?? []
+        const metadata = this.statistics?.populated_metadata_fields ?? []
         this.propertiesDict = {}
         res.values.forEach(
           (property: { name: string; query_type: string; description: string }) => {
@@ -329,7 +378,7 @@ export const useSamplesStore = defineStore('samples', {
         // keep only those properties that have a coverage, i.e. that are not entirly empty
         // & drop the 'name' column because the ID column is fixed
         this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-          (key) => key !== 'name' && metaData.includes(key),
+          (key) => key !== 'name' && metadata.includes(key),
         )
         this.propertyMenuOptions = [
           'name',

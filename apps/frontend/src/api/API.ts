@@ -1,7 +1,6 @@
 import type { FilterGroupRoot } from '@/util/types'
 import axios from 'axios'
 import { saveAs } from 'file-saver'
-import qs from 'qs'
 import * as ExcelJS from 'exceljs'
 
 export default class API {
@@ -34,11 +33,15 @@ export default class API {
       Accept: 'application/json; version=1.0.1',
     }
   }
-  async getRequestFullUrl(url: string, params: JSON, suppressError: boolean) {
-    const stringifiedParams = qs.stringify(params)
+  async getRequestFullUrl(
+    url: string,
+    params: Record<string, string | number | boolean>,
+    suppressError: boolean,
+  ) {
     return axios
       .get(url, {
-        data: stringifiedParams,
+        data: {},
+        params: params,
         timeout: this.TIMEOUT,
       })
       .then((result) => result.data)
@@ -66,7 +69,11 @@ export default class API {
         }
       })
   }
-  getRequest(url: string, params: JSON, suppressError: boolean) {
+  getRequest(
+    url: string,
+    params: Record<string, string | number | boolean>,
+    suppressError: boolean,
+  ) {
     return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
   }
 
@@ -79,23 +86,41 @@ export default class API {
     if (Object.keys(filters).length > 0) {
       url += this.parseQueryString(filters).replace('?', '&')
     }
-    return this.getRequest(url, {} as JSON, false)
+    return this.getRequest(url, {}, false)
   }
 
   getSingleSampleGenome(name: string) {
-    return this.getRequest(`samples/genomes/?name=${name}`, {} as JSON, false)
+    return this.getRequest(`samples/genomes/?name=${name}`, {}, false)
   }
 
   getFilteredStatistics(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
     const url = `samples/filtered_statistics/${queryString}`
-    return this.getRequest(url, {} as JSON, false)
+    return this.getRequest(url, {}, false)
   }
 
-  getFilteredStatisticsPlots(params: FilterGroupRoot) {
+  getPlotSamplesPerWeek(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/filtered_statistics_plots/${queryString}`
-    return this.getRequest(url, {} as JSON, false)
+    const url = `samples/plot_samples_per_week/${queryString}`
+    return this.getRequest(url, {}, false)
+  }
+
+  getPlotGroupedLineagesPerWeek(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_grouped_lineages_per_week/${queryString}`
+    return this.getRequest(url, {}, false)
+  }
+
+  getPlotMetadataCoverage(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_metadata_coverage/${queryString}`
+    return this.getRequest(url, {}, false)
+  }
+
+  getPlotCustom(params: FilterGroupRoot, property: string) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_custom/${queryString}`
+    return this.getRequest(url, { property: property }, false)
   }
 
   async getSampleGenomesExport(
@@ -176,35 +201,35 @@ export default class API {
   }
 
   getSampleGenomePropertyOptions() {
-    return this.getRequest(`properties/distinct_property_names/`, {} as JSON, false)
+    return this.getRequest(`properties/distinct_property_names/`, {}, false)
   }
 
   getSampleGenomePropertyOptionsAndTypes() {
-    return this.getRequest(`properties/get_all_properties/`, {} as JSON, false)
+    return this.getRequest(`properties/get_all_properties/`, {}, false)
   }
 
   getSampleStatistics() {
-    return this.getRequest(`samples/statistics/`, {} as JSON, false)
+    return this.getRequest(`samples/statistics/`, {}, false)
   }
 
   getSampleGenomePropertyValueOptions(propertyName: string) {
     // get unique value2 of each property_name
     return this.getRequest(
       `properties/distinct_properties/?property_name=${propertyName}`,
-      {} as JSON,
+      {},
       false,
     )
   }
   getRepliconAccessionOptions() {
     const url = `replicons/distinct_accessions/`
-    return this.getRequest(url, {} as JSON, false)
+    return this.getRequest(url, {}, false)
   }
   getLineageOptions() {
     const url = `lineages/distinct_lineages/`
-    return this.getRequest(url, {} as JSON, false)
+    return this.getRequest(url, {}, false)
   }
   getGeneSymbolOptions() {
-    return this.getRequest(`genes/distinct_gene_symbols/`, {} as JSON, false)
+    return this.getRequest(`genes/distinct_gene_symbols/`, {}, false)
   }
   parseQueryString(query: FilterGroupRoot) {
     // remove properties (e.g. empty date ranges) with no value
@@ -229,6 +254,6 @@ export default class API {
     } else return ''
   }
   uniqueMutationCount() {
-    return this.getRequest(`mutations/distinct_mutations_count/`, {} as JSON, false)
+    return this.getRequest(`mutations/distinct_mutations_count/`, {}, false)
   }
 }
