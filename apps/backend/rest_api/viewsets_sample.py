@@ -481,23 +481,37 @@ class SampleViewSet(
             if key.startswith("not_null_count_")
         }
 
+    def _get_all_weeks(self, queryset):
+        """
+        Return list of all weeks (YYYY-Www) between earliest and latest
+        'collection_date' in given queryset, aligned to full calendar weeks.
+        """
+        date_range = queryset.aggregate(
+            start_date=Min("collection_date"),
+            end_date=Max("collection_date"),
+        )
+        start_date = date_range.get("start_date")
+        end_date = date_range.get("end_date")
+        if not start_date or not end_date:
+            return []
+
+        # align to full weeks: Monday to Sunday
+        start_date -= timedelta(days=start_date.weekday())  # previous Monday
+        end_date += timedelta(days=(6 - end_date.weekday()))  # next Sunday
+
+        all_weeks = [
+            f"{week_object.isocalendar().year}-W{week_object.isocalendar().week:02}"
+            for week_object in rrule(WEEKLY, dtstart=start_date, until=end_date)
+        ]
+
+        return all_weeks
+
     def _get_samples_per_week(self, queryset):
         """
         Return a dict mapping calendar week to count, for each week between
         the earliest and latest collection_date.
         Weeks with zero records will be present with value 0.
         """
-
-        date_range = queryset.aggregate(
-            start_date=Min("collection_date"),
-            end_date=Max("collection_date"),
-        )
-        start_date, end_date = date_range["start_date"], date_range["end_date"]
-        if not start_date or not end_date:
-            return {}
-        # align to complete weeks
-        start_date -= timedelta(days=start_date.weekday())  # Monday
-        end_date += timedelta(days=(6 - end_date.weekday()))  # Sunday
 
         weekly_qs = (
             queryset.annotate(week=TruncWeek("collection_date"))
@@ -506,17 +520,13 @@ class SampleViewSet(
             .order_by("week")
         )
 
-        result = OrderedDict()
-        # ordered dict with every week in [start_date..end_date], default 0
-        for dt in rrule(WEEKLY, dtstart=start_date, until=end_date):
-            year, week, _ = dt.isocalendar()
-            week_str = f"{year}-W{week:02}"
-            result[week_str] = 0
+        # initialize result dict with all weeks filled with 0 as count
+        result = OrderedDict((week, 0) for week in self._get_all_weeks(queryset))
 
         # overwrite with actual counts
         for item in weekly_qs:
-            dt = item["week"]
-            year, week, _ = dt.isocalendar()
+            week_object = item["week"]
+            year, week, _ = week_object.isocalendar()
             week_str = f"{year}-W{week:02}"
             result[week_str] = item["count"]
 
@@ -682,19 +692,14 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def plot_grouped_lineages_per_week(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
+        queryset = self._get_filtered_queryset(request).filter(
+            collection_date__isnull=False
+        )
 
         result_dict = {}
-        # check if queryset has any records with a collection_date -> if not, return empty object
-        if not queryset.filter(collection_date__isnull=False).exists():
+        if not queryset.exists():
             result_dict["grouped_lineages_per_week"] = {}
         else:
-            queryset = queryset.extra(
-                select={
-                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-                }
-            )
             result_dict["grouped_lineages_per_week"] = (
                 self._get_grouped_lineages_per_week(queryset)
             )
