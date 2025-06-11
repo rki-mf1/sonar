@@ -525,12 +525,29 @@ class SampleViewSet(
 
         # overwrite with actual counts
         for item in weekly_qs:
-            week_object = item["week"]
-            year, week, _ = week_object.isocalendar()
-            week_str = f"{year}-W{week:02}"
-            result[week_str] = item["count"]
+            year, week, _ = item["week"].isocalendar()
+            result[f"{year}-W{week:02}"] = item["count"]
 
         return result
+
+    def _map_lineages_to_groups(self, lineages):
+        """
+        Return dictionary that maps all given lineages to groups
+        by collapsing them to their first two segments.
+        """
+
+        # for each lineage, extract first two segments to form the grouping lineage (e.g. 'BA.2.9' -> 'BA.2')
+        lineage_groups = {".".join(lineage.split(".")[:2]) for lineage in lineages}
+        lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
+
+        # build mapping from sublineage to lineage_group
+        lineage_to_group = {}
+        for lineage_group in lineage_groups_model:
+            for sublineage in lineage_group.get_sublineages():
+                if sublineage.name in lineages:
+                    lineage_to_group[sublineage.name] = lineage_group.name
+
+        return lineage_to_group
 
     def _get_grouped_lineages_per_week(self, queryset):
         """
@@ -539,24 +556,10 @@ class SampleViewSet(
         covering every week between the earliest and latest record.
         Weeks with zero records will be present with values 0.
         """
-        present_lineages = {
-            entry["lineage"]
-            for entry in queryset.values("lineage")
-            if entry["lineage"] is not None
-        }
-        # for each lineage, extract first two segments to form the grouping lineage (e.g. 'BA.2.9' -> 'BA.2')
-        lineage_groups = {
-            ".".join(lineage.split(".")[:2]) for lineage in present_lineages
-        }
-        lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
-
-        # build mapping from sublineage to lineage_group
-        lineage_to_group = {}
-        for lineage_group in lineage_groups_model:
-            for sublineage in lineage_group.get_sublineages():
-                if sublineage.name in present_lineages:
-                    lineage_to_group[sublineage.name] = lineage_group.name
-
+        present_lineages = set(
+            queryset.values_list("lineage", flat=True).exclude(lineage__isnull=True)
+        )
+        lineage_to_group = self._map_lineages_to_groups(present_lineages)
         # annotate querysety with lineage groups
         lineage_cases = [
             When(lineage=lineage, then=Value(group))
@@ -567,74 +570,48 @@ class SampleViewSet(
                 *lineage_cases,
                 default=Value("Unknown"),
                 output_field=CharField(),
-            )
+            ),
+            week=TruncWeek("collection_date"),
         )
 
-        weekly_data = (
-            annotated_qs.values(
-                "year", "week", "lineage_group"
-            )  # for debugging add: "lineage"
-            .annotate(
-                lineage_count=Count("lineage_group"),
-                collection_date=Min("collection_date"),
-            )
-            .order_by("year", "week", "lineage_group")
+        weekly_qs = (
+            annotated_qs.values("week", "lineage_group")
+            .annotate(count=Count("id"))
+            .order_by("week", "lineage_group")
         )
 
-        if not weekly_data:
-            return []
+        total_qs = annotated_qs.values("week").annotate(total_count=Count("id"))
 
-        week_totals = {
-            item["week"]: item["total_count"]
-            for item in queryset.values("week")
-            .annotate(total_count=Count("id"))
-            .order_by("week")
-        }
+        # lookup for total counts
+        week_to_total = {entry["week"]: entry["total_count"] for entry in total_qs}
 
-        min_date = min(
-            item["collection_date"] for item in weekly_data if item["collection_date"]
-        )
-        max_date = max(
-            item["collection_date"] for item in weekly_data if item["collection_date"]
-        )
-
-        all_weeks = []
-        for dt in rrule(WEEKLY, dtstart=min_date, until=max_date):
-            year, week, _ = dt.isocalendar()
-            all_weeks.append(f"{year}-W{week:02}")
-
-        seen_weeks = set()
-        empty_placeholders = {
-            week_str: {
-                "week": week_str,
-                "lineage_group": None,
-                "count": 0,
-                "percentage": 0.0,
-            }
-            for week_str in all_weeks
-        }
-
-        # append real records
         result = []
-        for item in weekly_data:
-            if item["week"] is None or item["year"] is None:
-                continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"
-            percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
+        seen_weeks = set()
+        for item in weekly_qs:
+            year, week, _ = item["week"].isocalendar()
+            week_str = f"{year}-W{week:02}"
+            total = week_to_total.get(item["week"])
             result.append(
                 {
                     "week": week_str,
                     "lineage_group": item["lineage_group"],
-                    "count": item["lineage_count"],
-                    "percentage": round(percentage, 2),
+                    "count": item["count"],
+                    "percentage": round(item["count"] / total * 100, 2),
                 }
             )
             seen_weeks.add(week_str)
 
-        # add placeholders for empty weeks
-        for week_str, placeholder in empty_placeholders.items():
+        # fill missing weeks with placeholders
+        for week_str in self._get_all_weeks(queryset):
             if week_str not in seen_weeks:
-                result.append(placeholder)
+                result.append(
+                    {
+                        "week": week_str,
+                        "lineage_group": None,
+                        "count": 0,
+                        "percentage": 0.0,
+                    }
+                )
 
         result.sort(key=lambda x: x["week"])
         return result
