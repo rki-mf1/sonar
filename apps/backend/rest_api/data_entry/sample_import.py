@@ -181,6 +181,7 @@ class SampleImport:
                     "start": var_raw.start,
                     "end": var_raw.end,
                     "replicon": self.replicon,
+                    "is_frameshift": var_raw.frameshift,
                 }
                 mutation = next(
                     filter(
@@ -235,7 +236,6 @@ class SampleImport:
                     "alt": var_raw.alt if var_raw.alt else "",
                     "start": var_raw.start if var_raw.start else 0,
                     "end": var_raw.end if var_raw.end else 0,
-                    "is_frameshift": var_raw.frameshift,
                 }
                 mutation = next(
                     filter(

@@ -435,24 +435,16 @@ def process_batch_run(
                 nt_mutation_set,
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "replicon"],
-                update_fields=["ref", "alt", "start", "end", "replicon"],
+                update_fields=[
+                    "is_frameshift",
+                ],
             )
-            from collections import Counter
-
-            mutation_keys = [
-                (m.cds_id, m.ref, m.alt, m.start, m.end) for m in cds_mutation_set
-            ]
-            # The problem now sometime we have same duplcated
-            # m.cds_id, m.ref, m.alt, m.start, m.end, but differnt frameshift
-            # which cause us an error, ('ENA', '', 26, 29, 11)]
-            duplicates = [v for k, v in Counter(mutation_keys).items() if v > 1]
-            print("Duplicates in cds_mutation_set:", duplicates)
 
             AminoAcidMutation.objects.bulk_create(
                 cds_mutation_set,
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "cds"],
-                update_fields=["ref", "alt", "start", "end", "cds", "is_frameshift"],
+                update_fields=["ref", "alt", "start", "end", "cds"],
             )
             AminoAcidMutation.parent.through.objects.bulk_create(
                 mutation_parent_relations,
