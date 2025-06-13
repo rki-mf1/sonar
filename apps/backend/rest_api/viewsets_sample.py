@@ -530,40 +530,28 @@ class SampleViewSet(
 
         return result
 
-    def _map_lineages_to_groups(self, lineages):
-        """
-        Return dictionary that maps all given lineages to groups
-        by collapsing them to their first two segments.
-        """
-
-        # for each lineage, extract first two segments to form the grouping lineage (e.g. 'BA.2.9' -> 'BA.2')
-        lineage_groups = {".".join(lineage.split(".")[:2]) for lineage in lineages}
-        lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
-
-        # build mapping from sublineage to lineage_group
-        lineage_to_group = {}
-        for lineage_group in lineage_groups_model:
-            for sublineage in lineage_group.get_sublineages():
-                if sublineage.name in lineages:
-                    lineage_to_group[sublineage.name] = lineage_group.name
-
-        return lineage_to_group
-
     def _get_grouped_lineages_per_week(self, queryset):
         """
         Return a LIST of dicts, contianing counts and percentages per calendar week for
-        lineage groupes (derived from the two segments of each lineage),
+        lineage groups (lineages truncated to two first segments),
         covering every week between the earliest and latest record.
         Weeks with zero records will be present with values 0.
         """
         present_lineages = set(
-            queryset.values_list("lineage", flat=True).exclude(lineage__isnull=True)
+            queryset.exclude(lineage__isnull=True).values_list("lineage", flat=True)
         )
-        lineage_to_group = self._map_lineages_to_groups(present_lineages)
-        # annotate querysety with lineage groups
+        lineage_to_group = {
+            lineage: ".".join(lineage.split(".")[:2]) for lineage in present_lineages
+        }
+        valid_groups = set(
+            models.Lineage.objects.filter(name__isnull=False).values_list(
+                "name", flat=True
+            )
+        )
         lineage_cases = [
             When(lineage=lineage, then=Value(group))
             for lineage, group in lineage_to_group.items()
+            if group in valid_groups
         ]
         annotated_qs = queryset.annotate(
             lineage_group=Case(
