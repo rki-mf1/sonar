@@ -337,7 +337,9 @@ export default {
           this.samplesStore.updatePlotSamplesPerWeek()
           this.samplesStore.updatePlotGroupedLineagesPerWeek()
           this.samplesStore.updatePlotMetadataCoverage()
-          this.samplesStore.updatePlotCustom()
+          Object.keys(this.samplesStore.plotCustom).forEach((property) => {
+          this.samplesStore.updatePlotCustom(property)
+        })
         }
       }
     },

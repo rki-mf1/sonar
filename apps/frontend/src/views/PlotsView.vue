@@ -227,16 +227,16 @@ export default {
         .mode('lch') // color mode (lch is perceptually uniform)
         .colors(itemCount) // number of colors
     },
-    cleanDataAndAddNullSamples(data: PlotCustom) {
+    cleanDataAndAddNullSamples(data: { [key: string]: number }) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] }
       const cleanedData = Object.fromEntries(
         Object.entries(data).filter(([key, value]) => key !== 'null' && value !== 0),
       )
       const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0
       const metadataSamples = Object.values(cleanedData).reduce(
-        (sum, count) => sum + (typeof count === 'number' ? count : 0),
+        (sum, count) => sum + count,
         0,
-      )
+      );
       const noMetadataSamples = totalSamples - metadataSamples
       const labels = [...Object.keys(cleanedData)]
       const dataset = [...Object.values(cleanedData)]
@@ -541,7 +541,7 @@ export default {
           const binEnd = binStart + binSize
           const count = Object.entries(property_data).reduce((sum, [key, value]) => {
             const length = Number(key)
-            return length >= binStart && length < binEnd ? sum + value : sum
+            return length >= binStart && length < binEnd ? sum + Number(value) : sum
           }, 0)
           return count
         })
@@ -563,7 +563,13 @@ export default {
         }
       }
       // Default behavior for other properties
-      const { labels, data } = this.cleanDataAndAddNullSamples(property_data || {})
+      const flattenedData = Object.entries(property_data || {}).reduce((acc, [key, value]) => {
+        if (typeof value === 'number') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as { [key: string]: number });
+      const { labels, data } = this.cleanDataAndAddNullSamples(flattenedData);
       const colors = this.generateColorPalette(labels.length)
       if (labels.includes('Not Reported')) {
         colors.pop()
