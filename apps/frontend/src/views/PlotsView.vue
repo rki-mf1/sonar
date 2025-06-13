@@ -49,10 +49,10 @@
         <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
             ref="lineageChart"
+            :key="isBarChart"
             :type="isBarChart ? 'bar' : 'line'"
             :data="isBarChart ? lineageBarData() : lineageAreaData()"
             :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
-            :key="isBarChart"
             style="width: 100%; height: 50vh"
           />
         </div>
@@ -178,7 +178,6 @@ import chroma from 'chroma-js'
 import type { TooltipItem } from 'chart.js'
 import PrimeToggleButton from 'primevue/togglebutton'
 import { toRaw } from 'vue'
-import type { PlotCustom } from '@/util/types'
 
 export default {
   name: 'PlotsView',
@@ -233,10 +232,7 @@ export default {
         Object.entries(data).filter(([key, value]) => key !== 'null' && value !== 0),
       )
       const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0
-      const metadataSamples = Object.values(cleanedData).reduce(
-        (sum, count) => sum + count,
-        0,
-      );
+      const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0)
       const noMetadataSamples = totalSamples - metadataSamples
       const labels = [...Object.keys(cleanedData)]
       const dataset = [...Object.values(cleanedData)]
@@ -563,13 +559,16 @@ export default {
         }
       }
       // Default behavior for other properties
-      const flattenedData = Object.entries(property_data || {}).reduce((acc, [key, value]) => {
-        if (typeof value === 'number') {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as { [key: string]: number });
-      const { labels, data } = this.cleanDataAndAddNullSamples(flattenedData);
+      const flattenedData = Object.entries(property_data || {}).reduce(
+        (acc, [key, value]) => {
+          if (typeof value === 'number') {
+            acc[key] = value
+          }
+          return acc
+        },
+        {} as { [key: string]: number },
+      )
+      const { labels, data } = this.cleanDataAndAddNullSamples(flattenedData)
       const colors = this.generateColorPalette(labels.length)
       if (labels.includes('Not Reported')) {
         colors.pop()

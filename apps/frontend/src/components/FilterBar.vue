@@ -338,8 +338,8 @@ export default {
           this.samplesStore.updatePlotGroupedLineagesPerWeek()
           this.samplesStore.updatePlotMetadataCoverage()
           Object.keys(this.samplesStore.plotCustom).forEach((property) => {
-          this.samplesStore.updatePlotCustom(property)
-        })
+            this.samplesStore.updatePlotCustom(property)
+          })
         }
       }
     },

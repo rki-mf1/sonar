@@ -302,16 +302,19 @@ export const useSamplesStore = defineStore('samples', {
       }
       try {
         const response = await API.getInstance().getPlotCustom(this.filters, sample_property)
-        const typedResponse = response as Record<string, PlotCustom>;
+        const typedResponse = response as Record<string, PlotCustom>
 
         if (!typedResponse || !typedResponse[sample_property]) {
-          this.plotCustom[sample_property] = emptyStatistics;
+          this.plotCustom[sample_property] = emptyStatistics
         } else {
-          this.plotCustom[sample_property] = typedResponse[sample_property];
+          this.plotCustom[sample_property] = typedResponse[sample_property]
         }
       } catch (error) {
-        console.error(`Error fetching filtered statistics plots for property ${sample_property}:`, error);
-        this.plotCustom[sample_property] = emptyStatistics;
+        console.error(
+          `Error fetching filtered statistics plots for property ${sample_property}:`,
+          error,
+        )
+        this.plotCustom[sample_property] = emptyStatistics
       }
     },
     async setDefaultTimeRange() {
