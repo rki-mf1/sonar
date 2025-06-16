@@ -228,8 +228,7 @@ class sonarCache:
             batch_results = []
 
             for sample_data_dict in sample_batch:
-                seqName = sample_data_dict["seqName"]
-
+                seqName = sample_data_dict["seqId"]
                 # Skip if sample not found in lookup
                 if seqName not in sample_lookup_dict:
                     self.error_logfile_obj.write(
@@ -271,7 +270,8 @@ class sonarCache:
                 if not file_chunk:
                     continue
 
-                seq_names_in_chunk = [sample["seqName"] for sample in file_chunk]
+                seq_names_in_chunk = [sample["seqId"] for sample in file_chunk]
+                # print(seq_names_in_chunk)
                 # Create filtered sample data dict containing only samples in this chunk
                 filtered_sample_data = {
                     seq_name: sample_lookup_dict[seq_name]

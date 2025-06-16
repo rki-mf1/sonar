@@ -179,44 +179,6 @@ def process_nt_mutations(
         }
         mutations.append(mut)
 
-    # Process NT frameshifts
-    # for frameshift in data.get('frameshifts', []):
-    #     mut = {
-    #         'id': id_counter,
-    #         'ref': frameshift.get('refNuc', ''),
-    #         'start': frameshift['pos'],
-    #         'end': frameshift['pos'] + 1,
-    #         'alt': frameshift['qryNuc'],
-    #         'reference_acc': reference_acc,
-    #         'label': f"fs:{frameshift['pos'] + 1}",
-    #         'type': 'nt',
-    #         'parent_id': id_counter,
-    #         'frameshift': 0,
-    #         'nt_pos': frameshift['pos']
-    #     }
-    #     mutations.append(mut)
-    #     id_counter += 1
-
-    # Process "N" alternative NT
-    # print(data.get('missing', []))
-    # for n_alt in data.get("missing", []):
-    #     # NOTE: Note: Be careful about the character. Currently, we assume that all characters are 'N'.
-    #     # However, the unknownAaRanges provide the X positions but do not specify which ones correspond to the missing positions.
-    #     # NOTE: not sure, Should we represent the N as deletion or just alternative snv.
-    #     for pos in range(n_alt["range"]["begin"], n_alt["range"]["end"]):
-    #         mut = {
-    #             "id": id_counter,
-    #             "ref": reference_seq[pos],
-    #             "start": pos,
-    #             "end": pos + 1,
-    #             "alt": n_alt["character"],
-    #             "reference_acc": reference_acc,
-    #             "label": f"{reference_seq[pos]}{pos + 1}{n_alt['character']}",
-    #             "type": "nt",
-    #             "frameshift": 0,
-    #             "nt_pos": pos,  # Store for AA mapping
-    #         }
-    #         mutations.append(mut)
     # Sort NT mutations by position
     mutations = sorted(mutations, key=lambda x: x["start"])
 
@@ -609,11 +571,12 @@ def process_single_sample(  # noqa: C901
     output_parquet_file: str = None,
     debug: bool = False,
 ) -> None:
-    """Process a single sample and create its .var file"""
+    """Process a single sample and create its .var file,
+    the interface for sonar-cli
+    """
     try:
         # Get sample name/id
-        sample_id = sample_data.get("seqName", "unknown")
-
+        sample_id = sample_data.get("seqId", "unknown")
         # Process NT mutations
         nt_mutations, next_id = process_nt_mutations(
             sample_data, reference_acc, reference_seq
