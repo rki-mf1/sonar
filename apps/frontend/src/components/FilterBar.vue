@@ -337,7 +337,7 @@ export default {
           this.samplesStore.updatePlotSamplesPerWeek()
           this.samplesStore.updatePlotGroupedLineagesPerWeek()
           this.samplesStore.updatePlotMetadataCoverage()
-          Object.keys(this.samplesStore.plotCustom).forEach((property) => {
+          Object.keys(this.samplesStore.propertyData).forEach((property) => {
             this.samplesStore.updatePlotCustom(property)
           })
         }
@@ -360,7 +360,7 @@ export default {
         this.samplesStore.updatePlotSamplesPerWeek()
         this.samplesStore.updatePlotGroupedLineagesPerWeek()
         this.samplesStore.updatePlotMetadataCoverage()
-        Object.keys(this.samplesStore.plotCustom).forEach((property) => {
+        Object.keys(this.samplesStore.propertyData).forEach((property) => {
           this.samplesStore.updatePlotCustom(property)
         })
       }

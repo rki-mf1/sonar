@@ -113,7 +113,8 @@ export const useSamplesStore = defineStore('samples', {
     plotSamplesPerWeek: {} as PlotSamplesPerWeek,
     plotGroupedLineagesPerWeek: {} as PlotGroupedLineagesPerWeek,
     plotMetadataCoverage: {} as PlotMetadataCoverage,
-    plotCustom: {} as Record<string, PlotCustom>,
+    propertyData: {} as Record<string, { [key: string]: number }>,
+    propertyScatterData: {} as Record<string, Array<Record<string, number>>>,
     selectedCustomProperty: 'sequencing_reason',
     filteredCount: 0,
     loading: false,
@@ -297,26 +298,49 @@ export const useSamplesStore = defineStore('samples', {
       }
     },
     async updatePlotCustom(sample_property: string) {
-      const emptyStatistics = {
-        custom_property: {},
-      }
+      const emptyStatistics: { [key: string]: number } = {}
       try {
         const response = await API.getInstance().getPlotCustom(this.filters, sample_property)
         const typedResponse = response as Record<string, PlotCustom>
-
         if (!typedResponse || !typedResponse[sample_property]) {
-          this.plotCustom[sample_property] = emptyStatistics
+          this.propertyData[sample_property] = emptyStatistics
         } else {
-          this.plotCustom[sample_property] = typedResponse[sample_property]
+          this.propertyData[sample_property] = Object.fromEntries(
+            Object.entries(typedResponse[sample_property]).map(([key, value]) => [
+              key,
+              Number(value),
+            ]),
+          )
         }
       } catch (error) {
         console.error(
           `Error fetching filtered statistics plots for property ${sample_property}:`,
           error,
         )
-        this.plotCustom[sample_property] = emptyStatistics
+        this.propertyData[sample_property] = emptyStatistics
       }
     },
+    async updatePlotScatter(sample_property_x: string, sample_property_y: string) {
+      const emptyStatistics: Array<Record<string, number>> = []
+      const key = `${sample_property_x}_${sample_property_y}`
+      try {
+        const response = await API.getInstance().get2Properties(
+          this.filters,
+          sample_property_x,
+          sample_property_y,
+        )
+        const typedResponse = response as Array<Record<string, number>>
+
+        this.propertyScatterData[key] = typedResponse
+      } catch (error) {
+        console.error(
+          `Error fetching scatter plot data for properties ${sample_property_x} and ${sample_property_y}:`,
+          error,
+        )
+        this.propertyScatterData[key] = emptyStatistics
+      }
+    },
+
     async setDefaultTimeRange() {
       this.timeRange = [
         new Date(this.statistics.first_sample_date),

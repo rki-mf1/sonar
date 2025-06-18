@@ -68,136 +68,192 @@
         width: 100%;
       "
     >
-      <div
-        class="plots-container"
-        style="
-          display: grid;
-          gap: 1rem;
-          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-          width: 100%;
-        "
-      >
-        <!-- metadata plot-->
-        <div class="panel metadata-plot" style="grid-column: span 2">
-          <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
-            <div style="width: 100%; display: flex; justify-content: center">
-              <PrimeChart
-                type="bar"
-                :data="metadataCoverageData()"
-                :options="metadataCoverageOptions()"
-                style="width: 100%; height: 25vh"
-              />
-            </div>
-          </PrimePanel>
-        </div>
-
-        <!-- Dynamically added property plots -->
-        <div v-for="(property, index) in additionalProperties" :key="index" class="panel">
-          <PrimePanel :header="`Distribution of ${property}`" class="w-full shadow-2">
-            <template #header>
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  width: 100%;
-                "
-              >
-                <span style="font-weight: bold">Distribution of {{ property }}</span>
-                <PrimeButton
-                  icon="pi pi-times"
-                  class="p-button-danger p-button-rounded"
-                  style="height: 1.5rem; width: 1.5rem"
-                  @click="removePropertyPlot(property)"
-                />
-              </div>
-            </template>
-            <div style="width: 100%; display: flex; justify-content: center">
-              <!-- Show histogram for 'length' property -->
-              <PrimeChart
-                v-if="
-                  property === 'length' ||
-                  property === 'zip_code' ||
-                  property === 'age' ||
-                  property === 'collection_date'
-                "
-                type="bar"
-                :data="customPlotData(property)"
-                :options="customPlotOptions(false)"
-                style="width: 100%; height: 25vh"
-              />
-              <!-- Show doughnut chart for other properties -->
-              <PrimeChart
-                v-else
-                type="doughnut"
-                :data="customPlotData(property)"
-                :options="customPlotOptions(true)"
-                style="width: 100%; height: 25vh"
-              />
-            </div>
-          </PrimePanel>
-        </div>
-        <!-- + Button for Adding New Property Plots -->
-        <div class="add-property-button">
-          <PrimeButton
-            label="Add Property Plot"
-            icon="pi pi-plus"
-            class="p-button-warning"
-            @click="showPropertySelectionDialog"
-          />
-        </div>
+      <!-- metadata plot-->
+      <div class="panel metadata-plot" style="grid-column: span 2">
+        <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
+          <div style="width: 100%; display: flex; justify-content: center">
+            <PrimeChart
+              type="bar"
+              :data="metadataCoverageData()"
+              :options="metadataCoverageOptions()"
+              style="width: 100%; height: 25vh"
+            />
+          </div>
+        </PrimePanel>
       </div>
-      <!-- Property Selection Dialog -->
-      <PrimeDialog
-        v-model:visible="propertySelectionDialogVisible"
-        header="Select a Property"
-        modal
+      <!-- Property plots -->
+      <div
+        v-for="(plot, index) in plots"
+        :key="index"
+        class="panel"
+        :style="plot.type === 'scatter' ? 'grid-column: span 2;' : ''"
       >
-        <div style="display: flex; flex-direction: column; gap: 1rem">
+        <PrimePanel :header="plot.plotTitle" class="w-full shadow-2">
+          <div style="width: 100%; display: flex; justify-content: center">
+            <PrimeButton
+              icon="pi pi-times"
+              class="p-button-danger p-button-rounded"
+              style="height: 1.5rem; width: 1.5rem"
+              @click="removePropertyPlot(plot)"
+            />
+            <PrimeChart
+              :type="getChartType(plot.type)"
+              :data="plot.data"
+              :options="plot.options"
+              style="width: 100%; height: 25vh"
+            />
+          </div>
+        </PrimePanel>
+      </div>
+      <!-- + Button for Adding New Property Plots -->
+      <div class="add-plot-button">
+        <PrimeButton
+          label="Add Property Plot"
+          icon="pi pi-plus"
+          class="p-button-warning"
+          @click="showPlotSelectionDialog"
+        />
+      </div>
+    </div>
+    <!-- Plot Selection Dialog -->
+    <PrimeDialog v-model:visible="plotSelectionDialogVisible" header="Select Plot Type" modal>
+      <div style="display: flex; flex-direction: column; gap: 1rem">
+        <PrimeDropdown
+          v-model="selectedPlotType"
+          :options="plotTypes"
+          placeholder="Select Plot Type"
+          class="w-full"
+        />
+        <PrimeButton
+          label="Next"
+          icon="pi pi-arrow-right"
+          class="p-button-success"
+          :disabled="!selectedPlotType"
+          @click="showFeatureSelectionDialog"
+        />
+      </div>
+    </PrimeDialog>
+
+    <!-- Feature Selection Dialog -->
+    <PrimeDialog
+      v-model:visible="featureSelectionDialogVisible"
+      :header="`Select Features for ${selectedPlotType}`"
+      modal
+    >
+      <div style="display: flex; flex-direction: column; gap: 1rem">
+        <!-- Conditional rendering based on plot type -->
+        <div
+          v-if="
+            selectedPlotType === 'bar' ||
+            selectedPlotType === 'pie' ||
+            selectedPlotType === 'doughnut' ||
+            selectedPlotType === 'line'
+          "
+        >
           <PrimeDropdown
-            v-model="selectedPropertyToAdd"
+            v-model="selectedProperty"
             :options="samplesStore.metaCoverageOptions"
-            placeholder="Select a Property"
+            placeholder="Select Property"
             class="w-full"
           />
-          <PrimeButton
-            label="Add Property Plot"
-            icon="pi pi-check"
-            class="p-button-success"
-            @click="addPropertyPlot"
+        </div>
+        <div v-if="selectedPlotType === 'scatter'">
+          <PrimeDropdown
+            v-model="selectedXProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select X-Axis Property"
+            class="w-full"
+          />
+          <PrimeDropdown
+            v-model="selectedYProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select Y-Axis Property"
+            class="w-full"
           />
         </div>
-      </PrimeDialog>
-    </div>
+        <div v-if="selectedPlotType === 'histogram'">
+          <PrimeDropdown
+            v-model="selectedProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select Property"
+            class="w-full"
+          />
+          <PrimeInputNumber
+            v-model="selectedBinSize"
+            placeholder="Select Bin Size"
+            class="w-full"
+          />
+        </div>
+        <PrimeButton
+          label="Add Plot"
+          icon="pi pi-check"
+          class="p-button-success"
+          :disabled="!isFeatureSelectionValid"
+          @click="addPlot"
+        />
+      </div>
+    </PrimeDialog>
   </div>
 </template>
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples'
 import chroma from 'chroma-js'
-import type { TooltipItem } from 'chart.js'
+import type { ChartOptions, TooltipItem } from 'chart.js'
 import PrimeToggleButton from 'primevue/togglebutton'
-import { toRaw } from 'vue'
+import PrimeInputNumber from 'primevue/inputnumber'
+import {
+  PlotType,
+  type SimplePlotData,
+  type HistogramData,
+  type PlotConfig,
+  type ScatterPlotData,
+} from '@/util/types'
 
 export default {
   name: 'PlotsView',
   components: {
     PrimeToggleButton,
+    PrimeInputNumber,
   },
   data() {
     return {
       samplesStore: useSamplesStore(),
       isBarChart: true, // Toggle for lineage chart type
-      propertySelectionDialogVisible: false,
-      selectedPropertyToAdd: null,
-      additionalProperties: [],
+      plots: [] as PlotConfig[],
+      plotSelectionDialogVisible: false,
+      featureSelectionDialogVisible: false,
+      selectedPlotType: null as PlotType | null,
+      selectedProperty: null as string | null,
+      selectedXProperty: null as string | null,
+      selectedYProperty: null as string | null,
+      selectedBinSize: null as number | null,
+      plotTypes: Object.values(PlotType),
     }
+  },
+  computed: {
+    isFeatureSelectionValid(): boolean {
+      if (
+        this.selectedPlotType === 'bar' ||
+        this.selectedPlotType === 'pie' ||
+        this.selectedPlotType === 'doughnut' ||
+        this.selectedPlotType === 'line'
+      ) {
+        return !!this.selectedProperty;
+      }
+      if (this.selectedPlotType === 'scatter') {
+        return !!this.selectedXProperty && !!this.selectedYProperty;
+      }
+      if (this.selectedPlotType === 'histogram') {
+        return !!this.selectedProperty && !!this.selectedBinSize;
+      }
+      return false;
+    },
   },
   mounted() {
     this.samplesStore.updatePlotSamplesPerWeek()
     this.samplesStore.updatePlotGroupedLineagesPerWeek()
     this.samplesStore.updatePlotMetadataCoverage()
-    this.samplesStore.updatePlotCustom('length')
   },
   methods: {
     isDataEmpty(
@@ -226,6 +282,10 @@ export default {
         .mode('lch') // color mode (lch is perceptually uniform)
         .colors(itemCount) // number of colors
     },
+    getChartType(type: PlotType | null): string {
+      // Map 'histogram' to 'bar', otherwise return the original type
+      return type === 'histogram' ? 'bar' : type || ''
+    },
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] }
       const cleanedData = Object.fromEntries(
@@ -233,7 +293,10 @@ export default {
       )
       const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0
       const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0)
-      const noMetadataSamples = totalSamples - metadataSamples
+
+      const noneCount = data['None'] || 0
+      const noMetadataSamples = totalSamples - metadataSamples + noneCount
+
       const labels = [...Object.keys(cleanedData)]
       const dataset = [...Object.values(cleanedData)]
 
@@ -244,8 +307,10 @@ export default {
       }
       return { labels, data: dataset }
     },
-    removePropertyPlot(property: string) {
-      this.additionalProperties = this.additionalProperties.filter((item) => item !== property)
+    removePropertyPlot(plot: PlotConfig) {
+      this.plots = this.plots.filter(
+        (item) => item.propertyName !== plot.propertyName && item.type !== plot.type,
+      )
     },
 
     samplesPerWeekData() {
@@ -280,7 +345,7 @@ export default {
     },
     samplesPerWeekOptions() {
       return {
-        animation: true,
+        animation: { duration: 1000 },
         maintainAspectRatio: false,
         plugins: {
           legend: {
@@ -503,97 +568,13 @@ export default {
         },
       }
     },
-
-    showPropertySelectionDialog() {
-      this.propertySelectionDialogVisible = true
-    },
-    async addPropertyPlot() {
-      if (
-        this.selectedPropertyToAdd &&
-        !this.additionalProperties.includes(this.selectedPropertyToAdd)
-      ) {
-        this.additionalProperties.push(this.selectedPropertyToAdd)
-        await this.samplesStore.updatePlotCustom(this.selectedPropertyToAdd) // Fetch data for the new property
-      }
-      this.propertySelectionDialogVisible = false
-      this.selectedPropertyToAdd = null
-    },
-
-    customPlotData(property: string) {
-      const property_data = toRaw(this.samplesStore.plotCustom[property] || {})
-      if (this.isDataEmpty(property_data)) {
-        return this.emptyChart()
-      }
-
-      // Generate histogram bins for sequence length
-      if (property === 'length') {
-        const minLength = Math.min(...Object.keys(property_data).map(Number))
-        const maxLength = Math.max(...Object.keys(property_data).map(Number))
-        const binSize = Math.ceil((maxLength - minLength) / 20) // Calculate bin size for 20 bars
-
-        const bins = Array.from({ length: 20 }, (_, i) => minLength + i * binSize)
-
-        const histogramData = bins.map((binStart) => {
-          const binEnd = binStart + binSize
-          const count = Object.entries(property_data).reduce((sum, [key, value]) => {
-            const length = Number(key)
-            return length >= binStart && length < binEnd ? sum + Number(value) : sum
-          }, 0)
-          return count
-        })
-
-        const labels = bins.map((binStart) => `${binStart}-${binStart + binSize - 1}`)
-        const colors = this.generateColorPalette(1)
-
-        return {
-          labels,
-          datasets: [
-            {
-              label: 'Sequence Length Distribution',
-              data: histogramData,
-              backgroundColor: colors,
-              borderColor: colors.map((color) => chroma(color).darken(1.0).hex()),
-              borderWidth: 1.5,
-            },
-          ],
-        }
-      }
-      // Default behavior for other properties
-      const flattenedData = Object.entries(property_data || {}).reduce(
-        (acc, [key, value]) => {
-          if (typeof value === 'number') {
-            acc[key] = value
-          }
-          return acc
-        },
-        {} as { [key: string]: number },
-      )
-      const { labels, data } = this.cleanDataAndAddNullSamples(flattenedData)
-      const colors = this.generateColorPalette(labels.length)
-      if (labels.includes('Not Reported')) {
-        colors.pop()
-        colors.push('#cccccc') // Add gray color for 'Not Reported'
-      }
+    customPlotOptions(not_display_legend = false): ChartOptions {
       return {
-        labels: labels,
-        datasets: [
-          {
-            data: data,
-            backgroundColor: colors,
-            borderColor: colors.map((color) => chroma(color).darken(1.0).hex()),
-            borderWidth: 1.5,
-          },
-        ],
-      }
-    },
-
-    customPlotOptions(display_legend = true) {
-      return {
-        animation: true,
+        animation: { duration: 1000 },
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: display_legend,
+            display: !not_display_legend,
             position: 'bottom',
           },
           zoom: {
@@ -608,6 +589,273 @@ export default {
             },
           },
         },
+      }
+    },
+    customScatterPlotOptions(
+      y_feature: string,
+      x_feature: string,
+      x_axis_type:
+        | 'category'
+        | 'linear'
+        | 'time'
+        | 'logarithmic'
+        | 'timeseries'
+        | 'radialLinear' = 'category',
+      y_axis_type:
+        | 'category'
+        | 'linear'
+        | 'time'
+        | 'logarithmic'
+        | 'timeseries'
+        | 'radialLinear' = 'linear',
+    ): ChartOptions {
+      return {
+        animation: { duration: 1000 },
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'right',
+          },
+          tooltip: {
+            callbacks: {
+              label: (context: TooltipItem<'scatter'>) => {
+                const raw = context.raw as { x: string; y: number; category: string }
+                return `${y_feature}: ${raw.category}, ${x_feature}: ${raw.x}, number: ${raw.y}`
+              },
+            },
+          },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+          },
+        },
+        scales: {
+          x: {
+            type: x_axis_type,
+            title: {
+              display: true,
+              text: this.selectedXProperty || '',
+            },
+          },
+          y: {
+            type: y_axis_type,
+            title: {
+              display: true,
+              text: this.selectedYProperty || '',
+            },
+          },
+        },
+      }
+    },
+    showPlotSelectionDialog() {
+      this.plotSelectionDialogVisible = true
+    },
+    showFeatureSelectionDialog() {
+      this.plotSelectionDialogVisible = false
+      this.featureSelectionDialogVisible = true
+    },
+    async addPlot() {
+      const plotData = await this.generatePlotData()
+      const plotTitle = this.selectedProperty
+        ? this.selectedProperty
+        : this.selectedXProperty && this.selectedYProperty
+          ? `${this.selectedXProperty} - ${this.selectedYProperty}`
+          : ''
+      const propertyName =
+        this.selectedProperty || `${this.selectedXProperty}_${this.selectedYProperty}`
+      const plotConfig: PlotConfig = {
+        type: this.selectedPlotType,
+        propertyName: propertyName,
+        plotTitle: plotTitle,
+        data: plotData,
+        options: this.generatePlotOptions(),
+      }
+      this.plots.push(plotConfig)
+      this.resetSelections()
+    },
+    resetSelections() {
+      this.featureSelectionDialogVisible = false
+      this.selectedPlotType = null
+      this.selectedProperty = null
+      this.selectedXProperty = null
+      this.selectedYProperty = null
+      this.selectedBinSize = null
+    },
+    getHistogramPlotData(property: string, binSize: number): HistogramData {
+      const propertyData = this.samplesStore.propertyData[property] || {}
+      const minValue = Math.min(...Object.keys(propertyData).map(Number))
+      const maxValue = Math.max(...Object.keys(propertyData).map(Number))
+      const bins = Array.from(
+        { length: Math.ceil((maxValue - minValue) / binSize) },
+        (_, i) => minValue + i * binSize,
+      )
+      const histogramData = bins.map((binStart) => {
+        const binEnd = binStart + binSize
+        const count = Object.entries(propertyData).reduce((sum, [key, value]) => {
+          const length = Number(key)
+          return length >= binStart && length < binEnd ? sum + Number(value) : sum
+        }, 0)
+        return count
+      })
+      const labels = bins.map((binStart) => `${binStart}-${binStart + binSize - 1}`)
+      const color = this.generateColorPalette(1)[0]
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: `Histogram of ${property}`,
+            data: histogramData,
+            backgroundColor: color,
+            borderColor: chroma(color).darken(1.0).hex(),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+    scatterPlotData(xProperty: string, yProperty: string) {
+      // scatterData data structure e.g {"2024-09-01": Array[{ILLUMIA:1}, {Nanopore:7}] ... }
+      const scatterData = this.samplesStore.propertyScatterData[`${xProperty}_${yProperty}`] || {}
+      const labels = Object.keys(scatterData)
+      // Determine if x-axis data is a date or categorical
+      const isDateFormat = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+      const xData = labels.map((label) => (isDateFormat(label) ? label : label))
+      // Extract y values and unwrap Proxy objects
+      const data = labels.flatMap((label, index) => {
+        const xValue = xData[index]
+        const values = scatterData[label as keyof typeof scatterData]
+        return (Array.isArray(values) ? values : []).flatMap((item: Record<string, number>) =>
+          Object.entries(item).map(([key, value]) => ({
+            x: xValue,
+            y: value,
+            category: key,
+          })),
+        )
+      })
+      const uniqueCategories = [...new Set(data.map((point) => point.category))]
+      const colors = this.generateColorPalette(uniqueCategories.length)
+
+      return {
+        labels: labels,
+        datasets: uniqueCategories.map((category, index) => ({
+          label: category, // Chart legend for each category
+          data: data
+            .filter((point) => point.category === category)
+            .map((point) => ({
+              x: point.x,
+              y: point.y,
+              category: point.category,
+            })),
+          backgroundColor: colors[index], // Assign color for the category
+          borderColor: chroma(colors[index]).darken(1.0).hex(),
+          borderWidth: 1.5,
+          pointRadius: 5,
+        })),
+      }
+    },
+    // categorical data in pie, doughnut, and bar charts
+    getSimplePropertyPlotData(property: string) {
+      const propertyData = this.samplesStore.propertyData[property] || {}
+      if (this.isDataEmpty(propertyData)) {
+        return this.emptyChart()
+      }
+      const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
+      const colors = this.generateColorPalette(cleanedData.labels.length)
+      if (cleanedData.labels.includes('Not Reported')) {
+        colors.pop()
+        colors.push('#cccccc') // Add gray color for 'Not Reported'
+      }
+      return {
+        labels: cleanedData.labels,
+        datasets: [
+          {
+            label: `Distribution of ${property}`,
+            data: cleanedData.data,
+            backgroundColor: colors,
+            borderColor: colors.map((color) => chroma(color).darken(1.5).hex()),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+
+
+    async generatePlotData(): Promise<
+      HistogramData | SimplePlotData | ScatterPlotData | undefined
+    > {
+      // Fetch data from the server if not already available in samplesStore
+      if (
+        this.selectedPlotType === 'bar' ||
+        this.selectedPlotType === 'pie' ||
+        this.selectedPlotType === 'doughnut' ||
+        this.selectedPlotType === 'line'
+      ) {
+        if (
+          this.selectedProperty &&
+          (!this.samplesStore.propertyData ||
+            !Object.keys(this.samplesStore.propertyData).includes(this.selectedProperty) ||
+            !this.samplesStore.propertyData[this.selectedProperty] ||
+            Object.keys(this.samplesStore.propertyData[this.selectedProperty]).length === 0)
+        ) {
+          await this.samplesStore.updatePlotCustom(this.selectedProperty)
+        }
+        return this.selectedProperty
+          ? (this.getSimplePropertyPlotData(this.selectedProperty) as SimplePlotData)
+          : undefined
+      }
+
+      if (this.selectedPlotType === 'scatter') {
+        if (this.selectedXProperty && !this.samplesStore.propertyData[this.selectedXProperty]) {
+          if (this.selectedXProperty && this.selectedYProperty) {
+            await this.samplesStore.updatePlotScatter(
+              this.selectedXProperty,
+              this.selectedYProperty,
+            )
+          }
+        }
+        return this.selectedXProperty && this.selectedYProperty
+          ? (this.scatterPlotData(
+              this.selectedXProperty as string,
+              this.selectedYProperty as string,
+            ) as ScatterPlotData)
+          : undefined
+      }
+
+      if (this.selectedPlotType === 'histogram') {
+        if (
+          this.selectedProperty &&
+          (!this.samplesStore.propertyData ||
+            !Object.keys(this.samplesStore.propertyData).includes(this.selectedProperty) ||
+            !this.samplesStore.propertyData[this.selectedProperty] ||
+            Object.keys(this.samplesStore.propertyData[this.selectedProperty]).length === 0)
+        ) {
+          await this.samplesStore.updatePlotCustom(this.selectedProperty)
+        }
+        return this.selectedProperty && this.selectedBinSize !== null
+          ? (this.getHistogramPlotData(
+              this.selectedProperty,
+              this.selectedBinSize,
+            ) as HistogramData)
+          : undefined
+      }
+    },
+
+    generatePlotOptions() {
+      // Generate plot options based on selected plot type
+      if (this.selectedPlotType == 'scatter') {
+        return this.customScatterPlotOptions(
+          this.selectedYProperty ?? '',
+          this.selectedXProperty || '',
+        )
+      } else {
+        return this.customPlotOptions(this.selectedPlotType == 'histogram')
       }
     },
   },
