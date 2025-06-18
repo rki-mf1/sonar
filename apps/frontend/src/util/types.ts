@@ -173,55 +173,53 @@ export type SelectedRowData = {
 }
 
 export type PlotDataSets =
-{
-  label: string; // Label for the dataset
-  data: number[]; // Array of numbers representing histogram data
-  backgroundColor: string; // Hex color code for the background
-  borderColor: string; // Hex color code for the border
-  borderWidth: number; // Width of the border
-  } |
-  {
-  label: string;
-  data: never[];
-
-}
+  | {
+      label: string
+      data: number[]
+      backgroundColor: string
+      borderColor: string
+      borderWidth: number
+    }
+  | {
+      label: string
+      data: never[]
+    }
 export type HistogramData = {
-  labels: string[]; // Array of strings representing bin ranges
-  datasets: Array<PlotDataSets>;
+  labels: string[] // Array of strings representing bin ranges
+  datasets: Array<PlotDataSets>
 }
 
 export type SimplePlotData = {
-  labels: string[];
-  datasets: PlotDataSets[];
+  labels: string[]
+  datasets: PlotDataSets[]
 }
 
-
 export type ScatterPlotData = {
-  labels: string[];
+  labels: string[]
   datasets: {
-    label: string;
+    label: string
     data: {
-        x: number | Date | string;
-        y: number | Date | string;
-    }[];
-    backgroundColor: string;
-    borderColor: string;
-    borderWidth: number;
-}[];
+      x: number | Date | string
+      y: number | Date | string
+    }[]
+    backgroundColor: string
+    borderColor: string
+    borderWidth: number
+  }[]
 }
 
 export type PlotData = {
-  labels: string[];
+  labels: string[]
   datasets: {
-      label: string;
-      data: never[];
-  }[];
+    label: string
+    data: never[]
+  }[]
 }
 
 export type PlotConfig = {
-  type: PlotType | null;
-  propertyName: string | null;
-  plotTitle: string;
-  data: HistogramData | SimplePlotData | ScatterPlotData | undefined;
-  options: ChartOptions;
+  type: PlotType | null
+  propertyName: string | null
+  plotTitle: string
+  data: HistogramData | SimplePlotData | ScatterPlotData | undefined
+  options: ChartOptions
 }

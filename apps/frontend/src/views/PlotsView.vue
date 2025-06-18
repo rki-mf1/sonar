@@ -239,15 +239,15 @@ export default {
         this.selectedPlotType === 'doughnut' ||
         this.selectedPlotType === 'line'
       ) {
-        return !!this.selectedProperty;
+        return !!this.selectedProperty
       }
       if (this.selectedPlotType === 'scatter') {
-        return !!this.selectedXProperty && !!this.selectedYProperty;
+        return !!this.selectedXProperty && !!this.selectedYProperty
       }
       if (this.selectedPlotType === 'histogram') {
-        return !!this.selectedProperty && !!this.selectedBinSize;
+        return !!this.selectedProperty && !!this.selectedBinSize
       }
-      return false;
+      return false
     },
   },
   mounted() {
@@ -309,7 +309,7 @@ export default {
     },
     removePropertyPlot(plot: PlotConfig) {
       this.plots = this.plots.filter(
-        (item) => item.propertyName !== plot.propertyName && item.type !== plot.type,
+        (item) => item.propertyName !== plot.propertyName || item.type !== plot.type,
       )
     },
 
@@ -568,7 +568,7 @@ export default {
         },
       }
     },
-    customPlotOptions(not_display_legend = false): ChartOptions {
+    customChartOptions(not_display_legend = false): ChartOptions {
       return {
         animation: { duration: 1000 },
         maintainAspectRatio: false,
@@ -576,6 +576,12 @@ export default {
           legend: {
             display: !not_display_legend,
             position: 'bottom',
+          },
+          tooltip: {
+            callbacks: {
+              label: (context: TooltipItem<'bar' | 'line' | 'doughnut' | 'pie'>) =>
+                `${context.parsed.y} ${context.dataset.label}`,
+            },
           },
           zoom: {
             pan: {
@@ -586,6 +592,20 @@ export default {
               wheel: { enabled: true },
               pinch: { enabled: true },
               mode: 'x',
+            },
+          },
+        },
+        scales: {
+          x: {
+            title: {
+              display: not_display_legend,
+              text: this.selectedProperty || '',
+            },
+          },
+          y: {
+            title: {
+              display: not_display_legend,
+              text: 'Number of Samples',
             },
           },
         },
@@ -615,13 +635,22 @@ export default {
         plugins: {
           legend: {
             display: true,
+            title: {
+              display: true,
+              text: y_feature || '',
+            },
             position: 'right',
           },
           tooltip: {
             callbacks: {
+              title: (context: TooltipItem<'scatter'>[]) => {
+                // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur mltiple times in x-values
+                const raw = context[0].raw as { x: string; y: number; category: string };
+                return `Date: ${raw.x}`;
+              },
               label: (context: TooltipItem<'scatter'>) => {
                 const raw = context.raw as { x: string; y: number; category: string }
-                return `${y_feature}: ${raw.category}, ${x_feature}: ${raw.x}, number: ${raw.y}`
+                return `${y_feature}: ${raw.category}, ${x_feature}: ${raw.x}, ${raw.y} samples`
               },
             },
           },
@@ -642,14 +671,14 @@ export default {
             type: x_axis_type,
             title: {
               display: true,
-              text: this.selectedXProperty || '',
+              text: x_feature || '',
             },
           },
           y: {
             type: y_axis_type,
             title: {
               display: true,
-              text: this.selectedYProperty || '',
+              text: 'Number of Samples',
             },
           },
         },
@@ -711,7 +740,7 @@ export default {
         labels: labels,
         datasets: [
           {
-            label: `Histogram of ${property}`,
+            label: `samples`,
             data: histogramData,
             backgroundColor: color,
             borderColor: chroma(color).darken(1.0).hex(),
@@ -776,7 +805,7 @@ export default {
         labels: cleanedData.labels,
         datasets: [
           {
-            label: `Distribution of ${property}`,
+            label: `samples`,
             data: cleanedData.data,
             backgroundColor: colors,
             borderColor: colors.map((color) => chroma(color).darken(1.5).hex()),
@@ -785,7 +814,6 @@ export default {
         ],
       }
     },
-
 
     async generatePlotData(): Promise<
       HistogramData | SimplePlotData | ScatterPlotData | undefined
@@ -855,7 +883,11 @@ export default {
           this.selectedXProperty || '',
         )
       } else {
-        return this.customPlotOptions(this.selectedPlotType == 'histogram')
+        return this.customChartOptions(
+          this.selectedPlotType == 'histogram' ||
+            this.selectedPlotType == 'bar' ||
+            this.selectedPlotType == 'line',
+        )
       }
     },
   },

@@ -126,7 +126,7 @@ export default class API {
   get2Properties(params: FilterGroupRoot, x_property: string, y_property: string) {
     const queryString = this.parseQueryString(params)
     const url = `samples/plot_custom_xy/${queryString}`
-    return this.getRequest(url, { x_property: x_property, y_property:y_property }, false)
+    return this.getRequest(url, { x_property: x_property, y_property: y_property }, false)
   }
 
   async getSampleGenomesExport(
