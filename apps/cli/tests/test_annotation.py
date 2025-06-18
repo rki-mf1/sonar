@@ -12,7 +12,11 @@ def test_bcftools_merge_success(
 ):
     monkeypatch.chdir(Path(__file__).parent)
 
-    input_vcfs = ["covid19/1.vcf", "covid19/2.vcf", "covid19/3.vcf"]
+    input_vcfs = [
+        "../../../test-data/sars-cov-2/vcfs/1.vcf",
+        "../../../test-data/sars-cov-2/vcfs/2.vcf",
+        "../../../test-data/sars-cov-2/vcfs/3.vcf",
+    ]
     output_vcf = os.path.join(tmpfile_name, "merged.vcf")
 
     with patch("subprocess.run") as mock_run:
@@ -50,7 +54,7 @@ def test_snpeff_annotate_success(
     monkeypatch, annotator, accesion_SARSCOV2, tmpfile_name
 ):
     monkeypatch.chdir(Path(__file__).parent)
-    input_vcf = "covid19/1.vcf"
+    input_vcf = "../../../test-data/sars-cov-2/vcfs/1.vcf"
     output_vcf = os.path.join(tmpfile_name, "output.anno.vcf")
     database_name = accesion_SARSCOV2
 
@@ -61,7 +65,7 @@ def test_snpeff_annotate_success(
 
 def test_snpeff_annotate_fail(monkeypatch, annotator, accesion_SARSCOV2, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
-    input_vcf = "covid19/1.vcf"
+    input_vcf = "../../../test-data/sars-cov-2/vcfs/1.vcf"
     output_vcf = os.path.join(tmpfile_name, "output.anno.vcf")
     database_name = accesion_SARSCOV2
 
@@ -82,7 +86,7 @@ def test_bcftools_filter_success(
     monkeypatch, annotator, accesion_SARSCOV2, tmpfile_name
 ):
     monkeypatch.chdir(Path(__file__).parent)
-    input_vcf = "covid19/1.vcf"
+    input_vcf = "../../../test-data/sars-cov-2/vcfs/1.vcf"
     output_vcf = os.path.join(tmpfile_name, "output.filtered.vcf")
 
     with patch("subprocess.run") as mock_run:

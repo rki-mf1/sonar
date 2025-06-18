@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sonar-cli"
-version = "1.0.0"
+version = "1.0.1"
 description = "Sonar command line tool to interface with the sonar-backend and PostgreSQL version."
 authors = ["Stephan Fuchs <FuchsS@rki.de>", "Kunaphas Kongkitimanon <KongkitimanonK@hpi.de>", "Matthew Huska <HuskaM@rki.de>"]
 license = "GPL3"
@@ -28,6 +28,7 @@ colorlog = "^6.8.0"
 packaging = "^24.0"
 pango-aliasor = "^0.3.0"
 pyarrow = "^19.0.0"
+pywfa = "^0.5.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.6.0"

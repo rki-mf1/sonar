@@ -1,10 +1,13 @@
 from datetime import datetime
+from datetime import timezone
 from functools import reduce
+import io
 import json
 import operator
 import os
 import pickle
 import uuid
+import zipfile
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models import Count
@@ -135,11 +138,15 @@ class RepliconViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
-        queryset = models.Replicon.objects.distinct("accession").values("accession")
+        queryset = models.Replicon.objects.only("accession").values_list(
+            "accession", flat=True
+        )
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(molecule__reference__accession=ref)
+        distinct_accessions = queryset.distinct()
+
         return Response(
-            {"accessions": [item["accession"] for item in queryset]},
+            {"accessions": distinct_accessions},
             status=status.HTTP_200_OK,
         )
 
@@ -216,6 +223,10 @@ class GeneViewSet(viewsets.ModelViewSet):
 
         elif replicon_id := request.query_params.get("replicon_id"):
             queryset = self.queryset.filter(replicon_id=replicon_id)
+        elif replicon_acc := request.query_params.get("replicon_acc"):
+            queryset = models.GeneSegment.objects.select_related(
+                "gene__replicon"
+            ).filter(gene__replicon__accession=replicon_acc)
         else:
             return Response(
                 {"detail": "Searchable field is missing"},
@@ -223,6 +234,8 @@ class GeneViewSet(viewsets.ModelViewSet):
             )
 
         sample_data = []
+        # TODO : check for mulitple cds's per gene
+        # raise NotImplementedError("Multiple CDS per gene not implemented")
         for item in queryset.all():
             _data = {}
             _data["reference.id"] = item.gene.replicon.reference.id
@@ -239,23 +252,63 @@ class GeneViewSet(viewsets.ModelViewSet):
             _data["gene.start"] = item.gene.start
             _data["gene.end"] = item.gene.end
             _data["gene.description"] = item.gene.description
-            _data["gene.gene_symbol"] = item.gene.gene_symbol
-            _data["gene.gene_accession"] = item.gene.gene_accession
-            _data["gene.gene_sequence"] = item.gene.gene_sequence
-            _data["gene.cds_sequence"] = item.gene.cds_sequence
-            _data["gene.cds_accession"] = item.gene.cds_accession
-            _data["gene.cds_symbol"] = item.gene.cds_symbol
+            _data["gene.gene_symbol"] = item.gene.symbol
+            _data["gene.gene_accession"] = item.gene.accession
+            _data["gene.gene_sequence"] = item.gene.sequence
             _data["gene_segment.id"] = item.id
             _data["gene_segment.gene_id"] = item.gene_id
             _data["gene_segment.start"] = item.start
             _data["gene_segment.end"] = item.end
-            _data["gene_segment.strand"] = item.strand
-            _data["gene_segment.base"] = item.base
-            _data["gene_segment.segment"] = item.segment
+            _data["gene_segment.forward_strand"] = item.forward_strand
+            _data["gene_segment.order"] = item.order
+
+            # Add CDS information
+            cds_list = []
+            for cds in item.gene.cds_set.all():
+                cds_data = {
+                    "cds.id": cds.id,
+                    "cds.accession": cds.accession,
+                    "cds.sequence": cds.sequence,
+                    "cds.description": cds.description,
+                }
+                cds_segments = []
+                for segment in cds.cds_segments.all():
+                    segment_data = {
+                        "cds_segment.id": segment.id,
+                        "cds_segment.order": segment.order,
+                        "cds_segment.start": segment.start,
+                        "cds_segment.end": segment.end,
+                        "cds_segment.forward_strand": segment.forward_strand,
+                    }
+                    cds_segments.append(segment_data)
+                cds_data["cds_segments"] = cds_segments
+
+                # Add Peptide information
+                peptide_list = []
+                for peptide in cds.peptides.all():
+                    peptide_data = {
+                        "peptide.id": peptide.id,
+                        "peptide.description": peptide.description,
+                        "peptide.type": peptide.type,
+                    }
+                    peptide_segments = []
+                    for segment in peptide.peptide_segments.all().order_by("order"):
+                        segment_data = {
+                            "peptide_segment.id": segment.id,
+                            "peptide_segment.order": segment.order,
+                            "peptide_segment.start": segment.start,
+                            "peptide_segment.end": segment.end,
+                        }
+                        peptide_segments.append(segment_data)
+                    peptide_data["peptide_segments"] = peptide_segments
+                    peptide_list.append(peptide_data)
+                cds_data["peptide_list"] = peptide_list
+
+                cds_list.append(cds_data)
+            _data["cds_list"] = cds_list
+
             sample_data.append(_data)
-
         # sample_data =queryset.values()
-
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
@@ -279,8 +332,14 @@ class ReferenceViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
         translation_id = int(request.data.get("translation_id"))
-        gbk_file = request.FILES.get("gbk_file")
+        enable_segment = strtobool(request.data.get("segment"))
+        # if enable_segment:
+        #     gbk_files = request.FILES.getlist("gbk_file")
+        #     import_gbk_files(gbk_files, translation_id)
+        # else:
+        gbk_file = request.FILES.getlist("gbk_file")
         import_gbk_file(gbk_file, translation_id)
+
         return Response(
             {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
@@ -309,9 +368,10 @@ class ReferenceViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
-        queryset = models.Reference.objects.all()
-        accession = [item.accession for item in queryset]
-        return Response(data=accession, status=status.HTTP_200_OK)
+        accession_list = models.Reference.objects.values_list(
+            "accession", flat=True
+        ).distinct()
+        return Response(data=accession_list, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def get_all_references(self, request: Request, *args, **kwargs):
@@ -326,14 +386,45 @@ class ReferenceViewSet(
         queryset = models.Reference.objects.filter(accession=reference)
         if queryset.exists():
             reference_obj = queryset.first()
-            reference_file = reference_obj.name
-            # with open(reference_file, "r") as file:
-            #     data = file.read()
-            return FileResponse(
-                open(reference_file, "rb"),
-                as_attachment=True,
-                filename=os.path.basename(reference_file),
-            )
+            reference_files = reference_obj.name.split(
+                ", "
+            )  # Split the stored file paths
+
+            # Fetch associated replicon accessions
+            replicons = models.Replicon.objects.filter(reference=reference_obj)
+            replicon_accessions = list(replicons.values_list("accession", flat=True))
+            if len(reference_files) == 1:
+                # Only one file, send it directly
+                reference_file = reference_files[0]
+                response = FileResponse(
+                    open(reference_file, "rb"),
+                    as_attachment=True,
+                    filename=os.path.basename(reference_file),
+                )
+
+                # Add replicon_accessions to the response headers
+                response["Replicon-Accessions"] = ",".join(replicon_accessions)
+                return response
+            else:
+                # Multiple files -> Zip them
+                zip_buffer = io.BytesIO()
+
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+                    for ref_file in reference_files:
+                        with open(ref_file, "rb") as f:
+                            zipf.writestr(os.path.basename(ref_file), f.read())
+
+                zip_buffer.seek(0)
+
+                response = FileResponse(
+                    zip_buffer,
+                    as_attachment=True,
+                    filename=f"{reference}.segment.zip",
+                    content_type="application/zip",
+                )
+                # Add replicon_accessions to the response headers
+                response["Replicon-Accessions"] = ",".join(replicon_accessions)
+                return response
         else:
             return Response(
                 {"detail": "No reference found"}, status=status.HTTP_404_NOT_FOUND
@@ -587,7 +678,7 @@ class PropertyViewSet(
                     "name": _property_queryset.name,
                     "query_type": _property_queryset.datatype,
                     "description": _property_queryset.description,
-                    "default": _property_queryset.standard,
+                    "default": _property_queryset.default,
                 }
             )
         data = {"keys": cols, "values": data_list}
@@ -694,7 +785,6 @@ class FileUploadViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"])
     def import_upload(self, request, *args, **kwargs):
-
         # Step 1: Check if zip file is present in the request
         if "zip_file" not in request.FILES:
             return Response(
@@ -737,7 +827,9 @@ class FileUploadViewSet(viewsets.ViewSet):
                 )
 
             filename = (
-                datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3] + "." + jobID
+                datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
+                + "."
+                + jobID
             )
             pickle_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, f"{filename}.pkl")
             with open(pickle_path, "wb") as pickle_file:
@@ -826,10 +918,9 @@ class LineageViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
-
-        distinct_lineages = [
-            item.name for item in models.Lineage.objects.distinct("name")
-        ]
+        distinct_lineages = models.Lineage.objects.values_list(
+            "name", flat=True
+        ).distinct()
         return Response(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
@@ -915,5 +1006,6 @@ class TasksView(
             )
         except models.ProcessingJob.DoesNotExist:
             return Response(
-                data={"detail": "Job not found"}, status=status.HTTP_400_BAD_REQUEST
+                data={"detail": f"Job not found ({job_id})"},
+                status=status.HTTP_400_BAD_REQUEST,
             )

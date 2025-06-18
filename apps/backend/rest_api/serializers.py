@@ -160,15 +160,40 @@ class RepliconSerializer(serializers.ModelSerializer):
 
 class GeneSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
-        for sequence in ["gene_sequence", "cds_sequence"]:
-            if sequence in validated_data:
-                validated_data[sequence] = (
-                    validated_data["sequence"].strip().upper().replace("U", "T")
-                )
+        if "sequence" in validated_data:
+            validated_data["sequence"] = (
+                validated_data["sequence"].strip().upper().replace("U", "T")
+            )
         return super().create(validated_data)
 
     class Meta:
         model = models.Gene
+        fields = "__all__"
+
+
+class CDSSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.CDS
+        fields = "__all__"
+
+
+class CDSSegmentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.CDSSegment
+        fields = "__all__"
+
+
+class PeptideSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Peptide
+        fields = "__all__"
+
+
+class PeptideSegmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.PeptideSegment
         fields = "__all__"
 
 
@@ -228,38 +253,58 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                 dict[self.create_NT_format(mutation)] = annotations
         return dict
 
+    def define_proteomic_label(
+        self,
+        mutation: models.NucleotideMutation,
+        gene_symbol: str,
+        mutation_start: int,
+        mutation_end: int,
+    ):
+        if mutation.is_frameshift:
+            label = f"{gene_symbol}:{mutation.ref}{mutation_start + 1}fs"
+        else:
+            # SNP and INS
+            if mutation.alt != "":
+                label = f"{gene_symbol}:{mutation.ref}{mutation_end}{mutation.alt}"
+            else:  # DEL
+                if mutation_end - mutation_start == 1:
+                    label = f"{gene_symbol}:del:" + str(mutation_start + 1)
+                else:
+                    label = (
+                        f"{gene_symbol}:del:"
+                        + str(mutation_start + 1)
+                        + "-"
+                        + str(mutation_end)
+                    )
+        return label
+
     def get_proteomic_profiles(self, obj: models.Sample):
         # proteomic_profiles are prefetched
-        list = []
-        for alignment in obj.sequence.alignments.all():
-            for mutation in alignment.proteomic_profiles:
+        label_list = []
+        alignments = obj.sequence.alignments.prefetch_related(
+            "amino_acid_mutations__cds__gene",
+        )
+        for alignment in alignments:
+            for mutation in alignment.amino_acid_mutations.all():
                 try:
-                    label = ""
-                    # SNP and INS
-                    if mutation.alt != "":
-                        label = f"{mutation.gene.gene_symbol}:{mutation.ref}{mutation.end}{mutation.alt}"
-                    else:  # DEL
-                        if mutation.end - mutation.start == 1:
-                            label = f"{mutation.gene.gene_symbol}:del:" + str(
-                                mutation.start + 1
-                            )
-                        else:
-                            label = (
-                                f"{mutation.gene.gene_symbol}:del:"
-                                + str(mutation.start + 1)
-                                + "-"
-                                + str(mutation.end)
-                            )
-                    list.append(label)
+                    gene_symbol = mutation.cds.gene.symbol
+                    mutation_start = mutation.start
+                    mutation_end = mutation.end
+                    label = self.define_proteomic_label(
+                        mutation, gene_symbol, mutation_start, mutation_end
+                    )
+                    label_list.append((gene_symbol, mutation_start, label))
+
                 except AttributeError as e:
                     # most of the time this AttributeError outputs
-                    # 'NoneType' object has no attribute 'gene_symbol', so I comment it for now
-                    # to reduce logs print out to a console
-                    # capture the error 'NoneType' object has no attribute 'gene_symbol'
-                    # print(e)
-                    # print(f"{mutation.ref}{mutation.end}{mutation.alt}")
+                    # 'NoneType' object has no attribute 'gene_symbol'
+                    print(e)
+                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue
-        return list
+            sorted_label_list = [
+                item[2] for item in sorted(label_list, key=lambda x: (x[0], x[1]))
+            ]
+        return sorted_label_list
 
     def create_NT_format(self, mutation: models.NucleotideMutation):
         label = ""

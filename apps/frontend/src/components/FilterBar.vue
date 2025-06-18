@@ -85,9 +85,7 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{
-              border: samplesStore.filtersChanged ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
-            }"
+            :disabled="samplesStore.filtersChanged ? false : true"
             @click="updateSamplesInTableAndFilteredStatistics()"
           >
           </PrimeButton>
@@ -120,7 +118,7 @@
             label="&nbsp;Update sample selection"
             severity="warning"
             raised
-            :style="{ border: samplesStore.filtersChanged ? '4px solid #cf3004' : '' }"
+            :disabled="samplesStore.filtersChanged ? false : true"
             @click="closeAdvancedFilterDialogAndUpdate"
           >
           </PrimeButton>
@@ -332,12 +330,13 @@ export default {
     },
     closeAdvancedFilterDialogAndUpdate() {
       if (this.samplesStore.filtersChanged) {
+        this.displayDialogFilter = false
         this.samplesStore.updateSamples()
         this.samplesStore.updateFilteredStatistics()
+        if (this.$route.name === 'Plots') {
+          this.samplesStore.updateFilteredStatisticsPlots()
+        }
       }
-      this.displayDialogFilter = false
-      this.samplesStore.updateSamples()
-      this.samplesStore.updateFilteredStatistics()
     },
     toggleHelp(event: Event) {
       const advancedFiltersHelpRef = this.$refs.advancedFiltersHelp as {
@@ -352,6 +351,9 @@ export default {
     },
     updateSamplesInTableAndFilteredStatistics() {
       this.samplesStore.updateFilteredStatistics()
+      if (this.$route.name === 'Plots') {
+        this.samplesStore.updateFilteredStatisticsPlots()
+      }
       return this.samplesStore.updateSamples()
     },
     async setDefaultTimeRange() {

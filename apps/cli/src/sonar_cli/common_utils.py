@@ -27,7 +27,7 @@ LOGGER = LoggingConfigurator.get_logger()
 @contextmanager
 def open_file_autodetect(file_path: str, mode: str = "r"):
     """
-    Opens a file with automatic packing detection.
+    Opens a file with automatic packing detection and handles symlinks.
 
     Args:
         file_path: The path of the file to open.
@@ -36,6 +36,8 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
     Returns:
         A context manager yielding a file object.
     """
+    # Resolve symlinks
+    file_path = os.path.realpath(file_path)
     # Use the magic library to identify the file type
     file_type = magic.from_file(file_path, mime=True)
 
@@ -47,7 +49,7 @@ def open_file_autodetect(file_path: str, mode: str = "r"):
         zip_file = zipfile.ZipFile(file_path, mode)  # zip
         # Assumes there's one file in the ZIP, adjust as necessary
         file_obj = zip_file.open(zip_file.namelist()[0], mode)
-    elif file_type == "text/plain" or file_type == "application/csv":  # plain
+    elif file_type in ["text/plain", "application/csv", "text/csv"]:  # plain
         file_obj = open(file_path, mode)
     else:
         raise ValueError(f"Unsupported file type: {file_type}")
@@ -119,8 +121,13 @@ def remove_charfromsequence_data(seq: str, char="-") -> str:
 
 
 def read_seqcache(fname):
+    seq = ""
     with open(fname, "r") as handle:
-        seq = handle.readline().strip()
+        for line in handle:
+            # Skip the header
+            if line.startswith(">"):
+                continue
+            seq += line.rstrip()
     return seq
 
 
@@ -364,7 +371,7 @@ def copy_file(src, dest):
 
     # Copy the file
     shutil.copy(src, new_file_path)
-    LOGGER.info(f"File {src} has been copied to {dest}")
+    # LOGGER.info(f"File {src} has been copied to {dest}")
     # Return the new file path
     return new_file_path
 
@@ -380,3 +387,39 @@ def convert_default(value, converter, error_message):
     except ValueError:
         LOGGER.error(error_message)
         exit(1)
+
+
+def extract_filename(file_path, include_extension=True):
+    """
+    Extracts the filename from a given file path.
+
+    Parameters:
+    file_path (str): The full path of the file.
+    include_extension (bool): Whether to include the file extension in the result.
+
+    Returns:
+    str: The filename with or without the extension based on the parameter.
+    """
+    # Get the base name of the file (including extension)
+    filename_with_extension = os.path.basename(file_path)
+
+    # If including extension, return the full filename
+    if include_extension:
+        return filename_with_extension
+
+    # If not including extension, remove the extension
+    filename, _ = os.path.splitext(filename_with_extension)
+    return filename
+
+
+def flatten_list(nested_list):
+    """
+    Recursively flattens a deeply nested list into a one-dimensional list.
+    """
+    flat_list = []
+    for item in nested_list:
+        if isinstance(item, list):
+            flat_list.extend(flatten_list(item))
+        else:
+            flat_list.append(item)
+    return flat_list

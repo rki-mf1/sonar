@@ -1,10 +1,14 @@
+import concurrent
+import glob
 import hashlib
 from itertools import zip_longest
 import os
+from queue import Queue
 import re
 import shutil
 import subprocess
 import sys
+import threading
 import traceback
 from typing import Any
 from typing import Dict
@@ -12,6 +16,7 @@ from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Union
+import zipfile
 
 import pandas as pd
 from sonar_cli.api_interface import APIClient
@@ -23,8 +28,11 @@ from sonar_cli.common_utils import open_file_autodetect
 from sonar_cli.common_utils import remove_charfromsequence_data
 from sonar_cli.common_utils import slugify
 from sonar_cli.config import BASE_URL
+from sonar_cli.config import KSIZE
+from sonar_cli.config import SCALED
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
+from sonar_cli.sourmash_ext import create_cluster_db
 from tqdm import tqdm
 
 # Initialize logger
@@ -62,6 +70,7 @@ class sonarCache:
             temp (bool): Whether to set cache dir temporary or not.
             disable_progress (bool): Whether to disable progress display or not.
         """
+        self.result_queue = Queue()
         self.base_url = db if db else BASE_URL
         self.allow_updates = allow_updates
         self.debug = debug
@@ -77,9 +86,7 @@ class sonarCache:
         if not self.refmols:
             LOGGER.info(f"Cannot find reference: {self.refacc}")
             sys.exit()
-        LOGGER.debug(f"Init refmols: {self.refmols}")
         self.default_refmol_acc = [x for x in self.refmols][0]
-
         self._molregex = re.compile(r"\[molecule=([^\[\]=]+)\]")
 
         self.basedir = TMP_CACHE if not outdir else os.path.abspath(outdir)
@@ -99,6 +106,9 @@ class sonarCache:
         self.error_dir = os.path.join(self.basedir, "error")
         self.anno_dir = os.path.join(self.basedir, "anno")
         self.snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
+        self.blast_dir = os.path.join(self.basedir, "blast")
+
+        os.makedirs(self.snpeff_data_dir, exist_ok=True)
         os.makedirs(self.seq_dir, exist_ok=True)
         os.makedirs(self.ref_dir, exist_ok=True)
         # os.makedirs(self.algn_dir, exist_ok=True)
@@ -109,11 +119,11 @@ class sonarCache:
 
         self._samplefiles = set()
         self.sampleinput_total = 0
-        self._samplefiles_to_profile = set()
+        self._samplefiles_to_profile = 0
         self._samples_dict = dict()
 
         self._refs = set()
-        self._lifts = None
+        self._lifts = {}
         self._cds = set()
         self._tt = set()
 
@@ -142,6 +152,22 @@ class sonarCache:
                 )
                 sys.exit(1)
 
+        # for segment genome
+        self.cluster_db = None
+        self.is_segment_import = False
+        if len(self.refmols) > 1:
+            self.is_segment_import = True
+            LOGGER.info(
+                "Segment genome detected: creating a database for assigning appropriate reference accession"
+            )
+            # BUILD BLAST DATABSE
+            os.makedirs(self.blast_dir, exist_ok=True)
+            self.cluster_db = os.path.join(self.blast_dir, get_fname(self.refacc))
+            create_cluster_db(self.refmols, self.cluster_db, KSIZE, SCALED)
+            self.blast_best_aln = (
+                dict()
+            )  # <-- example { fname: {'LC638384.1' (sampleID):'NC_026435.1' (repliconID) , 'LC778458.1':....} (dict) }
+
     def __enter__(self):
         return self
 
@@ -151,26 +177,38 @@ class sonarCache:
         if self.logfile_obj:
             self.logfile_obj.close()
 
-    def add_fasta_v2(self, *fnames, method=1, chunk_size=1000):  # noqa: C901
+    def add_fasta_v2(
+        self, *fnames, method=1, chunk_size=1000, max_workers=8
+    ):  # noqa: C901
+        """ """
         sample_data: List[Dict[str, Union[str, int]]] = []
-        for fname in fnames:
-            batch_data = []  # Collect data in batches before making API calls
-            for data in self.iter_fasta(fname):
-                batch_data.append(data)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for fname in fnames:
+                batch_data = []
+                for data in self.iter_fasta(fname):
+                    batch_data.append(data)
+                    if len(batch_data) == chunk_size:
+                        executor.submit(self.process_data_batch, batch_data, method)
+                        batch_data = []
+                # Process any remaining data in the last batch
+                if batch_data:
+                    executor.submit(self.process_data_batch, batch_data, method)
+            # Block until all tasks are done
+            executor.shutdown(wait=True)
 
-                if len(batch_data) == chunk_size:
-                    sample_data.extend(self.process_data_batch(batch_data, method))
-                    batch_data = []
-
-            # Process any remaining data in the last batch
-            if batch_data:
-                sample_data.extend(self.process_data_batch(batch_data, method))
+        # merge all queue results
+        while not self.result_queue.empty():
+            sample_data.extend(self.result_queue.get())
 
         return sample_data
 
     def process_data_batch(
         self, batch_data: List[Dict[str, Union[str, int]]], method: str
     ):
+        current_thread = threading.current_thread()
+        LOGGER.debug(
+            f"Thread {current_thread.name} started processing batch of size {len(batch_data)} , method {method} "
+        )
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
 
@@ -178,7 +216,6 @@ class sonarCache:
         json_response = api_client.get_bulk_sample_data(
             [data["name"] for data in batch_data]
         )
-
         sample_dict = {
             sample_info["name"]: {
                 "sample_id": sample_info["sample_id"],
@@ -217,7 +254,7 @@ class sonarCache:
             batch_data[i]["source_acc"] = (
                 self.refmols[self.default_refmol_acc]["accession"]
                 if self.refmols[self.default_refmol_acc]["id"] == data["refmolid"]
-                else None
+                else data["refmol"]
             )
             refseq_accession = data["refmol"]
             batch_data[i]["refseq_id"] = self.get_refseq_id(refseq_accession)
@@ -236,10 +273,13 @@ class sonarCache:
             # del batch_data[i]["sequence"]
             # reformat data and only neccessay keys are kept.
             _return_data = self.cache_sample(**batch_data[i])
-            # TODO: if empty remove batch_data[i] or skip
             batch_data[i] = _return_data
 
-        return batch_data
+        # Note: remove batch_data[i] with empty dict
+        batch_data = list(filter(None, batch_data))
+        # add result to queue
+        self.result_queue.put(batch_data)
+        # return batch_data
 
     def cache_sample(
         self,
@@ -296,7 +336,7 @@ class sonarCache:
             "properties": properties,
             "include_nx": include_nx,
         }
-        fname = name  # self.get_sample_fname(name)  # return fname with full path
+        # fname = name  # self.get_sample_fname(name)  # return fname with full path
         self.sampleinput_total = self.sampleinput_total + 1
         # NOTE: write files only need to be processed
         if self.allow_updates or algnid is None:
@@ -305,15 +345,16 @@ class sonarCache:
             # except OSError:
             #     os.makedirs(os.path.dirname(fname), exist_ok=True)
             #     self.write_pickle(fname, data)
-
-            self._samplefiles_to_profile.add(fname)
-
+            self._samplefiles_to_profile += 1
             # NOTE: IF previous_seqhash != current_seqhash, we have realign and update the variant?
             # uncomment below to enable this
+            return data
         elif seqhash is not None:  # changes in seq content
-            self._samplefiles_to_profile.add(fname)
+            self._samplefiles_to_profile += 1
+            return data
 
-        return data
+        # we skip the existing one
+        return {}
 
     def get_sample_fname(self, sample_name):
         fn = slugify(hashlib.sha1(sample_name.encode("utf-8")).hexdigest())
@@ -329,7 +370,7 @@ class sonarCache:
             with (
                 open_file_autodetect(fname) as handle,
                 tqdm(
-                    desc="processing " + fname + "...",
+                    desc="Read " + fname + "...",
                     total=os.path.getsize(fname),
                     unit="bytes",
                     unit_scale=True,
@@ -344,15 +385,17 @@ class sonarCache:
                     line = line.strip()
                     if line.startswith(">"):
                         if seq:
-                            yield self.process_fasta_entry(header, "".join(seq))
+                            yield self.process_fasta_entry(header, "".join(seq), fname)
                             seq = []
                         header = line[1:]
                     else:
                         seq.append(line)
                 if seq:
-                    yield self.process_fasta_entry(header, "".join(seq))
+                    yield self.process_fasta_entry(header, "".join(seq), fname)
 
-    def process_fasta_entry(self, header: str, seq: str) -> Dict[str, Union[str, int]]:
+    def process_fasta_entry(
+        self, header: str, seq: str, fname: str
+    ) -> Dict[str, Union[str, int]]:
         """
         Formulate a data dict.
 
@@ -378,13 +421,16 @@ class sonarCache:
 
         refmol = self.get_refmol(header)
         if not refmol:
-            sys.exit(
-                "input error: "
-                + sample_id
-                + " refers to an unknown reference molecule ("
-                + self._molregex.search(header)
-                + ")."
-            )
+            # blast assignment for acession
+            try:
+                best_aln_dict = self.blast_best_aln[fname]
+                refmol = best_aln_dict[sample_id]
+                LOGGER.debug(f"Using refmol_acc: {refmol}, {sample_id}")
+            except Exception as e:
+                LOGGER.error(f"An error occurred: {e}")
+                sys.exit(
+                    f"input error: {sample_id} refers to an unknown reference molecule ({self._molregex.search(header)})."
+                )
         seq = harmonize_seq(seq)
         seq = remove_charfromsequence_data(seq, char="-")
         seqhash = hash_seq(seq)
@@ -408,14 +454,30 @@ class sonarCache:
             return default_refmol_acc if cannot find mol_id from the header
         """
         mol = self._molregex.search(fasta_header)
-        if not mol:
+        if mol:
             try:
                 LOGGER.info(f"Using refmol_acc: {self.refmols[mol]['accession']}")
                 return self.refmols[mol]["accession"]
             except Exception:
                 None
+        else:
+            if not self.cluster_db:  # not segment gneome
+                return self.default_refmol_acc
+            elif self.blast_best_aln is not None:
+                return None
 
-        return self.default_refmol_acc
+            # if blast_best_aln is None then use default mol
+            # TODO: dont return default_refmol_acc
+            # return self.default_refmol_acc
+
+            # NOTE: This code will not be triggered.... If I haven't missed anything in the logic or operation before,
+            # however, I should leave the raise error as it is  in case
+            # I miss something or unexpectedly event occurs.
+            LOGGER.error(
+                "An unexpected error occurred at def get_refmol, Please contact us.",
+                exc_info=True,
+            )
+            raise
 
     def get_refseq(self, refmol_acc):
         try:
@@ -450,7 +512,7 @@ class sonarCache:
         # 1. force update?
 
         # In cases:
-        # 1. sample is reuploaded under the same name but changes in  sequence (fasta)
+        # 1. sample is reuploaded under the same name but changes in sequence (fasta)
         # 2. New Sample (no algnid found in database)
         if self.allow_updates or data["algnid"] is None or data["seqhash"] != seqhash:
             data["seqfile"] = self.cache_sequence(data["seqhash"], data["sequence"])
@@ -464,6 +526,7 @@ class sonarCache:
             data["liftfile"] = self.cache_lift(
                 refseq_acc, data["refmol"], self.get_refseq(data["refmol"])
             )
+
             # cache_cds is used for frameshift detection
             # but this will be removed soon, since we use snpEff.
             data["cdsfile"] = None  # self.cache_cds(refseq_acc, data["refmol"])
@@ -511,10 +574,10 @@ class sonarCache:
             yield self.read_pickle(fname)
 
     def cache_sequence(self, seqhash, sequence):
-
         fname = self.get_seq_fname(seqhash)
         seqfasta = f">{seqhash}\n{sequence}\n"
-        if os.path.isfile(fname):
+        # checks if a file with the generated name (fname) already exist
+        if os.path.exists(fname):
             if file_collision(fname, seqfasta):
                 LOGGER.error("seqhash collision: file name:" + fname + ".")
                 sys.exit(
@@ -523,11 +586,11 @@ class sonarCache:
         else:
             try:
                 with open(fname, "w") as handle:
-                    handle.write(">" + seqhash + "\n" + sequence + "\n")
+                    handle.write(seqfasta)
             except OSError:
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
                 with open(fname, "w") as handle:
-                    handle.write(">" + seqhash + "\n" + sequence + "\n")
+                    handle.write(seqfasta)
         return fname
 
     def cache_reference(self, refid, sequence):
@@ -538,7 +601,7 @@ class sonarCache:
             self._refs.add(refid)
         return fname
 
-    def cache_lift(self, refid, refmol_acc, sequence):
+    def cache_lift(self, refseq_acc, refmol_acc, sequence):
         """
         The function takes in a reference id, a reference molecule accession number,
         and a reference sequence. It then checks to see if the reference molecule accession number is in the set of molecules that
@@ -550,7 +613,10 @@ class sonarCache:
         """
         rows = []
         # cache self._lifts
-        if self._lifts is None:
+        if refmol_acc in self._lifts:
+            # Reuse the cached dataframe
+            return self._lifts[refmol_acc]
+        else:
             cols = [
                 "elemid",
                 "nucPos1",
@@ -569,17 +635,20 @@ class sonarCache:
             ]
             # if there is no cds, the lift file will not be generated
             for cds in self.iter_cds_v2(refmol_acc):
+                LOGGER.debug(cds)
                 try:
                     elemid = cds["id"]
                     symbol = cds["symbol"]
                     accession = cds["accession"]
+                    full_seq = cds["sequence"] + "*"  # Full cds sequence
                     coords = [
                         list(group)
                         for group in zip_longest(
                             *[iter(self.get_cds_coord_list(cds))] * 3, fillvalue="-"
                         )
                     ]  # provide a list of triplets for all CDS coordinates
-                    seq = list(reversed(cds["sequence"] + "*"))
+                    # seq = list(reversed(cds["sequence"] + "*"))
+                    seq = list(full_seq)  # Convert AA sequence to list for tracking
                     for aa_pos, nuc_pos_list in enumerate(coords):
 
                         rows.append(
@@ -591,7 +660,7 @@ class sonarCache:
                                 sequence[nuc_pos_list[2]],
                             ]
                             * 2
-                            + [symbol, accession, aa_pos, seq.pop()]
+                            + [symbol, accession, aa_pos, seq[aa_pos]]
                         )
 
                 except Exception as e:
@@ -607,11 +676,8 @@ class sonarCache:
             df = df.reindex(df.columns.tolist(), axis=1)
             # df.to_pickle(fname)
 
-            # for debug
-            # df.to_csv(fname + ".csv")
-            self._lifts = df
-
-        return self._lifts
+            self._lifts[refmol_acc] = df
+            return df
 
     def get_cds_fname(self, refid):
         return os.path.join(self.ref_dir, str(refid) + ".lcds")
@@ -642,41 +708,49 @@ class sonarCache:
         return os.path.join(self.var_dir, fn[:2], fn + ".var")
 
     def iter_cds_v2(self, refmol_acc):
+        """
+        Extracts CDS sequences and their corresponding genomic coordinates.
+        """
         cds = {}
         prev_elem = None
-        gene_rows = APIClient(base_url=self.base_url).get_elements(ref_acc=refmol_acc)
+        if self.is_segment_import:
+            gene_rows = APIClient(base_url=self.base_url).get_elements(
+                molecule_acc=refmol_acc
+            )
+        else:
+            gene_rows = APIClient(base_url=self.base_url).get_elements(
+                ref_acc=refmol_acc
+            )
 
         for row in gene_rows:
+            for cds_entry in row["cds_list"]:  # Iterate through cds_list
 
-            if prev_elem is None:
-                prev_elem = row["gene_segment.gene_id"]
-            elif row["gene_segment.gene_id"] != prev_elem:
-                yield cds
-                cds = {}
-                prev_elem = row["gene_segment.gene_id"]
-            if cds == {}:
+                if prev_elem is None:
+                    prev_elem = cds_entry["cds.id"]
+                elif cds_entry["cds.id"] != prev_elem:
+                    yield cds
+                    cds = {}
+                    prev_elem = cds_entry["cds.id"]
 
-                cds = {
-                    "id": row["gene_segment.gene_id"],
-                    "accession": row["gene.cds_accession"],
-                    "symbol": row["gene.cds_symbol"],
-                    "sequence": row["gene.cds_sequence"],
-                    "ranges": [
-                        (
-                            row["gene_segment.start"],
-                            row["gene_segment.end"],
-                            row["gene_segment.strand"],
-                        )
-                    ],
-                }
-            else:
-                cds["ranges"].append(
-                    (
-                        row["gene_segment.start"],
-                        row["gene_segment.end"],
-                        row["gene_segment.strand"],
-                    )
-                )
+                if not cds:
+                    cds = {
+                        "id": cds_entry["cds.id"],
+                        "accession": cds_entry["cds.accession"],
+                        "symbol": row["gene.gene_symbol"],  # Gene symbol from gene
+                        "sequence": cds_entry["cds.sequence"],  # Protein sequence
+                        "ranges": [
+                            (
+                                segment["cds_segment.start"],
+                                segment["cds_segment.end"],
+                                (
+                                    1 if segment["cds_segment.forward_strand"] else -1
+                                ),  # Convert bool to strand
+                            )
+                            for segment in cds_entry[
+                                "cds_segments"
+                            ]  # Extract ranges from cds_segments
+                        ],
+                    }
 
         if cds:
             yield cds
@@ -721,7 +795,7 @@ class sonarCache:
             return None
 
     def perform_paranoid_cached_samples(  # noqa: C901
-        self, sample_data_dict_list
+        self, sample_data_dict_list, must_pass_paranoid
     ) -> list:
         """
         This function performs the paranoid test without fetching variants from the database.
@@ -734,8 +808,7 @@ class sonarCache:
         """
         list_fail_samples = []
         passed_samples_list = []
-        total_samples = len(self._samplefiles_to_profile)
-
+        total_samples = len(sample_data_dict_list)
         for sample_data in tqdm(
             sample_data_dict_list,
             total=total_samples,
@@ -749,15 +822,22 @@ class sonarCache:
                 # NOTE: right now, we no longer need var_file.
                 del sample_data["var_file"]
                 del sample_data["lift_file"]
-                if not sample_data["var_parquet_file"] is None:
+                if sample_data["var_parquet_file"] is not None:
                     # SECTION:ReadVar
                     var_df = pd.read_parquet(sample_data["var_parquet_file"])
-                    nt_df = var_df[(var_df["type"] == "nt")]
-                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
-                        "records"
-                    )
+                    # Currently var_df might be empty if the imported sequence
+                    # is identical to the reference
+                    if not var_df.empty:
+                        nt_df = var_df[(var_df["type"] == "nt")]
+                        iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                            "records"
+                        )
+                    else:
+                        LOGGER.warning(
+                            f"Paranoid test: var file ({sample_data['var_parquet_file']}) is missing for sample {sample_data['name']}"
+                        )
                     # SECTION: Paranoid
-                    if not sample_data["seqhash"] is None:
+                    if sample_data["seqhash"] is not None:
                         # Get Reference sequence.
                         seq = list(
                             self.get_refseq(refmol_acc=sample_data["source_acc"])
@@ -785,7 +865,23 @@ class sonarCache:
                             orig_seq = handle.read()
 
                         seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
+
                         if seq != orig_seq:
+                            LOGGER.warning(
+                                f"Failed paranoid test for sample '{sample_name}'"
+                            )
+
+                            # Only for printing the sequences with some indication
+                            # of mismatches between the original and target sequence
+                            min_len = min(len(orig_seq), len(seq))
+                            mismatches = []
+                            for a, b in zip(
+                                list(orig_seq[:min_len]), list(seq[:min_len])
+                            ):
+                                mismatches.append("|" if a == b else "X")
+                            LOGGER.debug(f"Original: {orig_seq}")
+                            LOGGER.debug(f"        : {''.join(mismatches)}")
+                            LOGGER.debug(f"Rebuilt : {seq}")
 
                             # NOTE: comment this part, for now, we need to discuss which
                             # information we want to report for the failed sample.
@@ -846,8 +942,11 @@ class sonarCache:
                 LOGGER.error(sample_data)
                 sys.exit("Unknown import error")
 
+        count_sample = total_samples - len(list_fail_samples)
+        LOGGER.info(f"Total passed samples: {count_sample}")
+
         if list_fail_samples:
-            LOGGER.warn(
+            LOGGER.warning(
                 "Some samples fail in sanity check; please check import.log under the cache directory."
             )
             # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
@@ -858,63 +957,173 @@ class sonarCache:
 
             # currently, we report only failed sample IDs.
             self.error_logfile_obj.write("Fail sample during alignment:----\n")
+            LOGGER.warning("Failed sample IDs:")
             for fail_sample in list_fail_samples:
                 self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
-
-        count_sample = total_samples - len(list_fail_samples)
-        LOGGER.info(f"Total passed samples: {count_sample}")
+                LOGGER.warning(fail_sample["sample_name"])
+            if must_pass_paranoid:
+                sys.exit("Some sequences failed the paranoid test, aborting.")
 
         return passed_samples_list
 
-    def build_snpeff_cache(self, reference):
-        """Build snpeff cache for the given reference,
-        1. Request the gbk file from server
-        2. Then save it to the cache directory (self.basedir/snpeff_data/{reference}/genes.gbk).
-        3. Use snpeff to build the cache.
-        snpEff build -nodownload MN908947.3 -genbank -dataDir self.basedir/snpeff_data/snpeffDB/ -v
-        4. Check if the file is built or failed.
+    def build_snpeff_cache(self, reference):  # noqa: C901
+        """Build snpEff cache for the given reference,
+        supporting both single and multiple GenBank files (segments).
+
+        1. Request the GBK file (or ZIP if segment).
+        2. Extract accession versions from GenBank headers.
+        3. Create folders for each replicon using accession versions.
+        4. Update snpEff.config with replicon accessions.
+        5. Build the snpEff cache for each replicon.
         """
         params = {
             "reference": reference,
         }
+
         if os.path.exists(os.path.join(self.snpeff_data_dir, reference, ".done")):
-            LOGGER.info(f"snpeff cache for reference {reference} is already built.")
+            # for multiple replicons, we assume if there is a refernce accesion and .done file,
+            # Thery are already built.
+            LOGGER.info(f"snpEff cache for reference {reference} is already built.")
             return True
 
         response = APIClient(base_url=self.base_url).get_reference_genbank(params)
         if response.status_code == 200:
-            gbk_file = os.path.join(self.snpeff_data_dir, reference, "genes.gbk")
-            os.makedirs(os.path.dirname(gbk_file), exist_ok=True)
+            LOGGER.info("----------- Build snpEff cache -----------")
+            gbk_files = []
+            # Check if response is a ZIP file (multiple segments) or a single GBK
+            content_type = response.headers.get("Content-Type", "")
+            snpeff_data_dir_tmp = os.path.join(self.snpeff_data_dir, "tmp")
+            os.makedirs(snpeff_data_dir_tmp, exist_ok=True)
 
-            with open(gbk_file, "wb") as file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    file.write(chunk)
-            LOGGER.info(f"Genbank downloaded successfully: {gbk_file}")
-            # build snpeff cache
-            snpeff_data_dir = os.path.join(self.basedir, "snpeff_data")
-            os.makedirs(snpeff_data_dir, exist_ok=True)
-            cmd = [
-                "snpEff",
-                "build",
-                "-nodownload",
-                reference,
-                "-genbank",
-                "-dataDir",
-                self.snpeff_data_dir,
-            ]
-            LOGGER.info(f"Building snpeff cache for reference {reference}")
-            try:
-                subprocess.run(cmd, capture_output=True, check=True)
-                # write .done file for later checking if the cahce is built already
-                # so we dont need to rebuild it again.
-                with open(
-                    os.path.join(self.snpeff_data_dir, reference, ".done"), "w"
-                ) as handle:
-                    handle.write("done")
-            except subprocess.CalledProcessError as e:
-                LOGGER.error(f"An error occurred: {e}")
-                sys.exit(1)
+            if "zip" in content_type:  # Zip file, Multi GBK files
+                zip_path = os.path.join(snpeff_data_dir_tmp, f"{reference}.segment.zip")
+                with open(zip_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+                # Extract ZIP file
+                with zipfile.ZipFile(zip_path, "r") as zipf:
+                    zipf.extractall(snpeff_data_dir_tmp)
+                    gbk_files = [
+                        os.path.join(snpeff_data_dir_tmp, f) for f in zipf.namelist()
+                    ]
+                LOGGER.debug(f"Detect segment genome, all GBKs: {gbk_files}")
+            else:
+                # Single GBK file
+                gbk_file = os.path.join(snpeff_data_dir_tmp, f"{reference}.gbk")
+                os.makedirs(os.path.dirname(gbk_file), exist_ok=True)
+                with open(gbk_file, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                gbk_files = [gbk_file]
+
+            # Extract accession versions and organize files
+            replicon_accessions = []
+            for gbk_file in gbk_files:
+                with open(gbk_file, "r") as f:
+                    for line in f:
+                        if line.startswith("VERSION"):
+                            accession = line.split()[1]
+                            replicon_accessions.append(accession)
+                            break
+                # Create a folder for each replicon and move the file
+                replicon_dir = os.path.join(self.snpeff_data_dir, accession)
+                os.makedirs(replicon_dir, exist_ok=True)
+                shutil.move(gbk_file, os.path.join(replicon_dir, "genes.gbk"))
+            LOGGER.info(f"Replicon accession: {replicon_accessions}")
+
+            # Update snpEff.config with replicon accessions
+            for replicon_accession in replicon_accessions:
+                self.update_snpeff_config(replicon_accession)
+
+            # Build snpEff cache for each segment
+            for replicon_accession in replicon_accessions:
+                # get folder name from gbk_file since it represents an each accession
+                replicon_dir = os.path.join(self.snpeff_data_dir, replicon_accession)
+                _done_file = os.path.join(replicon_dir, ".done")
+                # Skip if already built
+                if os.path.exists(_done_file):
+                    LOGGER.info(
+                        f"snpEff cache for {replicon_accession} already exists, skipping..."
+                    )
+                    continue
+
+                cmd = [
+                    "snpEff",
+                    "build",
+                    "-nodownload",
+                    replicon_accession,
+                    "-genbank",
+                    "-dataDir",
+                    self.snpeff_data_dir,
+                ]
+
+                LOGGER.info(f"Building snpEff cache for {replicon_accession}")
+                try:
+                    subprocess.run(cmd, capture_output=True, check=True)
+                    # Mark this segment as done
+                    with open(_done_file, "w") as f:
+                        f.write("done")
+
+                except subprocess.CalledProcessError as e:
+                    LOGGER.error(
+                        f"Failed to build snpEff for {replicon_accession}: {e}"
+                    )
+                    sys.exit(1)
+
+            # remove tmp folder
+            shutil.rmtree(snpeff_data_dir_tmp)
+            LOGGER.info("----------- Done -----------")
             return True
         else:
             LOGGER.error(f"Cannot get genbank file for reference {reference}")
             return False
+
+    def find_snpeff_config(self):
+        """Finds the latest snpEff.config file in the active Conda environment."""
+        conda_env_dir = os.getenv("CONDA_PREFIX")
+
+        if not conda_env_dir:
+            LOGGER.error("No conda environment is currently activated.")
+            sys.exit(1)
+
+        # Look for snpEff-* directories inside 'share'
+        share_path = os.path.join(conda_env_dir, "share")
+        snpeff_versions = sorted(
+            glob.glob(os.path.join(share_path, "snpeff-*")), reverse=True
+        )
+
+        if not snpeff_versions:
+            LOGGER.error("No snpEff installation found in the Conda environment.")
+            sys.exit(1)
+        else:
+            LOGGER.debug(
+                f"Found {snpeff_versions} snpEff installations in the Conda environment."
+            )
+        # Take the latest version directory
+        latest_snpeff_dir = snpeff_versions[0]
+        config_path = os.path.join(latest_snpeff_dir, "snpEff.config")
+
+        if not os.path.exists(config_path):
+            LOGGER.error(f"snpEff.config not found in {latest_snpeff_dir}")
+            sys.exit(1)
+
+        return config_path
+
+    def update_snpeff_config(self, reference):
+        """Updates snpEff.config by adding a new reference genome."""
+        config_file = self.find_snpeff_config()
+        genome_entry = f"{reference}.genome : {reference}"
+
+        with open(config_file, "r") as f:
+            lines = f.readlines()
+
+        # Check if reference already exists
+        if any(genome_entry in line for line in lines):
+            LOGGER.debug(f"{reference} is already present in {config_file}.")
+        else:
+            # Append new reference
+            with open(config_file, "a") as f:
+                f.write(f"\n{genome_entry}\n")
+
+            LOGGER.debug(f"Added '{genome_entry}' to {config_file}.")

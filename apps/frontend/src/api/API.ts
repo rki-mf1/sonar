@@ -95,6 +95,13 @@ export default class API {
     const url = `samples/filtered_statistics/${queryString}`
     return this.getRequest(url, {} as JSON, false)
   }
+
+  getFilteredStatisticsPlots(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/filtered_statistics_plots/${queryString}`
+    return this.getRequest(url, {} as JSON, false)
+  }
+
   async getSampleGenomesExport(
     params: FilterGroupRoot,
     columns: string[],

@@ -524,6 +524,11 @@ def create_subparser_import(
         help="Save additional files to the cache dir that can be useful when debugging errors",
         action="store_true",
     )
+    parser.add_argument(
+        "--must-pass-paranoid",
+        help="abort import if any sequence fails the 'paranoid' test",
+        action="store_true",
+    )
     return subparsers, parser
 
 
@@ -539,8 +544,16 @@ def create_subparser_add_reference(
     parser.add_argument(
         "--gb",
         metavar="FILE",
-        help="genbank file of a reference genome",
+        help=(
+            "Genbank file(s) of a reference genome. Normally, one genbank file per one reference genome, "
+            "however, in a case of a segmented genome (multiple genbank files), user can provide multiple files. "
+            "For example, --gb InfluenzaA_H1N1_seg1.gb InfluenzaA_H1N1_seg2.gb InfluenzaA_H1N1_seg7.gb ... "
+            "This will automatically treat this import as a segmented genome, and the first file will be used as the "
+            "index in the reference table and shown information in ref-list command."
+        ),
         type=str,
+        nargs="+",
+        default=[],
         required=True,
     )
 
@@ -739,10 +752,13 @@ def handle_import(args: argparse.Namespace):
     elif args.method == 3:
         LOGGER.info("Alignment Tool: WFA2-lib")
     else:
-        LOGGER.warn("Invalid --method. Please use 'import -h' to see available methods")
+        LOGGER.warning(
+            "Invalid --method. Please use 'import -h' to see available methods"
+        )
         exit(1)
     LOGGER.info(f"Skip N/X mutation: {args.skip_nx}")
     LOGGER.info(f"Variant Annotation: {args.auto_anno}")
+    LOGGER.info(f"All sequences must pass 'paranoid' test: {args.must_pass_paranoid}")
     sonarUtils.import_data(
         db=args.db,
         fasta=args.fasta,
@@ -761,6 +777,7 @@ def handle_import(args: argparse.Namespace):
         no_upload_sample=args.no_upload,
         include_nx=not args.skip_nx,
         debug=args.debug,
+        must_pass_paranoid=args.must_pass_paranoid,
     )
 
 
@@ -823,7 +840,7 @@ def handle_list_ref(args: argparse.Namespace):
 
 
 def handle_add_ref(args: argparse.Namespace):
-    sonarUtils.add_ref_by_genebank_file(reference_gb=args.gb)
+    sonarUtils.add_ref_by_genebank_file(reference_gbs=args.gb)
 
 
 def handle_delete_ref(args: argparse.Namespace):

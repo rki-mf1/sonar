@@ -58,7 +58,7 @@ class DatabaseInfoView(
         queryset = SampleViewSet()._get_filtered_queryset(request)
         statistics = SampleViewSet.get_statistics()
         total_samples = statistics["samples_total"]
-        meta_data_coverage = SampleViewSet()._get_meta_data_coverage(queryset)
+        meta_data_coverage = SampleViewSet().get_meta_data_coverage(queryset)
         # Add percentages
         for key, count in meta_data_coverage.items():
             percentage = (count / total_samples) * 100 if total_samples > 0 else 0
@@ -72,9 +72,6 @@ class DatabaseInfoView(
                 "latest_sampling_date": statistics["latest_sample_date"],
             }
         )
-
-        dict["database_size"] = self.get_database_size()
-        dict["database_version"] = self.get_database_version()
         # Earliest and Latest Genome Import
         earliest_genome_import = models.Sample.objects.order_by(
             "init_upload_date"
@@ -109,10 +106,12 @@ class DatabaseInfoView(
         )
         # Annotated Proteins
         annotated_proteins = models.Gene.objects.filter(
-            cds_symbol__isnull=False
-        ).values_list("cds_symbol", flat=True)
+            cds__gene__symbol__isnull=False
+        ).values_list("symbol", flat=True)
         dict["annotated_proteins"] = ", ".join(sorted(set(annotated_proteins)))
 
+        dict["database_size"] = self.get_database_size()
+        dict["database_version"] = self.get_database_version()
         return Response(data={"detail": dict}, status=status.HTTP_200_OK)
 
     def get_database_size(self):

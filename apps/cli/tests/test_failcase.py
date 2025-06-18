@@ -17,13 +17,13 @@ def test_match_no_ref(capfd, api_url):
     assert pytest_wrapped_e.value.code == 1
 
 
-def test_add_dupref(monkeypatch, capfd, api_url):
+def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     """
     Test case to add a duplicated reference.
     NOTE: Right now, we allows adding a duplicated reference and updates it if it already exists
     """
     monkeypatch.chdir(Path(__file__).parent)
-    new_ref_file = "influenza/InfluA_H7N9_seg6.gb"
+    new_ref_file = "../../../test-data/HIV/NC_001802.1.gb"
 
     # Add the reference for the first time
     code = run_cli(f"add-ref --db {api_url} --gb {new_ref_file}")

@@ -1,0 +1,99 @@
+LOCUS       FJ766841                1557 bp    cRNA    linear   VRL 28-FEB-2009
+DEFINITION  Influenza B virus (B/Brisbane/60/2008) segment 6 NB protein (NB)
+            and neuraminidase (NA) genes, complete cds.
+ACCESSION   FJ766841
+VERSION     FJ766841.1
+KEYWORDS    .
+SOURCE      Influenza B virus (B/Brisbane/60/2008)
+  ORGANISM  Influenza B virus (B/Brisbane/60/2008)
+            Viruses; Riboviria; Orthornavirae; Negarnaviricota;
+            Polyploviricotina; Insthoviricetes; Articulavirales;
+            Orthomyxoviridae; Betainfluenzavirus; Betainfluenzavirus
+            influenzae.
+REFERENCE   1  (bases 1 to 1557)
+  AUTHORS   Komadina,N.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (12-FEB-2009) WHO CC for Reference and Research on
+            Influenza, Parkville, 45 Poplar Rd., Parkville, Victoria 3052,
+            Australia
+COMMENT     'Some of the information does not have GenBank feature identifiers
+            and is being provided in the comment section.'.
+            
+            ##EpifluData-START##
+            Isolate             :: B/Brisbane/60/2008
+            Segment_name        :: NA
+            Host_gender         :: M
+            Host_age            :: 15
+            Passage_history     :: MDCKX/MDCK1
+            Country             :: Australia
+            State/Province      :: Queensland
+            Localization_detail :: Gold Coast
+            Collection_day      :: 4
+            Collection_month    :: 8
+            Collection_year     :: 2008
+            EPI_accession       :: EPI173276
+            ##EpifluData-END##
+FEATURES             Location/Qualifiers
+     source          1..1557
+                     /organism="Influenza B virus (B/Brisbane/60/2008)"
+                     /mol_type="viral cRNA"
+                     /strain="B/Brisbane/60/2008"
+                     /host="Homo sapiens; gender M; age 15"
+                     /db_xref="taxon:604436"
+                     /segment="6"
+                     /geo_loc_name="Australia: Queensland, Gold Coast"
+                     /collection_date="04-Aug-2008"
+     gene            47..349
+                     /gene="NB"
+     CDS             47..349
+                     /gene="NB"
+                     /codon_start=1
+                     /product="NB protein"
+                     /protein_id="ACN29382.1"
+                     /translation="MNNATFNYTNVNPIPHIRGSVIITICVSFIIILTIFGYIAKILT
+                     NRNNCTNNAIGLCKRIKCSGCEPFCNKRGDTSSPRTGVDIPAFILPGLNLSESTPN"
+     gene            54..1454
+                     /gene="NA"
+     CDS             54..1454
+                     /gene="NA"
+                     /codon_start=1
+                     /product="neuraminidase"
+                     /protein_id="ACN29381.1"
+                     /translation="MLPSTIQTLTLFLTSGGVLLSLYVSASLSYLLYSDILLKFSPTE
+                     ITAPTMPLDCANASNVQAVNRSATKGVTLLLPEPEWTYPRLSCPGSTFQKALLISPHR
+                     FGETKGNSAPLIIREPFIACGPNECKHFALTHYAAQPGGYYNGTRGDRNKLRHLISVK
+                     LGKIPTVENSIFHMAAWSGSACHDGKEWTYIGVDGPDNNALLKVKYGEAYTDTYHSYA
+                     NKILRTQESACNCIGGNCYLMITDGSASGVSECRFLKIREGRIIKEIFPTGRVKHTEE
+                     CTCGFASNKTIECACRDNSYTAKRPFVKLNVETDTAEIRLMCTDTYLDTPRPNDGSIT
+                     GPCESNGDKGSGGIKGGFVHQRMESKIGRWYSRTMSKTERMGMGLYVKYDGDPWADSD
+                     ALAFSGVMVSMKEPGWYSFGFEIKDKKCDVPCIGIEMVHDGGKETWHSAATAIYCLMG
+                     SGQLLWDTVTGVDMAL"
+ORIGIN      
+        1 agcagaagca gagcatcttc tcaaaactga ggcaaatagg ccaaaaatga acaatgctac
+       61 cttcaactat acaaacgtta accctattcc tcacatcagg gggagtgtta ttatcactat
+      121 atgtgtcagc ttcattatca tacttactat attcggatat attgctaaaa ttctcaccaa
+      181 cagaaataac tgcaccaaca atgccattgg attgtgcaaa cgcatcaaat gttcaggctg
+      241 tgaaccgttc tgcaacaaaa ggggtgacac ttcttctccc agaaccggag tggacatacc
+      301 cgcgtttatc ttgcccgggc tcaacctttc agaaagcact cctaattagc cctcatagat
+      361 tcggagaaac caaaggaaac tcagctccct tgataataag ggaacctttt attgcttgtg
+      421 gaccaaatga atgcaaacac tttgctctaa cccattatgc agcccaacca gggggatact
+      481 acaatggaac aagaggagac agaaacaagc tgaggcatct aatttcagtc aaattgggca
+      541 aaatcccaac agtagaaaac tccattttcc acatggcagc atggagcggg tccgcgtgcc
+      601 atgatggtaa ggaatggaca tatatcggag ttgatggccc tgacaataat gcattgctca
+      661 aagtaaaata tggagaagca tatactgaca cataccattc ctatgcaaac aaaatcctaa
+      721 gaacacaaga aagtgcctgc aattgcatcg ggggaaattg ttatcttatg ataactgatg
+      781 gctcagcttc aggtgttagt gaatgcagat ttcttaagat tcgagagggc cgaataataa
+      841 aagaaatatt tccaacagga agagtaaaac acactgagga atgcacatgc ggatttgcca
+      901 gcaataaaac catagaatgt gcctgtagag ataacagtta cacagcaaaa agaccttttg
+      961 tcaaattaaa cgtggagact gatacagcag aaataagatt gatgtgcaca gatacttatt
+     1021 tggacacccc cagaccaaac gatggaagca taacaggccc ttgtgaatct aatggggaca
+     1081 aagggagtgg aggcatcaag ggaggatttg ttcatcaaag aatggaatcc aagattggaa
+     1141 ggtggtactc tcgaacgatg tctaaaactg aaaggatggg gatgggactg tatgtcaagt
+     1201 atgatggaga cccatgggct gacagtgatg ccctagcttt tagtggagta atggtttcaa
+     1261 tgaaagaacc tggttggtac tcctttggct tcgaaataaa agataagaaa tgcgatgtcc
+     1321 cctgtattgg gatagagatg gtacatgatg gtggaaaaga gacttggcac tcagcagcaa
+     1381 cagccattta ctgtttaatg ggctcaggac agctgctgtg ggacactgtc acaggtgttg
+     1441 acatggctct gtaatggagg aatggttgag tctgttctaa accctttgtt cctgttttgt
+     1501 ttgaacaatt gtccttacta aacttaattg tttctgaaaa atgctcttgt tactact
+//
+

@@ -16,7 +16,7 @@ def find_or_create_property(
                 "datatype": datatype,
                 "naquerytypeme": querytype,
                 "description": description,
-                "standard": default,
+                "default": default,
             }
         )
         if obj.is_valid():
