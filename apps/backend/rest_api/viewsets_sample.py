@@ -1,5 +1,5 @@
+import _csv
 import ast
-from collections import defaultdict
 from collections import OrderedDict
 import csv
 from dataclasses import dataclass
@@ -7,12 +7,10 @@ from datetime import datetime
 from datetime import timedelta
 import json
 import os
-import pathlib
 import re
 import traceback
 from typing import Generator
 
-import _csv
 from dateutil.rrule import rrule
 from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
