@@ -645,8 +645,8 @@ export default {
             callbacks: {
               title: (context: TooltipItem<'scatter'>[]) => {
                 // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur mltiple times in x-values
-                const raw = context[0].raw as { x: string; y: number; category: string };
-                return `Date: ${raw.x}`;
+                const raw = context[0].raw as { x: string; y: number; category: string }
+                return `Date: ${raw.x}`
               },
               label: (context: TooltipItem<'scatter'>) => {
                 const raw = context.raw as { x: string; y: number; category: string }
