@@ -346,10 +346,21 @@ class ReferenceViewSet(
 
     @action(detail=False, methods=["get"])
     def dataset_options(self, request, *args, **kwargs):
-        references = models.Reference.objects.values_list("organism", "accession")
-        concatenated = [f"{org.strip()} ({acc})" for org, acc in references]
+        references = models.Reference.objects.prefetch_related(
+            "replicons__alignments__sequence__samples"
+        ).values_list("organism", "accession")
+        resp_dict = {}
+        for reference in references:
+            samples = []
+            for replicon in reference.replicons:
+                for alignment in replicon.alignments:
+                    for sample in alignment.sequence.samples:
+                        samples.append(sample)
+            resp_dict[reference.organism + " " + reference.accession] = samples
+        
+        
         return Response(
-            {"pathogens": concatenated},
+            {"pathogens": resp_dict},
             status=status.HTTP_200_OK,
         )
 
