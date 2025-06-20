@@ -10,6 +10,13 @@ from sonar_cli.logging import LoggingConfigurator
 
 LOGGER = LoggingConfigurator.get_logger()
 
+# Rules
+# 1. Get substitutions
+# 2.
+# 3.
+# 4.
+# 5.
+
 
 def read_nextclade_json_streaming(json_file: str, chunk_size: int = 100):  # noqa: C901
     """
