@@ -345,12 +345,11 @@ class ReferenceViewSet(
         )
 
     @action(detail=False, methods=["get"])
-    def distinct_pathogen_names(self, request, *args, **kwargs):
-        distinct_pathogens = [
-            item.organism for item in models.Reference.objects.distinct("organism")
-        ]
+    def dataset_options(self, request, *args, **kwargs):
+        references = models.Reference.objects.values_list("organism", "accession")
+        concatenated = [f"{org.strip()} ({acc})" for org, acc in references]
         return Response(
-            {"pathogens": distinct_pathogens},
+            {"pathogens": concatenated},
             status=status.HTTP_200_OK,
         )
 
