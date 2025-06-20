@@ -53,6 +53,16 @@ An interactive web frontend built with Vue 3 and Vite, allowing users to:
 
 See apps/frontend/README.md for setup and customization.
 
+## Download sonar
+
+```sh
+git clone https://github.com/rki-mf1/sonar.git
+cd sonar
+```
+## Contributing
+
+Contributions to sonar are welcome! If you encounter issues or have suggestions for improvements, please open an issue on the GitHub repository.
+
 ## 📄 License
 
 This project is licensed under the BSD License.
