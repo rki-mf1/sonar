@@ -346,21 +346,25 @@ class ReferenceViewSet(
 
     @action(detail=False, methods=["get"])
     def dataset_options(self, request, *args, **kwargs):
-        references = models.Reference.objects.prefetch_related(
-            "replicons__alignments__sequence__samples"
-        ).values_list("organism", "accession")
-        resp_dict = {}
-        for reference in references:
-            samples = []
-            for replicon in reference.replicons:
-                for alignment in replicon.alignments:
-                    for sample in alignment.sequence.samples:
-                        samples.append(sample)
-            resp_dict[reference.organism + " " + reference.accession] = samples
-        
-        
+        """
+        Mapping of references to their associated dataset values.
+        For each unique combination of organism and accession from the Reference table,
+        this returns the corresponding dataset values found in the Sample table.
+        """
+        queryset = models.Sample.objects.values(
+            accession=F("sequence__alignments__replicon__reference__accession"),
+            organism=F("sequence__alignments__replicon__reference__organism"),
+            data_set_values=F("data_set"),
+        ).distinct()
+
+        result = {}
+        for reference in queryset:
+            result[f"{reference['organism']} ({reference['accession']})"] = reference[
+                "data_set_values"
+            ]
+
         return Response(
-            {"pathogens": resp_dict},
+            result,
             status=status.HTTP_200_OK,
         )
 
