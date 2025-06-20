@@ -65,12 +65,19 @@ Contributions to sonar are welcome! If you encounter issues or have suggestions 
 
 ## 📄 License
 
-This project is licensed under the BSD License.
+This project is licensed under the GNU Affero General Public License (AGPL).
 The third-party software libraries used are each licensed under their own licenses.
 See LICENSE and THIRD-PARTY-LICENSES.txt for details.
 
 ## 🙏 Acknowledgments
 
-Sonar is built on the foundation of covsonar and mpoxsonar, with contributions from a wide range of collaborators.
+This project has been developed as part of the following scientific initiatives:
 
-Special thanks to all Sonar contributors.
+- DAKI-FWS – Daten- und KI-gestütztes Frühwarnsystem zur Stabilisierung der deutschen Wirtschaft, funded by the Bundesministerium für Wirtschaft und Klimaschutz (BMWK).
+
+- HERA – Health Emergency Preparedness and Response Authority, funded by the European Commission.
+
+We also gratefully acknowledge the support of the Hasso Plattner Institute (HPI).
+
+Sonar is built on the foundation of covsonar and mpoxsonar, with contributions from a wide range of collaborators.
+Special thanks to all Sonar contributors for their invaluable input and dedication.
