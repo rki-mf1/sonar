@@ -86,7 +86,7 @@
         v-for="(plot, index) in plots"
         :key="index"
         class="panel"
-        :style="plot.type === 'scatter' ? 'grid-column: span 2;' : ''"
+        style="grid-column: span 2"
       >
         <PrimePanel :header="plot.plotTitle" class="w-full shadow-2">
           <div style="width: 100%; display: flex; justify-content: center">
@@ -145,7 +145,6 @@
         <div
           v-if="
             selectedPlotType === 'bar' ||
-            selectedPlotType === 'pie' ||
             selectedPlotType === 'doughnut' ||
             selectedPlotType === 'line'
           "
@@ -235,7 +234,6 @@ export default {
     isFeatureSelectionValid(): boolean {
       if (
         this.selectedPlotType === 'bar' ||
-        this.selectedPlotType === 'pie' ||
         this.selectedPlotType === 'doughnut' ||
         this.selectedPlotType === 'line'
       ) {
@@ -568,7 +566,7 @@ export default {
         },
       }
     },
-    customChartOptions(not_display_legend = false): ChartOptions {
+    customChartOptions(not_display_legend = false, has_axes=true): ChartOptions {
       return {
         animation: { duration: 1000 },
         maintainAspectRatio: false,
@@ -579,7 +577,7 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar' | 'line' | 'doughnut' | 'pie'>) =>
+              label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) =>
                 `${context.parsed.y} ${context.dataset.label}`,
             },
           },
@@ -595,7 +593,8 @@ export default {
             },
           },
         },
-        scales: {
+        scales: has_axes
+        ?{
           x: {
             title: {
               display: not_display_legend,
@@ -608,7 +607,8 @@ export default {
               text: 'Number of Samples',
             },
           },
-        },
+        }
+        : {},
       }
     },
     customScatterPlotOptions(
@@ -749,7 +749,7 @@ export default {
         ],
       }
     },
-    scatterPlotData(xProperty: string, yProperty: string) {
+    getScatterPlotData(xProperty: string, yProperty: string) {
       // scatterData data structure e.g {"2024-09-01": Array[{ILLUMIA:1}, {Nanopore:7}] ... }
       const scatterData = this.samplesStore.propertyScatterData[`${xProperty}_${yProperty}`] || {}
       const labels = Object.keys(scatterData)
@@ -770,7 +770,6 @@ export default {
       })
       const uniqueCategories = [...new Set(data.map((point) => point.category))]
       const colors = this.generateColorPalette(uniqueCategories.length)
-
       return {
         labels: labels,
         datasets: uniqueCategories.map((category, index) => ({
@@ -789,14 +788,38 @@ export default {
         })),
       }
     },
-    // categorical data in pie, doughnut, and bar charts
-    getSimplePropertyPlotData(property: string) {
+    // categorical data in bar and lne charts
+    getBarLinePropertyPlotData(property: string) {
       const propertyData = this.samplesStore.propertyData[property] || {}
       if (this.isDataEmpty(propertyData)) {
         return this.emptyChart()
       }
       const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
-      const colors = this.generateColorPalette(cleanedData.labels.length)
+      const baseColor = this.generateColorPalette(2)[0]; // Single color for all bars/points
+      const colors = cleanedData.labels.map((label) =>
+          label === 'Not Reported' ? '#cccccc' : baseColor // Grey for "Not Reported", base color for others
+        );
+      return {
+        labels: cleanedData.labels,
+        datasets: [
+          {
+            label: `samples`,
+            data: cleanedData.data,
+            backgroundColor: colors,
+            borderColor: colors.map((color) => chroma(color).darken(1.5).hex()),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+    // categorical data in doughnut charts
+    getDoughnutPropertyPlotData(property: string) {
+      const propertyData = this.samplesStore.propertyData[property] || {}
+      if (this.isDataEmpty(propertyData)) {
+        return this.emptyChart()
+      }
+      const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
+      const colors = this.generateColorPalette(cleanedData.labels.length);
       if (cleanedData.labels.includes('Not Reported')) {
         colors.pop()
         colors.push('#cccccc') // Add gray color for 'Not Reported'
@@ -814,14 +837,12 @@ export default {
         ],
       }
     },
-
     async generatePlotData(): Promise<
       HistogramData | SimplePlotData | ScatterPlotData | undefined
     > {
       // Fetch data from the server if not already available in samplesStore
       if (
         this.selectedPlotType === 'bar' ||
-        this.selectedPlotType === 'pie' ||
         this.selectedPlotType === 'doughnut' ||
         this.selectedPlotType === 'line'
       ) {
@@ -835,8 +856,12 @@ export default {
           await this.samplesStore.updatePlotCustom(this.selectedProperty)
         }
         return this.selectedProperty
-          ? (this.getSimplePropertyPlotData(this.selectedProperty) as SimplePlotData)
-          : undefined
+          ? this.selectedPlotType === 'bar' || this.selectedPlotType === 'line'
+            ? (this.getBarLinePropertyPlotData(this.selectedProperty) as SimplePlotData)
+            : this.selectedPlotType === 'doughnut'
+            ? (this.getDoughnutPropertyPlotData(this.selectedProperty) as SimplePlotData)
+            : undefined
+          : undefined;
       }
 
       if (this.selectedPlotType === 'scatter') {
@@ -849,7 +874,7 @@ export default {
           }
         }
         return this.selectedXProperty && this.selectedYProperty
-          ? (this.scatterPlotData(
+          ? (this.getScatterPlotData(
               this.selectedXProperty as string,
               this.selectedYProperty as string,
             ) as ScatterPlotData)
@@ -887,6 +912,7 @@ export default {
           this.selectedPlotType == 'histogram' ||
             this.selectedPlotType == 'bar' ||
             this.selectedPlotType == 'line',
+            this.selectedPlotType !== 'doughnut'
         )
       }
     },

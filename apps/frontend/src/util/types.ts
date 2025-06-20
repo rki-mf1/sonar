@@ -45,7 +45,6 @@ export enum PlotType {
   histogram = 'histogram',
   scatter = 'scatter',
   doughnut = 'doughnut',
-  pie = 'pie',
   line = 'line',
 }
 export type PropertyFilter = {

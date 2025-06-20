@@ -382,14 +382,14 @@ export const useSamplesStore = defineStore('samples', {
 
     async updatePropertyOptions() {
       try {
-        const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-        if (!res) {
+        const response = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+        if (!response) {
           console.error('API request failed')
           return
         }
         const metadata = this.statistics?.populated_metadata_fields ?? []
         this.propertiesDict = {}
-        res.values.forEach(
+        response.values.forEach(
           (property: { name: string; query_type: string; description: string }) => {
             if (property.query_type === 'value_varchar') {
               this.propertiesDict[property.name] = Object.values(StringDjangoFilterType)
