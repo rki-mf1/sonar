@@ -82,12 +82,7 @@
         </PrimePanel>
       </div>
       <!-- Property plots -->
-      <div
-        v-for="(plot, index) in plots"
-        :key="index"
-        class="panel"
-        style="grid-column: span 2"
-      >
+      <div v-for="(plot, index) in plots" :key="index" class="panel" style="grid-column: span 2">
         <PrimePanel :header="plot.plotTitle" class="w-full shadow-2">
           <div style="width: 100%; display: flex; justify-content: center">
             <PrimeButton
@@ -566,7 +561,7 @@ export default {
         },
       }
     },
-    customChartOptions(not_display_legend = false, has_axes=true): ChartOptions {
+    customChartOptions(not_display_legend = false, has_axes = true): ChartOptions {
       return {
         animation: { duration: 1000 },
         maintainAspectRatio: false,
@@ -594,21 +589,21 @@ export default {
           },
         },
         scales: has_axes
-        ?{
-          x: {
-            title: {
-              display: not_display_legend,
-              text: this.selectedProperty || '',
-            },
-          },
-          y: {
-            title: {
-              display: not_display_legend,
-              text: 'Number of Samples',
-            },
-          },
-        }
-        : {},
+          ? {
+              x: {
+                title: {
+                  display: not_display_legend,
+                  text: this.selectedProperty || '',
+                },
+              },
+              y: {
+                title: {
+                  display: not_display_legend,
+                  text: 'Number of Samples',
+                },
+              },
+            }
+          : {},
       }
     },
     customScatterPlotOptions(
@@ -795,6 +790,30 @@ export default {
         return this.emptyChart()
       }
       const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
+      const baseColor = this.generateColorPalette(2)[0] // Single color for all bars/points
+      const colors = cleanedData.labels.map(
+        (label) => (label === 'Not Reported' ? '#cccccc' : baseColor), // Grey for "Not Reported", base color for others
+      )
+      return {
+        labels: cleanedData.labels,
+        datasets: [
+          {
+            label: `samples`,
+            data: cleanedData.data,
+            backgroundColor: colors,
+            borderColor: colors.map((color) => chroma(color).darken(1.5).hex()),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+    // categorical data in doughnut charts
+    getDoughnutPropertyPlotData(property: string) {
+      const propertyData = this.samplesStore.propertyData[property] || {}
+      if (this.isDataEmpty(propertyData)) {
+        return this.emptyChart()
+      }
+      const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
       const baseColor = this.generateColorPalette(2)[0]; // Single color for all bars/points
       const colors = cleanedData.labels.map((label) =>
           label === 'Not Reported' ? '#cccccc' : baseColor // Grey for "Not Reported", base color for others
@@ -859,9 +878,9 @@ export default {
           ? this.selectedPlotType === 'bar' || this.selectedPlotType === 'line'
             ? (this.getBarLinePropertyPlotData(this.selectedProperty) as SimplePlotData)
             : this.selectedPlotType === 'doughnut'
-            ? (this.getDoughnutPropertyPlotData(this.selectedProperty) as SimplePlotData)
-            : undefined
-          : undefined;
+              ? (this.getDoughnutPropertyPlotData(this.selectedProperty) as SimplePlotData)
+              : undefined
+          : undefined
       }
 
       if (this.selectedPlotType === 'scatter') {
@@ -912,7 +931,7 @@ export default {
           this.selectedPlotType == 'histogram' ||
             this.selectedPlotType == 'bar' ||
             this.selectedPlotType == 'line',
-            this.selectedPlotType !== 'doughnut'
+          this.selectedPlotType !== 'doughnut',
         )
       }
     },
