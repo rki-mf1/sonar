@@ -814,31 +814,7 @@ export default {
         return this.emptyChart()
       }
       const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
-      const baseColor = this.generateColorPalette(2)[0]; // Single color for all bars/points
-      const colors = cleanedData.labels.map((label) =>
-          label === 'Not Reported' ? '#cccccc' : baseColor // Grey for "Not Reported", base color for others
-        );
-      return {
-        labels: cleanedData.labels,
-        datasets: [
-          {
-            label: `samples`,
-            data: cleanedData.data,
-            backgroundColor: colors,
-            borderColor: colors.map((color) => chroma(color).darken(1.5).hex()),
-            borderWidth: 1.5,
-          },
-        ],
-      }
-    },
-    // categorical data in doughnut charts
-    getDoughnutPropertyPlotData(property: string) {
-      const propertyData = this.samplesStore.propertyData[property] || {}
-      if (this.isDataEmpty(propertyData)) {
-        return this.emptyChart()
-      }
-      const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
-      const colors = this.generateColorPalette(cleanedData.labels.length);
+      const colors = this.generateColorPalette(cleanedData.labels.length)
       if (cleanedData.labels.includes('Not Reported')) {
         colors.pop()
         colors.push('#cccccc') // Add gray color for 'Not Reported'
@@ -856,6 +832,7 @@ export default {
         ],
       }
     },
+
     async generatePlotData(): Promise<
       HistogramData | SimplePlotData | ScatterPlotData | undefined
     > {
