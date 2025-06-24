@@ -10,13 +10,6 @@ from sonar_cli.logging import LoggingConfigurator
 
 LOGGER = LoggingConfigurator.get_logger()
 
-# Rules
-# 1. Get substitutions
-# 2.
-# 3.
-# 4.
-# 5.
-
 
 def read_nextclade_json_streaming(json_file: str, chunk_size: int = 100):  # noqa: C901
     """
@@ -130,7 +123,40 @@ def is_frameshifted(data: Dict, pos: int) -> bool:
 def process_nt_mutations(
     data: Dict, reference_acc: str, reference_seq: str
 ) -> List[Dict[str, Any]]:
-    """Process nucleotide mutations and create initial records"""
+    """
+    Process nucleotide (NT) mutations from Nextclade sample data and create initial mutation records.
+
+    This function parses substitutions, deletions, and insertions from the input data,
+    constructs a list of NT mutation dictionaries, and assigns unique IDs and parent-child relationships.
+
+    Steps:
+    1. Initialize an empty list for mutations and set the starting ID counter.
+    2. Parse all nucleotide substitutions:
+        - For each substitution, create a mutation record with reference, position, alternate base, and label.
+        - Mark as type 'nt' and set frameshift to 0.
+        - Store the NT position for later AA mapping.
+    3. Parse all nucleotide deletions:
+        - For each deletion, extract the reference sequence for the deleted region.
+        - Set the start and end positions, alternate as empty string, and label as a deletion.
+        - Determine if the deletion causes a frameshift using `is_frameshifted`.
+        - Store the NT position for later AA mapping.
+    4. Parse all nucleotide insertions:
+        - For each insertion, extract the reference base at the insertion site.
+        - Set the start and end positions, alternate as the inserted sequence, and label as an insertion.
+        - Determine if the insertion causes a frameshift using `is_frameshifted`.
+        - Store the NT position for later AA mapping.
+    5. Sort all NT mutations by their start position.
+    6. Assign unique IDs and set each mutation's parent_id to its own ID.
+    7. Return the list of mutation records and the next available ID.
+
+    Args:
+        data (Dict): Nextclade sample data.
+        reference_acc (str): Reference accession string.
+        reference_seq (str): Reference nucleotide sequence.
+
+    Returns:
+        Tuple[List[Dict[str, Any]], int]: List of processed NT mutation records and the next available ID.
+    """
     mutations = []
     id_counter = 1
 
@@ -202,13 +228,46 @@ def process_nt_mutations(
 def process_aa_mutations(  # noqa: C901
     data: Dict, nt_mutations: List[Dict], start_id: int
 ) -> List[Dict[str, Any]]:
-    """Process amino acid mutations and link them to NT mutations"""
+    """
+    Process amino acid (AA) mutations and link them to nucleotide (NT) mutations.
+
+    This function takes Nextclade sample data, a list of NT mutations, and a starting ID,
+    and returns a list of AA mutation dictionaries with parent-child relationships to NT mutations.
+
+    Steps:
+    1. Build a mapping from NT positions to mutation IDs (`nt_pos_to_id`).
+    2. Parse the AA mutation mapping (`nucToAaMuts`) to group AA deletions by gene and position.
+    3. Merge adjacent AA deletions, tracking all underlying NT positions (`nt_pos_list`) for robust parent_id mapping.
+    4. Parse AA insertions from the input.
+    5. Build a position mapping from `aaChangesGroups` for use in insertion and SNP mapping.
+    6. For each merged AA deletion:
+        - Attempt to find a parent NT mutation by searching all merged `nt_pos` values with small offsets.
+        - If not found, attempt to map via frameshift information.
+        - Construct the AA deletion mutation record.
+    7. For each regular AA mutation (non-deletion):
+        - Map to parent NT mutation by position.
+        - Handle insertions and SNPs, constructing the mutation record.
+    8. Handle any remaining insertions not already mapped.
+    9. Combine AA mutations with identical attributes, merging their parent_ids.
+    10. Return the final list of AA mutation records.
+
+    Args:
+        data (Dict): Nextclade sample data.
+        nt_mutations (List[Dict]): List of nucleotide mutation records.
+        start_id (int): Starting ID for AA mutations.
+
+    Returns:
+        List[Dict[str, Any]]: List of processed AA mutation records, each with parent_id linkage.
+    """
     aa_mutations = []
     id_counter = start_id
+    # "nucToAaMuts" shows a nucleotide mutation possiton belong to which AA mutation
     nuc_to_aa = {int(k): v for k, v in data.get("nucToAaMuts", {}).items()}
     # Create position mapping from all NT mutations that we construct from
-    # previous function
+    # previous (nt_mutations)
     nt_pos_to_id = {mut["nt_pos"]: mut["id"] for mut in nt_mutations}
+    # print("---nt_pos_to_id---")
+    # print(nt_pos_to_id)
 
     # Create a mapping of NT mutation IDs to their frameshift status
     frameshift_nt_ids = {
@@ -252,10 +311,12 @@ def process_aa_mutations(  # noqa: C901
                     "end": pos + 1,
                     "ref": positions[pos]["ref"],
                     "nt_pos": positions[pos]["nt_pos"],
+                    "nt_pos_list": [positions[pos]["nt_pos"]],  # <-- Track all nt_pos
                 }
             elif pos == current_group["end"]:  # keep merging
                 current_group["end"] = pos + 1
                 current_group["ref"] += positions[pos]["ref"]
+                current_group["nt_pos_list"].append(positions[pos]["nt_pos"])
             else:
                 if cds_name not in merged_deletions:
                     merged_deletions[cds_name] = []
@@ -266,6 +327,7 @@ def process_aa_mutations(  # noqa: C901
                     "end": pos + 1,
                     "ref": positions[pos]["ref"],
                     "nt_pos": positions[pos]["nt_pos"],
+                    "nt_pos_list": [positions[pos]["nt_pos"]],
                 }
         # handle the last
         if current_group:
@@ -277,8 +339,7 @@ def process_aa_mutations(  # noqa: C901
 
     # -----------------  Create AA Insertion
     # we collect the insertion information from
-    # aaInsertions because it close to the var format
-    # that we want
+    # "aaInsertions"
     aa_insertions = {}
     for insertion in data.get("aaInsertions", []):
         key = f"{insertion['cds']}_{insertion['pos']}"  # pos to match positions
@@ -286,10 +347,10 @@ def process_aa_mutations(  # noqa: C901
 
     # print("---aa_insertions---")
     # print(aa_insertions)
-    # ----------------- Start mapping
+    # ----------------- Start mapping -----------------
     # Create a position mapping from aaChangesGroups.
-    # The aaChangesGroups will also help us identify
-    # AA changes related to insertions and nucPos
+    # The aaChangesGroups will help us identify
+    # AA changes related to insertion and deletions to mapping nucPos
     # NOTE: The position in aaInsertions is 0-based,
     # while in aaChangesGroups it is 1-based (label representation).
 
@@ -306,10 +367,9 @@ def process_aa_mutations(  # noqa: C901
                 "qryAa": change["qryAa"],
                 "nucRanges": int(change["nucRanges"][0]["end"])
                 - int(change["nucRanges"][0]["begin"]),
+                "nucRanges_ov": change["nucRanges"][0]["end"]
+                - change["nucRanges"][0]["begin"],
             }
-
-    # print("---position_mapping---")
-    # print(position_mapping)
 
     # Process deletions
     for cds_name, deletions in merged_deletions.items():
@@ -320,14 +380,21 @@ def process_aa_mutations(  # noqa: C901
                 if del_info["start"] + 1 == del_info["end"]
                 else f"del:{del_info['start'] + 1}-{del_info['end']}"
             )
-
-            # Try positions at 0, 1, 2,-1,-2 relative to nt_pos to find valid parent_id
-            # tripet?
+            # NOTE: the current solution for now.
+            # The position in "nucToAaMuts" may differ for some deletion positions compared to
+            # "aaChangesGroups"."changes." However, "aaChangesGroups"."changes" always
+            # contains refTriplet and qryTriplet, which use a range of three nucleotides.
+            # Therefore, we should try offset positions of (0, 1, 2, 3, -1, -2, -3)
+            # relative to nt_pos_list to find the valid parent_id.
             parent_id = None
-            for offset in [0, 1, 2, -1, -2]:
-                if del_info["nt_pos"] + offset in nt_pos_to_id:
-                    parent_id = nt_pos_to_id[del_info["nt_pos"] + offset]
+            for nt_pos in del_info["nt_pos_list"]:
+                for offset in [0, 1, 2, 3, -1, -2, -3]:
+                    if nt_pos + offset in nt_pos_to_id:
+                        parent_id = nt_pos_to_id[nt_pos + offset]
+                        break
+                if parent_id is not None:
                     break
+
             # for the case of framshift deletion
             if parent_id is None:
                 for frameshift in data.get("frameShifts", []):
@@ -375,7 +442,7 @@ def process_aa_mutations(  # noqa: C901
             ]
 
             # Find matching insertion key and remove it so it won't be used again,
-            # because we will know which insertion mutations didnt list in nucToAaMuts
+            # because we know which insertion mutations didnt list in nucToAaMuts
             matching_key = None
             for key in insertion_keys:
                 if key in aa_insertions:
@@ -384,9 +451,7 @@ def process_aa_mutations(  # noqa: C901
                     break
 
             if matching_key:
-                # print(matching_key)
                 position_info = position_mapping.get(matching_key)
-                # print(position_info)
                 # Check if this is a termination followed by insertion (*) or regular AA followed by insertion
                 if position_info["qryAa"] == "*":
                     alt = inserted_aa
@@ -423,7 +488,7 @@ def process_aa_mutations(  # noqa: C901
             aa_mutations.append(mut)
             id_counter += 1
 
-    # TODO: handle the remaining insertion.
+    # handle the remaining insertion.
     for key, inserted_aa in aa_insertions.items():
         # split _ key to cds_name and pos
         cds_name, pos = key.split("_")
@@ -505,66 +570,6 @@ def process_aa_mutations(  # noqa: C901
     # Convert back to list
     final_combined_mutations = list(grouped_mutations.values())
 
-    # # print(nt_pos_to_id)
-    # for frameshift in data.get('frameShifts', []):
-    #     pass_finding = False
-    #     # find deletion mapping position
-
-    #     for deletion in data.get('deletions', []):
-    #         if frameshift["nucAbs"][0]["begin"] == deletion["range"]["end"]:
-    #             # find parent ID
-    #             parent_id = nt_pos_to_id.get(deletion["range"]["begin"], None)
-    #             if parent_id is None:
-    #                raise ValueError(f"parent_id not found for frameshift at {frameshift}")
-
-    #             # find refAa deletion framshift
-    #             sel_refAa = nuc_to_aa.get(frameshift["nucAbs"][0]["begin"], None)
-
-    #             if sel_refAa is not None:
-    #                 refAa = sel_refAa[0]['refAa']
-    #                 mut = {
-    #                     'id': id_counter,
-    #                     'ref': refAa,
-    #                     'start': frameshift['codon']['begin'],
-    #                     'end': frameshift['codon']['end'],
-    #                     'alt': '',
-    #                     'reference_acc': frameshift["cdsName"],
-    #                     'label': f"del:{frameshift['codon']['begin'] + 1}-{frameshift['codon']['end']}",
-    #                     'type': 'cds',
-    #                     'frameshift': 1,
-    #                     'parent_id': parent_id
-    #                 }
-    #                 aa_mutations.append(mut)
-    #                 id_counter += 1
-    #                 pass_finding = True
-    #                 break
-    #             else:
-    #                 # go to insertion mapping
-    #                 break
-    #                 print('Searching for ',frameshift["nucAbs"][0]["begin"])
-    #                 print(nuc_to_aa)
-    #                 raise ValueError(f"Reference AA not found for frameshift at {frameshift}")
-    #     # if pass_finding:
-    #     #     continue
-    #     # # if we cannot find the deletion mapping position
-
-    #     # #  look for insertion mapping position
-    #     # for insertion in data.get('insertions', []):
-    #     #     if frameshift["nucAbs"][0]["begin"] == (insertion["pos"]+1):
-    #     #         # find parent ID
-    #     #         parent_id = nt_pos_to_id.get(insertion["pos"], None)
-    #     #         if parent_id is None:
-    #     #             raise ValueError(f"parent_id not found for frameshift at {frameshift}")
-
-    #     #         # find refAa insertion framshift
-    #     #         sel_refAa = nuc_to_aa.get(frameshift["nucAbs"][0]["begin"] + offset, None)
-    #     #         if sel_refAa is not None:
-    #     #             pass_finding = True
-
-    #     if not pass_finding:
-    #         print('Searching for ',frameshift["nucAbs"][0]["begin"])
-    #         print(nuc_to_aa)
-    #         raise ValueError(f"Reference AA not found for frameshift at {frameshift}")
     return final_combined_mutations
 
 
@@ -621,9 +626,9 @@ def process_single_sample(  # noqa: C901
         # Ensure correct column order and types
         df["parent_id"] = df["parent_id"].astype(str)
         # NOTE: tmp remove row where parent_id where is none
-        df = df[df["parent_id"].notna()]
+        # df = df[df["parent_id"].notna()]
         # remove parent_id where is 'None'
-        df = df[(df["parent_id"] != "None") & (df["parent_id"] != "nan")]
+        # df = df[(df["parent_id"] != "None") & (df["parent_id"] != "nan")]
 
         if debug:
             # Save to TSV file
