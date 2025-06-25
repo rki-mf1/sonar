@@ -10,11 +10,11 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 
 ## Features
 
-1. Import genomes: mutation calling and mutation import to database
-2. query database with mutations profiles: Match profile
+1. Import genomes: alignment against a reference genome of your choice, mutation calling and mutation import to database
+2. Search: query database with mutation profiles or metadata (lineages, sampling dates, etc.)
 2. Support multiple genome references.
 3. Support multiple alignment tools.
-4. Cluster machine compatibility.
+4. Support for high performance compute clusters.
 
 ### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar/apps/cli/wiki/) 🏃‍♂️
 
@@ -24,12 +24,11 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 
 ### 1.1 Conda (Package manager)
 
-- please visit [Miniconda](https://docs.anaconda.com/free/miniconda/) for download and installation
-- please visit [Bioconda](https://bioconda.github.io/) for download and installation
+We recommend [miniforge](https://conda-forge.org/download/), but other conda disributions will work as well.
 
 ### 1.2 Install sonar-backend
 
-please visit [sonar-backend](https://github.com/rki-mf1/apps/backend) for download and installation
+Please visit [sonar-backend](https://github.com/rki-mf1/apps/backend) for download and installation
 
 ## 2. Sonar-cli Setup
 
