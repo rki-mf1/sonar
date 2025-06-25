@@ -94,7 +94,7 @@ export default {
     },
   },
   mounted() {
-    // this.samplesStore.setDataset(null, null)
+    this.samplesStore.setDataset(null, null)
     this.samplesStore.updateSamples()
     this.samplesStore
       .updateStatistics()

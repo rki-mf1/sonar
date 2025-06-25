@@ -31,7 +31,13 @@
               placeholder="Select a Dataset"
               filter
             />
-            <PrimeButton label="Proceed" severity="warning" raised @click="proceed" />
+            <PrimeButton
+              label="Proceed"
+              severity="warning"
+              raised
+              :loading="loading"
+              @click="proceed"
+            />
           </div>
         </template>
       </PrimeCard>
@@ -50,10 +56,11 @@ export default {
     return {
       samplesStore: useSamplesStore(),
       router: useRouter(),
+      datasetOptions: {},
       pathogens: [] as string[],
-      datasets: [] as string[],
-      selectedPathogen: null,
-      selectedDataset: null,
+      selectedPathogen: '',
+      selectedDataset: '',
+      loading: false,
     }
   },
   mounted() {
@@ -61,17 +68,28 @@ export default {
   },
   methods: {
     async updateDatasetOptions() {
-      const pathogens = await API.getInstance().getPathogenOptions()
-      this.pathogens = pathogens['pathogens']
-      this.datasets = ['RKI Dataset', 'Gisaid Dataset']
+      this.datasetOptions = await API.getInstance().getDatasetOptions()
+      this.pathogens = Object.keys(this.datasetOptions)
+      this.selectedPathogen = this.pathogens[0]
+      this.selectedDataset = this.datasets[0] || null
     },
     proceed() {
       if (this.selectedPathogen && this.selectedDataset) {
-        this.samplesStore.setDataset(this.selectedPathogen, this.selectedDataset)
-        this.router.push({ name: 'Home' })
+        this.loading = true
+        setTimeout(() => {
+          this.samplesStore.setDataset(this.selectedPathogen, this.selectedDataset)
+          this.router.push({ name: 'Home' })
+          this.loading = false
+        }, 50) // delay to trigger loading animation -> there has to be another solution!
       } else {
         alert('Please select both a pathogen and a dataset.')
       }
+    },
+  },
+  computed: {
+    // dynamically based on selectedPathogen
+    datasets() {
+      return this.datasetOptions[this.selectedPathogen] || []
     },
   },
 }

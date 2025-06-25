@@ -173,6 +173,10 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
+    setDataset(pathogen: string | null, dataset: string | null) {
+      this.pathogen = pathogen
+      this.dataset = dataset
+    },
     async updateStatistics() {
       const emptyStatistics = {
         samples_total: 0,
