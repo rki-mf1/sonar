@@ -264,10 +264,6 @@ sonar-cli delete-sample --sample IMS-10116-CVDP-77AB96B7-B9FB-46D6-B844-F9356151
 
 ---
 
-# 📄 License
-
-This project is licensed under BSD.
-
 # Acknowledgments
 
 This tool is built upon the foundations of covsonar and pathosonar projects.
