@@ -1,8 +1,6 @@
-# sonar-backend
+# Sonar Backend
 
-The sonar-backend is web service that represents the API version of the Sonar tool (covsonar), which utilizes Django REST + PostgreSQL for scalability and integration with the web application.
-
-![Static Badge](https://img.shields.io/badge/Lifecycle-Experimental-ff7f2a)
+The sonar backend is web service provides the postgres database and Rest-API for scalability and integration with the web application.
 
 ![Static Badge](https://img.shields.io/badge/Maintenance%20status-actively%20developed-brightgreen)
 
@@ -10,7 +8,7 @@ The sonar-backend is web service that represents the API version of the Sonar to
 ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)
 ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
-**Please visit [sonar-backend wiki](https://github.com/rki-mf1/sonar-backend/wiki) for more details**
+**Please visit [sonar-backend wiki](https://github.com/rki-mf1/sonar/apps/backend/wiki) for more details**
 
 # Setup
 
@@ -71,11 +69,11 @@ Your user can then setup the following:
 Now we need to clone the sonar-backend repo:
 
 ```bash
-git clone https://github.com/rki-mf1/sonar-backend.git
-cd sonar-backend
+git clone https://github.com/rki-mf1/sonar.git
+cd sonar/apps/backend
 ```
 
-Next we need to set up secret information that will be unique to your installation. These values need to be defined in `sonar-backend/conf/docker/prod-secrets.env`. To see which values need to be set, you can check the `sonar-backend/conf/docker/dev-secrets.env` file but **do not just copy the values from this file**. You need to set your own passwords and Django SECRET_KEY.
+Next we need to set up secret information that will be unique to your installation. These values need to be defined in `backend/conf/docker/prod-secrets.env`. To see which values need to be set, you can check the `backend/conf/docker/dev-secrets.env` file but **do not just copy the values from this file**. You need to set your own passwords and Django SECRET_KEY.
 
 To generate a new Django SECRET_KEY, you can run the following (needs Python >=3.6):
 
@@ -96,33 +94,7 @@ Next we need to build the sonar-backend docker container, bring up all services 
 $ ./scripts/linux/clean-prod-env.sh -t
 ```
 
-If you want to deploy the frontend as well, you need to clone it:
 
-```bash
-git clone https://github.com/rki-mf1/sonar-frontend.git
-cd sonar-frontend
-```
-
-Make sure you have npm installed (`conda create -n sonar-frontend nodejs` will work with conda), and then follow the frontend docs:
-
-```
-$ npm install
-```
-
-Next you probably want to customize the url of the sonar backend. You can set this from a file `sonar-frontend/.env.production` or directly from the command line when building the frontend:
-
-```
-$ VITE_SONAR_BACKEND_ADDRESS=https://myserver.com npm run build
-```
-
-Then copy the built files into the backend `work/` directory. You might need to tweak the commands below depending on the relative location of sonar-frontend and sonar-backend, and whether you are updating an existing copy of the frontend or doing this for the first time:
-
-```
-$ mkdir -p ../sonar-backend/work/frontend/dist
-$ cp -r dist/* ../sonar-backend/work/frontend/dist
-```
-
-Now you should be able to access the frontend on your server at port 443 (e.g. `https://servername.org`).
 
 ## Development
 
@@ -141,8 +113,8 @@ The current version has been tested on the following system configurations:
 First, clone the project:
 
 ```bash
-$ git clone https://github.com/rki-mf1/sonar-backend.git
-$ cd sonar-backend
+$ git clone https://github.com/rki-mf1/sonar.git
+$ cd sonar/apps/backend
 ```
 
 Next, you can start up a dev instance of the software stack using docker compose (use the `-h` argument to see other options for this script):
@@ -172,7 +144,7 @@ python manage.py import_lineage
 If you have a specific file from pangoline that you manually downloaded, you can specify it using the following command:
 
 ```bash
-python manage.py import_lineage --lineages test-data/lineages_2024_01_15.csv --alias-key test-data/alias_key_2024_01_15.json
+python manage.py import_lineage --lineages test-data/lineages_2024_01_15.csv
 ```
 
 ### **Note:**
@@ -194,7 +166,7 @@ python manage.py import_lineage --lineages test-data/lineages_2024_01_15.csv --a
   ```bash
   python manage.py flush_sonarDB
   ```
-- During development, we use [Insomnia](https://insomnia.rest/) for API testing. To facilitate testing, we provide the API collection in the file `resource/Insomnia_XXXX.json`. The datasets can be found under the `test-data` folder. You can easily import the collection into your Insomnia API client and start testing."
+- During development, we use [Insomnia](https://insomnia.rest/) for API testing. To facilitate testing, we provide the API collection in the file `backend/resource/Insomnia_XXXX.json`. The datasets can be found under the `test-data` folder. You can easily import the collection into your Insomnia API client and start testing."
 
 ### Test Datasets
 
@@ -202,13 +174,10 @@ We provide the test datasets under the `test-data` directory. These datasets can
 
 | File                     | Usage                                                                                                                 |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `alias_key.json`         | Used in the `python manage.py import_lineage` command.                                                                |
-| `lineages.zip`           | Used in the `python manage.py import_lineage` command.                                                                |
-| `lineages.ready.tsv`     | Example output from the `import_lineage` command.                                                                     |
-| `sars-cov-2.180.tsv`        | Input sample containing meta information (tsv).                                                                       |
-| `cache_180_mafft.zip`    | Input sample containing the genomic sequence (fasta) using MAFFT aligner.                                             |
-| `MN908947.3.gb`         | Reference genome of SARS-CoV-2 in GenBank format.                                                                     |
-| `dump-sonar-test-db-180-2025_01_21.INSERT.sql` | SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest." |
+| `test-data/sars-cov-2/lineages_2024_01_15_full.tsv`           | Used in the `python manage.py import_lineage` command.                                                                |
+| `test-data/sars-cov-2/sars-cov-2.180.tsv`        | Input sample containing meta information (tsv).                                                                       |
+| `test-data/sars-cov-2/MN908947.nextclade.gb`         | Reference genome of SARS-CoV-2 in GenBank format.                                                                     |
+| `apps/backend/conf/initdb-test/dump-sonar-12-test-db.sql` | SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest." |
 
 ### Extra docker compose commands
 
@@ -229,7 +198,7 @@ Once the containers are up and running, you can access
 
 # License
 
-This project is licensed under....
+This project is licensed under BSD license
 
 # Acknowledgments
 

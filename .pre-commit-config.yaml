@@ -16,16 +16,16 @@ repos:
         args: ["--keep-unused", "-m", "rest_api,covsonar_backend,permission_model"]
         exclude: ^apps/backend/rest_api/migrations/
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 25.1.0
     hooks:
       - id: black
         exclude: ^apps/backend/rest_api/migrations/
   - repo: https://github.com/google/yamlfmt
-    rev: v0.14.0
+    rev: v0.17.1
     hooks:
       - id: yamlfmt
   - repo: https://github.com/pycqa/flake8
-    rev: '7.1.1'
+    rev: '7.2.0'
     hooks:
       - id: flake8
         files: ^apps/cli
