@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from datetime import timezone
 from functools import reduce
@@ -357,11 +358,15 @@ class ReferenceViewSet(
             data_set_values=F("data_set"),
         ).distinct()
 
-        result = {}
+        result = defaultdict(list)
         for reference in queryset:
-            result[f"{reference['organism']} ({reference['accession']})"] = reference[
-                "data_set_values"
-            ]
+            result[f"{reference['organism']} ({reference['accession']})"].append(
+                reference["data_set_values"]
+            )
+
+        for reference in list(result):
+            if all(data_set_value is None for data_set_value in result[reference]):
+                result[reference] = None
 
         return Response(
             result,
