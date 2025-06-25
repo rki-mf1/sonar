@@ -196,10 +196,6 @@ Once the containers are up and running, you can access
 
 ---
 
-# License
-
-This project is licensed under BSD license
-
 # Acknowledgments
 
 This tool is built upon the foundations of covsonar and pathosonar projects.
