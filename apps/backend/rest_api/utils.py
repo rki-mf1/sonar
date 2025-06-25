@@ -69,7 +69,7 @@ IUPAC_CODES = {
 
 regexes = {
     "snv": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$"),
-    "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$"),
+    "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?(del:)([0-9]+)(|-?[0-9]+)?$"),
 }
 
 
@@ -155,16 +155,14 @@ def define_profile(mutation):  # noqa: C901
                             )
                         raise ValueError(error_message)
 
-                        sys.exit(1)
                     _query["alt_nuc"] = alt
                     _query["ref_nuc"] = ref
                     _query["ref_pos"] = match.group(5)
                     _query["label"] = "SNP Nt" if len(alt) == 1 else "Ins Nt"
 
             elif mutation_type == "del":
-                _query["first_deleted"] = match.group(4)
-                _query["last_deleted"] = match.group(5)[1:]
-
+                _query["first_deleted"] = match.group(5)
+                _query["last_deleted"] = match.group(6)[1:]
                 if gene_name:  # AA deletion
                     _query["protein_symbol"] = gene_name
                     _query["label"] = "Del AA"
@@ -221,10 +219,21 @@ def get_distinct_gene_symbols(reference=None):
     Helper method to get distinct gene symbols.
     This method can be called from anywhere.
     """
-    queryset = models.Gene.objects.distinct("gene_symbol").values("gene_symbol")
+    queryset = models.Gene.objects.distinct("symbol").values("symbol")
     if reference:
         queryset = queryset.filter(replicon__reference__accession=reference)
-    return [item["gene_symbol"] for item in queryset]
+    return [item["symbol"] for item in queryset]
+
+
+def get_distinct_peptide_descriptions(reference=None):
+    """
+    Helper method to get distinct gene symbols.
+    This method can be called from anywhere.
+    """
+    queryset = models.Peptide.objects.distinct("description").values("description")
+    if reference:
+        queryset = queryset.filter(replicon__reference__accession=reference)
+    return [item["description"] for item in queryset]
 
 
 def parse_default_data(value):

@@ -89,7 +89,6 @@ class sonarAligner:
 
     def process_cached_alignment(self, data: dict):
         source_acc = str(data["source_acc"])
-
         # Do alignment
         alignment = align_MAFFT(data["seq_file"], data["ref_file"])
         # Extract nucleotide mutations from alignment
