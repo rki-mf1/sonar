@@ -79,8 +79,8 @@ export default {
       return this.$route.name === 'Home' || this.$route.name === 'Plots'
     },
     appTitle() {
-      return this.samplesStore.pathogen && this.samplesStore.dataset
-        ? `Sonar: ${this.samplesStore.pathogen} - ${this.samplesStore.dataset}`
+      return this.samplesStore.organism && this.samplesStore.accession && this.samplesStore.data_set
+        ? `Sonar: ${this.samplesStore.organism} (${this.samplesStore.accession}) - ${this.samplesStore.data_set}`
         : 'Sonar'
     },
   },
@@ -94,7 +94,7 @@ export default {
     },
   },
   mounted() {
-    this.samplesStore.setDataset(null, null)
+    // this.samplesStore.setDataset(null, null)
     this.samplesStore.updateSamples()
     this.samplesStore
       .updateStatistics()

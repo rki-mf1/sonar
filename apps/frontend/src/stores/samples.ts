@@ -104,8 +104,9 @@ function parseDateToDateRangeFilter(data: Date[]) {
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
-    pathogen: null as string | null,
-    dataset: null as string | null,
+    organism: null as string | null,
+    accession: null as string | null,
+    data_set: null as string | null,
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
@@ -173,9 +174,10 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
-    setDataset(pathogen: string | null, dataset: string | null) {
-      this.pathogen = pathogen
-      this.dataset = dataset
+    setDataset(organism: string | null, accession: string | null, data_set: string | null) {
+      this.organism = organism
+      this.accession = accession
+      this.data_set = data_set
     },
     async updateStatistics() {
       const emptyStatistics = {
@@ -407,8 +409,6 @@ export const useSamplesStore = defineStore('samples', {
         accession: 'MN908947.3',
       })
 
-      console.log(this.dataset)
-      console.log(filters)
       return filters
     },
   },

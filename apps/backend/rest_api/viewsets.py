@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import datetime
 from datetime import timezone
 from functools import reduce
@@ -348,25 +347,29 @@ class ReferenceViewSet(
     @action(detail=False, methods=["get"])
     def dataset_options(self, request, *args, **kwargs):
         """
-        Mapping of references to their associated dataset values.
-        For each unique combination of organism and accession from the Reference table,
-        this returns the corresponding dataset values found in the Sample table.
+        For each organism in the Reference table, returns the corresponding
+        accession values found int the Reference table and
+        dataset values found in the Sample table.
         """
         queryset = models.Sample.objects.values(
             accession=F("sequence__alignments__replicon__reference__accession"),
             organism=F("sequence__alignments__replicon__reference__organism"),
-            data_set_values=F("data_set"),
+            data_set_value=F("data_set"),
         ).distinct()
 
-        result = defaultdict(list)
-        for reference in queryset:
-            result[f"{reference['organism']} ({reference['accession']})"].append(
-                reference["data_set_values"]
-            )
+        result = {}
 
-        for reference in list(result):
-            if all(data_set_value is None for data_set_value in result[reference]):
-                result[reference] = None
+        for reference in queryset:
+            organism = reference["organism"]
+            accession = reference["accession"]
+            data_set_value = reference["data_set_value"]
+
+            if organism not in result:
+                result[organism] = {"accessions": set(), "data_sets": set()}
+            if accession is not None:
+                result[organism]["accessions"].add(accession)
+            if data_set_value is not None and data_set_value != "":
+                result[organism]["data_sets"].add(data_set_value)
 
         return Response(
             result,

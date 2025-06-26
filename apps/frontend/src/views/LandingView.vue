@@ -19,19 +19,29 @@
         </template>
         <template #content>
           <div class="content-container">
+            <h4 class="text-primary mt-0 mb-0">Organism</h4>
             <PrimeDropdown
-              v-model="selectedPathogen"
-              :options="pathogens"
-              placeholder="Select a Pathogen"
+              v-model="selectedOrganism"
+              :options="organisms"
+              placeholder="Select a Organism"
               filter
             />
+            <h4 class="text-primary mt-0 mb-0">Accession</h4>
+            <PrimeDropdown
+              v-model="selectedAccession"
+              :options="accessions"
+              placeholder="Select an Accession"
+              filter
+            />
+            <h4 class="text-primary mt-0 mb-0">Dataset</h4>
             <PrimeDropdown
               v-model="selectedDataset"
-              :options="datasets"
+              :options="data_sets"
               placeholder="Select a Dataset"
               filter
             />
             <PrimeButton
+              style="margin-top: 2em"
               label="Proceed"
               severity="warning"
               raised
@@ -57,16 +67,26 @@ export default {
       samplesStore: useSamplesStore(),
       router: useRouter(),
       datasetOptions: {},
-      pathogens: [] as string[],
-      selectedPathogen: '',
+      organisms: [] as string[],
+      selectedOrganism: '',
+      selectedAccession: '',
       selectedDataset: '',
       loading: false,
     }
   },
   computed: {
-    // dynamically based on selectedPathogen
-    datasets() {
-      return this.datasetOptions[this.selectedPathogen] || []
+    // dynamically based on selectedOrganism
+    accessions() {
+      return this.datasetOptions[this.selectedOrganism]?.accessions || []
+    },
+    data_sets() {
+      return this.datasetOptions[this.selectedOrganism]?.data_sets || []
+    },
+  },
+  watch: {
+    selectedOrganism() {
+      this.selectedAccession = this.accessions[0] || null
+      this.selectedDataset = this.data_sets[0] || null
     },
   },
   mounted() {
@@ -75,20 +95,25 @@ export default {
   methods: {
     async updateDatasetOptions() {
       this.datasetOptions = await API.getInstance().getDatasetOptions()
-      this.pathogens = Object.keys(this.datasetOptions)
-      this.selectedPathogen = this.pathogens[0]
-      this.selectedDataset = this.datasets[0] || null
+      this.organisms = Object.keys(this.datasetOptions)
+      this.selectedOrganism = this.organisms[0]
+      this.selectedAccession = this.accessions[0] || null
+      this.selectedDataset = this.data_sets[0] || null
     },
     proceed() {
-      if (this.selectedPathogen && this.selectedDataset) {
+      if (this.selectedOrganism && this.selectedAccession && this.selectedDataset) {
         this.loading = true
         setTimeout(() => {
-          this.samplesStore.setDataset(this.selectedPathogen, this.selectedDataset)
+          this.samplesStore.setDataset(
+            this.selectedOrganism,
+            this.selectedAccession,
+            this.selectedDataset,
+          )
           this.router.push({ name: 'Home' })
           this.loading = false
         }, 50) // delay to trigger loading animation -> there has to be another solution!
       } else {
-        alert('Please select both a pathogen and a dataset.')
+        alert('Please select an organism, an accession and a dataset.')
       }
     },
   },
@@ -110,8 +135,8 @@ export default {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2rem;
-  width: 25vw;
-  height: 25vh;
+  gap: 1rem;
+  width: 40vw;
+  height: 35vh;
 }
 </style>
