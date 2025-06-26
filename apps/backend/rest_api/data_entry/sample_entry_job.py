@@ -258,6 +258,7 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                             batch,
                             replicon_cache,
                             gene_cache_by_accession,
+                            gene_cache_by_var_pos,
                             str(temp_dir),
                         )
                     # annotation
@@ -358,8 +359,10 @@ def process_batch(
         lp = LineProfiler()
         # Add a few of the slowest functions based on profiling the
         # process_batch_run() function
-        lp.add_function(SampleImport.get_mutation_objs)
-        lp.add_function(get_mutation2alignment_objs)
+        lp.add_function(SampleImport.get_mutation_objs_cds_and_parent_relations)
+        lp.add_function(SampleImport.get_mutation_objs_nt)
+        lp.add_function(process_batch_run)
+        lp.add_function(process_annotation)
         process_batch_profiled = lp(process_batch_run)
         retval = process_batch_profiled(**parameters)
         lp.print_stats()
@@ -509,7 +512,7 @@ def process_annotation(file_name):
 
 
 def process_batch_single_thread(
-    batch, replicon_cache, gene_cache_by_accession, temp_dir
+    batch, replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, temp_dir
 ):
     try:
         sample_import_objs = [
@@ -530,28 +533,83 @@ def process_batch_single_thread(
                 samples,
                 update_conflicts=True,
                 unique_fields=["name"],
-                update_fields=["sequence"],
+                update_fields=["length", "sequence", "last_update_date"],
             )
             [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
             alignments = [
                 sample_import_obj.create_alignment()
                 for sample_import_obj in sample_import_objs
             ]
-            Alignment.objects.bulk_create(alignments, ignore_conflicts=True)
-            mutations = []
-            for sample_import_obj in sample_import_objs:
-                mutations.extend(
-                    sample_import_obj.get_mutation_objs(gene_cache_by_accession)
-                )
-            Mutation.objects.bulk_create(mutations, ignore_conflicts=True)
-            mutations2alignments = []
-            for sample_import_obj in sample_import_objs:
-                mutations2alignments.extend(
-                    sample_import_obj.get_mutation2alignment_objs()
-                )
-            Mutation.alignments.through.objects.bulk_create(
-                mutations2alignments, ignore_conflicts=True
+            Alignment.objects.bulk_create(
+                alignments,
+                update_conflicts=True,
+                unique_fields=["sequence", "replicon"],
+                update_fields=["sequence", "replicon"],
             )
+            nt_mutation_set: list[NucleotideMutation] = []
+            cds_mutation_set: list[AminoAcidMutation] = []
+            mutation_parent_relations = []
+            nt_mutation_alignment_relations: list[
+                NucleotideMutation.alignments.through
+            ] = []
+            aa_mutation_alignment_relations: list[
+                AminoAcidMutation.alignments.through
+            ] = []
+
+            for sample_import_obj in sample_import_objs:
+                id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
+                    nt_mutation_set,
+                    replicon_cache,
+                    gene_cache_by_var_pos,
+                    nt_mutation_alignment_relations,
+                )
+                parent_relations = (
+                    sample_import_obj.get_mutation_objs_cds_and_parent_relations(
+                        cds_mutation_set,
+                        gene_cache_by_accession,
+                        id_to_mutation_mapping,
+                        aa_mutation_alignment_relations,
+                    )
+                )
+                mutation_parent_relations.extend(parent_relations)
+
+            NucleotideMutation.objects.bulk_create(
+                nt_mutation_set,
+                update_conflicts=True,
+                unique_fields=["ref", "alt", "start", "end", "replicon"],
+                update_fields=["ref", "alt", "start", "end", "replicon"],
+            )
+            AminoAcidMutation.objects.bulk_create(
+                cds_mutation_set,
+                update_conflicts=True,
+                unique_fields=["ref", "alt", "start", "end", "cds"],
+                update_fields=["ref", "alt", "start", "end", "cds"],
+            )
+            AminoAcidMutation.parent.through.objects.bulk_create(
+                mutation_parent_relations,
+                ignore_conflicts=True,
+            )
+            NucleotideMutation.alignments.through.objects.bulk_create(
+                [
+                    NucleotideMutation.alignments.through(
+                        nucleotidemutation_id=rel.nucleotidemutation.id,
+                        alignment_id=rel.alignment.id,
+                    )
+                    for rel in nt_mutation_alignment_relations
+                ],
+                ignore_conflicts=True,
+            )
+            AminoAcidMutation.alignments.through.objects.bulk_create(
+                [
+                    AminoAcidMutation.alignments.through(
+                        aminoacidmutation_id=rel.aminoacidmutation.id,
+                        alignment_id=rel.alignment.id,
+                    )
+                    for rel in aa_mutation_alignment_relations
+                ],
+                ignore_conflicts=True,
+            )
+
             # annotations = []
             # for sample_import_obj in sample_import_objs:
             #     annotations.extend(sample_import_obj.get_annotation_objs())
