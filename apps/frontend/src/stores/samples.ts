@@ -387,11 +387,29 @@ export const useSamplesStore = defineStore('samples', {
       return { filters: getFilterGroupFilters(this.filterGroup) }
     },
     filters(): FilterGroupRoot {
-      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters))
+      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters)) as FilterGroupRoot
+
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
-      return filters as FilterGroupRoot
+
+      // // insert dataset selection as a fixed filter at the beginning
+      filters.filters.andFilter.unshift({
+        filter_type: 'exact',
+        label: 'Property',
+        property_name: 'data_set',
+        value: 'dataset1', //this.dataset
+      })
+
+      filters.filters.andFilter.unshift({
+        label: 'Replicon',
+        exclude: false,
+        accession: 'MN908947.3',
+      })
+
+      console.log(this.dataset)
+      console.log(filters)
+      return filters
     },
   },
 })
