@@ -682,6 +682,12 @@ class PropertyViewSet(
                 "description": "Date when the sample data was last updated in the database (fixed prop.)",
                 "default": "current date and time",
             },
+            {
+                "name": "data_set",
+                "query_type": "value_varchar",
+                "description": "Name of the data set",
+                "default": None,
+            },
         ]  # from SAMPLE TABLE
 
         cols = [

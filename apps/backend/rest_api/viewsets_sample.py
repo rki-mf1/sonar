@@ -377,7 +377,7 @@ class SampleViewSet(
                     models.Sample.objects.filter(
                         id=OuterRef("id"),
                         properties__property__name=property_name,
-                        **{f"properties__{datatype}__isnull": False},
+                        # **{f"properties__{datatype}__isnull": False},
                     )
                 )
             except Exception as e:

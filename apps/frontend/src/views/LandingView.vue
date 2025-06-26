@@ -63,6 +63,12 @@ export default {
       loading: false,
     }
   },
+  computed: {
+    // dynamically based on selectedPathogen
+    datasets() {
+      return this.datasetOptions[this.selectedPathogen] || []
+    },
+  },
   mounted() {
     this.updateDatasetOptions()
   },
@@ -84,12 +90,6 @@ export default {
       } else {
         alert('Please select both a pathogen and a dataset.')
       }
-    },
-  },
-  computed: {
-    // dynamically based on selectedPathogen
-    datasets() {
-      return this.datasetOptions[this.selectedPathogen] || []
     },
   },
 }
