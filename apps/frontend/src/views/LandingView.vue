@@ -84,6 +84,7 @@ export default {
     },
   },
   watch: {
+    // when ever selectedOrganism is changed, choose first available option
     selectedOrganism() {
       this.selectedAccession = this.accessions[0] || null
       this.selectedDataset = this.data_sets[0] || null
@@ -97,11 +98,9 @@ export default {
       this.datasetOptions = await API.getInstance().getDatasetOptions()
       this.organisms = Object.keys(this.datasetOptions)
       this.selectedOrganism = this.organisms[0]
-      this.selectedAccession = this.accessions[0] || null
-      this.selectedDataset = this.data_sets[0] || null
     },
     proceed() {
-      if (this.selectedOrganism && this.selectedAccession && this.selectedDataset) {
+      if (this.selectedOrganism && this.selectedAccession) {
         this.loading = true
         setTimeout(() => {
           this.samplesStore.setDataset(
@@ -111,9 +110,9 @@ export default {
           )
           this.router.push({ name: 'Home' })
           this.loading = false
-        }, 50) // delay to trigger loading animation -> there has to be another solution!
+        }, 50) // delay to trigger loading animation -> there has to be a better solution!
       } else {
-        alert('Please select an organism, an accession and a dataset.')
+        alert('Please select at least an organism and an accession.')
       }
     },
   },
@@ -136,7 +135,7 @@ export default {
   flex-direction: column;
   justify-content: center;
   gap: 1rem;
-  width: 40vw;
+  width: 30vw;
   height: 35vh;
 }
 </style>

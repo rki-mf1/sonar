@@ -395,20 +395,23 @@ export const useSamplesStore = defineStore('samples', {
         filters.filters.andFilter = []
       }
 
-      // // insert dataset selection as a fixed filter at the beginning
-      filters.filters.andFilter.unshift({
-        filter_type: 'exact',
-        label: 'Property',
-        property_name: 'data_set',
-        value: 'dataset1', //this.dataset
-      })
-
-      filters.filters.andFilter.unshift({
-        label: 'Replicon',
-        exclude: false,
-        accession: 'MN908947.3',
-      })
-
+      // insert dataset selection as a fixed filter at the beginning
+      if (this.data_set) {
+        filters.filters.andFilter.unshift({
+          filter_type: 'exact',
+          label: 'Property',
+          property_name: 'data_set',
+          value: this.data_set,
+        })
+      }
+      if (this.accession) {
+        filters.filters.andFilter.unshift({
+          label: 'Replicon',
+          exclude: false,
+          accession: this.accession,
+        })
+      }
+      console.log(filters)
       return filters
     },
   },
