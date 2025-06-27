@@ -41,7 +41,6 @@
               filter
             />
             <PrimeButton
-              style="margin-top: 2em"
               label="Proceed"
               severity="warning"
               raised
