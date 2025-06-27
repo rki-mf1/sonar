@@ -536,10 +536,9 @@ def process_batch_single_thread(
                 update_fields=["length", "sequence", "last_update_date"],
             )
             [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
-            alignments = [
-                sample_import_obj.create_alignment()
-                for sample_import_obj in sample_import_objs
-            ]
+            alignments: list[Alignment] = []
+            for sample_import_obj in sample_import_objs:
+                sample_import_obj.create_alignment(alignments)
             Alignment.objects.bulk_create(
                 alignments,
                 update_conflicts=True,
