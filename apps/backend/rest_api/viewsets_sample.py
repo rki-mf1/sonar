@@ -157,7 +157,7 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
         """
-        fetch samples and genomic profiles based on provided filters and optional parameters
+        fetch proteomic and genomic profiles based on provided filters and optional parameters
 
         TODO:
         1. Optimize the query (reduce the database hit)
@@ -189,10 +189,10 @@ class SampleViewSet(
             ).order_by("start")
             proteomic_profiles_qs = (
                 models.AminoAcidMutation.objects.only(
-                    "ref", "alt", "start", "end", "gene"
+                    "ref", "alt", "start", "end", "cds"
                 )
-                .prefetch_related("gene")
-                .order_by("gene", "start")
+                .prefetch_related("cds__cds_segments")
+                .order_by("cds", "start")
             )
             annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")
 
@@ -946,7 +946,7 @@ class SampleViewSet(
             Q(amino_acid_mutations__end=ref_pos)
             & Q(amino_acid_mutations__ref=ref_aa)
             & (mutation_alt)
-            & Q(amino_acid_mutations__gene__gene_symbol=protein_symbol)
+            & Q(amino_acid_mutations__cds__gene__symbol=protein_symbol)
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
@@ -999,7 +999,7 @@ class SampleViewSet(
 
         alignment_qs = models.Alignment.objects.filter(
             # search with case insensitive ORF1ab = orf1ab
-            amino_acid_mutations__gene__gene_symbol__iexact=protein_symbol,
+            amino_acid_mutations__cds__gene__symbol__iexact=protein_symbol,
             amino_acid_mutations__start=int(first_deleted) - 1,
             amino_acid_mutations__end=last_deleted,
             amino_acid_mutations__alt="",
@@ -1048,7 +1048,7 @@ class SampleViewSet(
             amino_acid_mutations__end=ref_pos,
             amino_acid_mutations__ref=ref_aa,
             amino_acid_mutations__alt=alt_aa,
-            amino_acid_mutations__gene__gene_symbol=protein_symbol,
+            amino_acid_mutations__cds__gene__symbol=protein_symbol,
         )
         filters = {"sequence__alignments__in": alignment_qs}
         if exclude:

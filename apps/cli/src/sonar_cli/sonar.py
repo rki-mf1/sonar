@@ -544,8 +544,16 @@ def create_subparser_add_reference(
     parser.add_argument(
         "--gb",
         metavar="FILE",
-        help="genbank file of a reference genome",
+        help=(
+            "Genbank file(s) of a reference genome. Normally, one genbank file per one reference genome, "
+            "however, in a case of a segmented genome (multiple genbank files), user can provide multiple files. "
+            "For example, --gb InfluenzaA_H1N1_seg1.gb InfluenzaA_H1N1_seg2.gb InfluenzaA_H1N1_seg7.gb ... "
+            "This will automatically treat this import as a segmented genome, and the first file will be used as the "
+            "index in the reference table and shown information in ref-list command."
+        ),
         type=str,
+        nargs="+",
+        default=[],
         required=True,
     )
 
@@ -832,7 +840,7 @@ def handle_list_ref(args: argparse.Namespace):
 
 
 def handle_add_ref(args: argparse.Namespace):
-    sonarUtils.add_ref_by_genebank_file(reference_gb=args.gb)
+    sonarUtils.add_ref_by_genebank_file(reference_gbs=args.gb)
 
 
 def handle_delete_ref(args: argparse.Namespace):

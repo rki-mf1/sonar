@@ -1,10 +1,10 @@
-LOCUS       NC_063383             197209 bp    DNA     linear   VRL 13-JUL-2022
+LOCUS       NC_063383             197209 bp    DNA     linear   VRL 18-NOV-2022
 DEFINITION  Monkeypox virus, complete genome.
 ACCESSION   NC_063383
 VERSION     NC_063383.1
 DBLINK      BioProject: PRJNA485481
 KEYWORDS    RefSeq.
-SOURCE      Monkeypox virus (monkeypox)
+SOURCE      Monkeypox virus
   ORGANISM  Monkeypox virus
             Viruses; Varidnaviria; Bamfordvirae; Nucleocytoviricota;
             Pokkesviricetes; Chitovirales; Poxviridae; Chordopoxvirinae;
@@ -58,7 +58,7 @@ FEATURES             Location/Qualifiers
                      /isolate="MPXV-M5312_HM12_Rivers"
                      /host="Homo sapiens"
                      /db_xref="taxon:10244"
-                     /country="Nigeria: Rivers State"
+                     /geo_loc_name="Nigeria: Rivers State"
                      /collection_date="2018-08"
                      /genotype="MPXV clade 2"
      repeat_region   complement(1..6422)
@@ -168,7 +168,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG019"
                      /locus_tag="NBT03_gp005"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-006"
-                     /db_xref="GeneID:72551422"
+                     /db_xref="GeneID:72551421"
      CDS             7580..8008
                      /gene="OPG019"
                      /locus_tag="NBT03_gp005"
@@ -179,7 +179,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="EGF-like domain protein"
                      /protein_id="YP_010377006.1"
-                     /db_xref="GeneID:72551422"
+                     /db_xref="GeneID:72551421"
                      /translation="MSIKYLMLLFAAMIIRSLADSGNAIETTSPEITNATTDIPAIRL
                      CGPEGDGYCLHGDCIHARDIDGMYCRCSHGYTGIRCQHVVLVDYQRSGKPDTTTSYIP
                      SLGIVLVLVGIIITCCLLSVYMFTRRTKLPIQDMVVLYFL"
@@ -189,7 +189,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG021"
                      /locus_tag="NBT03_gp006"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-008"
-                     /db_xref="GeneID:72551424"
+                     /db_xref="GeneID:72551422"
      CDS             9587..10315
                      /gene="OPG021"
                      /locus_tag="NBT03_gp006"
@@ -202,7 +202,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Zinc finger-like protein (2)"
                      /protein_id="YP_010377007.1"
-                     /db_xref="GeneID:72551424"
+                     /db_xref="GeneID:72551422"
                      /translation="MEFDPVKINTSSIDHVTILQYIDEPNDIRLTVCIIRNVNNITYY
                      INITKINPHLANRFRAWKKRIAGRDYMTNLSRDTGIQQSKLTETIRNCQKNKNIYGLY
                      IHYNLVINVVIDWITDVIVQSILRGLVNWYIANNTYTPNTPNNTTTISELDIIKILDK
@@ -212,7 +212,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG022"
                      /locus_tag="NBT03_gp007"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-009"
-                     /db_xref="GeneID:72551425"
+                     /db_xref="GeneID:72551423"
      CDS             complement(10478..10858)
                      /gene="OPG022"
                      /locus_tag="NBT03_gp007"
@@ -223,7 +223,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Interleukin-18-binding protein"
                      /protein_id="YP_010377008.1"
-                     /db_xref="GeneID:72551425"
+                     /db_xref="GeneID:72551423"
                      /translation="MRILFLIAFMYGCVHSYVNAVETKCPNLAIVTSSGEFHCSGCVE
                      RMPGFSYMYWLANDMKSDEDTKFIEHLGGGIKEDETVRTTDGGITTLRKVLHVTDTNK
                      FAHYRFTCVLITLDGVSKKNIWLK"
@@ -231,7 +231,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG023"
                      /locus_tag="NBT03_gp008"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-010"
-                     /db_xref="GeneID:72551426"
+                     /db_xref="GeneID:72551424"
      CDS             complement(10918..12900)
                      /gene="OPG023"
                      /locus_tag="NBT03_gp008"
@@ -242,7 +242,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin repeat protein (2)"
                      /protein_id="YP_010377009.1"
-                     /db_xref="GeneID:72551426"
+                     /db_xref="GeneID:72551424"
                      /translation="MFDYLENEEVVLDELKQMLRDRDPNDTRNQFKNNALHAYLFNEH
                      CNNVEVVKLLLDSGTNPLHKNWRQFTPIEEYTNSRHVKVNKDIAMALLEATGYSNIND
                      FNIFSYMKSKNVDVDLIKVLVEHGFDLSVKCENHRSVIENYVMTDDPVPEIIDLFIEN
@@ -259,7 +259,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG024"
                      /locus_tag="NBT03_gp009"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-011"
-                     /db_xref="GeneID:72551427"
+                     /db_xref="GeneID:72551425"
      CDS             complement(13034..13228)
                      /gene="OPG024"
                      /locus_tag="NBT03_gp009"
@@ -269,14 +269,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="retroviral pseudoprotease-like protein"
                      /protein_id="YP_010377010.1"
-                     /db_xref="GeneID:72551427"
+                     /db_xref="GeneID:72551425"
                      /translation="MSSKGGSSGGMWSVFIHGHDGSNKGSKTYTSSGSGMWGGGSSSG
                      VKSGVNGGVNGGVKSGTGKI"
      gene            complement(13375..15267)
                      /gene="OPG025"
                      /locus_tag="NBT03_gp010"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-012"
-                     /db_xref="GeneID:72551428"
+                     /db_xref="GeneID:72551426"
      CDS             complement(13375..15267)
                      /gene="OPG025"
                      /locus_tag="NBT03_gp010"
@@ -287,7 +287,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin repeat protein (14)"
                      /protein_id="YP_010377011.1"
-                     /db_xref="GeneID:72551428"
+                     /db_xref="GeneID:72551426"
                      /translation="MVNDKILYDSCKTFNIDASSAQSLIESGANPLYEYDGETPLKAY
                      VTKKNNNIKNDVVILLLSSVDYKNINDFDIFEYLCSDNIDIDLLKLLISKGIEINSIK
                      NGINIVEKYATTSNPNIDVFKLLLDKGIPTCSNIQYGYNIIPIQCTDYIYFNWDDEFD
@@ -306,7 +306,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG027"
                      /locus_tag="NBT03_gp011"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-013"
-                     /db_xref="GeneID:72551429"
+                     /db_xref="GeneID:72551427"
      CDS             complement(15925..16377)
                      /gene="OPG027"
                      /locus_tag="NBT03_gp011"
@@ -317,7 +317,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Host range protein"
                      /protein_id="YP_010377012.1"
-                     /db_xref="GeneID:72551429"
+                     /db_xref="GeneID:72551427"
                      /translation="MGIQHEFDIIINGDIALRNLQLHRGDNYGCKLKIISNDYKKLKL
                      RFIIRPDWSEIDEVKGLTVFANNYAVKVNKVDYTFYYVIYEAVIHLYNKKTEILIYSD
                      DENELFKHYYPYISLNMISKKYKVKEENYSSPYIEHPLIPYRDYESMD"
@@ -325,7 +325,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG029"
                      /locus_tag="NBT03_gp012"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-014"
-                     /db_xref="GeneID:72551430"
+                     /db_xref="GeneID:72551428"
      CDS             complement(16602..17069)
                      /gene="OPG029"
                      /locus_tag="NBT03_gp012"
@@ -336,7 +336,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377013.1"
-                     /db_xref="GeneID:72551430"
+                     /db_xref="GeneID:72551428"
                      /translation="MNVYNKADSFSLESDSIKDVIHDYICWLSMTDETRPSIGNVFTA
                      METFKIDAVRYYDGNIYDLAKDINTMSFDSFIRSLQNITSKKDKLTVYGTMGLLSIVV
                      DINKGRDVSNIKFAAGIIILMEYIFDDTDLSHLKIALYRRIQRCYPIDDDDDR"
@@ -344,7 +344,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG030"
                      /locus_tag="NBT03_gp013"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-015"
-                     /db_xref="GeneID:72551431"
+                     /db_xref="GeneID:72551429"
      CDS             complement(17213..17833)
                      /gene="OPG030"
                      /locus_tag="NBT03_gp013"
@@ -355,7 +355,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Kelch-like protein (1)"
                      /protein_id="YP_010377014.1"
-                     /db_xref="GeneID:72551431"
+                     /db_xref="GeneID:72551429"
                      /translation="MTSLIMDMNRLNLDKLKHENIFSDNIIEDAKEFIFGSRKIYTDS
                      VDDLIELYSLAKYLNNQTLKDVVIERMDYVCKYIGKDNWSTIYSFYKENGLRNSFLRQ
                      YINNNIEEICSTDQFLKLDVDSVCDILDNDEIVVTREYTILNMVLRWLENKRVNIDDF
@@ -364,7 +364,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG031"
                      /locus_tag="NBT03_gp014"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-016"
-                     /db_xref="GeneID:72551432"
+                     /db_xref="GeneID:72551430"
      CDS             complement(17878..18828)
                      /gene="OPG031"
                      /locus_tag="NBT03_gp014"
@@ -375,7 +375,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="C4L/C10L-like family protein"
                      /protein_id="YP_010377015.1"
-                     /db_xref="GeneID:72551432"
+                     /db_xref="GeneID:72551430"
                      /translation="MDTIKIFNHGEFDTIRNELVNLLKVVKWNTINSNVTVSSTDTID
                      ISDCIREILYKQFKNVRNIEVSSDISFIKYNRFNDTTITDDNMGYYLVIYLNRTKSLK
                      TLIYPTLETVISSSDDIMFSKSLNFRFENTKREYKLVMCSISLIYKPSICRIQYDNNK
@@ -388,7 +388,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG034"
                      /locus_tag="NBT03_gp015"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-018"
-                     /db_xref="GeneID:72551434"
+                     /db_xref="GeneID:72551431"
      CDS             complement(19361..20005)
                      /gene="OPG034"
                      /locus_tag="NBT03_gp015"
@@ -400,7 +400,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377017.1"
-                     /db_xref="GeneID:72551434"
+                     /db_xref="GeneID:72551431"
                      /translation="MIMRTDTNNILMRHLKNLTDDEFKCIIHRSSDFLYLSDRDYTSI
                      TKETLVSEIVEEYPDDCNKILAIIFLVLDKDIDVDIETKLTPTPKPAVRFAILDKMTA
                      DIKLTDLVRHYFRYIEQDIPLGPLFKKIDSYRIRAINNYSKELGLATEYFNKYGHLMF
@@ -409,7 +409,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG035"
                      /locus_tag="NBT03_gp016"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-019"
-                     /db_xref="GeneID:72551435"
+                     /db_xref="GeneID:72551432"
      CDS             complement(20051..20404)
                      /gene="OPG035"
                      /locus_tag="NBT03_gp016"
@@ -421,7 +421,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377018.1"
-                     /db_xref="GeneID:72551435"
+                     /db_xref="GeneID:72551432"
                      /translation="MRTLLIRYILWRNDGDPSYYNDDFKKLILFDELVDDDDVCTLIK
                      NMRMTLSDGPLLDRLNQPVNNVEDVKRMIAISAKVARDIGRRSEIRWEDSFTILFRMI
                      EKYFDDLMTDLYGEK"
@@ -429,7 +429,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG036"
                      /locus_tag="NBT03_gp017"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-020"
-                     /db_xref="GeneID:72551436"
+                     /db_xref="GeneID:72551433"
      CDS             complement(20531..21064)
                      /gene="OPG036"
                      /locus_tag="NBT03_gp017"
@@ -441,7 +441,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377019.1"
-                     /db_xref="GeneID:72551436"
+                     /db_xref="GeneID:72551433"
                      /translation="MTSSAMDNNESKVLEMVYDATILPDCSGMDPSIIDCINRHINMR
                      IQRSYSSNIIAILDRFLMMNKDELNNTQCHIIKEFMTYEQMAIDYYGGYVNAILYQIR
                      KRPNQHHTIDLFKRIKRTRYDTFKVNPVEFVKKVIGFVSILNKYKPIYSYVLYENVLY
@@ -450,7 +450,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG037"
                      /locus_tag="NBT03_gp018"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-021"
-                     /db_xref="GeneID:72551437"
+                     /db_xref="GeneID:72551434"
      CDS             complement(21105..22433)
                      /gene="OPG037"
                      /locus_tag="NBT03_gp018"
@@ -462,7 +462,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin-like protein (1)"
                      /protein_id="YP_010377020.1"
-                     /db_xref="GeneID:72551437"
+                     /db_xref="GeneID:72551434"
                      /translation="MSVEYYLSLYAKYNSKNLDVFRNMLQVIEPSGNYHILHAYCGIK
                      GLDERFIEELLHRGYSPNETDDDGNYPLHIASKINNNRIVAMLLVHGADPNACDKHNK
                      TPLYYLSGTDDEVIERINLLVQYGAKINNSVDEEGCGPLLACTDPSERVFKKIMSIGF
@@ -475,7 +475,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG038"
                      /locus_tag="NBT03_gp019"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-022"
-                     /db_xref="GeneID:72551438"
+                     /db_xref="GeneID:72551435"
      CDS             complement(22497..23159)
                      /gene="OPG038"
                      /locus_tag="NBT03_gp019"
@@ -486,7 +486,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="NFkB inhibitor"
                      /protein_id="YP_010377021.1"
-                     /db_xref="GeneID:72551438"
+                     /db_xref="GeneID:72551435"
                      /translation="MVYKLVLLFCIASLGYSVEYKNTICPHRQDYRYWYFVAELTIGV
                      NYDINSTIIGECHMSESYIDRNANIVLTGYGLKVNMTIMDTDQRFVAAAEGVGKDNKL
                      SVLLFTTQRLDKVHHNISVTITCMEMNCGTTKYNSDLPESIHKSSSCDITINGSCVTC
@@ -496,7 +496,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG039"
                      /locus_tag="NBT03_gp020"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-023"
-                     /db_xref="GeneID:72551439"
+                     /db_xref="GeneID:72551436"
      CDS             complement(23264..24118)
                      /gene="OPG039"
                      /locus_tag="NBT03_gp020"
@@ -507,7 +507,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin-like protein (3)"
                      /protein_id="YP_010377022.1"
-                     /db_xref="GeneID:72551439"
+                     /db_xref="GeneID:72551436"
                      /translation="MDLSRINTWKSKQLKSFLSSKDAFKADINGHSVLYYAIADNNVR
                      LVCTLLNAGALKNLLDNEFPLHQAATLEDTKIVKILLFSGMDDSQFDDKGNTALYYAV
                      DSGNMQTVKLFVKKNWRLMFYGKTGWKTSFYHAVMLNDVSIVSYFLSEIPSPFDLAIL
@@ -518,7 +518,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG040"
                      /locus_tag="NBT03_gp021"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-024"
-                     /db_xref="GeneID:72551440"
+                     /db_xref="GeneID:72551437"
      CDS             complement(24351..25478)
                      /gene="OPG040"
                      /locus_tag="NBT03_gp021"
@@ -530,7 +530,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Serpin"
                      /protein_id="YP_010377023.1"
-                     /db_xref="GeneID:72551440"
+                     /db_xref="GeneID:72551437"
                      /translation="MIALLILSLACSVSAYRLQGFINAGILAYKNIQNGDEDDNDNIV
                      FSPFGYSFSMFMSLLSASGNTRVELLNTMNLRKRDLGPAFTELISGLAKMKTSKYTYT
                      DLTYQSFVDSTVCIKPSYYQQYHRFGLYRLNFRRDAVNKINSIVERRSGMSNVVDSTM
@@ -544,7 +544,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG042"
                      /locus_tag="NBT03_gp022"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-026"
-                     /db_xref="GeneID:72551442"
+                     /db_xref="GeneID:72551438"
      CDS             complement(25823..27097)
                      /gene="OPG042"
                      /locus_tag="NBT03_gp022"
@@ -555,7 +555,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Phospholipase-D-like protein"
                      /protein_id="YP_010377025.1"
-                     /db_xref="GeneID:72551442"
+                     /db_xref="GeneID:72551438"
                      /translation="MNPDNTIAVITETIPIGMQFDKVYLTTFNMWREILSNTIKTLDI
                      SSFYWSLSDEVGTNFGTVILNEIVQLPKRGVRVRVAVNKSNKPLKDVERLQMAGVEVR
                      YIDITNILGGVLHTKFWISDNTHIYLGSANMDWRSLTQVKELGIAIFNNRNLAADLTQ
@@ -568,7 +568,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG043"
                      /locus_tag="NBT03_gp023"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-027"
-                     /db_xref="GeneID:72551443"
+                     /db_xref="GeneID:72551439"
      CDS             complement(27125..27955)
                      /gene="OPG043"
                      /locus_tag="NBT03_gp023"
@@ -579,7 +579,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Putative monoglyceride lipase"
                      /protein_id="YP_010377026.1"
-                     /db_xref="GeneID:72551443"
+                     /db_xref="GeneID:72551439"
                      /translation="MSTNCMFNLDNDYIYCKYWKPITYPKALVFISHGAGEHSGRYDE
                      LAENISSLGILVFSHDHIGHGRSNGEKMMIDDFGKYVRDVVQHVVTIKSTYPGVPVFL
                      LGHSMGATISILAACDNPNLFTAMILMSPLVNADAVPRLNLLAAKLMGTITPNASVGK
@@ -590,7 +590,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG044"
                      /locus_tag="NBT03_gp024"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-028"
-                     /db_xref="GeneID:72551444"
+                     /db_xref="GeneID:72551440"
      CDS             28091..28540
                      /gene="OPG044"
                      /locus_tag="NBT03_gp024"
@@ -602,7 +602,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377027.1"
-                     /db_xref="GeneID:72551444"
+                     /db_xref="GeneID:72551440"
                      /translation="METKSDYEDAVFYFVDDDEICSRDSIIDLIDEYITWRNHVIVFN
                      KDITSCGRLYKELIKFDDVAIRYYGIDKINEIVEAMSEGDHYINLTEVHDQESLFATI
                      GICAKITEHWGYKKISESKFQSLGNITDLMTDDNINILILFLEKKMN"
@@ -610,7 +610,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG045"
                      /locus_tag="NBT03_gp025"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-029"
-                     /db_xref="GeneID:72551445"
+                     /db_xref="GeneID:72551441"
      CDS             complement(28603..29262)
                      /gene="OPG045"
                      /locus_tag="NBT03_gp025"
@@ -621,7 +621,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Caspase-9 inhibitor"
                      /protein_id="YP_010377028.1"
-                     /db_xref="GeneID:72551445"
+                     /db_xref="GeneID:72551441"
                      /translation="MLSMFMYNNIIDYVHVHDIEDEASDNDDRDYVYPLPENMVYRFD
                      KSTNILDYLSTERDHVMMAVQYYMSKQRLDDLYRQLPTKTRSYVDIINTYCDKVNNDY
                      NSDMNIMCDMASTESFTVYDINNEVNTILMNNKGLGVRLATISFITELGRRCMNPVET
@@ -631,7 +631,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG046"
                      /locus_tag="NBT03_gp026"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-030"
-                     /db_xref="GeneID:72551446"
+                     /db_xref="GeneID:72551442"
      CDS             complement(29274..29729)
                      /gene="OPG046"
                      /locus_tag="NBT03_gp026"
@@ -642,7 +642,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="dUTPase"
                      /protein_id="YP_010377029.1"
-                     /db_xref="GeneID:72551446"
+                     /db_xref="GeneID:72551442"
                      /translation="MIFFMFNMNINSPVRFVKETNRAKSPTRQSPGAAGYDLYSAYDY
                      TIPPGERQLIKTDISMSMPKFCYGRIAPRSGLSLKGIDIGGGVIDEDYRGSIGVILIN
                      NGKCTFNVNTGDRIAQLIYQRIYYPELEEVQSLDSTDRGDQGFGSTGLR"
@@ -650,7 +650,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG047"
                      /locus_tag="NBT03_gp027"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-031"
-                     /db_xref="GeneID:72551447"
+                     /db_xref="GeneID:72551443"
      CDS             complement(29746..31194)
                      /gene="OPG047"
                      /locus_tag="NBT03_gp027"
@@ -661,7 +661,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Kelch-like protein (2)"
                      /protein_id="YP_010377030.1"
-                     /db_xref="GeneID:72551447"
+                     /db_xref="GeneID:72551443"
                      /translation="MPIFVNTVYCKNILALYTTKKFKTIIEAIGGNIIVNSTILKKLS
                      PYFRTHLRQKYTKNKDPVTRVCLDLDIHSLTSIVIYSYTGKVYIDSHNVVNLLRASIL
                      TSVEFIIYTCINFILRDFRKEYCIECYMMGIEYGLSNLLCHTKDFITKHFLELEDDII
@@ -675,7 +675,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG048"
                      /locus_tag="NBT03_gp028"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-032"
-                     /db_xref="GeneID:72551448"
+                     /db_xref="GeneID:72551444"
      CDS             complement(31205..32164)
                      /gene="OPG048"
                      /locus_tag="NBT03_gp028"
@@ -686,7 +686,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ribonucleotide reductase small subunit"
                      /protein_id="YP_010377031.1"
-                     /db_xref="GeneID:72551448"
+                     /db_xref="GeneID:72551444"
                      /translation="MEPILAPNPNRFVIFPIQYHDIWNMYKKAEASFWTVEEVDISKD
                      INDWNKLTPDEKYFIKHVLAFFAASDGIVNENLAERFCTEVQITEARCFYGFQMAIEN
                      IHSEMYSLLIDTYVKDSNEKNYLFNAIETMPCVKKKADWAQKWIHDSAGYGERLIAFA
@@ -697,7 +697,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG049"
                      /locus_tag="NBT03_gp029"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-033"
-                     /db_xref="GeneID:72551449"
+                     /db_xref="GeneID:72551445"
      CDS             complement(32195..33151)
                      /gene="OPG049"
                      /locus_tag="NBT03_gp029"
@@ -708,7 +708,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Telomere-binding protein I6 (1)"
                      /protein_id="YP_010377032.1"
-                     /db_xref="GeneID:72551449"
+                     /db_xref="GeneID:72551445"
                      /translation="MCTNVVRVFVILYLLAECGCIKYDVDDNVHICTHTVMSHINYTS
                      WYYNDKVIALATEDKTSGYISSFIKRVNISLTCLNISSLRYEDSGTYKGVSHLKDGVI
                      VTTTMNISVKANIIDLTGRVRYLTRNYCEVKIRCEITSFALNGSTPPHMILGTVDKWK
@@ -719,7 +719,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG050"
                      /locus_tag="NBT03_gp030"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-034"
-                     /db_xref="GeneID:72551450"
+                     /db_xref="GeneID:72551446"
      CDS             complement(33181..33408)
                      /gene="OPG050"
                      /locus_tag="NBT03_gp030"
@@ -730,14 +730,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="CPXV053 protein"
                      /protein_id="YP_010377033.1"
-                     /db_xref="GeneID:72551450"
+                     /db_xref="GeneID:72551446"
                      /translation="MSKILTFVKNKIIDLINNDHQIKYSRVMMIEESDSLLPVDEVHV
                      NHGFDCVEMIDENISNENIEQYKTESFFTIN"
      gene            complement(33425..33649)
                      /gene="OPG051"
                      /locus_tag="NBT03_gp031"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-035"
-                     /db_xref="GeneID:72551451"
+                     /db_xref="GeneID:72551447"
      CDS             complement(33425..33649)
                      /gene="OPG051"
                      /locus_tag="NBT03_gp031"
@@ -748,14 +748,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="CPXV054 protein"
                      /protein_id="YP_010377034.1"
-                     /db_xref="GeneID:72551451"
+                     /db_xref="GeneID:72551447"
                      /translation="MGSCCGRFCDAKNKKEDVEDGREGCCDYKNLNDLDESEARVEFG
                      PLYMINEEKSDINTLDIKRRYRHTIESVYF"
      gene            complement(33801..33995)
                      /gene="OPG052"
                      /locus_tag="NBT03_gp032"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-036"
-                     /db_xref="GeneID:72551452"
+                     /db_xref="GeneID:72551448"
      CDS             complement(33801..33995)
                      /gene="OPG052"
                      /locus_tag="NBT03_gp032"
@@ -766,14 +766,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Cytoplasmic protein"
                      /protein_id="YP_010377035.1"
-                     /db_xref="GeneID:72551452"
+                     /db_xref="GeneID:72551448"
                      /translation="MEGSKRKHDSRRLQEQEQPRPRTPPSYEEIAKYGHSFNVKRFTN
                      EEMCLKNDYPRIISYNPPPK"
      gene            complement(34052..34690)
                      /gene="OPG053"
                      /locus_tag="NBT03_gp033"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-037"
-                     /db_xref="GeneID:72551453"
+                     /db_xref="GeneID:72551449"
      CDS             complement(34052..34690)
                      /gene="OPG053"
                      /locus_tag="NBT03_gp033"
@@ -784,7 +784,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein L1R"
                      /protein_id="YP_010377036.1"
-                     /db_xref="GeneID:72551453"
+                     /db_xref="GeneID:72551449"
                      /translation="MAETKEFKTLYNLFIDSYLQKLAQHSIPTNVTCAIHIGEVIGQF
                      KNCALRITNKCMSNSRLSFTLMVESFIEVISLLPEKDRRAIAEEIGIDLDDVPSVVSK
                      LEKNCNAYAEVNNIIDIQKLNIGECSAPPGQHMLLQIVNTGSAEANCGLQTIVKSLNK
@@ -793,7 +793,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG054"
                      /locus_tag="NBT03_gp034"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-038"
-                     /db_xref="GeneID:72551454"
+                     /db_xref="GeneID:72551450"
      CDS             complement(34677..35996)
                      /gene="OPG054"
                      /locus_tag="NBT03_gp034"
@@ -804,7 +804,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Serine/threonine-protein kinase"
                      /protein_id="YP_010377037.1"
-                     /db_xref="GeneID:72551454"
+                     /db_xref="GeneID:72551450"
                      /translation="MGVANDSSPEYQWMSPHRLSDTVILGDCLYFNNIMSQLDLHQNW
                      APSVRLLNYFKNFNKETLLKIEENDYINSSFFQQKDKRFYPINDDFYHISTGGYGIVF
                      KIDNYVVKFVFEATKLYSPMETTAEFTVPKFLYNNLKGDEKKLIVCAWAMGLNYKLTF
@@ -817,7 +817,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG055"
                      /locus_tag="NBT03_gp035"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-039"
-                     /db_xref="GeneID:72551455"
+                     /db_xref="GeneID:72551451"
      CDS             complement(36019..37083)
                      /gene="OPG055"
                      /locus_tag="NBT03_gp035"
@@ -828,7 +828,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Protein F11"
                      /protein_id="YP_010377038.1"
-                     /db_xref="GeneID:72551455"
+                     /db_xref="GeneID:72551451"
                      /translation="MGFCIPLRSKMLKRVSRKSSSILARRPTPKKMNIVTDSENRLKK
                      NSYIENTNQGNILMDSIFVSTMPVETLFGSYITDDNDDYELKDLLNVTYNIKPVIVPD
                      IKLDSVLDRDGNFRPADCFLVKLKHSDGFTKGALYLGHSAGFTATICLKNEGVSGLYI
@@ -840,7 +840,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG056"
                      /locus_tag="NBT03_gp036"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-040"
-                     /db_xref="GeneID:72551456"
+                     /db_xref="GeneID:72551452"
      CDS             complement(37127..39034)
                      /gene="OPG056"
                      /locus_tag="NBT03_gp036"
@@ -851,7 +851,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="EEV maturation protein"
                      /protein_id="YP_010377039.1"
-                     /db_xref="GeneID:72551456"
+                     /db_xref="GeneID:72551452"
                      /translation="MLNRIQTLMKTANNYETIEILRNYLRLYIILARNEEGRGILIYD
                      DNIDSVMSMMNITILEVIGLTHCTKLRSSPPIPMSRLFMDEIDHESYYSPKTSYYPLI
                      DIIRKRSHEQGDIALALERYGIENTDSISEINEWLSSKGLACYRFVKFNDYRKQQMYR
@@ -868,7 +868,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG057"
                      /locus_tag="NBT03_gp037"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-041"
-                     /db_xref="GeneID:72551457"
+                     /db_xref="GeneID:72551453"
      CDS             complement(39077..40195)
                      /gene="OPG057"
                      /locus_tag="NBT03_gp037"
@@ -881,7 +881,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Palmytilated EEV membrane protein"
                      /protein_id="YP_010377040.1"
-                     /db_xref="GeneID:72551457"
+                     /db_xref="GeneID:72551453"
                      /translation="MWPFASVPAGAKCRLVETLPENMDFRSDHLTTFECFNEIITLAK
                      KYIYIASFCCNPLSTTRGALIFDKLKEVSEKGIKIIVLLDERGKRNLGELQSHSPDIN
                      FITVNIDKKNNVGLLLGCFWVSDDERCYVGNASFTGGSIHTIKTLGVYSDYPPLATDL
@@ -893,7 +893,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG058"
                      /locus_tag="NBT03_gp038"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-042"
-                     /db_xref="GeneID:72551458"
+                     /db_xref="GeneID:72551454"
      CDS             complement(40213..40434)
                      /gene="OPG058"
                      /locus_tag="NBT03_gp038"
@@ -903,14 +903,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Protein F14 (1)"
                      /protein_id="YP_010377041.1"
-                     /db_xref="GeneID:72551458"
+                     /db_xref="GeneID:72551454"
                      /translation="MKHRLYSEGLSISNDLNSIIGQQSTMDTDIEIDEDDIMELLNIL
                      TELGCDVDFDENFSDIADDILESLIEQDI"
      gene            complement(40484..40633)
                      /gene="OPG059"
                      /locus_tag="NBT03_gp039"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-043"
-                     /db_xref="GeneID:72551459"
+                     /db_xref="GeneID:72551455"
      CDS             complement(40484..40633)
                      /gene="OPG059"
                      /locus_tag="NBT03_gp039"
@@ -920,14 +920,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Cytochrome C oxidase"
                      /protein_id="YP_010377042.1"
-                     /db_xref="GeneID:72551459"
+                     /db_xref="GeneID:72551455"
                      /translation="MVIGLVIFVSVAATIVGVLSNVLDMIMYVEENNEEDAKIKEEQE
                      LLLLY"
      gene            complement(40706..41182)
                      /gene="OPG060"
                      /locus_tag="NBT03_gp040"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-044"
-                     /db_xref="GeneID:72551460"
+                     /db_xref="GeneID:72551456"
      CDS             complement(40706..41182)
                      /gene="OPG060"
                      /locus_tag="NBT03_gp040"
@@ -938,7 +938,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Protein F15"
                      /protein_id="YP_010377043.1"
-                     /db_xref="GeneID:72551460"
+                     /db_xref="GeneID:72551456"
                      /translation="MRSIAGLDKLKMEIFNVEELINMKPFKNMNKITINQKDNCILAN
                      RCFVKIDTPRYIPSTSISSSNIIRIRNHDFTLSELLYSPFHFQQPQFQYLLPGFVLTC
                      IDKVSKQQKECKYCISNRGDDDSLSINIFIPTINKSIYIIIGLRMKNFWKPKFEIE"
@@ -946,7 +946,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG061"
                      /locus_tag="NBT03_gp041"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-045"
-                     /db_xref="GeneID:72551461"
+                     /db_xref="GeneID:72551457"
      CDS             complement(41189..41884)
                      /gene="OPG061"
                      /locus_tag="NBT03_gp041"
@@ -957,7 +957,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Protein F16 (1)"
                      /protein_id="YP_010377044.1"
-                     /db_xref="GeneID:72551461"
+                     /db_xref="GeneID:72551457"
                      /translation="MKVVIVTSVASLLDASIQFQKTACRHHCNYLSMQVVKEIEEFGT
                      INEKKLEFDTWKDVIQNDEIDAIVFYRVKQISISTGVLYESMMRNRTKPISMYFVRDC
                      LAFDGNPPSFRMTSCNINAYNRNKIKDLIILMNMKTCNKKIIGEFIIDNFGSVDALLS
@@ -967,7 +967,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG062"
                      /locus_tag="NBT03_gp042"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-046"
-                     /db_xref="GeneID:72551462"
+                     /db_xref="GeneID:72551458"
      CDS             41947..42252
                      /gene="OPG062"
                      /locus_tag="NBT03_gp042"
@@ -979,14 +979,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-binding phosphoprotein (1)"
                      /protein_id="YP_010377045.1"
-                     /db_xref="GeneID:72551462"
+                     /db_xref="GeneID:72551458"
                      /translation="MNSHFVSAHTPFYINTKEGRYLVLKAVKVCDVRTVECEGSKASC
                      VLKVDKPSSPTCERRPSSPSRCERMNNPGKQVPFMRTDMLQNMFAANRDNVTSRLLN"
      gene            complement(42249..43688)
                      /gene="OPG063"
                      /locus_tag="NBT03_gp043"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-047"
-                     /db_xref="GeneID:72551463"
+                     /db_xref="GeneID:72551459"
      CDS             complement(42249..43688)
                      /gene="OPG063"
                      /locus_tag="NBT03_gp043"
@@ -998,7 +998,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Poly(A) polymerase catalytic subunit (3)"
                      /protein_id="YP_010377046.1"
-                     /db_xref="GeneID:72551463"
+                     /db_xref="GeneID:72551459"
                      /translation="MNRNPDQNTLPNITLKIIETYLGRVPSVNEYHMLKLQARNIQKI
                      TVFNKDIFVSLVKKNKKRFFFDVDTSASEIKDRILSYFSKQTQTYNIGKLFTIIELQS
                      VLVTTYTDILGVLTIKAPNVISSKISYNVTSMEELARDMLNSMNVAVIDKAKVMGRHN
@@ -1012,7 +1012,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG064"
                      /locus_tag="NBT03_gp044"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-048"
-                     /db_xref="GeneID:72551464"
+                     /db_xref="GeneID:72551460"
      CDS             complement(43685..45898)
                      /gene="OPG064"
                      /locus_tag="NBT03_gp044"
@@ -1023,7 +1023,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Iev morphogenesis protein"
                      /protein_id="YP_010377047.1"
-                     /db_xref="GeneID:72551464"
+                     /db_xref="GeneID:72551460"
                      /translation="MISVTDIRRAFLDNECHTITKAFGYLHEDKAIALIKIGFHPTYI
                      PKVLYNNVVEFVPEKLYLFKPRTVSPLDLISTITKLKNVDKFAAHINYHKNSILITGD
                      KSLIVKCMPYMIISDDDIRFIREQFVGTNSIEYILSFINKESVYRMSYQFSENEIVTI
@@ -1041,7 +1041,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG065"
                      /locus_tag="NBT03_gp045"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-049"
-                     /db_xref="GeneID:72551465"
+                     /db_xref="GeneID:72551461"
      CDS             complement(46022..46483)
                      /gene="OPG065"
                      /locus_tag="NBT03_gp045"
@@ -1056,7 +1056,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Double-stranded RNA binding protein"
                      /protein_id="YP_010377048.1"
-                     /db_xref="GeneID:72551465"
+                     /db_xref="GeneID:72551461"
                      /translation="MEKREVNKALYDLQRSAMVYSSNDTPPRWSTTMDADTRPTDSDA
                      DAIIDDVSREKSMREDHKSFDDVIPVKKIIYWKGVNPVTVINEYCQITRRDWSFRIES
                      VGPSNSPTFYACVDIDGRVFDKADGKSKRDAKNNAAKLAVDKLLSYVIIRF"
@@ -1064,7 +1064,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG066"
                      /locus_tag="NBT03_gp046"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-050"
-                     /db_xref="GeneID:72551466"
+                     /db_xref="GeneID:72551462"
      CDS             complement(46649..47428)
                      /gene="OPG066"
                      /locus_tag="NBT03_gp046"
@@ -1077,7 +1077,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-directed RNA polymerase 30 kDa polypeptide"
                      /protein_id="YP_010377049.1"
-                     /db_xref="GeneID:72551466"
+                     /db_xref="GeneID:72551462"
                      /translation="MENVYISSYSSNEQISMAVVTTDIRELLSQYVDDANLENLIEWA
                      MEKSSKYYIKNIGNTKSNIEETKFESKNNIGIEYSKDSKNKLSYRNKPSIATHLEYKT
                      LCDMIKGTSGTEKEFLRYLLFGIKCIKKGVEYNIDKIKDVSYNDYFNVLDEKYNTPCP
@@ -1089,7 +1089,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG068"
                      /locus_tag="NBT03_gp047"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-052"
-                     /db_xref="GeneID:72551468"
+                     /db_xref="GeneID:72551463"
      CDS             48201..49904
                      /gene="OPG068"
                      /locus_tag="NBT03_gp047"
@@ -1100,7 +1100,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein E6"
                      /protein_id="YP_010377051.1"
-                     /db_xref="GeneID:72551468"
+                     /db_xref="GeneID:72551463"
                      /translation="MDFIRRKYLIYTVENNIDFLKDDTLSKVNNFTLNHVLALKYLVS
                      NFPQHVITKDVLANTNFFVFIHMVRCCKVYEAVLRHAFDAPTLYVKALTKNYLSFSNT
                      IQSYKETVHKLTQDEKFLEVAEYMDELGELIGVNYDLVLNPLFHGGEPIKDMEIIFLK
@@ -1116,7 +1116,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG069"
                      /locus_tag="NBT03_gp048"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-053"
-                     /db_xref="GeneID:72551469"
+                     /db_xref="GeneID:72551464"
      CDS             49986..50486
                      /gene="OPG069"
                      /locus_tag="NBT03_gp048"
@@ -1127,7 +1127,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Myristoylated protein E7"
                      /protein_id="YP_010377052.1"
-                     /db_xref="GeneID:72551469"
+                     /db_xref="GeneID:72551464"
                      /translation="METVATIQTPTKLMNKENAEMILEKIVNHIAMYISDESIYSENN
                      PEYIDFRNRYGDYRSLIIKSDHEFVKLCKDHAEKSSPETQQMIIKHIYEQYLIPVSEV
                      LLKPIMSMGDIFTYNGCKDNEWMLEQLSTLNFNNLYTWNSCSIGNVTRLFYTFFSYLM
@@ -1136,7 +1136,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG070"
                      /locus_tag="NBT03_gp049"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-054"
-                     /db_xref="GeneID:72551470"
+                     /db_xref="GeneID:72551465"
      CDS             50590..51411
                      /gene="OPG070"
                      /locus_tag="NBT03_gp049"
@@ -1147,7 +1147,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Membrane protein E8"
                      /protein_id="YP_010377053.1"
-                     /db_xref="GeneID:72551470"
+                     /db_xref="GeneID:72551465"
                      /translation="MAATVPRFDDVYKNAQRRILDQETFFSRGLSRPLMKNTYLFDNY
                      AYGWIPETAIWSSRYANLDASDYYPISLGLLKKFEFLMSLYKGPIPVYEEKVNTEFIA
                      NGSFSGRYVSYLRKFSALPTNEFISFLLLTSIPIYNILFWFKNTQFDITKHTLFRYVY
@@ -1157,7 +1157,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG071"
                      /locus_tag="NBT03_gp050"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-055"
-                     /db_xref="GeneID:72551471"
+                     /db_xref="GeneID:72551466"
      CDS             complement(51418..54438)
                      /gene="OPG071"
                      /locus_tag="NBT03_gp050"
@@ -1168,7 +1168,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA polymerase (2)"
                      /protein_id="YP_010377054.1"
-                     /db_xref="GeneID:72551471"
+                     /db_xref="GeneID:72551466"
                      /translation="MDVRCINWFESHGENRFLYLKSRCRNGETVFIRFPHYFYYVVTD
                      EIYQSLSPPPFNARPMGKMRTIDIDETISYNLDIKDRKCSVADMWLIEEPKKRSIQNA
                      TMDEFLNISWFYISNGISPDGCYSLDEQYLTKINNGCYHCDDPRNCFAKEIPRFDIPR
@@ -1191,7 +1191,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG072"
                      /locus_tag="NBT03_gp051"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-056"
-                     /db_xref="GeneID:72551472"
+                     /db_xref="GeneID:72551467"
      CDS             54470..54757
                      /gene="OPG072"
                      /locus_tag="NBT03_gp051"
@@ -1203,14 +1203,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Sulfhydryl oxidase"
                      /protein_id="YP_010377055.1"
-                     /db_xref="GeneID:72551472"
+                     /db_xref="GeneID:72551467"
                      /translation="MNPKHWGRAVWTIIFIVLSQAGLDGNIEACKRKLYTIVSTLPCP
                      ACRRHATIAIEDNNVMSSDDLNYIYYFFIRLFNNLAFDPKYAIDVSKVKPL"
      gene            complement(54752..55141)
                      /gene="OPG073"
                      /locus_tag="NBT03_gp052"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-057"
-                     /db_xref="GeneID:72551473"
+                     /db_xref="GeneID:72551468"
      CDS             complement(54752..55141)
                      /gene="OPG073"
                      /locus_tag="NBT03_gp052"
@@ -1221,7 +1221,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virion core protein E11"
                      /protein_id="YP_010377056.1"
-                     /db_xref="GeneID:72551473"
+                     /db_xref="GeneID:72551468"
                      /translation="MELVNIFLETDAGRVKFVIKNTDDVCASELINKFVELLSEYIHI
                      DQSEFYLVVKDKDIFYFKCDRGSISIVNNEFYVFDEPLLFVKDFTKITGVEFIVTETM
                      PCRIIPKNNHAVISVVTNHKFYNGLSL"
@@ -1229,7 +1229,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG074"
                      /locus_tag="NBT03_gp053"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-058"
-                     /db_xref="GeneID:72551474"
+                     /db_xref="GeneID:72551469"
      CDS             complement(55128..57125)
                      /gene="OPG074"
                      /locus_tag="NBT03_gp053"
@@ -1240,7 +1240,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Iev morphogenesis protein"
                      /protein_id="YP_010377057.1"
-                     /db_xref="GeneID:72551474"
+                     /db_xref="GeneID:72551469"
                      /translation="MFMYPEFARKALSKLISKKLNIEKVSSKHQLVLLDYGLHGLLPK
                      SLYLEAINSDILNVRFFPPEIINVTDIVKALQNSCRVDEYLKAVSLYHKNSLMVSGPN
                      VVKLMIEYNLLTHSDLEWLINENVVKATYLLKINAYMINFKIDLTVDEIIDLVKDIPV
@@ -1257,7 +1257,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG075"
                      /locus_tag="NBT03_gp054"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-059"
-                     /db_xref="GeneID:72551475"
+                     /db_xref="GeneID:72551470"
      CDS             complement(57172..57498)
                      /gene="OPG075"
                      /locus_tag="NBT03_gp054"
@@ -1268,7 +1268,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Glutaredoxin-1"
                      /protein_id="YP_010377058.1"
-                     /db_xref="GeneID:72551475"
+                     /db_xref="GeneID:72551470"
                      /translation="MAEEFVQQRLANNKVTIFVKFTCPFCRNALDILNKFSFKRGAYE
                      IVDIKEFKPENELRDYFEQITGGRTVPRIFFGKTSIGGYSDLLEIDNMDALGDILLSI
                      GVLRTC"
@@ -1288,7 +1288,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG077"
                      /locus_tag="NBT03_gp056"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-060"
-                     /db_xref="GeneID:72551476"
+                     /db_xref="GeneID:72551472"
      CDS             complement(57645..58583)
                      /gene="OPG077"
                      /locus_tag="NBT03_gp056"
@@ -1300,7 +1300,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Telomere-binding protein I1"
                      /protein_id="YP_010377059.1"
-                     /db_xref="GeneID:72551476"
+                     /db_xref="GeneID:72551472"
                      /translation="MAEFEDQLVFNSISARALKAYFTAKINEMVDELVTRKCPQKKKS
                      QAKKPEVRIPVDLVKSSFVKKFGLCNYGGILISLINSLVENNFFTKNGKLDDTGKKEL
                      VLTDVEKRILNTIDKSSPLYIDISDVKVLAARLKRSATQFNFNGHTYHLENDKIEDLI
@@ -1311,7 +1311,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG078"
                      /locus_tag="NBT03_gp057"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-061"
-                     /db_xref="GeneID:72551477"
+                     /db_xref="GeneID:72551473"
      CDS             complement(58590..58811)
                      /gene="OPG078"
                      /locus_tag="NBT03_gp057"
@@ -1322,14 +1322,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein I2"
                      /protein_id="YP_010377060.1"
-                     /db_xref="GeneID:72551477"
+                     /db_xref="GeneID:72551473"
                      /translation="MDKLYAAIFGVFMGSQEDDLTDFIEIVKSVLSDEKTVTSTNNTG
                      CWGWYWLIIIFFIVLILLLLIYLYLKVVW"
      gene            complement(58812..59621)
                      /gene="OPG079"
                      /locus_tag="NBT03_gp058"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-062"
-                     /db_xref="GeneID:72551478"
+                     /db_xref="GeneID:72551474"
      CDS             complement(58812..59621)
                      /gene="OPG079"
                      /locus_tag="NBT03_gp058"
@@ -1341,7 +1341,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-binding phosphoprotein (2)"
                      /protein_id="YP_010377061.1"
-                     /db_xref="GeneID:72551478"
+                     /db_xref="GeneID:72551474"
                      /translation="MSKVIKKRVETSPRPTASSDSLQTCAGVIEYAKSISKSNAKCIE
                      CVTLNASQYANCSSISIKLTDSLSSQMTSTFIMLEGETKLYKNKSKQDRSDGYFLKIK
                      VTAASPMLYQLLEAVYGNITHKERIPNSLHSLSAETITEKTFKDESIFINKLNGAMVE
@@ -1351,7 +1351,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG080"
                      /locus_tag="NBT03_gp059"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-063"
-                     /db_xref="GeneID:72551479"
+                     /db_xref="GeneID:72551475"
      CDS             complement(59703..62018)
                      /gene="OPG080"
                      /locus_tag="NBT03_gp059"
@@ -1362,7 +1362,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ribonucleoside-diphosphate reductase (2)"
                      /protein_id="YP_010377062.1"
-                     /db_xref="GeneID:72551479"
+                     /db_xref="GeneID:72551475"
                      /translation="MFVIKRNGYKENVMFDKITSRIRKLCYGLNTDHIDPIKIAMKVI
                      QGIYNGVTTVELDTLAAEIAATCTTQHPDYAILAARIAISNLHKETKKLFSEVMEDLF
                      NYVNPKNGKHSPIISSITMDIVNKYKDKLNSVIIYERDFSYNYFGFKTLEKSYLLKIN
@@ -1381,7 +1381,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG081"
                      /locus_tag="NBT03_gp060"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-064"
-                     /db_xref="GeneID:72551480"
+                     /db_xref="GeneID:72551476"
      CDS             complement(62046..62285)
                      /gene="OPG081"
                      /locus_tag="NBT03_gp060"
@@ -1392,14 +1392,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein I5"
                      /protein_id="YP_010377063.1"
-                     /db_xref="GeneID:72551480"
+                     /db_xref="GeneID:72551476"
                      /translation="MVDAITVLTAICITVLMLLMVISGTAMIVKELNPNDIFTMQSLK
                      FNRTVTIFKYIGLFIYIPGTIILYATYVKSLLMKN"
      gene            complement(62304..63452)
                      /gene="OPG082"
                      /locus_tag="NBT03_gp061"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-065"
-                     /db_xref="GeneID:72551481"
+                     /db_xref="GeneID:72551477"
      CDS             complement(62304..63452)
                      /gene="OPG082"
                      /locus_tag="NBT03_gp061"
@@ -1410,7 +1410,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Telomere-binding protein"
                      /protein_id="YP_010377064.1"
-                     /db_xref="GeneID:72551481"
+                     /db_xref="GeneID:72551477"
                      /translation="MNNFVKQVASKSLKPTKKLSPLDEVISLNECIISFNLDNFYYCN
                      DGLFTKPINTPEDVLKSLLIMESFAYEKMIIKGLIKILISRAYINDIYFTPFGWLTGV
                      DDDPETHVVIKIIFNSSLISIKSQVIEYLKPYNVNNLSVLTTEKELSINTFNVPDSIP
@@ -1422,7 +1422,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG083"
                      /locus_tag="NBT03_gp062"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-066"
-                     /db_xref="GeneID:72551482"
+                     /db_xref="GeneID:72551478"
      CDS             complement(63445..64716)
                      /gene="OPG083"
                      /locus_tag="NBT03_gp062"
@@ -1434,7 +1434,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Viral core cysteine proteinase"
                      /protein_id="YP_010377065.1"
-                     /db_xref="GeneID:72551482"
+                     /db_xref="GeneID:72551478"
                      /translation="MERYTDLVISKIPELGFTNLLCHIYSLAGLCSNIDVSKFLTNCN
                      GYVVEKYDKSTTAGKVSCIPIGMMLELVESGHLSRPNSSDELDQKKELTDELTTRYHS
                      IYDVFELPTSIPLAYFFKPQLREKVSKAIDFSQMDLKIDDLSRKGIHTGENPKVVKMK
@@ -1447,7 +1447,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG084"
                      /locus_tag="NBT03_gp063"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-067"
-                     /db_xref="GeneID:72551483"
+                     /db_xref="GeneID:72551479"
      CDS             64722..66752
                      /gene="OPG084"
                      /locus_tag="NBT03_gp063"
@@ -1459,7 +1459,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="RNA helicase NPH-II (2)"
                      /protein_id="YP_010377066.1"
-                     /db_xref="GeneID:72551483"
+                     /db_xref="GeneID:72551479"
                      /translation="MEKNLPDIFFFPNCVNVFSYKYSQDEFSNMSKTERDNFSLAVFP
                      VIKHRWHNAHVVKHKGIYKVSTEARGKKVSPPSLGKPAHINLMSKQYIYSEYAISFEC
                      YSFLKCITNTEINSFDEYILRGLLEAGNSLQIFSNSVGKRIDTIGVLGNKYPFSKIPL
@@ -1476,7 +1476,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG085"
                      /locus_tag="NBT03_gp064"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-068"
-                     /db_xref="GeneID:72551484"
+                     /db_xref="GeneID:72551480"
      CDS             complement(66756..68531)
                      /gene="OPG085"
                      /locus_tag="NBT03_gp064"
@@ -1487,7 +1487,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Metalloendopeptidase"
                      /protein_id="YP_010377067.1"
-                     /db_xref="GeneID:72551484"
+                     /db_xref="GeneID:72551480"
                      /translation="MIVLPNKVRIFINDRMKKDIYLGISNFGFENDIDEILGIAHLLE
                      HLLISFDSTNFLANASTSRSYMSFWCKSINSATESDAIRTLVSWFFSNGKLKDNFSLS
                      SIRFHIKELENEYYFRNEVFHCMDILTFLSGGDLYNGGRIDMIDNLNIVRDMLVNRMQ
@@ -1503,7 +1503,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG086"
                      /locus_tag="NBT03_gp065"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-069"
-                     /db_xref="GeneID:72551485"
+                     /db_xref="GeneID:72551481"
      CDS             complement(68528..68863)
                      /gene="OPG086"
                      /locus_tag="NBT03_gp065"
@@ -1514,7 +1514,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Entry/fusion complex component"
                      /protein_id="YP_010377068.1"
-                     /db_xref="GeneID:72551485"
+                     /db_xref="GeneID:72551481"
                      /translation="MASLLYLILFLLFVCISYYFTYYPTNKLQAAVMETDRENAIIRQ
                      RNEEIPTRTLDTAIFTDASTVSSAQIHLYYNSNIGKIIMSLNGKKHTFNLYDDNDIRT
                      LLPILLLSK"
@@ -1522,7 +1522,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG087"
                      /locus_tag="NBT03_gp066"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-070"
-                     /db_xref="GeneID:72551486"
+                     /db_xref="GeneID:72551482"
      CDS             68857..69519
                      /gene="OPG087"
                      /locus_tag="NBT03_gp066"
@@ -1533,7 +1533,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Late transcription elongation factor"
                      /protein_id="YP_010377069.1"
-                     /db_xref="GeneID:72551486"
+                     /db_xref="GeneID:72551482"
                      /translation="MPFRDLILFNLSKFLLTEDEESLEIVSSLCRGFEISYDDLISYF
                      PDRKYHKYISKVFEHVDLSEELSMEFHDTTLRDLVYLRLYKYSKYIRPCYKLGDNLKG
                      IVVIKDRNIYIREANDDLIEYLLKEYTPQIYTYSNERVPIAGSKLILCGFSQVTFMAY
@@ -1543,7 +1543,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG088"
                      /locus_tag="NBT03_gp067"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-071"
-                     /db_xref="GeneID:72551487"
+                     /db_xref="GeneID:72551483"
      CDS             complement(69489..69863)
                      /gene="OPG088"
                      /locus_tag="NBT03_gp067"
@@ -1555,7 +1555,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Glutaredoxin-2"
                      /protein_id="YP_010377070.1"
-                     /db_xref="GeneID:72551487"
+                     /db_xref="GeneID:72551483"
                      /translation="MKNVLIIFGKPYCSICENVSEAVEELKSEYDILHVDILSFFLKD
                      GDSSMLGDVKRGTLIGNFAAHLSNYIVSIFKYNPQTKQMAFVDINKSLDFTKTDKSLV
                      NLEILKSEIEKATYGVWPPVTE"
@@ -1563,7 +1563,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG089"
                      /locus_tag="NBT03_gp068"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-072"
-                     /db_xref="GeneID:72551488"
+                     /db_xref="GeneID:72551484"
      CDS             69866..71170
                      /gene="OPG089"
                      /locus_tag="NBT03_gp068"
@@ -1574,7 +1574,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="FEN1-like nuclease"
                      /protein_id="YP_010377071.1"
-                     /db_xref="GeneID:72551488"
+                     /db_xref="GeneID:72551484"
                      /translation="MGIKNLKSLLLENKSLTILDDNLYKVYNGIFVDTMSIYIAVANC
                      VRNLEELTTVFIKYVNGWVKKGGHVTLFIDRGSIKIKQDVRDKRRKYSKLTKDRKMLE
                      LEKCTSEIQNVTGFMEEEIKAEMQLKIDKLTFQIYLSDYDNIKISLNEILTHFNNNEN
@@ -1587,7 +1587,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG090"
                      /locus_tag="NBT03_gp069"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-073"
-                     /db_xref="GeneID:72551489"
+                     /db_xref="GeneID:72551485"
      CDS             71179..71370
                      /gene="OPG090"
                      /locus_tag="NBT03_gp069"
@@ -1598,14 +1598,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-directed RNA polymerase 7 kDa subunit"
                      /protein_id="YP_010377072.1"
-                     /db_xref="GeneID:72551489"
+                     /db_xref="GeneID:72551485"
                      /translation="MVFQLVCSTCGKDISHERYKLIIRKKSLKDVLVSVKNECCRLKL
                      STQIEPQRNLTVQPLLDIN"
      gene            71370..71867
                      /gene="OPG091"
                      /locus_tag="NBT03_gp070"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-074"
-                     /db_xref="GeneID:72551490"
+                     /db_xref="GeneID:72551486"
      CDS             71370..71867
                      /gene="OPG091"
                      /locus_tag="NBT03_gp070"
@@ -1616,7 +1616,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Nlpc/p60 superfamily protein"
                      /protein_id="YP_010377073.1"
-                     /db_xref="GeneID:72551490"
+                     /db_xref="GeneID:72551486"
                      /translation="MDPVNFIKTYAPRGSIIFINYAMSLTSHLNPSIEKHVGIYYGTL
                      LSEHLVVESTYRKGVRIVPLDRFFEGYLSAKVYMLENIQVMKIAADMSLTLLGIPYGF
                      GHDRMYCFKLVAECYKNAGIDTSSKRILGKDIFLSQNFTDDNRWIKIYDSNNLTFWQI
@@ -1625,7 +1625,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG092"
                      /locus_tag="NBT03_gp071"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-075"
-                     /db_xref="GeneID:72551491"
+                     /db_xref="GeneID:72551487"
      CDS             complement(71832..72947)
                      /gene="OPG092"
                      /locus_tag="NBT03_gp071"
@@ -1636,7 +1636,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Assembly protein G7"
                      /protein_id="YP_010377074.1"
-                     /db_xref="GeneID:72551491"
+                     /db_xref="GeneID:72551487"
                      /translation="MATEQRRSTIFDIVSKCIVQSVLRDISINSEYIESKAKQLCYCP
                      ASKKESVINGIYNCCESNIEIMDKEQLLKILDNLRCHSVHVCNATDFWRLYNSLKRFT
                      HTTAFFNTCKPTILATLNTLITLILSNKLLYAAEMVEYLENQIDSSNKSMSQELAELL
@@ -1648,7 +1648,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG093"
                      /locus_tag="NBT03_gp072"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-076"
-                     /db_xref="GeneID:72551492"
+                     /db_xref="GeneID:72551488"
      CDS             72978..73760
                      /gene="OPG093"
                      /locus_tag="NBT03_gp072"
@@ -1659,7 +1659,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Late transcription factor VLTF-1"
                      /protein_id="YP_010377075.1"
-                     /db_xref="GeneID:72551492"
+                     /db_xref="GeneID:72551488"
                      /translation="MSIRIKIDKLRQIVAYFSEFSEEVSINVDSTDELMYIFAALGGS
                      VNIWAIIPLSASVFYRGAENIVFNLPVSKVKSCLCSFHNDAIIDIEPDLENNLVKLSS
                      YHVVSVDCNKELMPIRTDTTICLSIDQKKSYVFNFHKYEEKCCGRTVIHLEWLLGFIK
@@ -1669,7 +1669,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG094"
                      /locus_tag="NBT03_gp073"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-077"
-                     /db_xref="GeneID:72551493"
+                     /db_xref="GeneID:72551489"
      CDS             73780..74802
                      /gene="OPG094"
                      /locus_tag="NBT03_gp073"
@@ -1681,7 +1681,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Myristylated protein"
                      /protein_id="YP_010377076.1"
-                     /db_xref="GeneID:72551493"
+                     /db_xref="GeneID:72551489"
                      /translation="MGGGVSVELPKRDPPPGVPTDEMLLNVDKMHDVIAPAKLLEYVH
                      IGPLTKDKEDKVKKRYPEFRLVNTGPGGLSALLRQSYNGTAPNCCRTFNRTHYWKKDG
                      KISDKYEEGAVLESCWPDVHDTGKCDVDLFDWCQGDTFDMNICHQWIGSAFNRSDRTV
@@ -1693,7 +1693,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG095"
                      /locus_tag="NBT03_gp074"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-078"
-                     /db_xref="GeneID:72551494"
+                     /db_xref="GeneID:72551490"
      CDS             74803..75555
                      /gene="OPG095"
                      /locus_tag="NBT03_gp074"
@@ -1704,7 +1704,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein L1R"
                      /protein_id="YP_010377077.1"
-                     /db_xref="GeneID:72551494"
+                     /db_xref="GeneID:72551490"
                      /translation="MGAAASIQTTVNTLSERISSKLEQEANASAQTKCDIEIGNFYIR
                      QNHGCNITVKNMCSADADAQLDAVLSAATETYSGLTPEQKAYVPAMFTAALNIQTSVN
                      TVVRDFENYVKQTCNSSAVVDNKLKIQNVIIDECYGAPGSPTNLEFINTGSSKGNCAI
@@ -1714,7 +1714,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG096"
                      /locus_tag="NBT03_gp075"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-079"
-                     /db_xref="GeneID:72551495"
+                     /db_xref="GeneID:72551491"
      CDS             75587..75865
                      /gene="OPG096"
                      /locus_tag="NBT03_gp075"
@@ -1726,14 +1726,14 @@ FEATURES             Location/Qualifiers
                      /product="Crescent membrane and immature virion formation
                      protein"
                      /protein_id="YP_010377078.1"
-                     /db_xref="GeneID:72551495"
+                     /db_xref="GeneID:72551491"
                      /translation="MEVIADRLDDIVKQNIADEKFVDFVIHGLEHQCPAILRPLIRLF
                      IDILLFVIVIYIFTVRLVSRNYQILLVLVALVITLTIFLLLYTIIVLD"
      gene            complement(75841..76875)
                      /gene="OPG097"
                      /locus_tag="NBT03_gp076"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-080"
-                     /db_xref="GeneID:72551496"
+                     /db_xref="GeneID:72551492"
      CDS             complement(75841..76875)
                      /gene="OPG097"
                      /locus_tag="NBT03_gp076"
@@ -1744,7 +1744,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Internal virion L3/FP4 protein"
                      /protein_id="YP_010377079.1"
-                     /db_xref="GeneID:72551496"
+                     /db_xref="GeneID:72551492"
                      /translation="MNTRTDVTNDNIDKNPTKRGDRNIPGRNERFNDQNRFNNDRPQP
                      NQPPRQDNKYREENGDFINIRLCAYEKEYCNDGYLSPAYYMLKQVDDEEMSCWSELSS
                      LVRSRKAVGFPLLKAAKRISHGSMLYFEQFKNSKVVRLTPQVKCLNDTVIFQTVVILY
@@ -1756,7 +1756,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG098"
                      /locus_tag="NBT03_gp077"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-081"
-                     /db_xref="GeneID:72551497"
+                     /db_xref="GeneID:72551493"
      CDS             76900..77655
                      /gene="OPG098"
                      /locus_tag="NBT03_gp077"
@@ -1768,7 +1768,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Nucleic acid binding protein VP8/L4R"
                      /protein_id="YP_010377080.1"
-                     /db_xref="GeneID:72551497"
+                     /db_xref="GeneID:72551493"
                      /translation="MSLLLENLIEEDTIFFAGSISEYDDLQMVIAGAKSKFPRSMLSI
                      FNIVPRTMSKYELELIHNENITGAMFTTMYNIRNNLGLGDDKLTIEAIENYFLDPNNE
                      VMPLIINNTDMTTVIPKKSGRRKNKNMVIFRQGSSPILCIFETRKKINIYKENMESVS
@@ -1778,7 +1778,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG099"
                      /locus_tag="NBT03_gp078"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-082"
-                     /db_xref="GeneID:72551498"
+                     /db_xref="GeneID:72551494"
      CDS             77665..78051
                      /gene="OPG099"
                      /locus_tag="NBT03_gp078"
@@ -1789,7 +1789,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Membrane protein CL5"
                      /protein_id="YP_010377081.1"
-                     /db_xref="GeneID:72551498"
+                     /db_xref="GeneID:72551494"
                      /translation="MENVPNVYFNPVFIEPTFKHSLLSVYKHRLIVLFEVFVVFILIY
                      VFFRSELNMFFMPKRKIPDPIDRLRRANLACEDDKLMIYGLPWITTQTSALSINSKPI
                      VYKDCAKLLRSINGSQPVSLNDVLRR"
@@ -1797,7 +1797,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG100"
                      /locus_tag="NBT03_gp079"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-083"
-                     /db_xref="GeneID:72551499"
+                     /db_xref="GeneID:72551495"
      CDS             78008..78466
                      /gene="OPG100"
                      /locus_tag="NBT03_gp079"
@@ -1808,7 +1808,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein J1"
                      /protein_id="YP_010377082.1"
-                     /db_xref="GeneID:72551499"
+                     /db_xref="GeneID:72551495"
                      /translation="MDHNQYLLTMFFADDDSFFKYFASQDDESSLSDILQITQYLDFL
                      LLLLIQSKNKLEAVGHCYESLSEEYRQLTKFTDSQDFKKLFNKVPIVTDGRVKLNKGY
                      LFDFVISLMRFKKESALATTAIDPVRYIDPRRDIAFSNVMDILKSNKVEK"
@@ -1816,7 +1816,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG101"
                      /locus_tag="NBT03_gp080"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-084"
-                     /db_xref="GeneID:72551500"
+                     /db_xref="GeneID:72551496"
      CDS             78486..79019
                      /gene="OPG101"
                      /locus_tag="NBT03_gp080"
@@ -1827,7 +1827,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Thymidine kinase"
                      /protein_id="YP_010377083.1"
-                     /db_xref="GeneID:72551500"
+                     /db_xref="GeneID:72551496"
                      /translation="MNGGHIQLIIGPMFSGKSTELIRRVRRYQIAQYKCVTIKYSNDN
                      RYGTGLWTHDKNNFAALEVTKLCDVLEAITDFSVIGIDEGQFFPDIVEFCERMANEGK
                      IVIVAALDGTFQRRPFNNILNLIPLSEMVVKLTAVCMKCFKEASFSKRLGTETEIEII
@@ -1836,7 +1836,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG102"
                      /locus_tag="NBT03_gp081"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-085"
-                     /db_xref="GeneID:72551501"
+                     /db_xref="GeneID:72551497"
      CDS             79085..80086
                      /gene="OPG102"
                      /locus_tag="NBT03_gp081"
@@ -1850,7 +1850,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Cap-specific mRNA"
                      /protein_id="YP_010377084.1"
-                     /db_xref="GeneID:72551501"
+                     /db_xref="GeneID:72551497"
                      /translation="MDVVSLDKPFMYFEEIDNELDYEPESANEVAKKLPYQGQLKLLL
                      GELFFLSKLQRHGILDGATVVYIGSAPGTHIRYLRDHFYNLGVIIKWMLIDGRHHDPI
                      LNGLRDVTLVTRFVDEEYLRSIKKQLHPSKIILISDVRSKRGGNEPSTADLLSNYALQ
@@ -1861,7 +1861,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG103"
                      /locus_tag="NBT03_gp082"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-086"
-                     /db_xref="GeneID:72551502"
+                     /db_xref="GeneID:72551498"
      CDS             80001..80558
                      /gene="OPG103"
                      /locus_tag="NBT03_gp082"
@@ -1872,7 +1872,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-directed RNA polymerase subunit"
                      /protein_id="YP_010377085.1"
-                     /db_xref="GeneID:72551502"
+                     /db_xref="GeneID:72551498"
                      /translation="MNQYNVKYLAKILCLKTEIARDPYAVINRNVLLRYTTDIEYNDL
                      VTLITVRHKIDSMKTVFQVFNESSINYTPVDDDYGEPIIITSYLQKGHNKFPVNFLYI
                      DVVISDLFPSFVRLDTTETNIVNSVLQTGDGKKTLRLPKMLETEIVVKILYRPNIPLK
@@ -1881,7 +1881,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG104"
                      /locus_tag="NBT03_gp083"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-087"
-                     /db_xref="GeneID:72551503"
+                     /db_xref="GeneID:72551499"
      CDS             complement(80618..81019)
                      /gene="OPG104"
                      /locus_tag="NBT03_gp083"
@@ -1892,7 +1892,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Myristylated protein"
                      /protein_id="YP_010377086.1"
-                     /db_xref="GeneID:72551503"
+                     /db_xref="GeneID:72551499"
                      /translation="MTDEQIYAFCDTNKDDIRCKCIYPDKSIVRIGIDTRLPYYCWYE
                      PCKRSDALLPASLKKNISRCNVSDCTISLGNVSITDSKLDVNNVCDSKRVATENIAVR
                      YLNQEIRYPIIDIKWLPIGLLALAILILAFF"
@@ -1900,7 +1900,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG105"
                      /locus_tag="NBT03_gp084"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-088"
-                     /db_xref="GeneID:72551504"
+                     /db_xref="GeneID:72551500"
      CDS             81126..84986
                      /gene="OPG105"
                      /locus_tag="NBT03_gp084"
@@ -1911,7 +1911,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-dependent RNA polymerase subunit rpo147"
                      /protein_id="YP_010377087.1"
-                     /db_xref="GeneID:72551504"
+                     /db_xref="GeneID:72551500"
                      /translation="MAVISKVTYSLYDQKEINATDIIISHIKNDDDIGTVKDGRLGAM
                      DGALCKTCGKTELECFGHWGKVSIYKTHIVKPEFISEIIRLLNHICIHCGLLRSREPY
                      SDDINLKELSVHALRRLKDKILSKKKSCWNSECMQPYQKITFSKKKVCFVNKLDDINV
@@ -1939,7 +1939,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG106"
                      /locus_tag="NBT03_gp085"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-089"
-                     /db_xref="GeneID:72551505"
+                     /db_xref="GeneID:72551501"
      CDS             complement(84983..85498)
                      /gene="OPG106"
                      /locus_tag="NBT03_gp085"
@@ -1950,7 +1950,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Tyr/ser protein phosphatase"
                      /protein_id="YP_010377088.1"
-                     /db_xref="GeneID:72551505"
+                     /db_xref="GeneID:72551501"
                      /translation="MDKKSLYKYLLLRSTGDMHRAKSPTIMTRVTNNVYLGNYKNAMD
                      APSSEVKFKYVLNLTMDKYTLPNSNINIIHIPLVDDTTTDISKYFDDVTAFLSKCDQR
                      NEPVLVHCVAGVNRSGAMILAYLMSKNKESSPMLYFLYVYHSMRDLRGAFVENPSFKR
@@ -1959,7 +1959,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG107"
                      /locus_tag="NBT03_gp086"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-090"
-                     /db_xref="GeneID:72551506"
+                     /db_xref="GeneID:72551502"
      CDS             85512..86081
                      /gene="OPG107"
                      /locus_tag="NBT03_gp086"
@@ -1970,7 +1970,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Entry-fusion complex essential component"
                      /protein_id="YP_010377089.1"
-                     /db_xref="GeneID:72551506"
+                     /db_xref="GeneID:72551502"
                      /translation="MDKTTLSVNACNLEYVREKAIVGVQAAKTSTLIFFVIILAISAL
                      LLWFQTSDNPVFNELTRYMRIKNTVNDWKSLTDSKTKLESDRGRLLAAGKDDIFEFKC
                      VDFGAYFIAMRLDKKTYLPQAIRRGTGDAWMVKKAAKVDPSAQQFCQYLIKHKSNNVI
@@ -1979,7 +1979,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG108"
                      /locus_tag="NBT03_gp087"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-091"
-                     /db_xref="GeneID:72551507"
+                     /db_xref="GeneID:72551503"
      CDS             complement(86085..87059)
                      /gene="OPG108"
                      /locus_tag="NBT03_gp087"
@@ -1991,7 +1991,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV heparin binding surface protein"
                      /protein_id="YP_010377090.1"
-                     /db_xref="GeneID:72551507"
+                     /db_xref="GeneID:72551503"
                      /translation="MAAVKTPVIVVPVIDRPPSETFPNVHEHINDQKFDDVKDNEVMQ
                      EKRDVVIVNDDPDHYKDYVFIQWTGGNIRDDDKYTHFFSGFCNTMCTEETKRNIARHL
                      ALWDSKFFTELENKNVEYVVIIENDNVIEDITFLRPVLKAIHDKKIDILQMREIITGN
@@ -2002,7 +2002,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG109"
                      /locus_tag="NBT03_gp088"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-092"
-                     /db_xref="GeneID:72551508"
+                     /db_xref="GeneID:72551504"
      CDS             complement(87060..89447)
                      /gene="OPG109"
                      /locus_tag="NBT03_gp088"
@@ -2014,7 +2014,7 @@ FEATURES             Location/Qualifiers
                      /product="RNA polymerase-associated
                      transcription-specificity factor RAP94"
                      /protein_id="YP_010377091.1"
-                     /db_xref="GeneID:72551508"
+                     /db_xref="GeneID:72551504"
                      /translation="MDSKETILIEIIPKIKSYLLDTNISPKSYNDFISRNKNIFVINL
                      YNVSTITEEDIRLLYTTIEQNIDADDQTLVAIFSYIGYKFEQTVKEEISTSLSFNDKN
                      TTDEMTYNLYDLFFNTLDMYLRQKKISILVNDDVRGDVIVSYKNSDLVSSFNAELEPE
@@ -2033,7 +2033,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG110"
                      /locus_tag="NBT03_gp089"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-093"
-                     /db_xref="GeneID:72551509"
+                     /db_xref="GeneID:72551505"
      CDS             89632..90264
                      /gene="OPG110"
                      /locus_tag="NBT03_gp089"
@@ -2045,7 +2045,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Late transcription factor VLTF-4 (1)"
                      /protein_id="YP_010377092.1"
-                     /db_xref="GeneID:72551509"
+                     /db_xref="GeneID:72551505"
                      /translation="MAWSITNKADTSSFTKMAEIRAHLRNSAENKDKNEDIFPEDVII
                      PSTKPKTKRTTTPRKPAATKRSTKKDKEKEEVEEVVIEEYHQTTEENSPPPSSSPGVG
                      DIVESVAAVELDDSDGDDEPMVQVEAGKVNHSARSDLSDLKVATDNIVKDLKKIITRI
@@ -2054,7 +2054,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG111"
                      /locus_tag="NBT03_gp090"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-094"
-                     /db_xref="GeneID:72551510"
+                     /db_xref="GeneID:72551506"
      CDS             90265..91209
                      /gene="OPG111"
                      /locus_tag="NBT03_gp090"
@@ -2065,7 +2065,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA topoisomerase type I"
                      /protein_id="YP_010377093.1"
-                     /db_xref="GeneID:72551510"
+                     /db_xref="GeneID:72551506"
                      /translation="MRALFYKDGKLFTDNNFLNPVSDDNPAYEVLQHVKIPTHLTDVV
                      VYEQTWEEALTRLIFVGSDSKGRRQYFYGKMHIQNRNAKRDRIFVRVYNVMKRINCFI
                      NKNIKKSSTDSNYQLAVFMLMETMFFIRFGKMKYLKENETVGLLTLKNKHIEISPDEI
@@ -2076,7 +2076,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG112"
                      /locus_tag="NBT03_gp091"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-095"
-                     /db_xref="GeneID:72551511"
+                     /db_xref="GeneID:72551507"
      CDS             91247..91687
                      /gene="OPG112"
                      /locus_tag="NBT03_gp091"
@@ -2087,7 +2087,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Late protein H7"
                      /protein_id="YP_010377094.1"
-                     /db_xref="GeneID:72551511"
+                     /db_xref="GeneID:72551507"
                      /translation="MEMDKRMKSLAMTAFFGELNTLDIMALIMSIFKHHPNNTIFSVD
                      KDGQFMIDFEYDNYKASQYLDLTLTPISGNECKTHASSIAEQLACVDIIKEDISEYIK
                      TTPRLKRFIKKYRNRSYTRISRDTEKLKIALAKGIDYEYIKDAC"
@@ -2095,7 +2095,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG113"
                      /locus_tag="NBT03_gp092"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-096"
-                     /db_xref="GeneID:72551512"
+                     /db_xref="GeneID:72551508"
      CDS             91731..94268
                      /gene="OPG113"
                      /locus_tag="NBT03_gp092"
@@ -2107,7 +2107,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="mRNA capping enzyme large subunit"
                      /protein_id="YP_010377095.1"
-                     /db_xref="GeneID:72551512"
+                     /db_xref="GeneID:72551508"
                      /translation="MDANIVSSSTIATYIDALAKNASELEQRSTAYEINNELELVFIK
                      PPLITLTNVVNISTIQESFIRFTVTNKEGIKIRTKIPLSKVHGLDVKNVQLVDAIDNI
                      VWEKKSLVTENRLHKECLLRLSTEERHIFLDYKKYGSSIRLELVNLIQAKTKNFTIDF
@@ -2127,7 +2127,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG114"
                      /locus_tag="NBT03_gp093"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-097"
-                     /db_xref="GeneID:72551513"
+                     /db_xref="GeneID:72551509"
      CDS             complement(94227..94667)
                      /gene="OPG114"
                      /locus_tag="NBT03_gp093"
@@ -2138,7 +2138,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virion protein D2"
                      /protein_id="YP_010377096.1"
-                     /db_xref="GeneID:72551513"
+                     /db_xref="GeneID:72551509"
                      /translation="MSINIDIKKITDLLNSSILFPDDLQELLREKYIVLERKSNGTPT
                      VAHIYKTMARFDNKSIYRIAKFLFMNRPDVIKLLFLEDVEPLLPYKSINISINNTEYP
                      QLEGPIGTKIALLELFNAFRTGISEPIPYYYLPLRKDINNIVTK"
@@ -2146,7 +2146,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG115"
                      /locus_tag="NBT03_gp094"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-098"
-                     /db_xref="GeneID:72551514"
+                     /db_xref="GeneID:72551510"
      CDS             94660..95361
                      /gene="OPG115"
                      /locus_tag="NBT03_gp094"
@@ -2157,7 +2157,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virion core protein D3"
                      /protein_id="YP_010377097.1"
-                     /db_xref="GeneID:72551514"
+                     /db_xref="GeneID:72551510"
                      /translation="MDIFIVKDNKYPKVDNDDNEVFILLGNHNDFIRSKLTKLKEHVF
                      FSEYIVTPDTYGSLCVELNGSSFQHGGRYIEVEEFIDAGRQVRWCSTSNHISEDIHTD
                      KFVIYDIYTFDSFKNKRLVFVQVPPSLGDDSYLTNPLLSPYYRNSVARQMVNDMIFNQ
@@ -2167,7 +2167,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG116"
                      /locus_tag="NBT03_gp095"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-099"
-                     /db_xref="GeneID:72551515"
+                     /db_xref="GeneID:72551511"
      CDS             95361..96017
                      /gene="OPG116"
                      /locus_tag="NBT03_gp095"
@@ -2179,7 +2179,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Uracil DNA glycosylase superfamily"
                      /protein_id="YP_010377098.1"
-                     /db_xref="GeneID:72551515"
+                     /db_xref="GeneID:72551511"
                      /translation="MNSVTISHAPYTITYHDDWEPVMSQLVEFYNEVASWLLRDETSP
                      IPDKFFIQLKQPLRNKRVCVCGIDPYPKDGTGVPFESPNFTKKSIKEIASSISRLTGV
                      IDYKGYNLNIIDGVIPWNYYLSCKLGETKSHAIYWDKISKLLLQHITKHVSVLYCLGK
@@ -2189,7 +2189,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG117"
                      /locus_tag="NBT03_gp096"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-100"
-                     /db_xref="GeneID:72551516"
+                     /db_xref="GeneID:72551512"
      CDS             96049..98406
                      /gene="OPG117"
                      /locus_tag="NBT03_gp096"
@@ -2201,7 +2201,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="NTPase (1)"
                      /protein_id="YP_010377099.1"
-                     /db_xref="GeneID:72551516"
+                     /db_xref="GeneID:72551512"
                      /translation="MDAAIRGNDVIFVLKTIGVPSACRQNEDPRFVEAFKCDELERYI
                      DNNPECTLFESLRDEEAYSIVRIFMDVDLDACLDEIDYLTAIQDFIIEVSNCVARFAF
                      TECGAIHENVIKSMRSNFSLTKSTNRDKTSFHIIFLDTYTTMDTLIAMKRTLLELSRS
@@ -2220,7 +2220,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG118"
                      /locus_tag="NBT03_gp097"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-101"
-                     /db_xref="GeneID:72551517"
+                     /db_xref="GeneID:72551513"
      CDS             98446..100359
                      /gene="OPG118"
                      /locus_tag="NBT03_gp097"
@@ -2232,7 +2232,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Early transcription factor 70 kDa subunit"
                      /protein_id="YP_010377100.1"
-                     /db_xref="GeneID:72551517"
+                     /db_xref="GeneID:72551513"
                      /translation="MNTGIIDLFDNHVDSIPTILPHQLATLDYLVRTIIDENRSVLLF
                      HIMGSGKTIIALLFALVASRFKKVYILVPNINILKIFNYNMGVAMNLFNDEFIAENIF
                      IHSTTSFYSLNYNDNVINYNGLSRYNNSIFIVDEAHNIFGNNTGELMTVIKNKNKIPF
@@ -2249,7 +2249,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG119"
                      /locus_tag="NBT03_gp098"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-102"
-                     /db_xref="GeneID:72551518"
+                     /db_xref="GeneID:72551514"
      CDS             100386..100871
                      /gene="OPG119"
                      /locus_tag="NBT03_gp098"
@@ -2260,7 +2260,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="RNA polymerase subunit RPO18"
                      /protein_id="YP_010377101.1"
-                     /db_xref="GeneID:72551518"
+                     /db_xref="GeneID:72551514"
                      /translation="MSSFVTNGYLPVTLEPHELTLDIKTNIRNAVYKAYLHREISGKM
                      AKKIEIREDVELPLGEIVNNSVVINVPCVITYAYYHVGDIVRGTLNIEDESNVTIQCG
                      DLICKLSRDSGTVSFSDSKYCFFRNGNAYDNGIEVSAVLMEAQQGTESSFVFLANIVD
@@ -2269,7 +2269,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG120"
                      /locus_tag="NBT03_gp099"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-103"
-                     /db_xref="GeneID:72551519"
+                     /db_xref="GeneID:72551515"
      CDS             complement(100834..101748)
                      /gene="OPG120"
                      /locus_tag="NBT03_gp099"
@@ -2282,7 +2282,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Carbonic anhydrase"
                      /protein_id="YP_010377102.1"
-                     /db_xref="GeneID:72551519"
+                     /db_xref="GeneID:72551515"
                      /translation="MPQQLSPINIETKKAISDARLKTLDIHYNESKPTTIQNTGKLVR
                      INFKGGYISGGFLPNEYVLSTIHIYWGKEDDYGSNHLIDVYKYSGEINLVHWNKKKYS
                      SYEEAKKHDDGIIIIAIFLQVSDHKNVYFQKIVNQLDSIRSANMSAPFDSVFYLDNLL
@@ -2293,7 +2293,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG121"
                      /locus_tag="NBT03_gp100"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-104"
-                     /db_xref="GeneID:72551520"
+                     /db_xref="GeneID:72551516"
      CDS             101790..102431
                      /gene="OPG121"
                      /locus_tag="NBT03_gp100"
@@ -2304,7 +2304,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="NUDIX domain protein"
                      /protein_id="YP_010377103.1"
-                     /db_xref="GeneID:72551520"
+                     /db_xref="GeneID:72551516"
                      /translation="MGFTMDEEVIFETPRELISIKRIKDIPRSKDTHVFAACITSDGY
                      PLIGARRTSFAFQAILSQQNSDSIFRVSTKLLRFMYYNELREIFRRLRKGSINNIDPH
                      FEELILLGGKLDKKESIKDCLRRELKEESDEHITVKEFGNVILKLTTSDKLFNKVYIG
@@ -2313,7 +2313,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG122"
                      /locus_tag="NBT03_gp101"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-105"
-                     /db_xref="GeneID:72551521"
+                     /db_xref="GeneID:72551517"
      CDS             102428..103174
                      /gene="OPG122"
                      /locus_tag="NBT03_gp101"
@@ -2325,7 +2325,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="MutT motif protein"
                      /protein_id="YP_010377104.1"
-                     /db_xref="GeneID:72551521"
+                     /db_xref="GeneID:72551517"
                      /translation="MSFYRSSIISQIIKYNRRLAKSIICEDDSQIITLTAFVNQCLWC
                      HKRVSVSAILLTTDNKILVCNRRDSFLYSEIIRTRNMYRKKRLFLNYSNYLNKQERSI
                      LSSFFSLDPATADNDRINAIYPGGIPKRGENVPECLSREIKEEVNIDNSFVFIDTRFF
@@ -2335,7 +2335,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG123"
                      /locus_tag="NBT03_gp102"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-106"
-                     /db_xref="GeneID:72551522"
+                     /db_xref="GeneID:72551518"
      CDS             complement(103175..105070)
                      /gene="OPG123"
                      /locus_tag="NBT03_gp102"
@@ -2348,7 +2348,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Nucleoside triphosphatase I"
                      /protein_id="YP_010377105.1"
-                     /db_xref="GeneID:72551522"
+                     /db_xref="GeneID:72551518"
                      /translation="MSKSHAAYIDYALRRTTNMPVEMMGSDVVRLKDYQHFVARVFLG
                      LDSMHSLLLFHETGVGKTMTTVYILKHLKDIYTNWAIILLVKKALIEDPWINTILRYA
                      PEITKDCIFINYDDQNFRNKFFTNIKTINSKSRICVIIDECHNFISKSLIKEDGKIRP
@@ -2365,7 +2365,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG124"
                      /locus_tag="NBT03_gp103"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-107"
-                     /db_xref="GeneID:72551523"
+                     /db_xref="GeneID:72551519"
      CDS             complement(105105..105968)
                      /gene="OPG124"
                      /locus_tag="NBT03_gp103"
@@ -2377,7 +2377,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="mRNA capping enzyme small subunit"
                      /protein_id="YP_010377106.1"
-                     /db_xref="GeneID:72551523"
+                     /db_xref="GeneID:72551519"
                      /translation="MDEIVKNIREGTHVLLPFYETLPELNLSLGKSPLPSLEYGANYF
                      LQISRVNDLNRMPTDMLKLFTHDIMLPESDLDKVYEILKINSVKYYGRSTRADAVVAD
                      LSARNKLFKRERDAIKSNNHLTENNLYISDYKMLTFDVFRPLFDFVNEKYCIIKLPTL
@@ -2388,7 +2388,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG125"
                      /locus_tag="NBT03_gp104"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-108"
-                     /db_xref="GeneID:72551524"
+                     /db_xref="GeneID:72551520"
      CDS             complement(105999..107654)
                      /gene="OPG125"
                      /locus_tag="NBT03_gp104"
@@ -2401,7 +2401,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Rifampicin resistance protein"
                      /protein_id="YP_010377107.1"
-                     /db_xref="GeneID:72551524"
+                     /db_xref="GeneID:72551520"
                      /translation="MNNTIINSLIGGDDFIKRSNVFAVDSQIPTLYMPQYISLSGVMT
                      NDGPDNQAIASFEIRDQYITALNHLVLSLELPEVKGMGRFGYVPYVGYKCINHVSVSS
                      CNGVIWEIEGEELYNNCINNTIALKHSGYSSELNDISIGLTPNDTIKEPSTVYVYIKT
@@ -2416,7 +2416,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG126"
                      /locus_tag="NBT03_gp105"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-109"
-                     /db_xref="GeneID:72551525"
+                     /db_xref="GeneID:72551521"
      CDS             complement(107678..108130)
                      /gene="OPG126"
                      /locus_tag="NBT03_gp105"
@@ -2427,7 +2427,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Late transcription factor VLTF-2 (2)"
                      /protein_id="YP_010377108.1"
-                     /db_xref="GeneID:72551525"
+                     /db_xref="GeneID:72551521"
                      /translation="MAKRVSLPDVVISAPKAVFKPAKEEALACILPKYYKSMADMSIK
                      TNSVIDKCWFCNQDLVFRPISIETFKGGEVGYFCSKICRDSLASMVKSHVALREEPKI
                      SLLPLVFYEDKEKVINTINLLRDKDGVYGSCYFKENSQIIDISLRSLL"
@@ -2435,7 +2435,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG127"
                      /locus_tag="NBT03_gp106"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-110"
-                     /db_xref="GeneID:72551526"
+                     /db_xref="GeneID:72551522"
      CDS             complement(108151..108825)
                      /gene="OPG127"
                      /locus_tag="NBT03_gp106"
@@ -2446,7 +2446,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Late transcription factor VLTF-3 (1)"
                      /protein_id="YP_010377109.1"
-                     /db_xref="GeneID:72551526"
+                     /db_xref="GeneID:72551522"
                      /translation="MNLRLCSCCRHNGIVSEQGYEYCIFCESVFQKCTKVQKKSNFHV
                      SNKLIHLRNVLRRLLSHQCSGEIISELLDIMEKNQISTDDVDANFVSSFLKANERINK
                      KDYKLVFEIINQVKDEKLNLSTEKINEVVEIFKHLVFFCQENTPSKTINYSFFLDKIF
@@ -2456,7 +2456,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG128"
                      /locus_tag="NBT03_gp107"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-111"
-                     /db_xref="GeneID:72551527"
+                     /db_xref="GeneID:72551523"
      CDS             complement(108822..109055)
                      /gene="OPG128"
                      /locus_tag="NBT03_gp107"
@@ -2467,14 +2467,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="S-S bond formation pathway protein"
                      /protein_id="YP_010377110.1"
-                     /db_xref="GeneID:72551527"
+                     /db_xref="GeneID:72551523"
                      /translation="MSWYEKYNIVLNPPKRCSSTCSDNLTTILSEDGTNIIRAILYSQ
                      PKKLKILQDFLTTSRNKMFLYKILDDEIRRVLT"
      gene            complement(109070..111004)
                      /gene="OPG129"
                      /locus_tag="NBT03_gp108"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-112"
-                     /db_xref="GeneID:72551528"
+                     /db_xref="GeneID:72551524"
      CDS             complement(109070..111004)
                      /gene="OPG129"
                      /locus_tag="NBT03_gp108"
@@ -2485,7 +2485,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virion core protein P4b"
                      /protein_id="YP_010377111.1"
-                     /db_xref="GeneID:72551528"
+                     /db_xref="GeneID:72551524"
                      /translation="MEAVVNSDVFLTSNAGLKSSYTNQTLSLVDEDHIHTSDKSLSCS
                      VCNSLSQIVDDDFISAGARNQRTKPKRTGNDQSQQPIKKDCMVSIDEVASTHDWSTRL
                      RNDGNAIAKYLTTNKYDTSNFTIQDMLNIMNKLNIVRTNRNELFQLLSHVKSTLNNAS
@@ -2502,7 +2502,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG130"
                      /locus_tag="NBT03_gp109"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-113"
-                     /db_xref="GeneID:72551529"
+                     /db_xref="GeneID:72551525"
      CDS             complement(111057..111902)
                      /gene="OPG130"
                      /locus_tag="NBT03_gp109"
@@ -2515,7 +2515,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="A5L protein-like"
                      /protein_id="YP_010377112.1"
-                     /db_xref="GeneID:72551529"
+                     /db_xref="GeneID:72551525"
                      /translation="MDFFNKFSQGLAESSTPKSSIYYSEEKDPDTKKDEAIEIGLKSQ
                      ESYYQRQLREQLARDNMMTASRQPTQPLQPTIHITPQPVPTPTPAPILLPSSTAPVLK
                      PRQQTNTSSDMSNLFDWLSTDTDAPASTLLPALTPSNTVQDIISKFNKDQKMTTPPST
@@ -2526,7 +2526,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG131"
                      /locus_tag="NBT03_gp110"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-114"
-                     /db_xref="GeneID:72551530"
+                     /db_xref="GeneID:72551526"
      CDS             111940..112425
                      /gene="OPG131"
                      /locus_tag="NBT03_gp110"
@@ -2538,7 +2538,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-directed RNA polymerase 19 kDa subunit"
                      /protein_id="YP_010377113.1"
-                     /db_xref="GeneID:72551530"
+                     /db_xref="GeneID:72551526"
                      /translation="MADTDDIIDYESDDLTEYEDDEEDGESLETSDIDPKSSYKIVES
                      TSTHIEDAHSNLKHIGNHISALKRRYTRRISLFEIAGIIAESYNLLQRGRLPLVSEFS
                      DETMKQNMLHVIIQEIEEGSCPIVIEKNGELLSVNDFDKDGLKFHLDYIIKIWKLQKR
@@ -2547,7 +2547,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG132"
                      /locus_tag="NBT03_gp111"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-115"
-                     /db_xref="GeneID:72551531"
+                     /db_xref="GeneID:72551527"
      CDS             complement(112422..113540)
                      /gene="OPG132"
                      /locus_tag="NBT03_gp111"
@@ -2558,7 +2558,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virion morphogenesis protein"
                      /protein_id="YP_010377114.1"
-                     /db_xref="GeneID:72551531"
+                     /db_xref="GeneID:72551527"
                      /translation="MDKLRVLYDEFVTISKDNLERETGLSASDVDMDFDLNIFMTLVP
                      VLEKKVCVITPTIEDDKIVTMMKYCSYQSFSFWFLKSGAVVKSVYNKLDDVEKEKFVA
                      TFRDMLLNVQTLISLNSMYTRLRQDTEDIVSDSKKIIEIVSHLRASTTENAAYQVLQQ
@@ -2570,7 +2570,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG133"
                      /locus_tag="NBT03_gp112"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-116"
-                     /db_xref="GeneID:72551532"
+                     /db_xref="GeneID:72551528"
      CDS             complement(113564..115696)
                      /gene="OPG133"
                      /locus_tag="NBT03_gp112"
@@ -2582,7 +2582,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Early transcription factor 82 kDa subunit"
                      /protein_id="YP_010377115.1"
-                     /db_xref="GeneID:72551532"
+                     /db_xref="GeneID:72551528"
                      /translation="MRYIVSPQLVLQVGKGQEVERALYLTPYDYIDEKSPIYYFLRSH
                      LNIQRPEIVKRHILLTLRMTQLKGYLGNLLDIKDDIIIYSHKNNLEYSYVDNTIFNPF
                      VYTQKKTLLKNDSFLYNVYSGACDFLVIWVARACDTSIPEFGSYEDVDNNIIKFETML
@@ -2600,7 +2600,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG134"
                      /locus_tag="NBT03_gp113"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-117"
-                     /db_xref="GeneID:72551533"
+                     /db_xref="GeneID:72551529"
      CDS             115750..116628
                      /gene="OPG134"
                      /locus_tag="NBT03_gp113"
@@ -2611,7 +2611,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Intermediate transcription factor VITF-3 (1)"
                      /protein_id="YP_010377116.1"
-                     /db_xref="GeneID:72551533"
+                     /db_xref="GeneID:72551529"
                      /translation="MFEPVPDLNLEASVELGEVNIDQTTPMIKENSGFISRSRRLFAH
                      RSKDDERKLALRFFLQRLYFLDHREIHYLFRCVDAVKDVTITKKNNIIVAPYIALLTI
                      ASKGCKLTETMIEAFFPELYNEHSKKFKFNSQVSIIQEKLGYQSGNYHVYDFEPYYST
@@ -2622,7 +2622,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG135"
                      /locus_tag="NBT03_gp114"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-118"
-                     /db_xref="GeneID:72551534"
+                     /db_xref="GeneID:72551530"
      CDS             complement(116609..116911)
                      /gene="OPG135"
                      /locus_tag="NBT03_gp114"
@@ -2633,14 +2633,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein A9"
                      /protein_id="YP_010377117.1"
-                     /db_xref="GeneID:72551534"
+                     /db_xref="GeneID:72551530"
                      /translation="MSCYTAILKSVGGLALFQVANGAIDLCRHFFMYFCEQKLRPNSF
                      WFVVVRAIASMIMYLVLGIALLYISEQDDKKNTNNDSNSNNDKRNVSSINSNSSHK"
      gene            complement(116912..119587)
                      /gene="OPG136"
                      /locus_tag="NBT03_gp115"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-119"
-                     /db_xref="GeneID:72551535"
+                     /db_xref="GeneID:72551531"
      CDS             complement(116912..119587)
                      /gene="OPG136"
                      /locus_tag="NBT03_gp115"
@@ -2651,7 +2651,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virion core protein P4a"
                      /protein_id="YP_010377118.1"
-                     /db_xref="GeneID:72551535"
+                     /db_xref="GeneID:72551531"
                      /translation="MMPIKSIVTLDQLEDSEYLFRIVSTVLPHLCLDYKVCDQLKTTF
                      VHPFDVFLNNSLGSVTKQDELQATISKLGINYLIDTTSRELKLFNVTLNAGNIDIINH
                      PINISSETNPIINTHSFYDLPPFTQHLLNIRLTDTEYRARFIGGYIKPDGSDSMDVLA
@@ -2672,7 +2672,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG137"
                      /locus_tag="NBT03_gp116"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-120"
-                     /db_xref="GeneID:72551536"
+                     /db_xref="GeneID:72551532"
      CDS             119602..120558
                      /gene="OPG137"
                      /locus_tag="NBT03_gp116"
@@ -2683,7 +2683,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Viral membrane formation protein"
                      /protein_id="YP_010377119.1"
-                     /db_xref="GeneID:72551536"
+                     /db_xref="GeneID:72551532"
                      /translation="MTTVPVTDIQNDLITEFSEDNYPSNKNYEITLRQMSILTHVNNV
                      VDREHNAAVVSSPEEISSQLNEDLFPDDDSPATIIERVQPHTTIIDDTPPPTFRRELL
                      ISEQRQQREKRFNITVSKNSEAIMESRSMITSMPTQTPSLGVVYDKDKRIQMLEDEVV
@@ -2694,7 +2694,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG138"
                      /locus_tag="NBT03_gp117"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-121"
-                     /db_xref="GeneID:72551537"
+                     /db_xref="GeneID:72551533"
      CDS             complement(120560..121132)
                      /gene="OPG138"
                      /locus_tag="NBT03_gp117"
@@ -2705,7 +2705,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="A12 protein"
                      /protein_id="YP_010377120.1"
-                     /db_xref="GeneID:72551537"
+                     /db_xref="GeneID:72551533"
                      /translation="MADKKNLAVRSSYDDYIETVNKITPQLKNLLAQIGGDAAVKGGN
                      NNLNSQTDVTAGACDTKSKSSKCITCKPKSKSSSSTSTSKSSKNTSGAPRRRTTATTS
                      FNAMDGQIVQAVTNAGKIVYGTVRDGQLEVRGMVGEINHDLLGIESVNAGKKKPSKKM
@@ -2714,7 +2714,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG139"
                      /locus_tag="NBT03_gp118"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-122"
-                     /db_xref="GeneID:72551538"
+                     /db_xref="GeneID:72551534"
      CDS             complement(121156..121368)
                      /gene="OPG139"
                      /locus_tag="NBT03_gp118"
@@ -2725,14 +2725,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein A13L"
                      /protein_id="YP_010377121.1"
-                     /db_xref="GeneID:72551538"
+                     /db_xref="GeneID:72551534"
                      /translation="MIGILLLIGICVAVTVAILYTLYNKIKNPQNPNPSPNLNSPPPE
                      TRNTKFVNNLEKDHISSLYNLVKSSA"
      gene            complement(121474..121746)
                      /gene="OPG140"
                      /locus_tag="NBT03_gp119"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-123"
-                     /db_xref="GeneID:72551539"
+                     /db_xref="GeneID:72551535"
      CDS             complement(121474..121746)
                      /gene="OPG140"
                      /locus_tag="NBT03_gp119"
@@ -2744,14 +2744,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein A14"
                      /protein_id="YP_010377122.1"
-                     /db_xref="GeneID:72551539"
+                     /db_xref="GeneID:72551535"
                      /translation="MDMMLMIGNYFSGVLIAGIILLILSCIFAFIDFSKSTSPTRTWK
                      VLSIMAFILGIIITVGMLIYSMWGKHCAPHRVSGVIHTNHSDISMN"
      gene            complement(121763..121924)
                      /gene="OPG141"
                      /locus_tag="NBT03_gp120"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-124"
-                     /db_xref="GeneID:72551540"
+                     /db_xref="GeneID:72551536"
      CDS             complement(121763..121924)
                      /gene="OPG141"
                      /locus_tag="NBT03_gp120"
@@ -2762,14 +2762,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DUF1029 domain protein"
                      /protein_id="YP_010377123.1"
-                     /db_xref="GeneID:72551540"
+                     /db_xref="GeneID:72551536"
                      /translation="MISNYEPLLLLVITCCVLLFNFTISSKTKIDIIFAVQTIVFIWF
                      IFHFVYSAI"
      gene            complement(121914..122198)
                      /gene="OPG142"
                      /locus_tag="NBT03_gp121"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-125"
-                     /db_xref="GeneID:72551541"
+                     /db_xref="GeneID:72551537"
      CDS             complement(121914..122198)
                      /gene="OPG142"
                      /locus_tag="NBT03_gp121"
@@ -2780,14 +2780,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Core protein A15"
                      /protein_id="YP_010377124.1"
-                     /db_xref="GeneID:72551541"
+                     /db_xref="GeneID:72551537"
                      /translation="MFVDDNSLIIYSTWPSTLSDSSGRVIIMPDNRSFTFKEGFKLDE
                      SIKSILLVNPSSIDLLKIRVYKHRIKWMGDIFVLFEQENIPPPFRLVNDK"
      gene            complement(122182..123315)
                      /gene="OPG143"
                      /locus_tag="NBT03_gp122"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-126"
-                     /db_xref="GeneID:72551542"
+                     /db_xref="GeneID:72551538"
      CDS             complement(122182..123315)
                      /gene="OPG143"
                      /locus_tag="NBT03_gp122"
@@ -2798,7 +2798,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Myristylated protein"
                      /protein_id="YP_010377125.1"
-                     /db_xref="GeneID:72551542"
+                     /db_xref="GeneID:72551538"
                      /translation="MGAAVTLNRIKIETGIADIRDKYMVLDFNYPEYNRAVRFAEESY
                      MYYYETSPGEIKPKFCLIDGMSIDHCSSFIVPEFAKQYVLIHGEPCSSFKFRPGSLIY
                      YQNEVTPEYIKDLKYATDYIASGQRCHFIKKDYLLGDSDSVAKCCSKTNTKHCPKIFN
@@ -2810,7 +2810,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG144"
                      /locus_tag="NBT03_gp123"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-127"
-                     /db_xref="GeneID:72551543"
+                     /db_xref="GeneID:72551539"
      CDS             complement(123318..123932)
                      /gene="OPG144"
                      /locus_tag="NBT03_gp123"
@@ -2822,7 +2822,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein P21"
                      /protein_id="YP_010377126.1"
-                     /db_xref="GeneID:72551543"
+                     /db_xref="GeneID:72551539"
                      /translation="MSYLRYYNMLDDFSAGAGVLDKDLFTEEQQQSFMPKDGGMMQND
                      YGGIMNDYLGIFKNNDVRTLLGLILFVLALYSPPLISILMIFISSFLLPLTSLVITYC
                      LVTQMYRGGNGNTVGMSIVCIVAAVIIMAINVFTNSQIFNIISYIILFILFFAFVMNI
@@ -2831,7 +2831,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG145"
                      /locus_tag="NBT03_gp124"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-128"
-                     /db_xref="GeneID:72551544"
+                     /db_xref="GeneID:72551540"
      CDS             123947..125425
                      /gene="OPG145"
                      /locus_tag="NBT03_gp124"
@@ -2844,7 +2844,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA helicase"
                      /protein_id="YP_010377127.1"
-                     /db_xref="GeneID:72551544"
+                     /db_xref="GeneID:72551540"
                      /translation="MSLLKMEYNLYAELKKMTCGQTISLFNEDGDFVEVEPGSSFKFL
                      IPKGFYSSPCVKTSLVFETLTTTDNKITSINPTNAPKLYPLQRKVVSEVVSNMRKMIE
                      LKRPLYITLHLACGFGKTITTCYLMTTHGRKTIICVPNKMLIHQWKTQVEAVGLEHKI
@@ -2858,7 +2858,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG146"
                      /locus_tag="NBT03_gp125"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-129"
-                     /db_xref="GeneID:72551545"
+                     /db_xref="GeneID:72551541"
      CDS             complement(125406..125639)
                      /gene="OPG146"
                      /locus_tag="NBT03_gp125"
@@ -2869,14 +2869,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Zinc finger-like protein (1)"
                      /protein_id="YP_010377128.1"
-                     /db_xref="GeneID:72551545"
+                     /db_xref="GeneID:72551541"
                      /translation="MDSTNMRSGMKSRKKKPKTTVIDDDDDCMTCSACQSKLVKISDI
                      TKVSLDYINTMRGNTLACSACGSSLKLLNDFAS"
      gene            complement(125640..125987)
                      /gene="OPG147"
                      /locus_tag="NBT03_gp126"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-130"
-                     /db_xref="GeneID:72551546"
+                     /db_xref="GeneID:72551542"
      CDS             complement(125640..125987)
                      /gene="OPG147"
                      /locus_tag="NBT03_gp126"
@@ -2887,7 +2887,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein A21"
                      /protein_id="YP_010377129.1"
-                     /db_xref="GeneID:72551546"
+                     /db_xref="GeneID:72551542"
                      /translation="MITLFLILCYFILIFNIIVPAISEKMRRERAAYVNYKRLNKNFI
                      CVDDRLFSYNFTTSGIKAKVAVNKNVPIPCSKINEVNNKDVDTLYCDKDRDDIPGFAR
                      SCYRAYSDLFFTT"
@@ -2895,7 +2895,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG148"
                      /locus_tag="NBT03_gp127"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-131"
-                     /db_xref="GeneID:72551547"
+                     /db_xref="GeneID:72551543"
      CDS             125986..127266
                      /gene="OPG148"
                      /locus_tag="NBT03_gp127"
@@ -2907,7 +2907,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA polymerase processivity factor"
                      /protein_id="YP_010377130.1"
-                     /db_xref="GeneID:72551547"
+                     /db_xref="GeneID:72551543"
                      /translation="MTSSADLTNLKELLSLYKSLRFSDSVAIEKYNSLVEWGTSTYWK
                      IGVQKVTNVETSISDYYDEVKNKPFNIDPGYYIFLPVYFGSVFIYSKGKNMVELGSGN
                      SFQIPDEIRSACNKVLDSDNGIDFLRFVLLNNRWIMEDAISKYQSPVNIFKLASEYGL
@@ -2920,7 +2920,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG149"
                      /locus_tag="NBT03_gp128"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-132"
-                     /db_xref="GeneID:72551548"
+                     /db_xref="GeneID:72551544"
      CDS             127196..127759
                      /gene="OPG149"
                      /locus_tag="NBT03_gp128"
@@ -2931,7 +2931,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Holliday junction resolvase"
                      /protein_id="YP_010377131.1"
-                     /db_xref="GeneID:72551548"
+                     /db_xref="GeneID:72551544"
                      /translation="METSTSSSQSLIPLPMSKKDYSSEIICAFDIGAKNPARTVLEVK
                      DNSVRVLDISKLDWSSDWERRIAQDLSQYEYTTVLLERQPRRSPYVKFIYFIKGFLYH
                      TSAAKVICVSPVMSGNSYRDRKKRSVEAFLDWMDTFGLRDSVPDRRKLDDVADSFNLA
@@ -2940,7 +2940,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG150"
                      /locus_tag="NBT03_gp129"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-133"
-                     /db_xref="GeneID:72551549"
+                     /db_xref="GeneID:72551545"
      CDS             127779..128927
                      /gene="OPG150"
                      /locus_tag="NBT03_gp129"
@@ -2951,7 +2951,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Intermediate transcription factor VITF-3 (2)"
                      /protein_id="YP_010377132.1"
-                     /db_xref="GeneID:72551549"
+                     /db_xref="GeneID:72551545"
                      /translation="MDNLFTFLHEIEDRYARTIFNFHLISCDEIGDIYGLMKERISSE
                      DMFDNIVYNKDIHPAIKKLVYCDIQLTKHIINQNTYPVFNDSSQVKCCHYFDINSNNS
                      NISSRTVEIFESEKSSLVSYIKTTNKKRKVNYGEIKKTVHGGTNANYFSGKKSDEYLS
@@ -2963,7 +2963,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG151"
                      /locus_tag="NBT03_gp130"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-134"
-                     /db_xref="GeneID:72551550"
+                     /db_xref="GeneID:72551546"
      CDS             128924..132418
                      /gene="OPG151"
                      /locus_tag="NBT03_gp130"
@@ -2974,7 +2974,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-dependent RNA polymerase subunit rpo132"
                      /protein_id="YP_010377133.1"
-                     /db_xref="GeneID:72551550"
+                     /db_xref="GeneID:72551546"
                      /translation="MKKNTDSEMDQRLGYKFLVPDPKAGVFYRPLHFQYVSYSNFILH
                      RLHEILTVKRPLLSFKNNTERIMIEISNVKVTPPDYSPIIASIKGKSYDALATFTVNI
                      FKEVMTKEGISITKISSYEGKDSHLIKIPLLIGYGNKNPLDTAKYLVPNVIGGVFINK
@@ -3002,7 +3002,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG153"
                      /locus_tag="NBT03_gp131"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-137"
-                     /db_xref="GeneID:72551553"
+                     /db_xref="GeneID:72551547"
      CDS             complement(136138..137667)
                      /gene="OPG153"
                      /locus_tag="NBT03_gp131"
@@ -3014,7 +3014,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Orthopoxvirus A26L/A30L protein"
                      /protein_id="YP_010377134.1"
-                     /db_xref="GeneID:72551553"
+                     /db_xref="GeneID:72551547"
                      /translation="MANIINLWNGIVPMVQDVNVASITAFKSMIDETWDKKIEANTCI
                      SRKHRNIIHEVIRDFMKAYPKMDENRKSPLGAPMQWLTQYYILKNEYHKTMLAYDDGS
                      LNTKFKTLNIYMITNVGQYILYIVFCIISGKNHDGTPYIYDSEITSNDKNLINDRIKY
@@ -3029,7 +3029,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG154"
                      /locus_tag="NBT03_gp132"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-138"
-                     /db_xref="GeneID:72551554"
+                     /db_xref="GeneID:72551548"
      CDS             complement(137718..138050)
                      /gene="OPG154"
                      /locus_tag="NBT03_gp132"
@@ -3041,7 +3041,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV surface fusion protein"
                      /protein_id="YP_010377135.1"
-                     /db_xref="GeneID:72551554"
+                     /db_xref="GeneID:72551548"
                      /translation="MDGTLFPGDDDLAIPATEFFSTKAAKNPETKREAIVKAYGDDNE
                      ETLKQRLTNLEKKITNITTKFEQIEKCCKRNDEVLFRLENHAETLRAAMISLAKKIDV
                      QTGRHPYE"
@@ -3049,7 +3049,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG155"
                      /locus_tag="NBT03_gp133"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-139"
-                     /db_xref="GeneID:72551555"
+                     /db_xref="GeneID:72551549"
      CDS             complement(138051..138491)
                      /gene="OPG155"
                      /locus_tag="NBT03_gp133"
@@ -3060,7 +3060,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Envelope protein A28 homolog"
                      /protein_id="YP_010377136.1"
-                     /db_xref="GeneID:72551555"
+                     /db_xref="GeneID:72551549"
                      /translation="MNSLSIFFIVVATAAVCLLFIQSYSIYENYGNIKEFNATHAAFE
                      YSKSIGGTPALDRRVQDVNDTISDVKQKWRCVVYPGNGFVSASIFGFQAEVGPNNTRS
                      IRKFNTMRQCIDFTFSDVINIDIYNPCIAPNINNTECQFLKSVL"
@@ -3068,7 +3068,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG156"
                      /locus_tag="NBT03_gp134"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-140"
-                     /db_xref="GeneID:72551556"
+                     /db_xref="GeneID:72551550"
      CDS             complement(138492..139409)
                      /gene="OPG156"
                      /locus_tag="NBT03_gp134"
@@ -3079,7 +3079,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA-directed RNA polymerase 35 kDa subunit"
                      /protein_id="YP_010377137.1"
-                     /db_xref="GeneID:72551556"
+                     /db_xref="GeneID:72551550"
                      /translation="MQHPREENSIVVELEPALATFIKQGFNNLVKWPLLNIGVVLYNT
                      STAVNEEWLTAVEHIPTMKIFYKHIHKILTREMGFLVYLKRSQSEHDNYITLYDFDYY
                      IIDKDTNSVTMVDKPTELKETLLHVFQEYRLKSSQTIELIAFSSGTVINEDIVSKLTF
@@ -3090,7 +3090,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG157"
                      /locus_tag="NBT03_gp135"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-141"
-                     /db_xref="GeneID:72551557"
+                     /db_xref="GeneID:72551551"
      CDS             complement(139372..139608)
                      /gene="OPG157"
                      /locus_tag="NBT03_gp135"
@@ -3101,14 +3101,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IMV membrane protein A30"
                      /protein_id="YP_010377138.1"
-                     /db_xref="GeneID:72551557"
+                     /db_xref="GeneID:72551551"
                      /translation="MEDLNEANFSHLLINLSNNKDIDMQYTSTLSVVHELLSAINFKI
                      FNINKKSKKNSKSIEQQHPVVHHAASTGREFNRR"
      gene            complement(139641..139769)
                      /gene="OPG158"
                      /locus_tag="NBT03_gp136"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-142"
-                     /db_xref="GeneID:72551558"
+                     /db_xref="GeneID:72551552"
      CDS             complement(139641..139769)
                      /gene="OPG158"
                      /locus_tag="NBT03_gp136"
@@ -3118,13 +3118,13 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="A32.5L"
                      /protein_id="YP_010377139.1"
-                     /db_xref="GeneID:72551558"
+                     /db_xref="GeneID:72551552"
                      /translation="MLKMSAADFLERLIKAGIYIYVLRTKYVITALLVKNYPIKDE"
      gene            139768..140205
                      /gene="OPG159"
                      /locus_tag="NBT03_gp137"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-143"
-                     /db_xref="GeneID:72551559"
+                     /db_xref="GeneID:72551553"
      CDS             139768..140205
                      /gene="OPG159"
                      /locus_tag="NBT03_gp137"
@@ -3135,7 +3135,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="CPXV166 protein"
                      /protein_id="YP_010377140.1"
-                     /db_xref="GeneID:72551559"
+                     /db_xref="GeneID:72551553"
                      /translation="MTSILNTLRFLEKTSFYNCNDSITKEKIKIKHKGMLFVFYKPKH
                      STVVKYLSGGGIYHDDLVVLGKVTINDLKMMLFYMDLSYHGVTSSGAIYKLGSSIDRL
                      SLNRTIVTKVNNNYNNYNNYNNYNCYNNYNCYNYDDTFFDDDD"
@@ -3143,7 +3143,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG160"
                      /locus_tag="NBT03_gp138"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-144"
-                     /db_xref="GeneID:72551560"
+                     /db_xref="GeneID:72551554"
      CDS             complement(140172..141074)
                      /gene="OPG160"
                      /locus_tag="NBT03_gp138"
@@ -3155,7 +3155,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="ATPase A32"
                      /protein_id="YP_010377141.1"
-                     /db_xref="GeneID:72551560"
+                     /db_xref="GeneID:72551554"
                      /translation="MPSLFSSLLTTLVFHILIYYQINLVTVNIIMNCFQEKQFSRENL
                      LKMPFRMVLTGGSGSGKTIYLLSLFSTLVKKYKHIFLFTPVYNPDYDGYIWPNHINFV
                      SSQEALEYNLIRTKSNIEKCIAVAQNHKKSAHFLLIFDDVGDKLSKCNTLIEFLNFGR
@@ -3166,7 +3166,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG161"
                      /locus_tag="NBT03_gp139"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-145"
-                     /db_xref="GeneID:72551561"
+                     /db_xref="GeneID:72551555"
      CDS             141102..141647
                      /gene="OPG161"
                      /locus_tag="NBT03_gp139"
@@ -3180,7 +3180,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="EEV glycoprotein (1)"
                      /protein_id="YP_010377142.1"
-                     /db_xref="GeneID:72551561"
+                     /db_xref="GeneID:72551555"
                      /translation="MMTPENDEEQTSVFSATVYGDKIQGKNKRKRVIGLCIRISMVIS
                      LLSMITMSAFLIVRLNQCMSANKAAITDSAVAVAAASSTHRKVVSSTTQYDHKESCNG
                      LYYQGSCYILHSDYKSFEDAKANCAAESSTLPNKSDVLTTWLIDYVEDTWGSDGNPIT
@@ -3189,7 +3189,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG162"
                      /locus_tag="NBT03_gp140"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-146"
-                     /db_xref="GeneID:72551562"
+                     /db_xref="GeneID:72551556"
      CDS             141652..142158
                      /gene="OPG162"
                      /locus_tag="NBT03_gp140"
@@ -3203,7 +3203,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="EEV glycoprotein (2)"
                      /protein_id="YP_010377143.1"
-                     /db_xref="GeneID:72551562"
+                     /db_xref="GeneID:72551556"
                      /translation="MKSLNRQTVSRFRKLSVPAAIMMLLSTIISGIGTFLHYREELMP
                      SACANGWIQYDKHCYLDTNIKMSTDNAVYQCRKLRARLPRPDTRHLRVLFSIFYKDYW
                      VSLKKTNDKWLDINNDKDIDISKLTNFKQLNSTTDSEACYIYKSGKLVKTVCKSTQSV
@@ -3212,7 +3212,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG163"
                      /locus_tag="NBT03_gp141"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-147"
-                     /db_xref="GeneID:72551563"
+                     /db_xref="GeneID:72551557"
      CDS             142202..142732
                      /gene="OPG163"
                      /locus_tag="NBT03_gp141"
@@ -3223,7 +3223,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="MHC class II antigen presentation inhibitor"
                      /protein_id="YP_010377144.1"
-                     /db_xref="GeneID:72551563"
+                     /db_xref="GeneID:72551557"
                      /translation="MDAAFVITPMGVLTITDTLYDDLDISIMDFIGPYIIGNIKIVQI
                      DVRDIKYSDMQKCYFSYKGKIVPQDSNDLARFNIYSICTAYRSKNTIIIACDYDIMLD
                      IEGKHQPFYLFPSIDVFNATIIEAYNLYTAGDYHLIINPSDNLKMKLSFNSSFCISDG
@@ -3232,7 +3232,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG164"
                      /locus_tag="NBT03_gp142"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-148"
-                     /db_xref="GeneID:72551564"
+                     /db_xref="GeneID:72551558"
      CDS             142778..143464
                      /gene="OPG164"
                      /locus_tag="NBT03_gp142"
@@ -3245,7 +3245,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="IEV transmembrane phosphoprotein"
                      /protein_id="YP_010377145.1"
-                     /db_xref="GeneID:72551564"
+                     /db_xref="GeneID:72551558"
                      /translation="MLYIEQSEMMLVPLITVTVVAGTILVCYILYICRKKIRTVYNDN
                      KIIMTKLKKIKSPNSSKSSKSTDSESDWEDHCSAMEQNNDVDNISRNEILNDDSFAGS
                      LIWDNESNIMAPSTEHIYDSVAGSTLLINNDRNEQTIYQNTTVVINDTETVEILNEDT
@@ -3255,7 +3255,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG165"
                      /locus_tag="NBT03_gp143"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-149"
-                     /db_xref="GeneID:72551565"
+                     /db_xref="GeneID:72551559"
      CDS             143516..144322
                      /gene="OPG165"
                      /locus_tag="NBT03_gp143"
@@ -3266,7 +3266,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="CPXV173 protein"
                      /protein_id="YP_010377146.1"
-                     /db_xref="GeneID:72551565"
+                     /db_xref="GeneID:72551559"
                      /translation="MHYTNMEIFPVFGISKISNFIANNDCRYYIDVEHQKIISDEINR
                      QMDETVLLTNILSVEVVNDNEMYHLIPHRLSTIILCISSVGGCVISIDNDVNDKNILT
                      FPIDHAVIISPLSKCVVVSKGPTTILVVKADIPSKRLVTSFTNDILYVNNLSLINYLP
@@ -3292,7 +3292,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG167"
                      /locus_tag="NBT03_gp145"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-150"
-                     /db_xref="GeneID:72551566"
+                     /db_xref="GeneID:72551561"
      CDS             complement(144574..145407)
                      /gene="OPG167"
                      /locus_tag="NBT03_gp145"
@@ -3305,7 +3305,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="CD47-like protein"
                      /protein_id="YP_010377147.1"
-                     /db_xref="GeneID:72551566"
+                     /db_xref="GeneID:72551561"
                      /translation="MLRVRILLIYLCTFVVITSTKTIEYTACNDTIIIPCIIDNPTKY
                      IRWKLDNHDILTYNKTSKTTILSKWHTSARLHSLSDSDVSLIMEYKDILPGTYTCGDN
                      TGIKYTVKLIQRHTNWFNDYQTMLMFIFTGITLFLLFLEIAYTSISVVFSTNLGILQV
@@ -3320,7 +3320,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG170"
                      /locus_tag="NBT03_gp146"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-151"
-                     /db_xref="GeneID:72551567"
+                     /db_xref="GeneID:72551562"
      CDS             complement(146113..146778)
                      /gene="OPG170"
                      /locus_tag="NBT03_gp146"
@@ -3333,7 +3333,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Chemokine binding protein"
                      /protein_id="YP_010377148.1"
-                     /db_xref="GeneID:72551567"
+                     /db_xref="GeneID:72551562"
                      /translation="MYLLFIILMYLLPFSFQTSEPAYDKSVCDSGNKEYMGIEVYVEA
                      TLDEPLRQTTCESEIHKYGASVSNGGLNISVDLLNCFLNFHTVGVYTNRDTVYAKFAS
                      LDPWTTEPMNSMTHDDLVKLTEECIVDIYLKCEVDKTKDFMKTNDNRLKPRDFKTVPP
@@ -3343,7 +3343,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG171"
                      /locus_tag="NBT03_gp147"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-152"
-                     /db_xref="GeneID:72551568"
+                     /db_xref="GeneID:72551563"
      CDS             146988..147389
                      /gene="OPG171"
                      /locus_tag="NBT03_gp147"
@@ -3354,7 +3354,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Profilin domain protein"
                      /protein_id="YP_010377149.1"
-                     /db_xref="GeneID:72551568"
+                     /db_xref="GeneID:72551563"
                      /translation="MAEWHKIIEDISKNNKFEDAAIVDYKTTKNVLAAIPNRTFAKIN
                      PGEVIPLITNHNILKPLIGQKFCIVYTNSLMDENTYAMELLTGYAPVSPIVIARTHTA
                      LIFLMGKPTTSRRDVYRTCRDHATRVRATGN"
@@ -3362,7 +3362,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG172"
                      /locus_tag="NBT03_gp148"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-153"
-                     /db_xref="GeneID:72551569"
+                     /db_xref="GeneID:72551564"
      CDS             147427..148017
                      /gene="OPG172"
                      /locus_tag="NBT03_gp148"
@@ -3373,7 +3373,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Type-I membrane glycoprotein"
                      /protein_id="YP_010377150.1"
-                     /db_xref="GeneID:72551569"
+                     /db_xref="GeneID:72551564"
                      /translation="MMMKWIISILTMSIMPVLTYSSSIFRFHSEDIELCYGNLYFDRI
                      YNNVVNIKYIPEHIPYRYNFINRTFSVDELDDNVFFTHGYFLKHKYGCSLNPSLIVSL
                      SGNLKYNDIQCSVNVSCLIKNLATSTSTILTSKHKTYSLYRSMCIAIIGYDSIIWYKY
@@ -3382,7 +3382,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG173"
                      /locus_tag="NBT03_gp149"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-154"
-                     /db_xref="GeneID:72551570"
+                     /db_xref="GeneID:72551565"
      CDS             148037..148261
                      /gene="OPG173"
                      /locus_tag="NBT03_gp149"
@@ -3392,14 +3392,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="MPXVgp154"
                      /protein_id="YP_010377151.1"
-                     /db_xref="GeneID:72551570"
+                     /db_xref="GeneID:72551565"
                      /translation="MDKIKITIDSKIGNVVTISYNLEKITIDVTPKKKKEKDVLLAQS
                      VAVEEAKDVKVEEKNIIDIEDDDDMDIENT"
      gene            complement(148355..149395)
                      /gene="OPG174"
                      /locus_tag="NBT03_gp150"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-155"
-                     /db_xref="GeneID:72551571"
+                     /db_xref="GeneID:72551566"
      CDS             complement(148355..149395)
                      /gene="OPG174"
                      /locus_tag="NBT03_gp150"
@@ -3411,7 +3411,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Hydroxysteroid dehydrogenase"
                      /protein_id="YP_010377152.1"
-                     /db_xref="GeneID:72551571"
+                     /db_xref="GeneID:72551566"
                      /translation="MAVYAVTGGAGFLGRYIVKLLISADDVQEIRVIDIVEDPQPITS
                      KVKVINYIQCDINDFDKVREALDGVNLIIHTAALVDVFGKYTDNEIMKVNYYGTQTIL
                      AACVDLGIKYLIYTSSMEAIGPNKHGNPFIGHEHTLYDISPGHVYAKSKRMAEQLVMK
@@ -3423,7 +3423,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG175"
                      /locus_tag="NBT03_gp151"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-156"
-                     /db_xref="GeneID:72551572"
+                     /db_xref="GeneID:72551567"
      CDS             149442..149819
                      /gene="OPG175"
                      /locus_tag="NBT03_gp151"
@@ -3435,7 +3435,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Copper/zinc superoxide dismutase"
                      /protein_id="YP_010377153.1"
-                     /db_xref="GeneID:72551572"
+                     /db_xref="GeneID:72551567"
                      /translation="MAVCIIDHDNIRGVIYVEQVHGKDKVLGSVIGLKSGTYSLIIHR
                      YGDISRGCDSIGSPEIFIGNIFVNRYGVAYVYLDTDVNISTIIGKALSISKNDQRLAC
                      GVIGISYINEKIIHFLTINENGV"
@@ -3443,7 +3443,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG176"
                      /locus_tag="NBT03_gp152"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-157"
-                     /db_xref="GeneID:72551573"
+                     /db_xref="GeneID:72551568"
      CDS             149809..150531
                      /gene="OPG176"
                      /locus_tag="NBT03_gp152"
@@ -3454,7 +3454,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377154.1"
-                     /db_xref="GeneID:72551573"
+                     /db_xref="GeneID:72551568"
                      /translation="MAFDISVNASKTINALVYFSTQQDKLVIRNEVNDIHYTVEFDRD
                      KVVDTFISYNRHNDSIEIRGVLPEETNIGRVVNTPVSMTYLYNKYSFKPILAEYIRHR
                      NTISGNIYSALMTLDDLVIKQYGDIDLLFNEKLKVDSDSGLFDFVNFVKDMICCDSRI
@@ -3466,7 +3466,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG178"
                      /locus_tag="NBT03_gp153"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-158"
-                     /db_xref="GeneID:72551574"
+                     /db_xref="GeneID:72551569"
      CDS             151509..152123
                      /gene="OPG178"
                      /locus_tag="NBT03_gp153"
@@ -3478,7 +3478,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Thymidylate kinase"
                      /protein_id="YP_010377155.1"
-                     /db_xref="GeneID:72551574"
+                     /db_xref="GeneID:72551569"
                      /translation="MSRGALIVFEGLDKSGKTTQCMNIMESIPANTIKYLNFPQRSTV
                      TGKMIDDYLTRKKTYNDHIVNLLFCANRWEFASFIQEQLEQGITLIVDRYAFSGVAYA
                      TAKGASMTLSKSYESGLPKPDLVIFLESGSKEINRNIGEEIYEDVEFQQKVLQEYKKM
@@ -3489,7 +3489,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG180"
                      /locus_tag="NBT03_gp154"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-159"
-                     /db_xref="GeneID:72551575"
+                     /db_xref="GeneID:72551570"
      CDS             152692..154371
                      /gene="OPG180"
                      /locus_tag="NBT03_gp154"
@@ -3500,7 +3500,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="DNA ligase (2)"
                      /protein_id="YP_010377156.1"
-                     /db_xref="GeneID:72551575"
+                     /db_xref="GeneID:72551570"
                      /translation="MTSLREFRKLCCDIYHASGYKEKSKLIRDFITDRDDTDTYLIIK
                      LLLPGLDDRMYNMNDKQIIKLYSIIFKQSQEDMLQDLGYGYIGDTIRTFFKENTEIRP
                      RDKSILTLEEVDSFLTTLSSVTKESHQIKLLTDIASVCTCNDLKCVVMLIDKDLKIKA
@@ -3515,7 +3515,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG181"
                      /locus_tag="NBT03_gp155"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-160"
-                     /db_xref="GeneID:72551576"
+                     /db_xref="GeneID:72551571"
      CDS             154412..155416
                      /gene="OPG181"
                      /locus_tag="NBT03_gp155"
@@ -3526,7 +3526,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="M137R"
                      /protein_id="YP_010377157.1"
-                     /db_xref="GeneID:72551576"
+                     /db_xref="GeneID:72551571"
                      /translation="MDGVIVYCLNALVKHGEEINHIKNDFMIKPCCERVCEKVKNVHI
                      GGQSKNNTVIADLPYLDNAVSDVCKSIYKKNVSRISRFANLIKIDDDDKTPTGVYNYF
                      KPKDAIPVIISIGKDKDVCELLISSDKACACIKLNLYKVAILPMDVSFFTKGNASLII
@@ -3544,7 +3544,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG185"
                      /locus_tag="NBT03_gp156"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-162"
-                     /db_xref="GeneID:72551578"
+                     /db_xref="GeneID:72551572"
      CDS             158917..159858
                      /gene="OPG185"
                      /locus_tag="NBT03_gp156"
@@ -3557,7 +3557,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Hemagglutinin"
                      /protein_id="YP_010377158.1"
-                     /db_xref="GeneID:72551578"
+                     /db_xref="GeneID:72551572"
                      /translation="MTQLPILLLLISLVYATPSPQTSKKIGDDATISCSRNNTNYYVV
                      MSAWYKEPNSIILLAAKSDVLYFDNYTKDKISYDSPYDDLVTTITIKSLTAGDAGTYI
                      CAFFMTSTTNDTDKVDYEEYSIELIVNTDSESTIDIILSGSTPETISEKPEDIDNSNC
@@ -3570,7 +3570,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG187"
                      /locus_tag="NBT03_gp157"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-163"
-                     /db_xref="GeneID:72551579"
+                     /db_xref="GeneID:72551573"
      CDS             160622..161533
                      /gene="OPG187"
                      /locus_tag="NBT03_gp157"
@@ -3581,7 +3581,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ser/thr kinase"
                      /protein_id="YP_010377159.1"
-                     /db_xref="GeneID:72551579"
+                     /db_xref="GeneID:72551573"
                      /translation="MKFQGLVLIDNCKNQWVVGPLIGKGGFGSIYTTNDNNYVVKIEP
                      KANGSLFTEQAFYTRVLKPSVIEEWKKSHNIKHVGLITCKAFGLYKSINVEYRFLVIN
                      RLGADLDAVIRANNNRLPERSVMLIGIEILNTIQFMHEQGYSHGDIKASNIVLDQIDK
@@ -3592,7 +3592,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG188"
                      /locus_tag="NBT03_gp158"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-164"
-                     /db_xref="GeneID:72551580"
+                     /db_xref="GeneID:72551574"
      CDS             161596..163107
                      /gene="OPG188"
                      /locus_tag="NBT03_gp158"
@@ -3603,7 +3603,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Schlafen (1)"
                      /protein_id="YP_010377160.1"
-                     /db_xref="GeneID:72551580"
+                     /db_xref="GeneID:72551574"
                      /translation="MFYAHAFGGYDENLHAFPGISSTVANDVRKYSVVSVYNKKYNIV
                      KNKYMWCNSQVNKRYIGALLPMFECNEYLQIGDPIHDLEGNQISIVTYRHKNYYALSG
                      IGYESLDLCLEGVGIHHHVLETGNAVYGKVQHEYSTIKEKAKEMNALKPGPIIDYHVW
@@ -3617,7 +3617,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG189"
                      /locus_tag="NBT03_gp159"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-165"
-                     /db_xref="GeneID:72551581"
+                     /db_xref="GeneID:72551575"
      CDS             163333..165018
                      /gene="OPG189"
                      /locus_tag="NBT03_gp159"
@@ -3628,7 +3628,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin repeat protein (25)"
                      /protein_id="YP_010377161.1"
-                     /db_xref="GeneID:72551581"
+                     /db_xref="GeneID:72551575"
                      /translation="MDFFKKEILDWSIYLFLHYITRLCSNSSNSSTSHIIQEYNLVRK
                      YEKVDKTIVDFLSRWPNLFHILEYGENILHIYFIDAANTNIMIFFLDRVLNINKNRGS
                      FIHNLGLSSINIKEYVYQLVNNDHLDNSIRLMLENGRRTRHFLSYILDTVNIYISILI
@@ -3643,7 +3643,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG190"
                      /locus_tag="NBT03_gp160"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-166"
-                     /db_xref="GeneID:72551582"
+                     /db_xref="GeneID:72551576"
      CDS             165122..166075
                      /gene="OPG190"
                      /locus_tag="NBT03_gp160"
@@ -3657,7 +3657,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="EEV type-I membrane glycoprotein"
                      /protein_id="YP_010377162.1"
-                     /db_xref="GeneID:72551582"
+                     /db_xref="GeneID:72551576"
                      /translation="MKTISVVTLLCVLPAVVYSTCTVPTMNNAKLTSTETSFNDKQKV
                      TFTCDSGYHSLDPNAVCETDKWKYENPCKKMCTVSDYVSELYDKPLYEVNSTMTLSCN
                      GETKYFRCEEKNGNTSWNDTVTCPNAECQPLQLEHGSCQPVKEKYSFGEYMTINCDVG
@@ -3668,7 +3668,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG191"
                      /locus_tag="NBT03_gp161"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-167"
-                     /db_xref="GeneID:72551583"
+                     /db_xref="GeneID:72551577"
      CDS             166161..166667
                      /gene="OPG191"
                      /locus_tag="NBT03_gp161"
@@ -3679,7 +3679,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin-like protein (46)"
                      /protein_id="YP_010377163.1"
-                     /db_xref="GeneID:72551583"
+                     /db_xref="GeneID:72551577"
                      /translation="MSSSVDVDIYDAVRAFLLRHYYDKRFIVYGRSNTILHNIYRLFT
                      RCTVIPFDDIVRTMPNESRVKQWVMDTLNGIMMNEFDTVCVGTGLRFMEMFFDYNKNN
                      PKNSINNQIMYDIINSVAIILANERYRSAFNDDRIYIRRTMMDKLYEYASLTTIGTIT
@@ -3688,7 +3688,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG192"
                      /locus_tag="NBT03_gp162"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-168"
-                     /db_xref="GeneID:72551584"
+                     /db_xref="GeneID:72551578"
      CDS             166731..167279
                      /gene="OPG192"
                      /locus_tag="NBT03_gp162"
@@ -3699,7 +3699,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virulence protein"
                      /protein_id="YP_010377164.1"
-                     /db_xref="GeneID:72551584"
+                     /db_xref="GeneID:72551578"
                      /translation="MYKKLITFLFVIGAVASYSNNEYTPFNKLSVKLYIDGVDNIENS
                      YTDDNNELVLNFKEYTISIITESCDVGFDSIDIDVINDYKIIDMYTIDSSTIQRRGHT
                      CRISTKLSCHYDKYPYIHKYEGDERQYSITAEGKCYKGIKYEISMMNDDTLLRKHTLK
@@ -3708,7 +3708,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG193"
                      /locus_tag="NBT03_gp163"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-169"
-                     /db_xref="GeneID:72551585"
+                     /db_xref="GeneID:72551579"
      CDS             167334..168137
                      /gene="OPG193"
                      /locus_tag="NBT03_gp163"
@@ -3720,7 +3720,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Soluble interferon-gamma receptor-like protein"
                      /protein_id="YP_010377165.1"
-                     /db_xref="GeneID:72551585"
+                     /db_xref="GeneID:72551579"
                      /translation="MRYIIILAVLFINSIHAKITSYKFESVNFDSKIEWTGDGLYNIS
                      LKNYGIKTWQTMYTNVPEGTYDISGFPKNDFVSFWVKFEQGDYKVEEYCTGLCVEVKI
                      GPPTVILTEYDDHINLFIEHPYATRGSKKIPIYKRGDMCDIYLLYTANFTFGDSEEPV
@@ -3730,7 +3730,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG195"
                      /locus_tag="NBT03_gp164"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-170"
-                     /db_xref="GeneID:72551586"
+                     /db_xref="GeneID:72551580"
      CDS             168230..168895
                      /gene="OPG195"
                      /locus_tag="NBT03_gp164"
@@ -3742,7 +3742,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Intracellular viral protein"
                      /protein_id="YP_010377166.1"
-                     /db_xref="GeneID:72551586"
+                     /db_xref="GeneID:72551580"
                      /translation="MRSLIIVLLFPSIIYSMSIRRCEKTEEETWGLKIGLCIIAKDFY
                      PERTDCSVHRPTASGGLITEGNGFRVVIYDQCTEPHDFIITDTQQTRLGSSHTYIKFS
                      NMNTGVPSSIPKCSRTLCISVYCDQEAGDIKFEEYTQESSDISIRVKYDSSCIDYLGI
@@ -3754,7 +3754,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG197"
                      /locus_tag="NBT03_gp165"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-171"
-                     /db_xref="GeneID:72551587"
+                     /db_xref="GeneID:72551581"
      CDS             169670..169972
                      /gene="OPG197"
                      /locus_tag="NBT03_gp165"
@@ -3764,14 +3764,14 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="CPXV205 protein"
                      /protein_id="YP_010377167.1"
-                     /db_xref="GeneID:72551587"
+                     /db_xref="GeneID:72551581"
                      /translation="MYSGIYPIVLLLTTNMDSDTDTDTDTDTDTDTDTDVEDIMNEID
                      REKEEILKNVEIENNKNINKNHPSEYIREALVINTSSNSDSIDKEVIEYISHDVGI"
      gene            170038..170886
                      /gene="OPG198"
                      /locus_tag="NBT03_gp166"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-172"
-                     /db_xref="GeneID:72551588"
+                     /db_xref="GeneID:72551582"
      CDS             170038..170886
                      /gene="OPG198"
                      /locus_tag="NBT03_gp166"
@@ -3781,7 +3781,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ser/thr kinase"
                      /protein_id="YP_010377168.1"
-                     /db_xref="GeneID:72551588"
+                     /db_xref="GeneID:72551582"
                      /translation="MESFKYCFDNDGKKWIIGNTLYSGNSILYKVRKNFTSSFYNYVM
                      KIDHKSHKPLLSEIRFYISVLDPLTINNWTRERGIKYLAIPDLYGIGETDDYMFFIIK
                      NLGRVFAPKDSESVFEACVTMINTLEFIHSQGFTHGKIEPMNILIRNKRISLIDYSRT
@@ -3792,7 +3792,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG199"
                      /locus_tag="NBT03_gp167"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-173"
-                     /db_xref="GeneID:72551589"
+                     /db_xref="GeneID:72551583"
      CDS             170988..172022
                      /gene="OPG199"
                      /locus_tag="NBT03_gp167"
@@ -3805,7 +3805,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Serpin"
                      /protein_id="YP_010377169.1"
-                     /db_xref="GeneID:72551589"
+                     /db_xref="GeneID:72551583"
                      /translation="MDIFREIASSMKGKNVFISPASISSVLTILYYGANGSTAEQLSK
                      YVEKEENMDKVSAQNISFKSMNKVYGRYSAVFKDSFLGKIGDKFQTVDFTDCRTIDAI
                      NKCVDIFTEGKINPLLDEPLSPDTCLLAISAVYFKAKWLMPFEKEFTSDYPFYVSPTE
@@ -3817,7 +3817,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG200"
                      /locus_tag="NBT03_gp168"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-174"
-                     /db_xref="GeneID:72551590"
+                     /db_xref="GeneID:72551584"
      CDS             172150..172599
                      /gene="OPG200"
                      /locus_tag="NBT03_gp168"
@@ -3829,7 +3829,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377170.1"
-                     /db_xref="GeneID:72551590"
+                     /db_xref="GeneID:72551584"
                      /translation="MTANFSTHVFSPQHCGCDRLTSIDDVRQCLTEYIYWSSYAYRNR
                      QCAGQLYDTLLSFKDDAESVFIDVRELVKNMPWDNVKDCTEIIRCYIPDEQKTIREIS
                      AIIGLCAYAATYWGGEDHPTSNSLNALFVMLEMLNYMDYTIIFWRMN"
@@ -3843,7 +3843,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG204"
                      /locus_tag="NBT03_gp169"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-177"
-                     /db_xref="GeneID:72551593"
+                     /db_xref="GeneID:72551585"
      CDS             174532..175587
                      /gene="OPG204"
                      /locus_tag="NBT03_gp169"
@@ -3856,7 +3856,7 @@ FEATURES             Location/Qualifiers
                      /product="IFN-alpha/beta-receptor-like secreted
                      glycoprotein"
                      /protein_id="YP_010377172.1"
-                     /db_xref="GeneID:72551593"
+                     /db_xref="GeneID:72551585"
                      /translation="MKMKMMVRIYFVSLSLLLFHSYAIDIENEITEFFNKMRDTLPAK
                      DSKWLNPVCMFGGTMNDMAALGEPFSAKCPPIEDSLLSHRYKDYVVKWERLEKNRRRQ
                      VSNKRVKHGDLWIANYTSKFSNRRYLCTVTTKNGDCVQGVVRSHVWKPSSCIPKTYEL
@@ -3868,7 +3868,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG205"
                      /locus_tag="NBT03_gp170"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-178"
-                     /db_xref="GeneID:72551594"
+                     /db_xref="GeneID:72551586"
      CDS             175656..178019
                      /gene="OPG205"
                      /locus_tag="NBT03_gp170"
@@ -3879,7 +3879,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin repeat protein (44)"
                      /protein_id="YP_010377173.1"
-                     /db_xref="GeneID:72551594"
+                     /db_xref="GeneID:72551586"
                      /translation="MDEDTRLSRYLYLTDREHINVDSIKQLCKISDPNACYRCGCTAL
                      HEYFYNYRSVNGKYKYRYNGYYQYYSSSDYENYNEYYYDDYDRTGMNSESDNISIKTE
                      YENEYEFYDETQDQSTQLVDYDIKLKTNEDDFVDEFYGYDRSVGVHDYIDVSINKVVY
@@ -3900,7 +3900,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG208"
                      /locus_tag="NBT03_gp171"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-180"
-                     /db_xref="GeneID:72551596"
+                     /db_xref="GeneID:72551587"
      CDS             179266..180339
                      /gene="OPG208"
                      /locus_tag="NBT03_gp171"
@@ -3914,7 +3914,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Serpin"
                      /protein_id="YP_010377174.1"
-                     /db_xref="GeneID:72551596"
+                     /db_xref="GeneID:72551587"
                      /translation="MDIFKELILKHTDENVLISPVSILSTLSILNHGAAGSTAEQLSK
                      YIENMNENTPDDKKDDNNDMDVDIPYCATLATANKIYGSDSIEFHASFLQKIKDDFQT
                      VNFNNANQTKELINEWVKTMTNGKINSLLTSPLSINTRMIVISAVHFKAMWKYPFSKH
@@ -3926,7 +3926,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG209"
                      /locus_tag="NBT03_gp172"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-181"
-                     /db_xref="GeneID:72551597"
+                     /db_xref="GeneID:72551588"
      CDS             180518..181090
                      /gene="OPG209"
                      /locus_tag="NBT03_gp172"
@@ -3936,7 +3936,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Virulence protein"
                      /protein_id="YP_010377175.1"
-                     /db_xref="GeneID:72551597"
+                     /db_xref="GeneID:72551588"
                      /translation="MTIYGLIAYLIFVTSSIASPLYIPVIPPISEDKSFNSVEVLVSL
                      FPDDQKDYTVTSQFNNYTIGTKDWTINVLSTPDGLDIPLTNITYWSRFTIGRALFKSE
                      SEDIFQKKMSILGVSIECKKPSTLLTFLTVRKMTRVFNRFPDMAYYRGDCLEAVYVTM
@@ -3945,7 +3945,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG210"
                      /locus_tag="NBT03_gp173"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-182"
-                     /db_xref="GeneID:72551598"
+                     /db_xref="GeneID:72551589"
      CDS             181356..186998
                      /gene="OPG210"
                      /locus_tag="NBT03_gp173"
@@ -3957,7 +3957,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="B22R family protein"
                      /protein_id="YP_010377176.1"
-                     /db_xref="GeneID:72551598"
+                     /db_xref="GeneID:72551589"
                      /translation="MNFQKLSLAIYLTVTCSWCYETCMRKTALYHDIQLEHVEDNKDS
                      VASLPYKYLQVVKQRERSRLLATFNWTDIAEGVRNEFIKICDINGTYLYNYTIAVSII
                      IDSTEELPTVTPITTYEPSIYNYTIDYSTVITTEELQVTPTYAPVTTPLPTSAVPYDQ
@@ -4001,7 +4001,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG005"
                      /locus_tag="NBT03_gp174"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-184"
-                     /db_xref="GeneID:72551600"
+                     /db_xref="GeneID:72551590"
      CDS             189199..189660
                      /gene="OPG005"
                      /locus_tag="NBT03_gp174"
@@ -4013,7 +4013,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Bcl-2-like protein"
                      /protein_id="YP_010377177.1"
-                     /db_xref="GeneID:72551600"
+                     /db_xref="GeneID:72551590"
                      /translation="MASPCAQFSPCHCHATKDSLNTVTDVRHCLTEYILWVSHRWTHR
                      ESAGPLYRLLISFRIDAMELFGSELKEFSNSLPWDNIDNCVEIIKCFIRNDSMKTAKE
                      LCAIIGLCTQSAIVTGRVFNDKYIDILLMLRKILNENDYLTLLDHILTAKY"
@@ -4021,7 +4021,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG016"
                      /locus_tag="NBT03_gp175"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-186"
-                     /db_xref="GeneID:72551602"
+                     /db_xref="GeneID:72551591"
      CDS             190410..190940
                      /gene="OPG016"
                      /locus_tag="NBT03_gp175"
@@ -4031,7 +4031,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Brix domain protein"
                      /protein_id="YP_010377184.1"
-                     /db_xref="GeneID:72551602"
+                     /db_xref="GeneID:72551591"
                      /translation="MDSRIAIYVLVSASLLYLVNCHKLVHYFNLKINGSDITNTADIL
                      LDNYPIMTFDGKDIYPSISFMVGNKLFLDLYKNIFEEFFRLFRVSVSSQYEELEYYYS
                      CDYTNNRPTIKQHYFYNGDEYTEIDRSKKATNKNSWLITSGFRLQKWFDSEDCIIYLR
@@ -4042,7 +4042,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG015"
                      /locus_tag="NBT03_gp176"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-187"
-                     /db_xref="GeneID:72551603"
+                     /db_xref="GeneID:72551592"
      CDS             191054..192367
                      /gene="OPG015"
                      /locus_tag="NBT03_gp176"
@@ -4053,7 +4053,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin repeat protein (39)"
                      /protein_id="YP_010377179.1"
-                     /db_xref="GeneID:72551603"
+                     /db_xref="GeneID:72551592"
                      /translation="MESVDFMAVDEQFHDDLDLWSLSLVDDYKKHGLGVDCYVLEPVV
                      DRKIFDRFLLEPICDPVDVLYDYFRIHRDNIDQYIVDRLFAYITYKDIISALVSKNYM
                      EDIFSIIIKNCNSVQDLLLYYLSNAYVEIDIVDLMVDHGAVIYKIECLNAYFRGICKK
@@ -4066,7 +4066,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG003"
                      /locus_tag="NBT03_gp177"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-188"
-                     /db_xref="GeneID:72551604"
+                     /db_xref="GeneID:72551593"
      CDS             192603..194369
                      /gene="OPG003"
                      /locus_tag="NBT03_gp177"
@@ -4077,7 +4077,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Ankyrin repeat protein (25)"
                      /protein_id="YP_010377180.1"
-                     /db_xref="GeneID:72551604"
+                     /db_xref="GeneID:72551593"
                      /translation="MDEMDEIVRIVNDSMWYVPNAFMDDGDNEGHISVNNVCHMYLAF
                      FDVDISSHLFKLVIKHCDLNKRLKCGNSPLHCYTMNTRFNPSVLKILLRHGMRNFDSK
                      DKKGHIPLHHYLIHSLSIDNKIFDILTDPIDDFSKSSDLLLCYLRYKFNGSLNYYVLY
@@ -4093,7 +4093,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG002"
                      /locus_tag="NBT03_gp178"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-189"
-                     /db_xref="GeneID:72551605"
+                     /db_xref="GeneID:72551594"
      CDS             194459..195508
                      /gene="OPG002"
                      /locus_tag="NBT03_gp178"
@@ -4104,7 +4104,7 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Crm-B secreted TNF-alpha-receptor-like protein"
                      /protein_id="YP_010377181.1"
-                     /db_xref="GeneID:72551605"
+                     /db_xref="GeneID:72551594"
                      /translation="MRSVLYSYILFLSCIIINGRDIAPHAPSNGKCKDNEYRSRNLCC
                      LSCPPGTYASRLCDSKTNTQCTPCGSDTFTSHNNHLQACLSCNGRCDSNQVETRSCNT
                      THNRICECSPGYYCLLKGASGCRTCISKTKCGIGYGVSGYTSTGDVICSPCGPGTYSH
@@ -4116,7 +4116,7 @@ FEATURES             Location/Qualifiers
                      /gene="OPG001"
                      /locus_tag="NBT03_gp179"
                      /old_locus_tag="MPXV-M5312_HM12_Rivers-190"
-                     /db_xref="GeneID:72551606"
+                     /db_xref="GeneID:72551595"
      CDS             195635..196375
                      /gene="OPG001"
                      /locus_tag="NBT03_gp179"
@@ -4128,13 +4128,13 @@ FEATURES             Location/Qualifiers
                      /codon_start=1
                      /product="Chemokine binding protein"
                      /protein_id="YP_010377182.1"
-                     /db_xref="GeneID:72551606"
+                     /db_xref="GeneID:72551595"
                      /translation="MKQYIVLACMCLVAAAMPTSLQQSSSSCTEEENKHHMGIDVIIK
                      VTKQDQTPTNDKICQSVTEVTETEDDEVSEEVVKGDPTTYYTIVGAGLNMNFGFTKCP
                      KISSISESSDGNTVNTRLSSVSPGQGKDSPAITREEALAMIKDCEMSIDIRCSEEEKD
                      SDIKTHPVLGSNISHKKVSYKDIIGSTIVDTKCVKNLEFSVRIGDMCEESSELEVKDG
                      FKYVDGSASEGATDDTSLIDSTKLKACV"
-ORIGIN
+ORIGIN      
         1 attttactat tttatttagt gtctagaaaa aaatgtgtga cccacgaccg taggaaactc
        61 tagagggtaa gaaaaatcaa tcgtttatag agaccatcag aaagaggttt aatatttttg
       121 tgagacctat cgaagagaga aaggataaaa actttttacg actccatcag aaagaggttt
@@ -7423,3 +7423,4 @@ ORIGIN
    197101 aacctctttc tgatggtctc tataaacgat tgatttttct taccctctag agtttcctac
    197161 ggtcgtgggt cacacatttt tttctagaca ctaaataaaa tagtaaaat
 //
+

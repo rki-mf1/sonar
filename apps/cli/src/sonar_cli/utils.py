@@ -30,7 +30,9 @@ from sonar_cli.common_utils import _files_exist
 from sonar_cli.common_utils import _get_csv_colnames
 from sonar_cli.common_utils import calculate_time_difference
 from sonar_cli.common_utils import clear_unnecessary_cache
+from sonar_cli.common_utils import copy_file
 from sonar_cli.common_utils import flatten_json_output
+from sonar_cli.common_utils import flatten_list
 from sonar_cli.common_utils import get_current_time
 from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import out_autodetect
@@ -39,8 +41,11 @@ from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
 from sonar_cli.config import CHUNK_SIZE
+from sonar_cli.config import KSIZE
 from sonar_cli.config import PROP_CHUNK_SIZE
+from sonar_cli.config import SCALED
 from sonar_cli.logging import LoggingConfigurator
+from sonar_cli.sourmash_ext import perform_search
 from tqdm import tqdm
 
 # Initialize logger
@@ -68,7 +73,7 @@ class sonarUtils:
     # DATA IMPORT
 
     @staticmethod
-    def import_data(
+    def import_data(  # noqa: C901
         db: str,
         fasta: List[str] = [],
         csv_files: List[str] = [],
@@ -157,6 +162,27 @@ class sonarUtils:
 
         # importing sequences
         if fasta:
+
+            # Segment genome detection
+            if cache.cluster_db is not None:
+                for fname in fasta:
+                    new_path = copy_file(fname, cache.blast_dir)
+                    best_alignments = perform_search(
+                        new_path,
+                        cache.cluster_db,
+                        KSIZE,
+                        SCALED,
+                    )
+
+                    cache.blast_best_aln[fname] = best_alignments
+                    # print(cache.blast_best_aln)
+
+                    # rm new_path the copied file
+                    os.remove(new_path)
+                LOGGER.info(
+                    f"[runtime] Assign Reference: {calculate_time_difference(start_import_time, get_current_time())}"
+                )
+
             sonarUtils._import_fasta(
                 fasta,
                 cache,
@@ -339,7 +365,7 @@ class sonarUtils:
                     use_worker_state=False,
                 ) as pool:
                     pool.set_shared_objects(cache)
-                    anno_result_list = pool.map_unordered(
+                    raw_anno_result_list = pool.map_unordered(
                         sonarUtils.annotate_sample,
                         passed_samples_chunk_list,
                         progress_bar=True,
@@ -350,6 +376,8 @@ class sonarUtils:
                             "bar_format": bar_format,
                         },
                     )
+                    # Flatten the list of lists into a single list
+                    anno_result_list = flatten_list(raw_anno_result_list)
             except Exception as e:
                 tb = traceback.format_exc()
                 LOGGER.error(
@@ -804,15 +832,18 @@ class sonarUtils:
         """
         try:
             cache = shared_objects
-            refmol = cache.default_refmol_acc
-            input_vcf_list = []
+            # refmol = cache.default_refmol_acc
+            input_vcf_dict = collections.defaultdict(
+                list
+            )  # Group VCFs by replicon accession
             # map_name_annovcf_dict = {}
             _unique_name = ""
-
+            generated_files = []  # Collect all generated files
             # export_vcf:
             for kwargs in sample_list:
                 _unique_name = _unique_name + kwargs["name"]
-                input_vcf_list.append(kwargs["vcffile"])
+                replicon_accession = kwargs["refmol"]
+                input_vcf_dict[replicon_accession].append(kwargs["vcffile"])
                 if cache.allow_updates is False:
                     if os.path.exists(kwargs["vcffile"]):
                         continue
@@ -820,7 +851,7 @@ class sonarUtils:
                 sonarUtils.export_vcf(
                     cursor=kwargs,
                     cache=cache,
-                    reference=kwargs["refmol"],
+                    reference=replicon_accession,
                     outfile=kwargs["vcffile"],
                     from_var_file=True,
                 )
@@ -831,55 +862,71 @@ class sonarUtils:
                 annotator_exe_path=ANNO_TOOL_PATH,
                 cache=cache,
             )
-            merged_vcf = os.path.join(
-                cache.anno_dir, get_fname(_unique_name, extension=".vcf")
-            )
-            merged_anno_vcf = os.path.join(
-                cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
-            )
-            filtered_vcf = os.path.join(
-                cache.anno_dir,
-                get_fname(_unique_name, extension=".filtered.anno.vcf.gz"),
-            )
-            if cache.allow_updates is False:
-                if os.path.exists(filtered_vcf):
-                    return filtered_vcf
-            # merge vcf:
-            if len(input_vcf_list) == 1:
-                merged_vcf = input_vcf_list[0]
-            else:
-                annotator.bcftools_merge(
-                    input_vcfs=input_vcf_list, output_vcf=merged_vcf
+            # Annotate each group of VCFs by replicon accession
+            for replicon_accession, vcf_files in input_vcf_dict.items():
+
+                merged_vcf = os.path.join(
+                    cache.anno_dir,
+                    get_fname(f"{_unique_name}_{replicon_accession}", extension=".vcf"),
+                )
+                merged_anno_vcf = os.path.join(
+                    cache.anno_dir,
+                    get_fname(
+                        f"{_unique_name}_{replicon_accession}", extension=".anno.vcf"
+                    ),
+                )
+                filtered_vcf = os.path.join(
+                    cache.anno_dir,
+                    get_fname(
+                        f"{_unique_name}_{replicon_accession}",
+                        extension=".filtered.anno.vcf.gz",
+                    ),
                 )
 
-            # #  check if it is already exist
-            # # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
-            # if cache.allow_updates is False:
-            #     if os.path.exists(kwargs["anno_vcf_file"]):
-            #         return
+                generated_files.append(filtered_vcf)
+                if cache.allow_updates is False:
+                    if os.path.exists(filtered_vcf):
+                        return filtered_vcf
 
-            annotator.snpeff_annotate(
-                merged_vcf,
-                merged_anno_vcf,
-                refmol,
-            )
-            annotator.bcftools_filter(merged_anno_vcf, filtered_vcf)
-            # dont forget to change the name
-            # split vcf back
-            # annotator.bcftools_split(
-            #     input_vcf=merged_anno_vcf,
-            #     map_name_annovcf_dict=map_name_annovcf_dict,
-            # )
-            # clean unncessery file
-            if os.path.exists(merged_vcf):
-                os.remove(merged_vcf)
-            if os.path.exists(merged_anno_vcf):
-                os.remove(merged_anno_vcf)
+                # Merge VCFs if there are multiple files
+                if len(vcf_files) == 1:
+                    merged_vcf = vcf_files[0]
+                else:
+                    annotator.bcftools_merge(
+                        input_vcfs=vcf_files, output_vcf=merged_vcf
+                    )
+
+                # #  check if it is already exist
+                # # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
+                # if cache.allow_updates is False:
+                #     if os.path.exists(kwargs["anno_vcf_file"]):
+                #         return
+
+                # Annotate the merged VC
+                annotator.snpeff_annotate(
+                    merged_vcf,
+                    merged_anno_vcf,
+                    replicon_accession,
+                )
+                annotator.bcftools_filter(merged_anno_vcf, filtered_vcf)
+
+                # dont forget to change the name
+                # split vcf back
+                # annotator.bcftools_split(
+                #     input_vcf=merged_anno_vcf,
+                #     map_name_annovcf_dict=map_name_annovcf_dict,
+                # )
+                # clean unncessery file
+                if os.path.exists(merged_vcf):
+                    os.remove(merged_vcf)
+                if os.path.exists(merged_anno_vcf):
+                    os.remove(merged_anno_vcf)
+
         except Exception as e:
             tb = traceback.format_exc()
             LOGGER.error(f"Worker {worker_id} stopped: {e}. Traceback: {tb}")
             raise  # Raise to ensure the failure is propagated back to the worker pool
-        return filtered_vcf
+        return generated_files
 
     # MATCHING
     @staticmethod
@@ -1165,16 +1212,25 @@ class sonarUtils:
         return modified_data
 
     @staticmethod
-    def add_ref_by_genebank_file(reference_gb, default_reference=False):
+    def add_ref_by_genebank_file(reference_gbs: List[str]):
         """
         add reference
         """
-        if default_reference:
-            reference_gb = sonarUtils.get_default_reference_gb()
-        _files_exist(reference_gb)
-        reference_gb_obj = open(reference_gb, "rb")
+        segment = False
+
+        reference_gb_obj = []
+        if len(reference_gbs) > 1:
+            segment = True
+            LOGGER.info(f"Detect segmented genome: {reference_gbs}")
+
+        for reference_gb in reference_gbs:
+            _files_exist(reference_gb)
+            reference_gb_obj.append(open(reference_gb, "rb"))
+
         try:
-            flag = APIClient(base_url=BASE_URL).post_add_reference(reference_gb_obj)
+            flag = APIClient(base_url=BASE_URL).post_add_reference(
+                reference_gb_obj, segment
+            )
 
             if flag:
                 LOGGER.info("The reference has been added successfully.")

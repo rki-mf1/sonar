@@ -371,7 +371,7 @@ def copy_file(src, dest):
 
     # Copy the file
     shutil.copy(src, new_file_path)
-    LOGGER.info(f"File {src} has been copied to {dest}")
+    # LOGGER.info(f"File {src} has been copied to {dest}")
     # Return the new file path
     return new_file_path
 
@@ -387,3 +387,39 @@ def convert_default(value, converter, error_message):
     except ValueError:
         LOGGER.error(error_message)
         exit(1)
+
+
+def extract_filename(file_path, include_extension=True):
+    """
+    Extracts the filename from a given file path.
+
+    Parameters:
+    file_path (str): The full path of the file.
+    include_extension (bool): Whether to include the file extension in the result.
+
+    Returns:
+    str: The filename with or without the extension based on the parameter.
+    """
+    # Get the base name of the file (including extension)
+    filename_with_extension = os.path.basename(file_path)
+
+    # If including extension, return the full filename
+    if include_extension:
+        return filename_with_extension
+
+    # If not including extension, remove the extension
+    filename, _ = os.path.splitext(filename_with_extension)
+    return filename
+
+
+def flatten_list(nested_list):
+    """
+    Recursively flattens a deeply nested list into a one-dimensional list.
+    """
+    flat_list = []
+    for item in nested_list:
+        if isinstance(item, list):
+            flat_list.extend(flatten_list(item))
+        else:
+            flat_list.append(item)
+    return flat_list
