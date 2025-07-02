@@ -30,7 +30,9 @@ from sonar_cli.common_utils import _files_exist
 from sonar_cli.common_utils import _get_csv_colnames
 from sonar_cli.common_utils import calculate_time_difference
 from sonar_cli.common_utils import clear_unnecessary_cache
+from sonar_cli.common_utils import copy_file
 from sonar_cli.common_utils import flatten_json_output
+from sonar_cli.common_utils import flatten_list
 from sonar_cli.common_utils import get_current_time
 from sonar_cli.common_utils import get_fname
 from sonar_cli.common_utils import out_autodetect
@@ -39,8 +41,11 @@ from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
 from sonar_cli.config import CHUNK_SIZE
+from sonar_cli.config import KSIZE
 from sonar_cli.config import PROP_CHUNK_SIZE
+from sonar_cli.config import SCALED
 from sonar_cli.logging import LoggingConfigurator
+from sonar_cli.sourmash_ext import perform_search
 from tqdm import tqdm
 
 # Initialize logger
@@ -68,8 +73,9 @@ class sonarUtils:
     # DATA IMPORT
 
     @staticmethod
-    def import_data(
+    def import_data(  # noqa: C901
         db: str,
+        nextclade_json: List[str] = [],
         fasta: List[str] = [],
         csv_files: List[str] = [],
         tsv_files: List[str] = [],
@@ -107,12 +113,12 @@ class sonarUtils:
         reference = _check_reference(db, reference)
         start_import_time = get_current_time()
         # checks
+        nextclade_json = nextclade_json or []
         fasta = fasta or []
         tsv_files = tsv_files or []
         csv_files = csv_files or []
-
-        _files_exist(*fasta, *tsv_files, *csv_files)
-        if not _is_import_required(fasta, tsv_files, csv_files, update):
+        _files_exist(*nextclade_json, *fasta, *tsv_files, *csv_files)
+        if not _is_import_required(nextclade_json, fasta, tsv_files, csv_files, update):
             LOGGER.info("Nothing to import.")
             sys.exit(0)
 
@@ -156,7 +162,27 @@ class sonarUtils:
         )
 
         # importing sequences
-        if fasta:
+        if fasta and not nextclade_json:
+            # Segment genome detection
+            if cache.cluster_db is not None:
+                for fname in fasta:
+                    new_path = copy_file(fname, cache.blast_dir)
+                    best_alignments = perform_search(
+                        new_path,
+                        cache.cluster_db,
+                        KSIZE,
+                        SCALED,
+                    )
+
+                    cache.blast_best_aln[fname] = best_alignments
+                    # print(cache.blast_best_aln)
+
+                    # rm new_path the copied file
+                    os.remove(new_path)
+                LOGGER.info(
+                    f"[runtime] Assign Reference: {calculate_time_difference(start_import_time, get_current_time())}"
+                )
+
             sonarUtils._import_fasta(
                 fasta,
                 cache,
@@ -165,6 +191,16 @@ class sonarUtils:
                 method,
                 no_upload_sample,
                 must_pass_paranoid,
+            )
+        elif fasta and nextclade_json:
+            LOGGER.info("Importing Nextclade JSON files.")
+            sonarUtils.nextclade_import(
+                fasta,
+                nextclade_json,
+                cache,
+                threads,
+                progress=progress,
+                no_upload_sample=no_upload_sample,
             )
 
         # importing properties
@@ -221,6 +257,169 @@ class sonarUtils:
             refacc=reference,
             include_nx=include_nx,
             auto_anno=auto_anno,
+        )
+
+    @staticmethod
+    def nextclade_import(  # noqa: C901
+        fasta_files: List[str],
+        nextclade_json: List[str],
+        cache: sonarCache,
+        threads: int = 1,
+        progress: bool = False,
+        no_upload_sample: bool = False,
+    ):
+        if not no_upload_sample:
+            json_resp = APIClient(base_url=BASE_URL).get_jobID()
+            job_id = json_resp["job_id"]
+
+        if not fasta_files:
+            return
+
+        start_seqcheck_time = get_current_time()
+        sample_data_dict_list = cache.add_fasta_v2(*fasta_files, chunk_size=CHUNK_SIZE)
+        prepare_seq_time = calculate_time_difference(
+            start_seqcheck_time, get_current_time()
+        )
+        LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
+        cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
+        LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
+
+        # Map Nextclade JSON files and Fasta files (sequence names)
+        start_align_time = get_current_time()
+        passed_samples_list = cache.add_nextclade_json(
+            *nextclade_json, data_dict_list=sample_data_dict_list, chunk_size=100
+        )
+        LOGGER.info(
+            f"Numer of samples that passed Nextclade JSON mapping: {len(passed_samples_list)}"
+        )
+        LOGGER.info(
+            f"[runtime] JSON mapping: {calculate_time_difference(start_align_time, get_current_time())}"
+        )
+        cache.logfile_obj.write(
+            f"[runtime] JSON mapping: {calculate_time_difference(start_align_time, get_current_time())}\n"
+        )
+
+        # SKIP PARANOID TEST
+        # NOTE: because now we skip N and some deletion insetion mutations
+        # cannot be matched with parent_id
+
+        n = ANNO_CHUNK_SIZE
+        passed_samples_chunk_list = [
+            tuple(
+                list(passed_samples_list[i : i + n]),
+            )
+            for i in range(0, len(passed_samples_list), n)
+        ]
+        if cache.auto_anno:
+            anno_result_list = []
+            start_anno_time = get_current_time()
+            try:
+                with WorkerPool(
+                    n_jobs=threads,
+                    start_method="fork",
+                    shared_objects=cache,
+                    pass_worker_id=True,
+                    use_worker_state=False,
+                ) as pool:
+                    pool.set_shared_objects(cache)
+                    raw_anno_result_list = pool.map_unordered(
+                        sonarUtils.annotate_sample,
+                        passed_samples_chunk_list,
+                        progress_bar=True,
+                        progress_bar_options={
+                            "position": 0,
+                            "desc": "Annotate samples...",
+                            "unit": "chunks",
+                            "bar_format": bar_format,
+                        },
+                    )
+                    # Flatten the list of lists into a single list
+                    anno_result_list = flatten_list(raw_anno_result_list)
+            except Exception as e:
+                tb = traceback.format_exc()
+                LOGGER.error(
+                    f"Annotation process failed with error: {e}, abort all workers. Traceback:\n{tb}"
+                )
+                # Abort all pool workers
+                pool.terminate()  # Or pool.close()
+                sys.exit(1)  # raise # Re-raise to stop the program entirely
+
+            LOGGER.info(
+                f"[runtime] Sample annotation: {calculate_time_difference(start_anno_time, get_current_time())}"
+            )
+            cache.logfile_obj.write(
+                f"Sample anno usage time: {calculate_time_difference(start_anno_time, get_current_time())}\n"
+            )
+
+        else:
+            LOGGER.info("Skipping annotation step.")
+
+        # Send Result over network.
+        if not no_upload_sample:
+            start_upload_time = get_current_time()
+            # NOTE: reuse the chunk size from anno
+            # n = 500
+            LOGGER.info(
+                "Uploading and importing sequence mutation profiles into backend..."
+            )
+            cache_dict = {"job_id": job_id}
+            for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+                LOGGER.debug(f"Uploading chunk {chunk_number}.")
+                sonarUtils.zip_import_upload_sample_singlethread(
+                    cache_dict, sample_chunk, chunk_number
+                )
+            # Wait for all chunk to be processed
+            incomplete_chunks = set(range(1, len(passed_samples_chunk_list)))
+            while len(incomplete_chunks) > 0:
+                chunks_tmp = incomplete_chunks.copy()
+                for chunk_number in chunks_tmp:
+                    job_with_chunk = f"{job_id}_chunk{chunk_number}"
+                    resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                    job_status = resp["status"]
+                    if job_status in ["Q", "IP"]:
+                        next
+                    if job_status == "F":
+                        LOGGER.error(
+                            f"Job {job_with_chunk} failed (status={job_status}). Aborting."
+                        )
+                        sys.exit(1)
+                    if job_status == "C":
+                        incomplete_chunks.remove(chunk_number)
+                if len(incomplete_chunks) > 0:
+                    LOGGER.debug(
+                        f"Waiting for {len(incomplete_chunks)} chunks to finish being processed."
+                    )
+                    sleep_time = 3
+                    time.sleep(sleep_time)
+
+            if cache.auto_anno:
+                for chunk_number, each_file in enumerate(
+                    tqdm(
+                        anno_result_list,
+                        desc="Uploading and importing annotations",
+                        unit="file",
+                        bar_format=bar_format,
+                        position=0,
+                        disable=not progress,
+                    )
+                ):
+                    sonarUtils.zip_import_upload_annotation_singlethread(
+                        cache_dict, each_file, chunk_number
+                    )
+
+            LOGGER.info(
+                f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
+            )
+            cache.logfile_obj.write(
+                f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}\n"
+            )
+            LOGGER.debug("Job ID: %s", job_id)
+        else:
+            LOGGER.info("Disable sending samples.")
+        start_clean_time = get_current_time()
+        clear_unnecessary_cache(passed_samples_list, threads)
+        LOGGER.info(
+            f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
 
     @staticmethod
@@ -339,7 +538,7 @@ class sonarUtils:
                     use_worker_state=False,
                 ) as pool:
                     pool.set_shared_objects(cache)
-                    anno_result_list = pool.map_unordered(
+                    raw_anno_result_list = pool.map_unordered(
                         sonarUtils.annotate_sample,
                         passed_samples_chunk_list,
                         progress_bar=True,
@@ -350,6 +549,8 @@ class sonarUtils:
                             "bar_format": bar_format,
                         },
                     )
+                    # Flatten the list of lists into a single list
+                    anno_result_list = flatten_list(raw_anno_result_list)
             except Exception as e:
                 tb = traceback.format_exc()
                 LOGGER.error(
@@ -408,7 +609,6 @@ class sonarUtils:
                     time.sleep(sleep_time)
 
             if cache.auto_anno:
-
                 for chunk_number, each_file in enumerate(
                     tqdm(
                         anno_result_list,
@@ -496,12 +696,10 @@ class sonarUtils:
         compressed_data = BytesIO()
         with zipfile.ZipFile(compressed_data, "w", zipfile.ZIP_LZMA) as zipf:
             for file_path in files_to_compress:
-
                 if isinstance(file_path, tuple):
                     # Add the dictionary data to the archive with pickle extension
                     zipf.writestr(file_path[0], file_path[1])
                 else:
-
                     # Find the index of 'var'
                     path_parts = file_path.split("/")
                     var_index = path_parts.index("var")
@@ -804,15 +1002,18 @@ class sonarUtils:
         """
         try:
             cache = shared_objects
-            refmol = cache.default_refmol_acc
-            input_vcf_list = []
+            # refmol = cache.default_refmol_acc
+            input_vcf_dict = collections.defaultdict(
+                list
+            )  # Group VCFs by replicon accession
             # map_name_annovcf_dict = {}
             _unique_name = ""
-
+            generated_files = []  # Collect all generated files
             # export_vcf:
             for kwargs in sample_list:
                 _unique_name = _unique_name + kwargs["name"]
-                input_vcf_list.append(kwargs["vcffile"])
+                replicon_accession = kwargs["refmol"]
+                input_vcf_dict[replicon_accession].append(kwargs["vcffile"])
                 if cache.allow_updates is False:
                     if os.path.exists(kwargs["vcffile"]):
                         continue
@@ -820,7 +1021,7 @@ class sonarUtils:
                 sonarUtils.export_vcf(
                     cursor=kwargs,
                     cache=cache,
-                    reference=kwargs["refmol"],
+                    reference=replicon_accession,
                     outfile=kwargs["vcffile"],
                     from_var_file=True,
                 )
@@ -831,55 +1032,70 @@ class sonarUtils:
                 annotator_exe_path=ANNO_TOOL_PATH,
                 cache=cache,
             )
-            merged_vcf = os.path.join(
-                cache.anno_dir, get_fname(_unique_name, extension=".vcf")
-            )
-            merged_anno_vcf = os.path.join(
-                cache.anno_dir, get_fname(_unique_name, extension=".anno.vcf")
-            )
-            filtered_vcf = os.path.join(
-                cache.anno_dir,
-                get_fname(_unique_name, extension=".filtered.anno.vcf.gz"),
-            )
-            if cache.allow_updates is False:
-                if os.path.exists(filtered_vcf):
-                    return filtered_vcf
-            # merge vcf:
-            if len(input_vcf_list) == 1:
-                merged_vcf = input_vcf_list[0]
-            else:
-                annotator.bcftools_merge(
-                    input_vcfs=input_vcf_list, output_vcf=merged_vcf
+            # Annotate each group of VCFs by replicon accession
+            for replicon_accession, vcf_files in input_vcf_dict.items():
+                merged_vcf = os.path.join(
+                    cache.anno_dir,
+                    get_fname(f"{_unique_name}_{replicon_accession}", extension=".vcf"),
+                )
+                merged_anno_vcf = os.path.join(
+                    cache.anno_dir,
+                    get_fname(
+                        f"{_unique_name}_{replicon_accession}", extension=".anno.vcf"
+                    ),
+                )
+                filtered_vcf = os.path.join(
+                    cache.anno_dir,
+                    get_fname(
+                        f"{_unique_name}_{replicon_accession}",
+                        extension=".filtered.anno.vcf.gz",
+                    ),
                 )
 
-            # #  check if it is already exist
-            # # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
-            # if cache.allow_updates is False:
-            #     if os.path.exists(kwargs["anno_vcf_file"]):
-            #         return
+                generated_files.append(filtered_vcf)
+                if cache.allow_updates is False:
+                    if os.path.exists(filtered_vcf):
+                        return filtered_vcf
 
-            annotator.snpeff_annotate(
-                merged_vcf,
-                merged_anno_vcf,
-                refmol,
-            )
-            annotator.bcftools_filter(merged_anno_vcf, filtered_vcf)
-            # dont forget to change the name
-            # split vcf back
-            # annotator.bcftools_split(
-            #     input_vcf=merged_anno_vcf,
-            #     map_name_annovcf_dict=map_name_annovcf_dict,
-            # )
-            # clean unncessery file
-            if os.path.exists(merged_vcf):
-                os.remove(merged_vcf)
-            if os.path.exists(merged_anno_vcf):
-                os.remove(merged_anno_vcf)
+                # Merge VCFs if there are multiple files
+                if len(vcf_files) == 1:
+                    merged_vcf = vcf_files[0]
+                else:
+                    annotator.bcftools_merge(
+                        input_vcfs=vcf_files, output_vcf=merged_vcf
+                    )
+
+                # #  check if it is already exist
+                # # NOTE WARN: this doesnt check if the file is corrupt or not, or completed information in the vcf file.
+                # if cache.allow_updates is False:
+                #     if os.path.exists(kwargs["anno_vcf_file"]):
+                #         return
+
+                # Annotate the merged VC
+                annotator.snpeff_annotate(
+                    merged_vcf,
+                    merged_anno_vcf,
+                    replicon_accession,
+                )
+                annotator.bcftools_filter(merged_anno_vcf, filtered_vcf)
+
+                # dont forget to change the name
+                # split vcf back
+                # annotator.bcftools_split(
+                #     input_vcf=merged_anno_vcf,
+                #     map_name_annovcf_dict=map_name_annovcf_dict,
+                # )
+                # clean unncessery file
+                if os.path.exists(merged_vcf):
+                    os.remove(merged_vcf)
+                if os.path.exists(merged_anno_vcf):
+                    os.remove(merged_anno_vcf)
+
         except Exception as e:
             tb = traceback.format_exc()
             LOGGER.error(f"Worker {worker_id} stopped: {e}. Traceback: {tb}")
             raise  # Raise to ensure the failure is propagated back to the worker pool
-        return filtered_vcf
+        return generated_files
 
     # MATCHING
     @staticmethod
@@ -1165,16 +1381,25 @@ class sonarUtils:
         return modified_data
 
     @staticmethod
-    def add_ref_by_genebank_file(reference_gb, default_reference=False):
+    def add_ref_by_genebank_file(reference_gbs: List[str]):
         """
         add reference
         """
-        if default_reference:
-            reference_gb = sonarUtils.get_default_reference_gb()
-        _files_exist(reference_gb)
-        reference_gb_obj = open(reference_gb, "rb")
+        segment = False
+
+        reference_gb_obj = []
+        if len(reference_gbs) > 1:
+            segment = True
+            LOGGER.info(f"Detect segmented genome: {reference_gbs}")
+
+        for reference_gb in reference_gbs:
+            _files_exist(reference_gb)
+            reference_gb_obj.append(open(reference_gb, "rb"))
+
         try:
-            flag = APIClient(base_url=BASE_URL).post_add_reference(reference_gb_obj)
+            flag = APIClient(base_url=BASE_URL).post_add_reference(
+                reference_gb_obj, segment
+            )
 
             if flag:
                 LOGGER.info("The reference has been added successfully.")
@@ -1393,7 +1618,6 @@ def _write_vcf_records(handle, records: Dict, all_samples: List[str]):  # noqa: 
     for chrom in records:
         for pos in records[chrom]:
             for ref in records[chrom][pos]:
-
                 if ref == "pre_ref":  # skip pre_ref key
                     continue
                 # snps and inserts (combined output)

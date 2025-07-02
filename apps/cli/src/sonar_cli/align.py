@@ -89,7 +89,6 @@ class sonarAligner:
 
     def process_cached_alignment(self, data: dict):
         source_acc = str(data["source_acc"])
-
         # Do alignment
         alignment = align_MAFFT(data["seq_file"], data["ref_file"])
         # Extract nucleotide mutations from alignment
@@ -191,6 +190,7 @@ class sonarAligner:
                     "reference_acc": elem_acc,
                     "label": label,
                     "type": "nt",
+                    "frameshift": 0,
                     "parent_id": str(idx),
                 }
             )
@@ -208,6 +208,7 @@ class sonarAligner:
                     "reference_acc",
                     "label",
                     "type",
+                    "frameshift",
                     "parent_id",
                 ]
             )
@@ -264,6 +265,7 @@ class sonarAligner:
                     "reference_acc",
                     "label",
                     "type",
+                    "frameshift",
                     "parent_id",
                 ]
             )
@@ -345,6 +347,7 @@ class sonarAligner:
                     "reference_acc": row.accession,
                     "label": label,
                     "type": "cds",
+                    "frameshift": 0,
                     "parent_id": parent_id,
                 }
             )
@@ -385,6 +388,7 @@ class sonarAligner:
                         "reference_acc": first_row.accession,
                         "label": label,
                         "type": "cds",
+                        "frameshift": 0,
                         "parent_id": first_row.parent_ids,
                     }
                 )
@@ -412,6 +416,7 @@ class sonarAligner:
                     "reference_acc": first_row.accession,
                     "label": label,
                     "type": "cds",
+                    "frameshift": 0,
                     "parent_id": first_row.parent_ids,
                 }
             )
@@ -453,6 +458,7 @@ class sonarAligner:
                             "reference_acc": elemid,
                             "label": label,
                             "type": "nt",
+                            "frameshift": 0,
                             "parent_id": str(idx),
                         }
                     )
@@ -479,6 +485,7 @@ class sonarAligner:
                         "reference_acc": elemid,
                         "label": label,
                         "type": "nt",
+                        "frameshift": 0,
                         "parent_id": str(idx),
                     }
                 )
@@ -507,6 +514,7 @@ class sonarAligner:
                         "reference_acc": elemid,
                         "label": label,
                         "type": "nt",
+                        "frameshift": 0,
                         "parent_id": str(idx),
                     }
                 )
@@ -528,6 +536,7 @@ class sonarAligner:
                     "reference_acc",
                     "label",
                     "type",
+                    "frameshift",
                     "parent_id",
                 ]
             )

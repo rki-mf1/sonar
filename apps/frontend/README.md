@@ -1,18 +1,34 @@
-# sonar-frontend
+# Sonar Frontend
 
 A web frontend to the sonar mutation database.
 
-## Recommended IDE Setup
+# Setup
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+```bash
+git clone https://github.com/rki-mf1/sonar.git
+cd sonar/apps/frontend
+```
 
-## Type Support for `.vue` Imports in TS
+Make sure you have npm installed (`conda create -n sonar-frontend nodejs` will work with conda), and then follow the frontend docs:
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+```
+$ npm install
+```
 
-## Customize configuration
+Next you probably want to customize the url of the sonar backend. You can set this from a file `sonar/apps/frontend/.env.production` or directly from the command line when building the frontend:
 
-See [Vite Configuration Reference](https://vitejs.dev/config/).
+```
+$ VITE_SONAR_BACKEND_ADDRESS=https://myserver.com npm run build
+```
+
+Then copy the built files into the backend `work/` directory. You might need to tweak the commands below depending on the relative location of sonar-frontend and sonar-backend, and whether you are updating an existing copy of the frontend or doing this for the first time:
+
+```
+$ mkdir -p ../backend/work/frontend/dist
+$ cp -r dist/* ../backend/work/frontend/dist
+```
+
+Now you should be able to access the frontend on your server at port 443 (e.g. `https://servername.org`).
 
 ## Project Setup
 

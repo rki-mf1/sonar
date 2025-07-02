@@ -39,7 +39,7 @@ PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -p 8432 -v ON_ERROR_STOP=1 --use
     INSERT INTO auth_user (username, email, first_name, last_name, password, is_superuser, is_staff, is_active, date_joined)
     VALUES ('root', 'admin@example.com', 'admin', 'root', 'hashed_password', true, true, true, NOW());
 EOSQL
-
+echo "Dump test database to json fixture"
 ./scripts/linux/dev-manage.sh dumpdata --indent=4 auth rest_api django_apscheduler -o "rest_api/fixtures/test_data_${SUFFIX}.json"
 
 xz -f rest_api/fixtures/test_data_${SUFFIX}.json

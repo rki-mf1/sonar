@@ -27,7 +27,7 @@ class Annotator:
 
     def snpeff_annotate(self, input_vcf, output_vcf, database_name):
         if not self.annotator:
-            raise ValueError("Annotator executable path is not provided.")
+            raise ValueError("Annotator executable path is not provided")
         # Command to annotate using SnpEff
         command = [
             f"{self.annotator}",

@@ -345,7 +345,6 @@ def create_parser_thread() -> argparse.ArgumentParser:
 def create_subparser_tasks(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     # View Reference.
     parser = subparsers.add_parser(
         "tasks",
@@ -402,7 +401,6 @@ def create_subparser_list_prop(
 def create_subparser_list_reference(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     # View Reference.
     parser = subparsers.add_parser(
         "list-ref",
@@ -415,7 +413,6 @@ def create_subparser_list_reference(
 def create_subparser_lineage_import(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     parser = subparsers.add_parser(
         "import-lineage",
         parents=parent_parsers,
@@ -451,7 +448,13 @@ def create_subparser_import(
         type=int,
         default=1,
     )
-
+    parser.add_argument(
+        "--nextclade-json",
+        help="outputfrom nextclade tool (e.g. nextclade.json)",
+        type=str,
+        nargs="+",
+        default=None,
+    )
     parser.add_argument(
         "--fasta",
         help="fasta file containing genome sequences to import",
@@ -535,7 +538,6 @@ def create_subparser_import(
 def create_subparser_add_reference(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     parser = subparsers.add_parser(
         "add-ref",
         parents=parent_parsers,
@@ -544,8 +546,16 @@ def create_subparser_add_reference(
     parser.add_argument(
         "--gb",
         metavar="FILE",
-        help="genbank file of a reference genome",
+        help=(
+            "Genbank file(s) of a reference genome. Normally, one genbank file per one reference genome, "
+            "however, in a case of a segmented genome (multiple genbank files), user can provide multiple files. "
+            "For example, --gb InfluenzaA_H1N1_seg1.gb InfluenzaA_H1N1_seg2.gb InfluenzaA_H1N1_seg7.gb ... "
+            "This will automatically treat this import as a segmented genome, and the first file will be used as the "
+            "index in the reference table and shown information in ref-list command."
+        ),
         type=str,
+        nargs="+",
+        default=[],
         required=True,
     )
 
@@ -753,6 +763,7 @@ def handle_import(args: argparse.Namespace):
     LOGGER.info(f"All sequences must pass 'paranoid' test: {args.must_pass_paranoid}")
     sonarUtils.import_data(
         db=args.db,
+        nextclade_json=args.nextclade_json,
         fasta=args.fasta,
         csv_files=args.csv,
         tsv_files=args.tsv,
@@ -824,7 +835,6 @@ def handle_match(args: argparse.Namespace):
 
 
 def handle_list_ref(args: argparse.Namespace):
-
     print(
         tabulate(sonarUtils.get_all_references(), headers="keys", tablefmt="fancy_grid")
     )
@@ -832,7 +842,7 @@ def handle_list_ref(args: argparse.Namespace):
 
 
 def handle_add_ref(args: argparse.Namespace):
-    sonarUtils.add_ref_by_genebank_file(reference_gb=args.gb)
+    sonarUtils.add_ref_by_genebank_file(reference_gbs=args.gb)
 
 
 def handle_delete_ref(args: argparse.Namespace):

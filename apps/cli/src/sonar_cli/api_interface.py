@@ -303,7 +303,7 @@ class APIClient:
             params["ref_acc"] = ref_acc
 
         if molecule_acc:
-            params["molecule_acc"] = molecule_acc
+            params["replicon_acc"] = molecule_acc
 
         json_response = self._make_request(
             "GET", endpoint=self.get_gene_endpoint, params=params
@@ -344,17 +344,17 @@ class APIClient:
         )
         return json_response
 
-    def post_add_reference(self, reference_gb_obj):
+    def post_add_reference(self, reference_gb_objs, segment=False):
         """
-        send gbk file.
+        send one or multiple gbk files.
         """
 
-        data = {"translation_id": 1}
+        data = {"translation_id": 1, "segment": segment}
 
-        file = {"gbk_file": reference_gb_obj}
+        files = [("gbk_file", (file.name, file)) for file in reference_gb_objs]
 
         json_response = self._make_request(
-            "POST", endpoint=self.post_add_reference_endpoint, data=data, files=file
+            "POST", endpoint=self.post_add_reference_endpoint, data=data, files=files
         )
         if json_response["detail"] == "File uploaded successfully":
             return True
