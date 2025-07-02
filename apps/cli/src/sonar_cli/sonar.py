@@ -345,7 +345,6 @@ def create_parser_thread() -> argparse.ArgumentParser:
 def create_subparser_tasks(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     # View Reference.
     parser = subparsers.add_parser(
         "tasks",
@@ -402,7 +401,6 @@ def create_subparser_list_prop(
 def create_subparser_list_reference(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     # View Reference.
     parser = subparsers.add_parser(
         "list-ref",
@@ -415,7 +413,6 @@ def create_subparser_list_reference(
 def create_subparser_lineage_import(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     parser = subparsers.add_parser(
         "import-lineage",
         parents=parent_parsers,
@@ -451,7 +448,13 @@ def create_subparser_import(
         type=int,
         default=1,
     )
-
+    parser.add_argument(
+        "--nextclade-json",
+        help="outputfrom nextclade tool (e.g. nextclade.json)",
+        type=str,
+        nargs="+",
+        default=None,
+    )
     parser.add_argument(
         "--fasta",
         help="fasta file containing genome sequences to import",
@@ -535,7 +538,6 @@ def create_subparser_import(
 def create_subparser_add_reference(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-
     parser = subparsers.add_parser(
         "add-ref",
         parents=parent_parsers,
@@ -761,6 +763,7 @@ def handle_import(args: argparse.Namespace):
     LOGGER.info(f"All sequences must pass 'paranoid' test: {args.must_pass_paranoid}")
     sonarUtils.import_data(
         db=args.db,
+        nextclade_json=args.nextclade_json,
         fasta=args.fasta,
         csv_files=args.csv,
         tsv_files=args.tsv,
@@ -832,7 +835,6 @@ def handle_match(args: argparse.Namespace):
 
 
 def handle_list_ref(args: argparse.Namespace):
-
     print(
         tabulate(sonarUtils.get_all_references(), headers="keys", tablefmt="fancy_grid")
     )

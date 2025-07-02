@@ -21422,4 +21422,3 @@ ALTER TABLE ONLY public.sample
 --
 -- PostgreSQL database dump complete
 --
-

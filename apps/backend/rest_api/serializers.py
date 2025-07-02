@@ -172,14 +172,12 @@ class GeneSerializer(serializers.ModelSerializer):
 
 
 class CDSSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = models.CDS
         fields = "__all__"
 
 
 class CDSSegmentSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = models.CDSSegment
         fields = "__all__"
@@ -260,22 +258,19 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         mutation_start: int,
         mutation_end: int,
     ):
-        if mutation.is_frameshift:
-            label = f"{gene_symbol}:{mutation.ref}{mutation_start + 1}fs"
-        else:
-            # SNP and INS
-            if mutation.alt != "":
-                label = f"{gene_symbol}:{mutation.ref}{mutation_end}{mutation.alt}"
-            else:  # DEL
-                if mutation_end - mutation_start == 1:
-                    label = f"{gene_symbol}:del:" + str(mutation_start + 1)
-                else:
-                    label = (
-                        f"{gene_symbol}:del:"
-                        + str(mutation_start + 1)
-                        + "-"
-                        + str(mutation_end)
-                    )
+        # SNP and INS
+        if mutation.alt != "":
+            label = f"{gene_symbol}:{mutation.ref}{mutation_end}{mutation.alt}"
+        else:  # DEL
+            if mutation_end - mutation_start == 1:
+                label = f"{gene_symbol}:del:" + str(mutation_start + 1)
+            else:
+                label = (
+                    f"{gene_symbol}:del:"
+                    + str(mutation_start + 1)
+                    + "-"
+                    + str(mutation_end)
+                )
         return label
 
     def get_proteomic_profiles(self, obj: models.Sample):
@@ -311,12 +306,15 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         # SNP and INS
         if mutation.alt != "":
             label = f"{mutation.ref}{mutation.end}{mutation.alt}"
-
+            if mutation.is_frameshift:
+                label += "*fs"
         else:  # DEL
             if mutation.end - mutation.start == 1:
                 label = "del:" + str(mutation.start + 1)
             else:
                 label = "del:" + str(mutation.start + 1) + "-" + str(mutation.end)
+            if mutation.is_frameshift:
+                label += "*fs"
 
         return label
 
@@ -331,7 +329,6 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
     def get_genomic_profiles(self, obj: models.Sample):
         list = []
         for alignment in obj.sequence.alignments.all():
-
             for mutation in alignment.genomic_profiles:
                 variant = {}
                 variant["variant.id"] = mutation.id
