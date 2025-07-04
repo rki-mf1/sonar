@@ -908,9 +908,11 @@ class LineageViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
-        distinct_lineages = models.Lineage.objects.values_list(
-            "name", flat=True
-        ).distinct()
+        distinct_lineages = (
+            models.Lineage.objects.values_list("name", flat=True)
+            .distinct()
+            .order_by("name")
+        )
         return Response(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,

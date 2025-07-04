@@ -1,13 +1,12 @@
 import _csv
 import ast
-from collections import defaultdict
 from collections import OrderedDict
 import csv
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
 import json
 import os
-import pathlib
 import re
 import traceback
 from typing import Generator
@@ -22,6 +21,7 @@ from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
 from django.db.models import IntegerField
+from django.db.models import Max
 from django.db.models import Min
 from django.db.models import OuterRef
 from django.db.models import Prefetch
@@ -30,6 +30,7 @@ from django.db.models import QuerySet
 from django.db.models import Subquery
 from django.db.models import Value
 from django.db.models import When
+from django.db.models.functions import TruncWeek
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -478,145 +479,123 @@ class SampleViewSet(
             if key.startswith("not_null_count_")
         }
 
+    def _get_all_weeks(self, queryset):
+        """
+        Return list of all weeks (YYYY-Www) between earliest and latest
+        'collection_date' in given queryset, aligned to full calendar weeks.
+        """
+        date_range = queryset.aggregate(
+            start_date=Min("collection_date"),
+            end_date=Max("collection_date"),
+        )
+        start_date = date_range.get("start_date")
+        end_date = date_range.get("end_date")
+        if not start_date or not end_date:
+            return []
+
+        # align to full weeks: Monday to Sunday
+        start_date -= timedelta(days=start_date.weekday())  # previous Monday
+        end_date += timedelta(days=(6 - end_date.weekday()))  # next Sunday
+
+        all_weeks = [
+            f"{week_object.isocalendar().year}-W{week_object.isocalendar().week:02}"
+            for week_object in rrule(WEEKLY, dtstart=start_date, until=end_date)
+        ]
+
+        return all_weeks
+
     def _get_samples_per_week(self, queryset):
         """
-        Return a dict mapping calendar week to count, for every week between
-        the earliest and latest non-null collection_date in `queryset`.
+        Return a dict mapping calendar week to count, for each week between
+        the earliest and latest collection_date.
         Weeks with zero records will be present with value 0.
         """
+
         weekly_qs = (
-            queryset.values("year", "week")
-            .annotate(count=Count("id"), collection_date=Min("collection_date"))
-            .order_by("year", "week")
+            queryset.annotate(week=TruncWeek("collection_date"))
+            .values("week")
+            .annotate(count=Count("id"))
+            .order_by("week")
         )
 
-        filtered_qs = weekly_qs.filter(collection_date__isnull=False)
-        if not filtered_qs:
-            return {}
-
-        start_date = filtered_qs.first()["collection_date"]
-        end_date = filtered_qs.last()["collection_date"]
-
-        result = OrderedDict()
-        # ordered dict with every week in [start_date..end_date], default 0
-        for dt in rrule(WEEKLY, dtstart=start_date, until=end_date):
-            week = dt.isocalendar()[1]
-            year = dt.isocalendar()[0]
-            week_str = f"{year}-W{week:02}"
-            result[week_str] = 0
+        # initialize result dict with all weeks filled with 0 as count
+        result = OrderedDict((week, 0) for week in self._get_all_weeks(queryset))
 
         # overwrite with actual counts
-        for item in filtered_qs:
-            week = int(item["week"])
-            year = item["year"]
-            week_str = f"{year}-W{week:02}"
-            result[week_str] = item["count"]
+        for item in weekly_qs:
+            year, week, _ = item["week"].isocalendar()
+            result[f"{year}-W{week:02}"] = item["count"]
 
         return result
 
     def _get_grouped_lineages_per_week(self, queryset):
         """
         Return a LIST of dicts, contianing counts and percentages per calendar week for
-        lineage groupes (derived from the two segments of each lineage),
+        lineage groups (lineages truncated to two first segments),
         covering every week between the earliest and latest record.
         Weeks with zero records will be present with values 0.
         """
-        present_lineages = {
-            entry["lineage"]
-            for entry in queryset.values("lineage")
-            if entry["lineage"] is not None
+        present_lineages = set(
+            queryset.exclude(lineage__isnull=True).values_list("lineage", flat=True)
+        )
+        lineage_to_group = {
+            lineage: ".".join(lineage.split(".")[:2]) for lineage in present_lineages
         }
-        # for each lineage, extract first two segments to form the grouping lineage (e.g. 'BA.2.9' -> 'BA.2')
-        lineage_groups = {
-            ".".join(lineage.split(".")[:2]) for lineage in present_lineages
-        }
-        lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
-
-        # build mapping from sublineage to lineage_group
-        lineage_to_group = {}
-        for lineage_group in lineage_groups_model:
-            for sublineage in lineage_group.get_sublineages():
-                if sublineage.name in present_lineages:
-                    lineage_to_group[sublineage.name] = lineage_group.name
-
-        # annotate querysety with lineage groups
+        valid_groups = set(
+            models.Lineage.objects.filter(name__isnull=False).values_list(
+                "name", flat=True
+            )
+        )
         lineage_cases = [
             When(lineage=lineage, then=Value(group))
             for lineage, group in lineage_to_group.items()
+            if group in valid_groups
         ]
         annotated_qs = queryset.annotate(
             lineage_group=Case(
                 *lineage_cases,
                 default=Value("Unknown"),
                 output_field=CharField(),
-            )
+            ),
+            week=TruncWeek("collection_date"),
         )
 
-        weekly_data = (
-            annotated_qs.values(
-                "year", "week", "lineage_group"
-            )  # for debugging add: "lineage"
-            .annotate(
-                lineage_count=Count("lineage_group"),
-                collection_date=Min("collection_date"),
-            )
-            .order_by("year", "week", "lineage_group")
+        weekly_qs = annotated_qs.values("week", "lineage_group").annotate(
+            count=Count("id")
         )
 
-        if not weekly_data:
-            return []
+        total_qs = annotated_qs.values("week").annotate(total_count=Count("id"))
 
-        week_totals = {
-            item["week"]: item["total_count"]
-            for item in queryset.values("week")
-            .annotate(total_count=Count("id"))
-            .order_by("week")
-        }
+        # lookup for total counts
+        week_to_total = {entry["week"]: entry["total_count"] for entry in total_qs}
 
-        min_date = min(
-            item["collection_date"] for item in weekly_data if item["collection_date"]
-        )
-        max_date = max(
-            item["collection_date"] for item in weekly_data if item["collection_date"]
-        )
-
-        all_weeks = []
-        for dt in rrule(WEEKLY, dtstart=min_date, until=max_date):
-            year, week, _ = dt.isocalendar()
-            all_weeks.append(f"{year}-W{week:02}")
-
-        seen_weeks = set()
-        empty_placeholders = {
-            week_str: {
-                "week": week_str,
-                "lineage_group": None,
-                "count": 0,
-                "percentage": 0.0,
-            }
-            for week_str in all_weeks
-        }
-
-        # append real records
         result = []
-        for item in weekly_data:
-            if item["week"] is None or item["year"] is None:
-                continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"
-            percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
+        seen_weeks = set()
+        for item in weekly_qs:
+            year, week, _ = item["week"].isocalendar()
+            week_str = f"{year}-W{week:02}"
+            total = week_to_total.get(item["week"])
             result.append(
                 {
                     "week": week_str,
                     "lineage_group": item["lineage_group"],
-                    "count": item["lineage_count"],
-                    "percentage": round(percentage, 2),
+                    "count": item["count"],
+                    "percentage": round(item["count"] / total * 100, 2),
                 }
             )
             seen_weeks.add(week_str)
 
-        # add placeholders for empty weeks
-        for week_str, placeholder in empty_placeholders.items():
+        # fill missing weeks with placeholders
+        for week_str in self._get_all_weeks(queryset):
             if week_str not in seen_weeks:
-                result.append(placeholder)
+                result.append(
+                    {
+                        "week": week_str,
+                        "lineage_group": None,
+                        "count": 0,
+                        "percentage": 0.0,
+                    }
+                )
 
         result.sort(key=lambda x: x["week"])
         return result
@@ -660,38 +639,28 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def plot_samples_per_week(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
+        queryset = self._get_filtered_queryset(request).filter(
+            collection_date__isnull=False
+        )
 
         result_dict = {}
-        # check if queryset has any records with a collection_date -> if not, return empty object
-        if not queryset.filter(collection_date__isnull=False).exists():
+        if not queryset.exists():
             result_dict["samples_per_week"] = {}
         else:
-            queryset = queryset.extra(
-                select={
-                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-                }
-            )
             result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
 
         return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
     def plot_grouped_lineages_per_week(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
+        queryset = self._get_filtered_queryset(request).filter(
+            collection_date__isnull=False
+        )
 
         result_dict = {}
-        # check if queryset has any records with a collection_date -> if not, return empty object
-        if not queryset.filter(collection_date__isnull=False).exists():
+        if not queryset.exists():
             result_dict["grouped_lineages_per_week"] = {}
         else:
-            queryset = queryset.extra(
-                select={
-                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-                }
-            )
             result_dict["grouped_lineages_per_week"] = (
                 self._get_grouped_lineages_per_week(queryset)
             )
