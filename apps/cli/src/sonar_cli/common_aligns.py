@@ -217,3 +217,52 @@ def align_MAFFT(query_file, ref_file):
 #             # a new operation
 #     return "".join(map(lambda x: str(x[0]) + x[1], cigar))
 #     # turn to string
+
+
+def is_frameshift_nt(pos: int, ref_nt: str, alt_nt: str) -> bool:
+    """
+    Determines whether a nucleotide change causes a potential frameshift.
+
+    Args:
+        pos: Nucleotide position (1-based).
+        ref_nt: Reference nucleotide sequence.
+        alt_nt: Alternate nucleotide sequence.
+
+    Returns:
+        True if the change is a potential frameshift, False otherwise.
+    """
+    nt_change_len = len(alt_nt) - len(ref_nt)
+    return nt_change_len % 3 != 0
+
+
+def is_frameshift_aa(pos: int, ref_aa: str, alt_aa: str) -> bool:
+    """
+    Determines whether an amino acid change is indicative of a frameshift.
+
+    Args:
+        pos: Amino acid position (1-based).
+        ref_aa: Reference amino acid sequence.
+        alt_aa: Alternate amino acid sequence.
+
+    Returns:
+        True if the change suggests a frameshift (e.g., early stop or major alteration), False otherwise.
+    """
+    return "*" in alt_aa or len(alt_aa) > 1
+
+
+# # Example usage:
+# nt_pos = 10
+# ref_nt = "A"
+# alt_nt = "AT"
+
+# aa_pos = 5
+# ref_aa = "L"
+# alt_aa = "*"
+
+# if is_frameshift_nt(nt_pos, ref_nt, alt_nt):
+#     if is_frameshift_aa(aa_pos, ref_aa, alt_aa):
+#         print(f"Frameshift detected at NT position {nt_pos} and AA position {aa_pos}")
+#     else:
+#         print(f"Possible frameshift detected at NT position {nt_pos}")
+# else:
+#     print("No frameshift detected")

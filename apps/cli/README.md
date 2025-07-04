@@ -1,10 +1,8 @@
 # sonar-cli
 
-Sonar command line tool to interface with the [sonar-backend](https://github.com/rki-mf1/sonar-backend) (API version; DjangoREST+PostgreSQL). Allows you to import new sequences and metadata.
+Sonar command line tool to interface with the [sonar-backend](https://github.com/rki-mf1/sonar/apps/backend) (API version; DjangoREST+PostgreSQL). Allows you to import new sequences and metadata.
 
 [![Test&Check](https://github.com/rki-mf1/sonar-cli/actions/workflows/dev.workflow.yml/badge.svg?branch=dev)](https://github.com/rki-mf1/sonar-cli/actions/workflows/dev.workflow.yml)
-
-![Static Badge](https://img.shields.io/badge/Lifecycle-Experimental-ff7f2a)
 
 ![Static Badge](https://img.shields.io/badge/Maintenance%20status-actively%20developed-brightgreen)
 
@@ -12,12 +10,13 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 
 ## Features
 
-1. Include standard features from covsonar and pathosonar (e.g., Import genome, Match profile)
+1. Import genomes: alignment against a reference genome of your choice, mutation calling and mutation import to database
+2. Search: query database with mutation profiles or metadata (lineages, sampling dates, etc.)
 2. Support multiple genome references.
 3. Support multiple alignment tools.
-4. Cluster machine compatibility.
+4. Support for high performance compute clusters.
 
-### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar-cli/wiki/) 🏃‍♂️
+### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar/apps/cli/wiki/) 🏃‍♂️
 
 # QuickStart 🧬
 
@@ -25,25 +24,24 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 
 ### 1.1 Conda (Package manager)
 
-- please visit [Miniconda](https://docs.anaconda.com/free/miniconda/) for download and installation
-- please visit [Bioconda](https://bioconda.github.io/) for download and installation
+We recommend [miniforge](https://conda-forge.org/download/), but other conda disributions will work as well.
 
 ### 1.2 Install sonar-backend
 
-please visit [sonar-backend](https://github.com/rki-mf1/sonar-backend) for download and installation
+Please visit [sonar-backend](https://github.com/rki-mf1/apps/backend) for download and installation
 
 ## 2. Sonar-cli Setup
 
 ### 2.1 Download sonar-cli
 
 ```sh
-git clone https://github.com/rki-mf1/sonar-cli.git
-cd sonar-cli
+git clone https://github.com/rki-mf1/sonar.git
+cd sonar/apps/cli
 ```
 
 ### 2.2 Configuration
 
-🤓 There is a "env.template" file in the root directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+🤓 There is a "env.template" file in the apps/cli directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
 
 ```sh
 cp env.template .env
@@ -65,26 +63,18 @@ The above environment file sets two environment variables to work around issues 
 1. SSL errors: `REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`
 2. [snpEff OutOfMemoryError](https://github.com/rki-mf1/sonar-cli/issues/72) (this bumps the memory up from 2GB to 4GB): `_JAVA_OPTIONS="-Xms128m -Xmx4g"`
 
-### 2.4 Install sonar-cli
+### 2.4 Install sonar CLI
 
-Navigate to the root directory of `sonar-cli`.
+Navigate to the directory of `sonar/apps/cli`.
 
 ```sh
-cd path/to/sonar-cli
+cd path/to/sonar/apps/cli
 ```
 
 Install the application using Poetry.
 
 ```sh
 poetry install --only main
-```
-
-Temporary: build pywfa from source. This is to work around a segfault when
-using the conda or pip installation (see
-https://github.com/kcleal/pywfa/issues/16)
-
-```sh
-pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
 ```
 
 Verify the installation by checking the version.
@@ -137,12 +127,11 @@ positional arguments:
 
 ### Test Datasets
 
-We provide the test datasets under the `test-data` directory. These datasets can be used in `sonar-backend` commands and Insomnia API for testing.
-
+We provide the test datasets under the `test-data` directory.
 | File              | Usage                                                                            |
 | ----------------- | -------------------------------------------------------------------------------- |
-| `180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
-| `MN908947.3`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
+| `sars-cov-2/180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
+| `sars-cov-2/MN908947.nextclade.gb`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
 
 # Usage 🚀
 
@@ -163,14 +152,14 @@ The table below shows the several commands that can be used.
 > [!TIP]
 > You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
 >
-> for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb MN908947.3.gb`
+> for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
 
 ## Adding Reference
 
 The `add-ref` subcommand is used to add reference genome sequences to the database.
 
 ```sh
-sonar-cli add-ref --gb MN908947.3.gb
+sonar-cli add-ref --gb test-data/sars-cov-2/MN908947.nextclade.gb
 ```
 
 ## Importing Genomes
@@ -274,14 +263,6 @@ sonar-cli delete-sample --sample IMS-10116-CVDP-77AB96B7-B9FB-46D6-B844-F9356151
 ```
 
 ---
-
-# Contributing
-
-Contributions to sonar-cli are welcome! If you encounter issues or have suggestions for improvements, please open an issue on the GitHub repository.
-
-# License
-
-This project is licensed under....
 
 # Acknowledgments
 

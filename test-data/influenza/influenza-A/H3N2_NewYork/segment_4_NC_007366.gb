@@ -1,0 +1,116 @@
+LOCUS       NC_007366               1762 bp    cRNA    linear   VRL 13-AUG-2018
+DEFINITION  Influenza A virus (A/New York/392/2004(H3N2)) segment 4, complete
+            sequence.
+ACCESSION   NC_007366
+VERSION     NC_007366.1
+DBLINK      BioProject: PRJNA485481
+KEYWORDS    RefSeq.
+SOURCE      Influenza A virus (A/New York/392/2004(H3N2))
+  ORGANISM  Influenza A virus (A/New York/392/2004(H3N2))
+            Viruses; Riboviria; Orthornavirae; Negarnaviricota;
+            Polyploviricotina; Insthoviricetes; Articulavirales;
+            Orthomyxoviridae; Alphainfluenzavirus; Alphainfluenzavirus
+            influenzae.
+REFERENCE   1  (bases 1 to 1762)
+  AUTHORS   Ghedin,E., Miller,N., Zaborsky,J., Feldblyum,T., Subbu,V.,
+            Shumway,M., Sitz,J., Kosack,D., Koo,H., Salzberg,S.L.,
+            Griesemer,S., St. George,K., Bennett,R., Taylor,J., Bao,Y.,
+            Bolotov,P., Dernovoy,D., Lipman,D.J. and Tatusova,T.
+  TITLE     The NIAID Influenza Genome Sequencing Project
+  JOURNAL   Unpublished
+REFERENCE   2  (bases 1 to 1762)
+  CONSRTM   NCBI Genome Project
+  TITLE     Direct Submission
+  JOURNAL   Submitted (30-AUG-2005) National Center for Biotechnology
+            Information, NIH, Bethesda, MD 20894, USA
+REFERENCE   3  (bases 1 to 1762)
+  CONSRTM   The NIAID Influenza Genome Sequencing Consortium
+  TITLE     Direct Submission
+  JOURNAL   Submitted (01-AUG-2005) on behalf of TIGR/Wadsworth-NYSDOH/NCBI,
+            National Center for Biotechnology Information, NIH, Bethesda, MD
+            20894, USA
+COMMENT     REVIEWED REFSEQ: This record has been curated by NCBI staff. The
+            reference sequence was derived from CY002064.
+            COMPLETENESS: full length.
+FEATURES             Location/Qualifiers
+     source          1..1762
+                     /organism="Influenza A virus (A/New York/392/2004(H3N2))"
+                     /mol_type="viral cRNA"
+                     /strain="A/New York/392/2004"
+                     /serotype="H3N2"
+                     /isolation_source="gender:M; age:16y"
+                     /host="Homo sapiens"
+                     /db_xref="taxon:335341"
+                     /segment="4"
+                     /lab_host="RhMK 1 passage(s)"
+                     /geo_loc_name="USA: Tompkins County, NY"
+                     /collection_date="21-Dec-2004"
+     gene            30..1730
+                     /gene="HA"
+                     /locus_tag="FLUAVH3N2_s4p1"
+                     /db_xref="GeneID:3655151"
+     CDS             30..1730
+                     /gene="HA"
+                     /locus_tag="FLUAVH3N2_s4p1"
+                     /function="receptor binding and fusion protein"
+                     /codon_start=1
+                     /product="hemagglutinin"
+                     /protein_id="YP_308839.1"
+                     /db_xref="GeneID:3655151"
+                     /translation="MKTIIALSYILCLVFAQKLPGNDNSTATLCLGHHAVPNGTIVKT
+                     ITNDQIEVTNATELVQSSSTGGICDSPHQILDGENCTLIDALLGDPQCDGFQNKKWDL
+                     FVERSKAYSNCYPYDVPDYASLRSLVASSGTLEFNNESFNWTGVTQNGTSSACKRRSN
+                     NSFFSRLNWLTHLKFKYPALNVTMPNNEKFDKLYIWGVHHPGTDNDQISLYAQASGRI
+                     TVSTKRSQQTVIPSIGSRPRIRDVPSRISIYWTIVKPGDILLINSTGNLIAPRGYFKI
+                     RSGKSSIMRSDAPIGKCNSECITPNGSIPNDKPFQNVNRITYGACPRYVKQNTLKLAT
+                     GMRNVPEKQTRGIFGAIAGFIENGWEGMVDGWYGFRHQNSEGTGQAADLKSTQAAINQ
+                     INGKLNRLIGKTNEKFHQIEKEFSEVEGRIQDLEKYVEDTKIDLWSYNAELLVALENQ
+                     HTIDLTDSEMNKLFERTKKQLRENAEDMGNGCFKIYHKCDNACIGSIRNGTYDHDVYR
+                     DEALNNRFQIKGVELKSGYKDWILWISFAISCFLLCVALLGFIMWACQKGNIRCNICI
+                     "
+     sig_peptide     30..77
+                     /gene="HA"
+                     /locus_tag="FLUAVH3N2_s4p1"
+     mat_peptide     78..1064
+                     /gene="HA"
+                     /locus_tag="FLUAVH3N2_s4p1"
+                     /product="HA1"
+                     /protein_id="YP_308875.1"
+     mat_peptide     1065..1727
+                     /gene="HA"
+                     /locus_tag="FLUAVH3N2_s4p1"
+                     /product="HA2"
+                     /protein_id="YP_308876.1"
+ORIGIN      
+        1 agcaaaagca ggggataatt ctattaacca tgaagactat cattgctttg agctacattc
+       61 tatgtctggt tttcgctcaa aaacttcccg gaaatgacaa cagcacggca acgctgtgcc
+      121 ttgggcacca tgcagtacca aacggaacga tagtgaaaac aatcacgaat gaccaaattg
+      181 aagtcactaa tgctactgaa ctggttcaga gttcctcaac aggtggaata tgcgacagtc
+      241 ctcatcagat ccttgatgga gaaaactgca cactaataga tgctctattg ggagaccctc
+      301 agtgtgatgg cttccaaaat aagaaatggg acctttttgt tgaacgcagc aaagcctaca
+      361 gcaactgtta cccttatgat gtgccggatt atgcctccct taggtcacta gttgcctcat
+      421 ccggcacact ggagtttaac aatgaaagct tcaattggac tggagtcact caaaatggaa
+      481 caagctctgc ttgcaaaagg agatctaata acagtttctt tagtagattg aattggttga
+      541 cccacttaaa attcaaatac ccagcattga acgtgactat gccaaacaat gaaaaatttg
+      601 acaaactgta catttggggg gttcaccacc cgggtacgga caatgaccaa atcagcctat
+      661 atgctcaagc atcaggaaga atcacagtct ctaccaaaag aagccaacaa accgtaatcc
+      721 cgagtatcgg atctagaccc aggataaggg atgtccccag cagaataagc atctattgga
+      781 caatagtaaa accgggagac atacttttga ttaacagcac agggaatcta attgctcctc
+      841 ggggttactt caaaatacga agtgggaaaa gctcaataat gagatcagat gcacccattg
+      901 gcaaatgcaa ttctgaatgc atcactccaa atggaagcat tcccaatgac aaaccatttc
+      961 aaaatgtaaa caggatcaca tatggggcct gtcccagata tgttaagcaa aacactctga
+     1021 aattggcaac agggatgcga aatgtaccag agaaacaaac tagaggcata tttggcgcaa
+     1081 tcgcgggttt catagaaaat ggttgggagg gaatggtaga cggttggtac ggtttcaggc
+     1141 atcaaaattc tgagggaaca ggacaagcag cagatctcaa aagcactcaa gcagcaatca
+     1201 accaaatcaa tgggaagctg aataggttga tcgggaaaac aaacgagaaa ttccatcaga
+     1261 ttgaaaaaga attctcagaa gtagaaggga gaattcagga cctcgagaaa tatgttgagg
+     1321 acactaaaat agatctctgg tcatacaacg cggagcttct tgtggccctg gagaaccaac
+     1381 atacaattga tctaactgac tcagaaatga acaaactgtt tgaaagaaca aagaagcaac
+     1441 tgagggaaaa tgctgaggat atgggcaatg gttgtttcaa aatataccac aaatgtgaca
+     1501 atgcctgcat agggtcaatc agaaatggaa cttatgacca tgatgtatac agagatgaag
+     1561 cattaaacaa ccggttccag atcaaaggtg ttgagttgaa gtcaggatac aaagattgga
+     1621 tcctatggat ttcctttgcc atatcatgtt ttttgctttg tgttgctttg ttggggttca
+     1681 tcatgtgggc ctgccaaaaa ggcaacatta ggtgcaacat ttgcatttga gtgcattaat
+     1741 taaaaacacc cttgtttcta ct
+//
+

@@ -1,0 +1,127 @@
+LOCUS       NC_007359               2233 bp    cRNA    linear   VRL 13-AUG-2018
+DEFINITION  Influenza A virus (A/goose/Guangdong/1/1996(H5N1)) polymerase (PA)
+            and PA-X protein (PA-X) genes, complete cds.
+ACCESSION   NC_007359
+VERSION     NC_007359.1
+DBLINK      BioProject: PRJNA485481
+KEYWORDS    RefSeq.
+SOURCE      Influenza A virus (A/goose/Guangdong/1/1996(H5N1))
+  ORGANISM  Influenza A virus (A/goose/Guangdong/1/1996(H5N1))
+            Viruses; Riboviria; Orthornavirae; Negarnaviricota;
+            Polyploviricotina; Insthoviricetes; Articulavirales;
+            Orthomyxoviridae; Alphainfluenzavirus; Alphainfluenzavirus
+            influenzae.
+REFERENCE   1  (bases 1 to 2233)
+  AUTHORS   Xu,X., Subbarao, Cox,N.J. and Guo,Y.
+  TITLE     Genetic characterization of the pathogenic influenza
+            A/Goose/Guangdong/1/96 (H5N1) virus: similarity of its
+            hemagglutinin gene to those of H5N1 viruses from the 1997 outbreaks
+            in Hong Kong
+  JOURNAL   Virology 261 (1), 15-19 (1999)
+   PUBMED   10484749
+REFERENCE   2  (bases 1 to 2233)
+  CONSRTM   NCBI Genome Project
+  TITLE     Direct Submission
+  JOURNAL   Submitted (26-AUG-2005) National Center for Biotechnology
+            Information, NIH, Bethesda, MD 20894, USA
+REFERENCE   3  (bases 1 to 2233)
+  AUTHORS   Xu,X., Subbarao,K., Cox,N.J. and Guo,Y.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (20-APR-1999) Influenza Branch, Center for Diseases
+            Control and Prevention, 1600 Clifton Road, Atlanta, GA 30333, USA
+COMMENT     REVIEWED REFSEQ: This record has been curated by NCBI staff. The
+            reference sequence is identical to AF144302.
+            COMPLETENESS: full length.
+FEATURES             Location/Qualifiers
+     source          1..2233
+                     /organism="Influenza A virus
+                     (A/goose/Guangdong/1/1996(H5N1))"
+                     /mol_type="viral cRNA"
+                     /strain="A/goose/Guangdong/1/1996"
+                     /serotype="H5N1"
+                     /host="goose"
+                     /db_xref="taxon:93838"
+                     /geo_loc_name="China"
+                     /collection_date="1996"
+     gene            25..2175
+                     /gene="PA"
+                     /locus_tag="FLUAVH5N1_s3gp1"
+                     /db_xref="GeneID:3654617"
+     CDS             25..2175
+                     /gene="PA"
+                     /locus_tag="FLUAVH5N1_s3gp1"
+                     /codon_start=1
+                     /product="polymerase"
+                     /protein_id="YP_308666.1"
+                     /db_xref="GeneID:3654617"
+                     /translation="MEDFVRQCFNPMIVELAEKAMKEYGEDPKIETNKFAAICTHLEV
+                     CFMYSDFHFIDERGESTIIESGDPNALLKHRFEIIEGRDRTMAWTVVNSICNTTGVEK
+                     PKFLPDLYDYKENRFIEIGVTRREVHTYYLEKANKIKSEKTHIHIFSFTGEEMATKAD
+                     YTLDEESRARIKTRLFTIRQEMASRGLWDSFRQSERGEETVEERFEITGTMCRLADQS
+                     LPPNFSSLEKFRAYVDGFEPNGCIEGKLSQMSKEVNARIEPFLKTTPRPLRLPDGPPC
+                     SQRSKFLLMDALKLSIEDPSHEGEGIPLYDAIKCMKTFFGWKEPNIVKPHEKGINPNY
+                     LLAWKQVLAELQDIENEEKIPKTKNMRKTSQLKWALGENMAPEKVDFEDCKDVSDLRQ
+                     YDSDEPKPRSLASWIQSEFNKACELTDSSWIELDEIGEDVAPIEHIASMRRNYFTAEV
+                     SHCRATEYIMKGVYINTALLNASCAAMDDFQLIPMISKCRTKEGRRKTNLYGFLIKGR
+                     SHLRNDTDVVNFVSMEFSLTDPRLEPHRWEKYCVLRIGDMLLRTEIGQVSRPMFLYVR
+                     TNGTSKIKMKWGMEMRRCPFQSLQQIESMIEAESSVKEKDMTKEFFENKSETWPIGES
+                     PKGVEEGSIGKVCRTLLAKSVFNSLYASPQLEGFSAESRKLLLIVQALRDNLEPGTFD
+                     LGGLYEAIEECLINDPWVLLNASWFNSFLTHALR"
+     gene            25..784
+                     /gene="PA-X"
+                     /locus_tag="FLUAVH5N1_s3gp2"
+                     /db_xref="GeneID:13229455"
+     CDS             join(25..594,596..784)
+                     /gene="PA-X"
+                     /locus_tag="FLUAVH5N1_s3gp2"
+                     /ribosomal_slippage
+                     /codon_start=1
+                     /product="PA-X protein"
+                     /protein_id="YP_006495800.1"
+                     /db_xref="GeneID:13229455"
+                     /translation="MEDFVRQCFNPMIVELAEKAMKEYGEDPKIETNKFAAICTHLEV
+                     CFMYSDFHFIDERGESTIIESGDPNALLKHRFEIIEGRDRTMAWTVVNSICNTTGVEK
+                     PKFLPDLYDYKENRFIEIGVTRREVHTYYLEKANKIKSEKTHIHIFSFTGEEMATKAD
+                     YTLDEESRARIKTRLFTIRQEMASRGLWDSFVSPREAKRQLKKDLKSQGLCAGLPTKV
+                     SHLISPALKNLEPMWMDSNRTAALRASFLKCRKK"
+ORIGIN      
+        1 agcaaaagca ggtactgatc caaaatggaa gactttgtgc gacaatgctt caatccaatg
+       61 attgtcgagc ttgcggaaaa ggcaatgaaa gaatatgggg aagatccgaa aatcgaaacg
+      121 aacaaatttg ccgcaatatg cacgcactta gaagtctgtt tcatgtattc agatttccac
+      181 tttattgatg aacggggcga atcaacaatt atagaatctg gcgatcccaa tgcattattg
+      241 aaacaccggt ttgaaataat cgaagggagg gaccgaacaa tggcctggac agtggtgaat
+      301 agtatctgca acaccacagg agttgagaag cctaaatttc tcccagattt gtatgactac
+      361 aaggagaacc gatttattga aattggagtg acacggaggg aagttcacac atactatcta
+      421 gaaaaagcca acaagataaa atctgagaag acacacattc acatattctc attcactgga
+      481 gaggaaatgg ccaccaaagc ggactacacc cttgatgaag aaagcagggc ccgaatcaaa
+      541 accaggctgt tcactataag gcaggaaatg gccagtaggg gtttatggga ttcctttcgt
+      601 cagtccgaga gaggcgaaga gacagttgaa gaaagatttg aaatcacagg gactatgtgc
+      661 aggcttgccg accaaagtct cccacctaat ttctccagcc ttgaaaaatt tagagcctat
+      721 gtggatggat tcgaaccgaa cggctgcatt gagggcaagc tttctcaaat gtcgaaagaa
+      781 gtaaacgcca gaattgagcc atttctgaag acaacaccac gccctcttag attacctgat
+      841 gggcctccct gctctcagcg gtcgaagttt ttgctgatgg atgcccttaa attaagcatc
+      901 gaagacccga gtcatgaggg ggaggggata ccgctatatg atgcaatcaa atgcatgaaa
+      961 acatttttcg gctggaaaga gcccaacatt gtaaaaccac atgaaaaagg cataaacccc
+     1021 aattacctcc tggcttggaa gcaggtgctg gcagagctcc aagatattga aaacgaggag
+     1081 aaaattccaa agacaaagaa catgaggaaa acaagccaat tgaagtgggc acttggtgag
+     1141 aatatggcac cagagaaagt agactttgag gattgcaaag atgttagcga tctaaggcag
+     1201 tatgacagtg atgaaccaaa gcctagatca ctagcaagct ggatccagag tgaattcaac
+     1261 aaggcatgcg aattgacaga ttcaagttgg attgaacttg atgaaatagg ggaagacgtt
+     1321 gctccaattg agcacattgc aagtatgaga aggaactatt tcacagcgga agtatcccat
+     1381 tgcagggcta ctgaatacat aatgaaggga gtgtacataa acacagcttt gttgaatgca
+     1441 tcctgtgcag ccatggatga cttccaactg atcccaatga taagcaaatg cagaaccaaa
+     1501 gaaggaagac ggaaaactaa cctgtatgga ttccttataa aaggaagatc ccatttgaga
+     1561 aatgacaccg atgtggtaaa ctttgtgagt atggaattct ctcttactga tccgaggctg
+     1621 gagccacaca gatgggaaaa gtactgcgtt cttcggatag gagacatgct cttacggact
+     1681 gaaataggcc aagtgtcaag gcccatgttt ctttatgtga gaaccaatgg aacctccaag
+     1741 atcaagatga aatggggcat ggaaatgagg cgatgccctt ttcaatccct tcaacagatt
+     1801 gagagcatga ttgaggccga gtcttctgtc aaagaaaaag acatgactaa agaattcttt
+     1861 gaaaacaaat cagaaacatg gccaattgga gaatcaccca agggagtgga ggaaggctcc
+     1921 atcgggaagg tgtgcagaac cttactggct aaatctgttt tcaacagtct atatgcatct
+     1981 ccacaactcg aggggttttc agctgaatca agaaaattgc ttctcattgt tcaggcactt
+     2041 agggacaacc tggaacctgg aaccttcgat cttggggggc tatatgaagc aattgaggag
+     2101 tgcctgatta atgatccctg ggttttgctt aatgcatctt ggttcaactc cttcctcaca
+     2161 catgcactaa gatagttgtg gcaatgctac tatttgctat ccatactgtc caaaaaagta
+     2221 ccttgtttct act
+//
+

@@ -11,6 +11,7 @@ import pandas as pd
 from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
 from rest_api.models import AminoAcidMutation
+from rest_api.models import CDS
 from rest_api.models import Gene
 from rest_api.models import NucleotideMutation
 from rest_api.models import Replicon
@@ -55,6 +56,7 @@ class VarRaw:
     replicon_or_cds_accession: str
     # lable: str
     type: str
+    frameshift: int
     parent_id: list[int] | None
 
 
@@ -179,6 +181,7 @@ class SampleImport:
                     "start": var_raw.start,
                     "end": var_raw.end,
                     "replicon": self.replicon,
+                    "is_frameshift": var_raw.frameshift,
                 }
                 mutation = next(
                     filter(
@@ -206,7 +209,7 @@ class SampleImport:
     def get_mutation_objs_cds_and_parent_relations(
         self,
         cds_mutation_set: list[AminoAcidMutation],
-        gene_cache_by_accession: dict[str, Gene | None],
+        gene_cache_by_accession: dict[str, CDS | None],
         parent_id_mapping: dict[int, NucleotideMutation],
         aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through],
     ) -> list[AminoAcidMutation.parent.through]:
@@ -217,25 +220,22 @@ class SampleImport:
                 if not var_raw.replicon_or_cds_accession in gene_cache_by_accession:
                     try:
                         gene_cache_by_accession[var_raw.replicon_or_cds_accession] = (
-                            Gene.objects.get(
-                                cds_accession=var_raw.replicon_or_cds_accession
-                            )
+                            CDS.objects.get(accession=var_raw.replicon_or_cds_accession)
                         )
-                    except Gene.DoesNotExist:
+                    except CDS.DoesNotExist:
                         LOGGER.error(
-                            f"Gene not found for accession: {var_raw.replicon_or_cds_accession}"
+                            f"CDS not found for accession: {var_raw.replicon_or_cds_accession}"
                         )
                         continue
-                gene = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
+                cds = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
                 if var_raw.alt is None:
                     var_raw.ref = ""
                 mutation_data = {
-                    "gene": gene,
+                    "cds": cds,
                     "ref": var_raw.ref if var_raw.ref else "",
                     "alt": var_raw.alt if var_raw.alt else "",
                     "start": var_raw.start if var_raw.start else 0,
                     "end": var_raw.end if var_raw.end else 0,
-                    "replicon": self.replicon,
                 }
                 mutation = next(
                     filter(
@@ -267,6 +267,9 @@ class SampleImport:
                                 )
                             )
                         except KeyError:
+                            LOGGER.warning(
+                                f"Parent ID {parent_id} not found in parent_id_mapping for mutation {mutation_data}"
+                            )
                             pass
                 sample_cds_mutations.append(mutation)
         return mutation_parent_relations
@@ -304,6 +307,7 @@ class SampleImport:
                     row["alt"],
                     row["reference_acc"],
                     row["type"],
+                    row["frameshift"],
                     (
                         [int(x) for x in row["parent_id"].split(",")]
                         if pd.notna(row["parent_id"]) and row["parent_id"].strip() != ""
