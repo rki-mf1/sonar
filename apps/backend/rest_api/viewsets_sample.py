@@ -377,7 +377,7 @@ class SampleViewSet(
                     models.Sample.objects.filter(
                         id=OuterRef("id"),
                         properties__property__name=property_name,
-                        # **{f"properties__{datatype}__isnull": False},
+                        **{f"properties__{datatype}__isnull": False},
                     )
                 )
             except Exception as e:
@@ -1234,9 +1234,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__reference__accession=accession)
+            return ~Q(sequence__alignments__replicon__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__reference__accession=accession)
+            return Q(sequence__alignments__replicon__accession=accession)
 
     def filter_sublineages(
         self,
