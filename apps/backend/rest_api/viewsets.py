@@ -344,6 +344,38 @@ class ReferenceViewSet(
             {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
 
+    @action(detail=False, methods=["get"])
+    def dataset_options(self, request, *args, **kwargs):
+        """
+        For each organism in the Reference table, returns the corresponding
+        accession values found int the Reference table and
+        dataset values found in the Sample table.
+        """
+        queryset = models.Sample.objects.values(
+            accession=F("sequence__alignments__replicon__reference__accession"),
+            organism=F("sequence__alignments__replicon__reference__organism"),
+            data_set_value=F("data_set"),
+        ).distinct()
+
+        result = {}
+
+        for reference in queryset:
+            organism = reference["organism"]
+            accession = reference["accession"]
+            data_set_value = reference["data_set_value"]
+
+            if organism not in result:
+                result[organism] = {"accessions": set(), "data_sets": set()}
+            if accession is not None:
+                result[organism]["accessions"].add(accession)
+            if data_set_value is not None:
+                result[organism]["data_sets"].add(data_set_value)
+
+        return Response(
+            result,
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["post"])
     def delete_reference(self, request: Request, *args, **kwargs):
         if "accession" not in request.data:
@@ -652,6 +684,12 @@ class PropertyViewSet(
                 "query_type": "value_date",
                 "description": "Date when the sample data was last updated in the database (fixed prop.)",
                 "default": "current date and time",
+            },
+            {
+                "name": "data_set",
+                "query_type": "value_varchar",
+                "description": "Name of the data set",
+                "default": None,
             },
         ]  # from SAMPLE TABLE
 

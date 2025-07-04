@@ -1049,9 +1049,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__reference__accession=accession)
+            return ~Q(sequence__alignments__replicon__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__reference__accession=accession)
+            return Q(sequence__alignments__replicon__accession=accession)
 
     def filter_sublineages(
         self,

@@ -77,6 +77,10 @@ export default class API {
     return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
   }
 
+  getDatasetOptions() {
+    return this.getRequest(`references/dataset_options/`, {} as JSON, false)
+  }
+
   getSampleGenomes(filters: FilterGroupRoot, params: Record<string, string | number | boolean>) {
     let url = `samples/genomes/?`
     for (const key of Object.keys(params)) {
