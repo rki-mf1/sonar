@@ -560,10 +560,8 @@ class SampleViewSet(
             week=TruncWeek("collection_date"),
         )
 
-        weekly_qs = (
-            annotated_qs.values("week", "lineage_group")
-            .annotate(count=Count("id"))
-            .order_by("week", "lineage_group")
+        weekly_qs = annotated_qs.values("week", "lineage_group").annotate(
+            count=Count("id")
         )
 
         total_qs = annotated_qs.values("week").annotate(total_count=Count("id"))
