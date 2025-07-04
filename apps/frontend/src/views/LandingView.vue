@@ -33,11 +33,12 @@
               placeholder="Select an Accession"
               filter
             />
-            <h4 class="text-primary mt-0 mb-0">Dataset</h4>
-            <PrimeDropdown
-              v-model="selectedDataset"
+            <h4 class="text-primary mt-0 mb-0">Datasets</h4>
+            <MultiSelect
+              v-model="selectedDatasets"
               :options="data_sets"
-              placeholder="Select a Dataset"
+              placeholder="Select Datasets"
+              display="chip"
               filter
             />
             <PrimeButton
@@ -69,7 +70,7 @@ export default {
       organisms: [] as string[],
       selectedOrganism: '',
       selectedAccession: '',
-      selectedDataset: '',
+      selectedDatasets: [] as string[],
       loading: false,
     }
   },
@@ -86,7 +87,7 @@ export default {
     // when ever selectedOrganism is changed, choose first available option
     selectedOrganism() {
       this.selectedAccession = this.accessions[0] || null
-      this.selectedDataset = this.data_sets[0] || null
+      this.selectedDatasets = this.data_sets
     },
   },
   mounted() {
@@ -105,7 +106,7 @@ export default {
           this.samplesStore.setDataset(
             this.selectedOrganism,
             this.selectedAccession,
-            this.selectedDataset,
+            this.selectedDatasets,
           )
           this.router.push({ name: 'Home' })
           this.loading = false

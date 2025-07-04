@@ -106,7 +106,7 @@ export const useSamplesStore = defineStore('samples', {
   state: () => ({
     organism: null as string | null,
     accession: null as string | null,
-    data_set: null as string | null,
+    data_sets: [] as string[],
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
@@ -174,10 +174,10 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
-    setDataset(organism: string | null, accession: string | null, data_set: string | null) {
+    setDataset(organism: string | null, accession: string | null, data_sets: string[]) {
       this.organism = organism
       this.accession = accession
-      this.data_set = data_set
+      this.data_sets = data_sets
     },
     async updateStatistics() {
       const emptyStatistics = {
@@ -396,12 +396,12 @@ export const useSamplesStore = defineStore('samples', {
       }
 
       // insert dataset selection as a fixed filter at the beginning
-      if (this.data_set) {
+      if (this.data_sets?.length > 0) {
         filters.filters.andFilter.unshift({
-          filter_type: 'exact',
           label: 'Property',
           property_name: 'data_set',
-          value: this.data_set,
+          filter_type: 'in',
+          value: this.data_sets,
         })
       }
       if (this.accession) {
@@ -411,7 +411,7 @@ export const useSamplesStore = defineStore('samples', {
           accession: this.accession,
         })
       }
-      console.log(filters)
+
       return filters
     },
   },

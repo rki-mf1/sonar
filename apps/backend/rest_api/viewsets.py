@@ -368,7 +368,7 @@ class ReferenceViewSet(
                 result[organism] = {"accessions": set(), "data_sets": set()}
             if accession is not None:
                 result[organism]["accessions"].add(accession)
-            if data_set_value is not None and data_set_value != "":
+            if data_set_value is not None:
                 result[organism]["data_sets"].add(data_set_value)
 
         return Response(
