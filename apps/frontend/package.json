@@ -14,7 +14,7 @@
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {
-    "axios": "^1.7.0",
+    "axios": "^1.8.2",
     "chart.js": "^4.4.3",
     "chartjs-adapter-moment": "^1.0.1",
     "chartjs-plugin-zoom": "^2.0.1",
