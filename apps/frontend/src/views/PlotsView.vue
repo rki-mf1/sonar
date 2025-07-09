@@ -488,12 +488,11 @@ export default {
     },
 
     metadataCoverageData() {
-      // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
-      // what about the property 'name' ?? its not in the list, but its always shown in the table
+      // keep only those properties that have data, i.e. are in this.samplesStore.metaCoverageOptions
       const metadata_coverage = Object.fromEntries(
-        Object.entries(this.samplesStore.plotMetadataCoverage?.['metadata_coverage'] || {}).filter(
-          ([key]) => this.samplesStore.metaCoverageOptions.includes(key),
-        ),
+        Object.entries(this.samplesStore.plotMetadataCoverage?.['metadata_coverage'] || {})
+        .filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key))
+        .sort(),
       )
       if (this.isDataEmpty(metadata_coverage)) {
         return this.emptyChart()

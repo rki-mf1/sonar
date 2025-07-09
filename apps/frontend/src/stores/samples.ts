@@ -412,10 +412,9 @@ export const useSamplesStore = defineStore('samples', {
           ),
         ]
         this.metaCoverageOptions = [
-          ...this.propertyMenuOptions.filter(
-            (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
-          ),
-        ]
+          ...this.propertyTableOptions
+          .filter((prop) => !['name', 'init_upload_date', 'last_update_date', 'genomic_profiles', 'proteomic_profiles',].includes(prop)),
+        ];
       } catch (error) {
         console.error('Failed to update property options:', error)
       }
