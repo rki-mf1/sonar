@@ -377,7 +377,7 @@ export default {
       }
       const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
         .filter((l) => l !== null)
-        .sort()
+        .sort(new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare) // natural sort: ensure e.g. MC.2 < MC.10
       const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
       const colors = this.generateColorPalette(lineages.length)
       const datasets = lineages.map((lineage, index) => ({
