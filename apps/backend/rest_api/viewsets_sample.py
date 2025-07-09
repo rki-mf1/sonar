@@ -93,6 +93,7 @@ class SampleViewSet(
             "Ins Nt": self.filter_ins_profile_nt,
             "Ins AA": self.filter_ins_profile_aa,
             "Replicon": self.filter_replicon,
+            "Reference": self.filter_reference,
             "Sample": self.filter_sample,
             "Lineages": self.filter_sublineages,
             "Annotation": self.filter_annotation,
@@ -1237,6 +1238,18 @@ class SampleViewSet(
             return ~Q(sequence__alignments__replicon__accession=accession)
         else:
             return Q(sequence__alignments__replicon__accession=accession)
+
+    def filter_reference(
+        self,
+        accession,
+        exclude: bool = False,
+        *args,
+        **kwargs,
+    ):
+        if exclude:
+            return ~Q(sequence__alignments__replicon__reference__accession=accession)
+        else:
+            return Q(sequence__alignments__replicon__reference__accession=accession)
 
     def filter_sublineages(
         self,
