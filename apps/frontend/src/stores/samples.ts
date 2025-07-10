@@ -406,7 +406,7 @@ export const useSamplesStore = defineStore('samples', {
       }
       if (this.accession) {
         filters.filters.andFilter.unshift({
-          label: 'Replicon',
+          label: 'Reference',
           exclude: false,
           accession: this.accession,
         })
