@@ -369,7 +369,15 @@ class ReferenceViewSet(
             if accession is not None:
                 result[organism]["accessions"].add(accession)
             if data_set_value is not None:
-                result[organism]["data_sets"].add(data_set_value)
+                if data_set_value == "":
+                    # NOTE: if "-Empty-" string is changed here, it must be changed as well in samples.ts !!
+                    result[organism]["data_sets"].add("-Empty-")
+                else:
+                    result[organism]["data_sets"].add(data_set_value)
+
+        # sort data_set values
+        for organism in result:
+            result[organism]["data_sets"] = sorted(result[organism]["data_sets"])
 
         return Response(
             result,

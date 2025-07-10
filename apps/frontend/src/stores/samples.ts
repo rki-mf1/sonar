@@ -397,6 +397,7 @@ export const useSamplesStore = defineStore('samples', {
 
       // insert dataset selection as a fixed filter at the beginning
       if (this.data_sets?.length > 0) {
+        this.data_sets = this.data_sets.map(value => value === "-Empty-" ? "" : value);
         filters.filters.andFilter.unshift({
           label: 'Property',
           property_name: 'data_set',
