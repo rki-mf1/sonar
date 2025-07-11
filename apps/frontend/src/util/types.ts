@@ -1,3 +1,5 @@
+import type { ChartOptions } from 'chart.js'
+
 export enum DjangoFilterType {
   EXACT = 'exact',
   IEXACT = 'iexact',
@@ -36,6 +38,14 @@ export enum IntegerDjangoFilterType {
   LTE = 'lte',
   RANGE = 'range',
   IN = 'in',
+}
+
+export enum PlotType {
+  bar = 'bar',
+  histogram = 'histogram',
+  scatter = 'scatter',
+  doughnut = 'doughnut',
+  line = 'line',
 }
 export type PropertyFilter = {
   fetchOptions: boolean
@@ -129,16 +139,13 @@ export type FilteredStatistics = {
   filtered_total_count: number
 }
 
-export type PlotSamplesPerWeek = {
-  samples_per_week: { [key: string]: number }
-}
-export type PlotGroupedLineagesPerWeek = {
-  grouped_lineages_per_week: Array<{
-    week: string
-    lineage_group: string
-    count: number
-    percentage: number
-  }>
+export type SamplesPerWeek = [string, number]
+
+export type LineagePerWeek = {
+  week: string
+  lineage_group: string
+  count: number
+  percentage: number
 }
 export type PlotMetadataCoverage = {
   metadata_coverage: { [key: string]: number }
@@ -159,4 +166,56 @@ export type SelectedRowData = {
   properties: never[]
   genomic_profiles: { [variant: string]: string[] }
   proteomic_profiles: string[]
+}
+
+export type PlotDataSets =
+  | {
+      label: string
+      data: number[]
+      backgroundColor: string
+      borderColor: string
+      borderWidth: number
+    }
+  | {
+      label: string
+      data: never[]
+    }
+export type HistogramData = {
+  labels: string[] // Array of strings representing bin ranges
+  datasets: Array<PlotDataSets>
+}
+
+export type SimplePlotData = {
+  labels: string[]
+  datasets: PlotDataSets[]
+}
+
+export type ScatterPlotData = {
+  labels: string[]
+  datasets: {
+    label: string
+    data: {
+      x: number | Date | string
+      y: number | Date | string
+    }[]
+    backgroundColor: string
+    borderColor: string
+    borderWidth: number
+  }[]
+}
+
+export type PlotData = {
+  labels: string[]
+  datasets: {
+    label: string
+    data: never[]
+  }[]
+}
+
+export type PlotConfig = {
+  type: PlotType | null
+  propertyName: string | null
+  plotTitle: string
+  data: HistogramData | SimplePlotData | ScatterPlotData | undefined
+  options: ChartOptions
 }

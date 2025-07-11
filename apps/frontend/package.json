@@ -42,7 +42,6 @@
     "@types/qs": "^6.9.16",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/tsconfig": "^0.5.1",
-    "eslint": "^9.16.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-vue": "^9.32.0",
     "npm-run-all2": "^6.1.2",

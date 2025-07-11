@@ -479,30 +479,32 @@ class SampleViewSet(
             if key.startswith("not_null_count_")
         }
 
-    def _get_all_weeks(self, queryset):
-        """
-        Return list of all weeks (YYYY-Www) between earliest and latest
-        'collection_date' in given queryset, aligned to full calendar weeks.
-        """
-        date_range = queryset.aggregate(
-            start_date=Min("collection_date"),
-            end_date=Max("collection_date"),
-        )
-        start_date = date_range.get("start_date")
-        end_date = date_range.get("end_date")
-        if not start_date or not end_date:
-            return []
+    def _get_custom_property_plot(self, queryset, sample_property):
+        if sample_property == "":
+            result_dict = {}
+        elif sample_property == "sequencing_reason":
+            queryset = queryset.filter(properties__property__name="sequencing_reason")
+            # the value_char holds the sequencing reason values
+            grouped_queryset = (
+                queryset.values("properties__value_varchar")
+                .annotate(total=Count("properties__value_varchar"))
+                .order_by()
+            )
+            result_dict = {
+                item["properties__value_varchar"]: item["total"]
+                for item in grouped_queryset
+            }
 
-        # align to full weeks: Monday to Sunday
-        start_date -= timedelta(days=start_date.weekday())  # previous Monday
-        end_date += timedelta(days=(6 - end_date.weekday()))  # next Sunday
-
-        all_weeks = [
-            f"{week_object.isocalendar().year}-W{week_object.isocalendar().week:02}"
-            for week_object in rrule(WEEKLY, dtstart=start_date, until=end_date)
-        ]
-
-        return all_weeks
+        else:
+            grouped_queryset = (
+                queryset.values(sample_property)
+                .annotate(total=Count(sample_property))
+                .order_by(sample_property)
+            )
+            result_dict = {
+                str(item[sample_property]): item["total"] for item in grouped_queryset
+            }  # str required for properties in date format
+        return result_dict
 
     def _get_samples_per_week(self, queryset):
         """
@@ -518,10 +520,7 @@ class SampleViewSet(
             .order_by("week")
         )
 
-        # initialize result dict with all weeks filled with 0 as count
-        result = OrderedDict((week, 0) for week in self._get_all_weeks(queryset))
-
-        # overwrite with actual counts
+        result = {}
         for item in weekly_qs:
             year, week, _ = item["week"].isocalendar()
             result[f"{year}-W{week:02}"] = item["count"]
@@ -570,7 +569,6 @@ class SampleViewSet(
         week_to_total = {entry["week"]: entry["total_count"] for entry in total_qs}
 
         result = []
-        seen_weeks = set()
         for item in weekly_qs:
             year, week, _ = item["week"].isocalendar()
             week_str = f"{year}-W{week:02}"
@@ -583,19 +581,6 @@ class SampleViewSet(
                     "percentage": round(item["count"] / total * 100, 2),
                 }
             )
-            seen_weeks.add(week_str)
-
-        # fill missing weeks with placeholders
-        for week_str in self._get_all_weeks(queryset):
-            if week_str not in seen_weeks:
-                result.append(
-                    {
-                        "week": week_str,
-                        "lineage_group": None,
-                        "count": 0,
-                        "percentage": 0.0,
-                    }
-                )
 
         result.sort(key=lambda x: x["week"])
         return result
@@ -643,13 +628,11 @@ class SampleViewSet(
             collection_date__isnull=False
         )
 
-        result_dict = {}
         if not queryset.exists():
-            result_dict["samples_per_week"] = {}
+            return Response(data=[])
         else:
-            result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
-
-        return Response(data=result_dict)
+            samples_per_week = self._get_samples_per_week(queryset)
+            return Response(data=list(samples_per_week.items()))
 
     @action(detail=False, methods=["get"])
     def plot_grouped_lineages_per_week(self, request: Request, *args, **kwargs):
@@ -678,12 +661,137 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def plot_custom(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-        property = request.query_params["property"]
+        sample_property = request.query_params["property"]
 
         result_dict = {}
-        result_dict["custom_property"] = self._get_custom_property_plot(
-            queryset, property
+        result_dict[sample_property] = self._get_custom_property_plot(
+            queryset, sample_property
         )
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def plot_custom_xy(self, request: Request, *args, **kwargs):
+        """
+        API call to plot data based on two properties: x and y categories.
+        Handles both flexible properties (sample2property table) and fixed sample table properties.
+        Returns:
+            - For string-type y property: dict with x categories as keys and lists of y categories with counts.
+            - For number-type y property: dict with x categories as keys and lists of y numbers.
+        """
+        queryset = self._get_filtered_queryset(request)
+        x_property = request.query_params.get("x_property")
+        y_property = request.query_params.get("y_property")
+
+        if not x_property or not y_property:
+            return Response(
+                {"detail": "Both x_property and y_property must be provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Determine if x_property and y_property are flexible or fixed
+        flexible_properties = PropertyViewSet.get_custom_property_names()
+        x_is_flexible = x_property in flexible_properties
+        y_is_flexible = y_property in flexible_properties
+
+        result_dict = {}
+
+        if y_is_flexible:
+            # Handle flexible y_property
+            y_datatype = (
+                models.Property.objects.filter(name=y_property)
+                .values_list("datatype", flat=True)
+                .first()
+            )
+
+            if not y_datatype:
+                return Response(
+                    {"detail": f"Property {y_property} not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if x_is_flexible:
+                # Both x_property and y_property are flexible
+                grouped_queryset = (
+                    queryset.filter(
+                        properties__property__name__in=[x_property, y_property],
+                        properties__value_varchar__isnull=False,
+                        **{f"properties__{y_datatype}__isnull": False},
+                    )
+                    .values(
+                        "properties__value_varchar",
+                        f"properties__{y_datatype}",
+                    )
+                    .annotate(total=Count(f"properties__{y_datatype}"))
+                    .order_by("properties__value_varchar", f"properties__{y_datatype}")
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item["properties__value_varchar"])
+                    y_cat = str(item[f"properties__{y_datatype}"])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
+
+            else:
+                # x_property is fixed, y_property is flexible
+                grouped_queryset = (
+                    queryset.filter(
+                        **{f"{x_property}__isnull": False},
+                        properties__property__name=y_property,
+                        **{f"properties__{y_datatype}__isnull": False},
+                    )
+                    .values(x_property, f"properties__{y_datatype}")
+                    .annotate(total=Count(f"properties__{y_datatype}"))
+                    .order_by(x_property, f"properties__{y_datatype}")
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item[x_property])
+                    y_cat = str(item[f"properties__{y_datatype}"])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
+
+        else:
+            # Handle fixed y_property
+            if x_is_flexible:
+                # x_property is flexible, y_property is fixed
+                grouped_queryset = (
+                    queryset.filter(
+                        properties__property__name=x_property,
+                        **{f"{y_property}__isnull": False},
+                        properties__value_varchar__isnull=False,
+                    )
+                    .values("properties__value_varchar", y_property)
+                    .annotate(total=Count(y_property))
+                    .order_by("properties__value_varchar", y_property)
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item["properties__value_varchar"])
+                    y_cat = str(item[y_property])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
+
+            else:
+                # Both x_property and y_property are fixed
+                grouped_queryset = (
+                    queryset.filter(
+                        **{f"{x_property}__isnull": False},
+                        **{f"{y_property}__isnull": False},
+                    )
+                    .values(x_property, y_property)
+                    .annotate(total=Count(y_property))
+                    .order_by(x_property, y_property)
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item[x_property])
+                    y_cat = str(item[y_property])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
 
         return Response(data=result_dict)
 
