@@ -318,27 +318,27 @@ export default {
       if (Array.isArray(samples_per_week) && samples_per_week.length > 0) {
         samples_per_week.forEach((item) => {
           if (Array.isArray(item) && item.length === 2) {
-            labels.push(item[0]);
-            data.push(item[1]);
+            labels.push(item[0])
+            data.push(item[1])
           } else {
-            console.error('Invalid item format in samples_per_week:', item);
+            console.error('Invalid item format in samples_per_week:', item)
           }
-        });
+        })
       }
-        return {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Samples',
-              data: data,
-              backgroundColor: this.generateColorPalette(1),
-              borderColor: this.generateColorPalette(1).map((color) =>
-                chroma(color).darken(1.5).hex(),
-              ),
-              borderWidth: 1.5,
-            },
-          ],
-        }
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Samples',
+            data: data,
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map((color) =>
+              chroma(color).darken(1.5).hex(),
+            ),
+            borderWidth: 1.5,
+          },
+        ],
+      }
     },
     samplesPerWeekOptions() {
       return {
@@ -373,27 +373,27 @@ export default {
     },
 
     get_lineage_data() {
-      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek || [];
+      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek || []
       if (!Array.isArray(lineages_per_week) || lineages_per_week.length === 0) {
-        console.error('lineages_per_week is undefined or empty');
-        return { lineages_per_week: [], lineages: [], colors: [], weeks: [] };
+        console.error('lineages_per_week is undefined or empty')
+        return { lineages_per_week: [], lineages: [], colors: [], weeks: [] }
       }
       let lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
         .filter((l) => l !== null)
         .sort(new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare) // natural sort: ensure e.g. MC.2 < MC.10
 
       if (lineages.includes('Unknown')) {
-        lineages = lineages.filter((l) => l !== 'Unknown');
-        lineages.push('Unknown');
+        lineages = lineages.filter((l) => l !== 'Unknown')
+        lineages.push('Unknown')
       }
       const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
       const colors = this.generateColorPalette(lineages.length - 1)
-      colors.push('#cccccc'); // Add grey color for "Unknown"
+      colors.push('#cccccc') // Add grey color for "Unknown"
       return { lineages_per_week, lineages, colors, weeks }
     },
 
     lineageBarData() {
-      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data();
+      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data()
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: weeks.map(
@@ -409,7 +409,7 @@ export default {
     },
 
     lineageAreaData() {
-      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data();
+      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data()
       // Normalize data so that percentages for each week sum up to 100%
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
@@ -497,8 +497,8 @@ export default {
       // keep only those properties that have data, i.e. are in this.samplesStore.metaCoverageOptions
       const metadata_coverage = Object.fromEntries(
         Object.entries(this.samplesStore.plotMetadataCoverage?.['metadata_coverage'] || {})
-        .filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key))
-        .sort(),
+          .filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key))
+          .sort(),
       )
       if (this.isDataEmpty(metadata_coverage)) {
         return this.emptyChart()
