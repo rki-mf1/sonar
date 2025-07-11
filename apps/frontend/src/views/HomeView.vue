@@ -232,7 +232,18 @@ export default {
     }
   },
   computed: {},
-  mounted() {},
+  mounted() {
+    this.samplesStore.updateSamples()
+    this.samplesStore
+      .updateStatistics()
+      .then(() => this.samplesStore.updatePropertyOptions())
+      .then(() => this.samplesStore.updateSelectedColumns())
+    this.samplesStore.updateFilteredStatistics()
+    this.samplesStore.updateLineageOptions()
+    this.samplesStore.updateSymbolOptions()
+    this.samplesStore.updateRepliconAccessionOptions()
+    this.$root.$toastRef = this.$refs.toast ?? null
+  },
   methods: {
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find((property) => property.name === propertyName)

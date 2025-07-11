@@ -311,6 +311,7 @@ export default {
         'country',
         'host',
         'isolation_source',
+        'data_set',
       ],
       ProfileFilter: {
         label: 'DNA/AA Profile',

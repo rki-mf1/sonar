@@ -107,6 +107,9 @@ function parseDateToDateRangeFilter(data: Date[]) {
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
+    organism: null as string | null,
+    accession: null as string | null,
+    data_sets: [] as string[],
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
@@ -179,6 +182,11 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
+    setDataset(organism: string | null, accession: string | null, data_sets: string[]) {
+      this.organism = organism
+      this.accession = accession
+      this.data_sets = data_sets
+    },
     async updateStatistics() {
       const emptyStatistics = {
         samples_total: 0,
@@ -534,11 +542,31 @@ export const useSamplesStore = defineStore('samples', {
       return { filters: getFilterGroupFilters(this.filterGroup) }
     },
     filters(): FilterGroupRoot {
-      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters))
+      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters)) as FilterGroupRoot
+
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
-      return filters as FilterGroupRoot
+
+      // insert dataset selection as a fixed filter at the beginning
+      if (this.data_sets?.length > 0) {
+        this.data_sets = this.data_sets.map(value => value === "-Empty-" ? "" : value);
+        filters.filters.andFilter.unshift({
+          label: 'Property',
+          property_name: 'data_set',
+          filter_type: 'in',
+          value: this.data_sets,
+        })
+      }
+      if (this.accession) {
+        filters.filters.andFilter.unshift({
+          label: 'Reference',
+          exclude: false,
+          accession: this.accession,
+        })
+      }
+
+      return filters
     },
   },
 })
