@@ -8,7 +8,7 @@ import {
   type ProfileFilter,
   type Statistics,
   type FilteredStatistics,
-  type PlotSamplesPerWeek,
+  type SamplesPerWeek,
   type LineagePerWeek,
   type PlotMetadataCoverage,
   type PlotCustom,
@@ -110,7 +110,7 @@ export const useSamplesStore = defineStore('samples', {
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
-    plotSamplesPerWeek: {} as PlotSamplesPerWeek,
+    plotSamplesPerWeek: [] as Array<SamplesPerWeek>,
     plotGroupedLineagesPerWeek: [] as Array<LineagePerWeek>,
     plotMetadataCoverage: {} as PlotMetadataCoverage,
     propertyData: {} as Record<string, { [key: string]: number }>,
@@ -245,15 +245,17 @@ export const useSamplesStore = defineStore('samples', {
       }
     },
     async updatePlotSamplesPerWeek() {
-      const emptyStatistics = {
-        samples_per_week: {},
-      }
+      const emptyStatistics = [] as Array<SamplesPerWeek>
       try {
-        const plotSamplesPerWeek = await API.getInstance().getPlotSamplesPerWeek(this.filters)
-        if (!plotSamplesPerWeek) {
+        const result = await API.getInstance().getPlotSamplesPerWeek(this.filters)
+        if (!result) {
           this.plotSamplesPerWeek = emptyStatistics
         } else {
-          this.plotSamplesPerWeek = plotSamplesPerWeek
+          const completeWeeks = this.generateWeeksBetween(result[0][0], result[result.length - 1][0]);
+          this.plotSamplesPerWeek = completeWeeks.map((week) => {
+            const entry = result.find((item:SamplesPerWeek) => item[0] === week);
+            return entry ? [entry[0], entry[1]] : [week, 0];
+          });
         }
       } catch (error) {
         // TODO how to handle request failure
@@ -264,7 +266,8 @@ export const useSamplesStore = defineStore('samples', {
 
     generateWeeksBetween(startWeek: string, endWeek: string): string[] {
       const weeks: string[] = [];
-      // Parse the start and end weeks into dates
+
+      // Parse the start and end weeks into year and week numbers
       const startYear = parseInt(startWeek.split('-W')[0]);
       const startWeekNumber = parseInt(startWeek.split('-W')[1]);
       const endYear = parseInt(endWeek.split('-W')[0]);
@@ -272,9 +275,9 @@ export const useSamplesStore = defineStore('samples', {
 
       // Convert week number to date (start of the week)
       const getDateFromWeek = (year: number, week: number): Date => {
-        const firstDayOfYear = new Date(year, 0, 1);
-        const daysOffset = (week - 1) * 7 - firstDayOfYear.getDay() + 1; // Adjust for week start
-        return new Date(year, 0, daysOffset);
+        const firstDayOfYear = new Date(year, 0, 1); // January 1st
+        const daysOffset = (week - 1) * 7 + (firstDayOfYear.getDay() <= 4 ? -firstDayOfYear.getDay() + 1 : 8 - firstDayOfYear.getDay()); // Adjust for ISO week start (Monday)
+        return new Date(year, 0, 1 + daysOffset);
       };
 
       const currentDate = getDateFromWeek(startYear, startWeekNumber);
@@ -288,6 +291,7 @@ export const useSamplesStore = defineStore('samples', {
         weeks.push(`${year}-W${week.toString().padStart(2, '0')}`);
         currentDate.setDate(currentDate.getDate() + 7); // Increment by one week
       }
+
       return weeks;
     },
 

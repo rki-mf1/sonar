@@ -506,31 +506,6 @@ class SampleViewSet(
             }  # str required for properties in date format
         return result_dict
 
-    def _get_all_weeks(self, queryset):
-        """
-        Return list of all weeks (YYYY-Www) between earliest and latest
-        'collection_date' in given queryset, aligned to full calendar weeks.
-        """
-        date_range = queryset.aggregate(
-            start_date=Min("collection_date"),
-            end_date=Max("collection_date"),
-        )
-        start_date = date_range.get("start_date")
-        end_date = date_range.get("end_date")
-        if not start_date or not end_date:
-            return []
-
-        # align to full weeks: Monday to Sunday
-        start_date -= timedelta(days=start_date.weekday())  # previous Monday
-        end_date += timedelta(days=(6 - end_date.weekday()))  # next Sunday
-
-        all_weeks = [
-            f"{week_object.isocalendar().year}-W{week_object.isocalendar().week:02}"
-            for week_object in rrule(WEEKLY, dtstart=start_date, until=end_date)
-        ]
-
-        return all_weeks
-
     def _get_samples_per_week(self, queryset):
         """
         Return a dict mapping calendar week to count, for each week between
@@ -545,10 +520,7 @@ class SampleViewSet(
             .order_by("week")
         )
 
-        # initialize result dict with all weeks filled with 0 as count
-        result = OrderedDict((week, 0) for week in self._get_all_weeks(queryset))
-
-        # overwrite with actual counts
+        result = {}
         for item in weekly_qs:
             year, week, _ = item["week"].isocalendar()
             result[f"{year}-W{week:02}"] = item["count"]
@@ -656,13 +628,11 @@ class SampleViewSet(
             collection_date__isnull=False
         )
 
-        result_dict = {}
         if not queryset.exists():
-            result_dict["samples_per_week"] = {}
+            return Response(data=[])
         else:
-            result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
-
-        return Response(data=result_dict)
+            samples_per_week = self._get_samples_per_week(queryset)
+            return Response(data=list(samples_per_week.items()))
 
     @action(detail=False, methods=["get"])
     def plot_grouped_lineages_per_week(self, request: Request, *args, **kwargs):

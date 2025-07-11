@@ -139,9 +139,7 @@ export type FilteredStatistics = {
   filtered_total_count: number
 }
 
-export type PlotSamplesPerWeek = {
-  samples_per_week: { [key: string]: number }
-}
+export type SamplesPerWeek =  [string, number];
 
 export type LineagePerWeek = {
     week: string

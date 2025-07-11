@@ -308,18 +308,23 @@ export default {
 
     samplesPerWeekData() {
       const samples_per_week = this.samplesStore.plotSamplesPerWeek
-        ? this.samplesStore.plotSamplesPerWeek['samples_per_week']
+        ? this.samplesStore.plotSamplesPerWeek
         : {}
       if (this.isDataEmpty(samples_per_week)) {
         return this.emptyChart()
       }
       const labels: string[] = []
       const data: number[] = []
-      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
-        Object.keys(samples_per_week).forEach((key) => {
-          labels.push(key)
-          data.push(samples_per_week[key])
-        })
+      if (Array.isArray(samples_per_week) && samples_per_week.length > 0) {
+        samples_per_week.forEach((item) => {
+          if (Array.isArray(item) && item.length === 2) {
+            labels.push(item[0]);
+            data.push(item[1]);
+          } else {
+            console.error('Invalid item format in samples_per_week:', item);
+          }
+        });
+      }
         return {
           labels: labels,
           datasets: [
@@ -334,7 +339,6 @@ export default {
             },
           ],
         }
-      }
     },
     samplesPerWeekOptions() {
       return {
