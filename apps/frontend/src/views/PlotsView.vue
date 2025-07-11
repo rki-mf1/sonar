@@ -368,18 +368,28 @@ export default {
       }
     },
 
-    lineageBarData() {
-      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek
-        ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
-        : []
-      if (this.isDataEmpty(lineages_per_week)) {
-        return this.emptyChart()
+    get_lineage_data() {
+      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek || [];
+      if (!Array.isArray(lineages_per_week) || lineages_per_week.length === 0) {
+        console.error('lineages_per_week is undefined or empty');
+        return { lineages_per_week: [], lineages: [], colors: [], weeks: [] };
       }
-      const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
+      let lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
         .filter((l) => l !== null)
         .sort(new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare) // natural sort: ensure e.g. MC.2 < MC.10
+
+      if (lineages.includes('Unknown')) {
+        lineages = lineages.filter((l) => l !== 'Unknown');
+        lineages.push('Unknown');
+      }
       const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
-      const colors = this.generateColorPalette(lineages.length)
+      const colors = this.generateColorPalette(lineages.length - 1)
+      colors.push('#cccccc'); // Add grey color for "Unknown"
+      return { lineages_per_week, lineages, colors, weeks }
+    },
+
+    lineageBarData() {
+      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data();
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: weeks.map(
@@ -395,15 +405,7 @@ export default {
     },
 
     lineageAreaData() {
-      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek
-        ? this.samplesStore.plotGroupedLineagesPerWeek['grouped_lineages_per_week']
-        : []
-      if (this.isDataEmpty(lineages_per_week)) {
-        return this.emptyChart()
-      }
-      const lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
-      const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
-      const colors = this.generateColorPalette(lineages.length)
+      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data();
       // Normalize data so that percentages for each week sum up to 100%
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,

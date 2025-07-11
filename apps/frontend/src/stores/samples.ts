@@ -9,7 +9,7 @@ import {
   type Statistics,
   type FilteredStatistics,
   type PlotSamplesPerWeek,
-  type PlotGroupedLineagesPerWeek,
+  type LineagePerWeek,
   type PlotMetadataCoverage,
   type PlotCustom,
   DjangoFilterType,
@@ -111,7 +111,7 @@ export const useSamplesStore = defineStore('samples', {
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
     plotSamplesPerWeek: {} as PlotSamplesPerWeek,
-    plotGroupedLineagesPerWeek: {} as PlotGroupedLineagesPerWeek,
+    plotGroupedLineagesPerWeek: [] as Array<LineagePerWeek>,
     plotMetadataCoverage: {} as PlotMetadataCoverage,
     propertyData: {} as Record<string, { [key: string]: number }>,
     propertyScatterData: {} as Record<string, Array<Record<string, number>>>,
@@ -261,10 +261,61 @@ export const useSamplesStore = defineStore('samples', {
         this.plotSamplesPerWeek = emptyStatistics
       }
     },
-    async updatePlotGroupedLineagesPerWeek() {
-      const emptyStatistics = {
-        grouped_lineages_per_week: [],
+
+    generateWeeksBetween(startWeek: string, endWeek: string): string[] {
+      const weeks: string[] = [];
+      // Parse the start and end weeks into dates
+      const startYear = parseInt(startWeek.split('-W')[0]);
+      const startWeekNumber = parseInt(startWeek.split('-W')[1]);
+      const endYear = parseInt(endWeek.split('-W')[0]);
+      const endWeekNumber = parseInt(endWeek.split('-W')[1]);
+
+      // Convert week number to date (start of the week)
+      const getDateFromWeek = (year: number, week: number): Date => {
+        const firstDayOfYear = new Date(year, 0, 1);
+        const daysOffset = (week - 1) * 7 - firstDayOfYear.getDay() + 1; // Adjust for week start
+        return new Date(year, 0, daysOffset);
+      };
+
+      const currentDate = getDateFromWeek(startYear, startWeekNumber);
+      const endDate = getDateFromWeek(endYear, endWeekNumber);
+
+      while (currentDate <= endDate) {
+        const year = currentDate.getFullYear();
+        const week = Math.ceil(
+          ((currentDate.getTime() - new Date(year, 0, 1).getTime()) / (1000 * 60 * 60 * 24) + currentDate.getDay()) / 7
+        ); // Calculate week number
+        weeks.push(`${year}-W${week.toString().padStart(2, '0')}`);
+        currentDate.setDate(currentDate.getDate() + 7); // Increment by one week
       }
+      return weeks;
+    },
+
+    processGroupedLineagesPerWeek(data: Array<{ week: string; lineage_group: string; count: number; percentage: number }>) {
+     // Extract all unique weeks and sort them
+      const allWeeks = [...new Set(data.map((item) => item.week))]
+        .sort((a, b) => new Date(parseInt(a.split('-W')[0]), parseInt(a.split('-W')[1])).getTime() - new Date(parseInt(b.split('-W')[0]), parseInt(b.split('-W')[1])).getTime());
+      const completeWeeks = this.generateWeeksBetween(allWeeks[0], allWeeks[allWeeks.length - 1]);
+
+      // Create a map to store the processed data
+      const processedData = completeWeeks.map((week) => {
+        const entriesForWeek = data.filter((item) => item.week === week);
+        if (entriesForWeek.length > 0) {
+          return entriesForWeek; // Include existing entries for the week
+        } else {
+          return {
+            week,
+            lineage_group: "",
+            count: 0,
+            percentage: 0.0,
+          }; // Add missing week entry
+        }
+      });
+      return processedData.flat(); // Flatten the nested array
+    },
+
+    async updatePlotGroupedLineagesPerWeek() {
+      const emptyStatistics = [] as Array<LineagePerWeek>
       try {
         const plotGroupedLineagesPerWeek = await API.getInstance().getPlotGroupedLineagesPerWeek(
           this.filters,
@@ -272,7 +323,7 @@ export const useSamplesStore = defineStore('samples', {
         if (!plotGroupedLineagesPerWeek) {
           this.plotGroupedLineagesPerWeek = emptyStatistics
         } else {
-          this.plotGroupedLineagesPerWeek = plotGroupedLineagesPerWeek
+          this.plotGroupedLineagesPerWeek = this.processGroupedLineagesPerWeek(plotGroupedLineagesPerWeek.grouped_lineages_per_week)
         }
       } catch (error) {
         // TODO how to handle request failure
@@ -280,6 +331,7 @@ export const useSamplesStore = defineStore('samples', {
         this.plotGroupedLineagesPerWeek = emptyStatistics
       }
     },
+
     async updatePlotMetadataCoverage() {
       const emptyStatistics = {
         metadata_coverage: {},

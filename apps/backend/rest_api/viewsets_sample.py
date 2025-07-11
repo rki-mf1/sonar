@@ -597,7 +597,6 @@ class SampleViewSet(
         week_to_total = {entry["week"]: entry["total_count"] for entry in total_qs}
 
         result = []
-        seen_weeks = set()
         for item in weekly_qs:
             year, week, _ = item["week"].isocalendar()
             week_str = f"{year}-W{week:02}"
@@ -610,19 +609,6 @@ class SampleViewSet(
                     "percentage": round(item["count"] / total * 100, 2),
                 }
             )
-            seen_weeks.add(week_str)
-
-        # fill missing weeks with placeholders
-        for week_str in self._get_all_weeks(queryset):
-            if week_str not in seen_weeks:
-                result.append(
-                    {
-                        "week": week_str,
-                        "lineage_group": None,
-                        "count": 0,
-                        "percentage": 0.0,
-                    }
-                )
 
         result.sort(key=lambda x: x["week"])
         return result

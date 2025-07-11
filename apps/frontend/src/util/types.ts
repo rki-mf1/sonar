@@ -142,13 +142,12 @@ export type FilteredStatistics = {
 export type PlotSamplesPerWeek = {
   samples_per_week: { [key: string]: number }
 }
-export type PlotGroupedLineagesPerWeek = {
-  grouped_lineages_per_week: Array<{
+
+export type LineagePerWeek = {
     week: string
     lineage_group: string
     count: number
     percentage: number
-  }>
 }
 export type PlotMetadataCoverage = {
   metadata_coverage: { [key: string]: number }
