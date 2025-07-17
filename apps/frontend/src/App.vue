@@ -79,9 +79,9 @@ export default {
       return this.$route.name === 'Home' || this.$route.name === 'Plots'
     },
     appTitle() {
-      const { organism, accession, data_set } = this.samplesStore
+      const { organism, accession, data_sets } = this.samplesStore
       return organism && accession
-        ? `Sonar: ${organism} (${accession})${data_set ? ' - ' + data_set : ''}`
+        ? `Sonar: ${organism} (${accession})${data_sets ? ' - ' + data_sets : ''}`
         : 'Sonar'
     },
   },

@@ -66,11 +66,14 @@ export default {
     return {
       samplesStore: useSamplesStore(),
       router: useRouter(),
-      datasetOptions: {} as Record<string, { accessions: (string | null)[]; data_sets: (string | null)[] }>,
+      datasetOptions: {} as Record<
+        string,
+        { accessions: (string | null)[]; data_sets: (string | null)[] }
+      >,
       organisms: [] as string[],
       selectedOrganism: '',
-      selectedAccession: '',
-      selectedDatasets: [] as string[],
+      selectedAccession: '' as string | null,
+      selectedDatasets: [] as (string | null)[],
       loading: false,
     }
   },
