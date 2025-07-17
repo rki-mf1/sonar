@@ -55,13 +55,17 @@ class LineageImport:
         parents: dict[str, Lineage] = {}
         children: list[Lineage] = []
         for lineage, sublineages in tsv_data.itertuples(index=False):
-            if sublineages == "none":
-                continue
-            values = sublineages.split(",")
+            # Ensure the lineage is added even if it has no children
             if lineage not in parents:
                 parents[lineage] = Lineage(name=lineage)
-            for val in values:
-                children.append(Lineage(name=val, parent=parents[lineage]))
+
+            # Process sublineages if they exist
+            if sublineages != "none":
+                values = sublineages.split(",")
+                for val in values:
+                    children.append(Lineage(name=val, parent=parents[lineage]))
+
+        # Save all lineages to the database
         with transaction.atomic():
             for parent in parents.values():
                 parent.save()

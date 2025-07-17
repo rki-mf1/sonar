@@ -1,16 +1,16 @@
+import _csv
 import ast
-from collections import defaultdict
+from collections import OrderedDict
 import csv
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
 import json
 import os
-import pathlib
 import re
 import traceback
 from typing import Generator
 
-import _csv
 from dateutil.rrule import rrule
 from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -21,6 +21,7 @@ from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
 from django.db.models import IntegerField
+from django.db.models import Max
 from django.db.models import Min
 from django.db.models import OuterRef
 from django.db.models import Prefetch
@@ -29,6 +30,7 @@ from django.db.models import QuerySet
 from django.db.models import Subquery
 from django.db.models import Value
 from django.db.models import When
+from django.db.models.functions import TruncWeek
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -403,7 +405,7 @@ class SampleViewSet(
         )
 
     @staticmethod
-    def get_meta_data_coverage(queryset):
+    def get_metadata_coverage(queryset):
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
@@ -535,304 +537,139 @@ class SampleViewSet(
         result_dict = {item["host"]: item["total"] for item in grouped_queryset}
         return result_dict
 
-    def _get_zip_code_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("zip_code").annotate(total=Count("zip_code")).order_by()
-        )
-        result_dict = {item["zip_code"]: item["total"] for item in grouped_queryset}
-        return result_dict
+    def _get_custom_property_plot(self, queryset, sample_property):
+        if sample_property == "":
+            result_dict = {}
+        elif sample_property == "sequencing_reason":
+            queryset = queryset.filter(properties__property__name="sequencing_reason")
+            # the value_char holds the sequencing reason values
+            grouped_queryset = (
+                queryset.values("properties__value_varchar")
+                .annotate(total=Count("properties__value_varchar"))
+                .order_by()
+            )
+            result_dict = {
+                item["properties__value_varchar"]: item["total"]
+                for item in grouped_queryset
+            }
 
-    def _get_sequencingReason_chart(self, queryset):
-        result_dict = {}
-        queryset = queryset.filter(properties__property__name="sequencing_reason")
-
-        # the value_char" holds the sequencing reason values
-        grouped_queryset = (
-            queryset.values("properties__value_varchar")
-            .annotate(total=Count("properties__value_varchar"))
-            .order_by()
-        )
-        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
-        result_dict = {
-            item["properties__value_varchar"]: item["total"]
-            for item in grouped_queryset
-        }
-        return result_dict
-
-    def _get_sampleType_chart(self, queryset):
-        result_dict = {}
-        queryset = queryset.filter(properties__property__name="sample_type")
-
-        # the value_char" holds the sample type values
-        grouped_queryset = (
-            queryset.values("properties__value_varchar")
-            .annotate(total=Count("properties__value_varchar"))
-            .order_by()
-        )
-        # grouped_queryset = queryset.values('sequencing_reason').annotate(total=Count('sequencing_reason')).order_by()
-        result_dict = {
-            item["properties__value_varchar"]: item["total"]
-            for item in grouped_queryset
-        }
-        return result_dict
-
-    def _get_sequencingTech_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("sequencing_tech")
-            .annotate(total=Count("sequencing_tech"))
-            .order_by()
-        )
-        result_dict = {
-            item["sequencing_tech"]: item["total"] for item in grouped_queryset
-        }
+        else:
+            grouped_queryset = (
+                queryset.values(sample_property)
+                .annotate(total=Count(sample_property))
+                .order_by(sample_property)
+            )
+            result_dict = {
+                str(item[sample_property]): item["total"] for item in grouped_queryset
+            }  # str required for properties in date format
         return result_dict
 
     def _get_samples_per_week(self, queryset):
-        result_dict = {}
-        queryset = (
-            queryset.values("year", "week")
-            .annotate(count=Count("id"), collection_date=Min("collection_date"))
-            .order_by("year", "week")
-        )
-        filtered_queryset = queryset.filter(collection_date__isnull=False)
-        if len(filtered_queryset) != 0:
-            start_date = filtered_queryset.first()["collection_date"]
-            end_date = filtered_queryset.last()["collection_date"]
-            if start_date and end_date:
-                for dt in rrule(
-                    WEEKLY, dtstart=start_date, until=end_date
-                ):  # generate all weeks between start and end dates and assign default value 0
-                    result_dict[f"{dt.year}-W{dt.isocalendar()[1]:02}"] = 0
-                for item in filtered_queryset:  # fill in count values of present weeks
-                    result_dict[f"{item['year']}-W{int(item['week']):02}"] = item[
-                        "count"
-                    ]
-        return result_dict
+        """
+        Return a dict mapping calendar week to count, for each week between
+        the earliest and latest collection_date.
+        Weeks with zero records will be present with value 0.
+        """
 
-    def normalize_get_monthly_lineage_percentage_area_chart(self, queryset):
-        monthly_data = (
-            queryset.values("month", "year", "lineage", "lineage_parent")
-            .annotate(lineage_count=Count("id"))
-            .order_by("year", "month", "lineage")
+        weekly_qs = (
+            queryset.annotate(week=TruncWeek("collection_date"))
+            .values("week")
+            .annotate(count=Count("id"))
+            .order_by("week")
         )
 
-        # Organize monthly lineage data into a dictionary for processing
-        lineage_data = defaultdict(lambda: defaultdict(int))
-        for item in monthly_data:
-            month_str = (
-                f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
-            )
-            lineage_data[month_str][
-                LineageInfo(item["lineage"], item["lineage_parent"])
-            ] += item["lineage_count"]
-
-        result = []
-
-        # Process each month to apply the 10% threshold-based grouping
-        for month, lineages in lineage_data.items():
-            total_count = sum(lineages.values())
-            threshold_count = total_count * 0.10
-
-            # Use the helper function for aggregation
-            aggregated_lineages = aggregate_below_threshold_lineages(
-                lineages, threshold_count
-            )
-
-            # Calculate percentages
-            for lineage, count in aggregated_lineages.items():
-                percentage = (count / total_count) * 100
-                result.append(
-                    {
-                        "date": month,
-                        "lineage": lineage,
-                        "percentage": round(percentage, 2),
-                    }
-                )
+        result = {}
+        for item in weekly_qs:
+            year, week, _ = item["week"].isocalendar()
+            result[f"{year}-W{week:02}"] = item["count"]
 
         return result
 
-    def get_monthly_lineage_percentage_area_chart(self, queryset: QuerySet):
-        # Annotate each sample with the month based on collection_date
-        monthly_data = (
-            queryset.values("month", "lineage")
-            .annotate(
-                lineage_count=Count("id")
-            )  # Count occurrences of each lineage per month
-            .order_by("month", "lineage")
+    def _get_grouped_lineages_per_week(self, queryset):
+        """
+        Return a LIST of dicts, contianing counts and percentages per calendar week for
+        lineage groups (lineages truncated to two first segments),
+        covering every week between the earliest and latest record.
+        Weeks with zero records will be present with values 0.
+        """
+        present_lineages = set(
+            queryset.exclude(lineage__isnull=True).values_list("lineage", flat=True)
         )
-
-        # Calculate total samples per month to determine percentages
-        total_per_month = (
-            queryset.values("month").annotate(total_count=Count("id")).order_by("month")
-        )
-
-        # Create a dictionary for quick lookup of total counts per month
-        month_totals = {item["month"]: item["total_count"] for item in total_per_month}
-
-        # Construct the final result with percentages
-        result = []
-        for item in monthly_data:
-            if item["month"] is None:
-                continue
-            month_str = (
-                f"{item['year']}-{str(item['month']).zfill(2)}"  # Format as "YYYY-MM"
-            )
-            percentage = (item["lineage_count"] / month_totals[item["month"]]) * 100
-            result.append(
-                {
-                    "date": month_str,
-                    "lineage": item["lineage"],
-                    "percentage": round(percentage, 2),
-                }
-            )
-
-        return result
-
-    def normalize_get_weekly_lineage_percentage_bar_chart(self, queryset):
-        # Annotate each sample with the start of the week and count occurrences per lineage
-        weekly_data = (
-            queryset.values("year", "week", "lineage", "lineage_parent")
-            .annotate(lineage_count=Count("id"))
-            .order_by("year", "week", "lineage")
-        )
-
-        # Organize lineage counts by week into a dictionary
-        lineage_data = defaultdict(lambda: defaultdict(int))
-
-        for item in weekly_data:
-            if item["week"] is None:
-                continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
-            lineage_data[week_str][
-                LineageInfo(item["lineage"], item["lineage_parent"])
-            ] += item["lineage_count"]
-
-        # Initialize final result list
-        result = []
-
-        # Process each week, applying the 10% threshold rule
-
-        for week, lineages in lineage_data.items():
-            total_count = sum(lineages.values())
-            threshold_count = total_count * 0.10
-
-            # Aggregate below-threshold lineages using the helper function
-            aggregated_lineages = aggregate_below_threshold_lineages(
-                lineages, threshold_count
-            )
-
-            # Calculate percentages
-            for lineage, count in aggregated_lineages.items():
-                percentage = (count / total_count) * 100
-                result.append(
-                    {
-                        "week": week,
-                        "lineage": lineage,
-                        "percentage": round(percentage, 2),
-                    }
-                )
-
-        return result
-
-    def get_weekly_lineage_percentage_bar_chart(self, queryset):
-        # Annotate each sample with the start of the week based on collection_date
-        weekly_data = (
-            queryset.values("week", "lineage")
-            .annotate(
-                lineage_count=Count("id")
-            )  # Count occurrences of each lineage per week
-            .order_by("week", "lineage")
-        )
-
-        # Calculate total samples per week to determine percentages
-        total_per_week = (
-            queryset.values("week").annotate(total_count=Count("id")).order_by("week")
-        )
-
-        # Create a dictionary for quick lookup of total counts per week
-        week_totals = {item["week"]: item["total_count"] for item in total_per_week}
-
-        # Construct the final result with percentages
-        result = []
-        for item in weekly_data:
-            if item["week"] is None:
-                continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
-            percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
-            result.append(
-                {
-                    "week": week_str,
-                    "lineage": item["lineage"],
-                    "percentage": round(percentage, 2),
-                }
-            )
-
-        return result
-
-    def get_weekly_lineage_grouped_percentage_bar_chart(self, queryset):
-
-        present_lineages = {entry["lineage"] for entry in queryset.values("lineage")}
-
-        # extract lineages up to second dot to form the grouping lineages (e.g. 'BA.2.9' -> 'BA.2')
-        lineage_groups = {
-            ".".join(lineage.split(".")[:2])
-            for lineage in present_lineages
-            if lineage is not None
+        lineage_to_group = {
+            lineage: ".".join(lineage.split(".")[:2]) for lineage in present_lineages
         }
-        lineage_groups_model = models.Lineage.objects.filter(name__in=lineage_groups)
-
-        # build mapping from sublineage to lineage_group
-        lineage_to_group = {}
-        for lineage_group in lineage_groups_model:
-            for sublineage in lineage_group.get_sublineages():
-                if sublineage.name in present_lineages:
-                    lineage_to_group[sublineage.name] = lineage_group.name
-
-        # map lineages in data to groups using django conditions
+        valid_groups = set(
+            models.Lineage.objects.filter(name__isnull=False).values_list(
+                "name", flat=True
+            )
+        )
         lineage_cases = [
             When(lineage=lineage, then=Value(group))
             for lineage, group in lineage_to_group.items()
+            if group in valid_groups
         ]
-        # annotate queryset with lineage_group
-        queryset = queryset.annotate(
+        annotated_qs = queryset.annotate(
             lineage_group=Case(
                 *lineage_cases,
                 default=Value("Unknown"),
                 output_field=CharField(),
-            )
+            ),
+            week=TruncWeek("collection_date"),
         )
 
-        weekly_data = (
-            queryset.values("year", "week", "lineage_group")
-            .annotate(lineage_count=Count("lineage_group"))
-            .order_by("year", "week", "lineage_group")
+        weekly_qs = annotated_qs.values("week", "lineage_group").annotate(
+            count=Count("id")
         )
 
-        week_totals = {
-            item["week"]: item["total_count"]
-            for item in queryset.values("week")
-            .annotate(total_count=Count("id"))
-            .order_by("week")
-        }
+        total_qs = annotated_qs.values("week").annotate(total_count=Count("id"))
+
+        # lookup for total counts
+        week_to_total = {entry["week"]: entry["total_count"] for entry in total_qs}
 
         result = []
-        for item in weekly_data:
-            if item["week"] is None:
-                continue
-            week_str = f"{item['year']}-W{int(item['week']):02}"  # Format as "YYYY-WXX"
-            percentage = (item["lineage_count"] / week_totals[item["week"]]) * 100
+        for item in weekly_qs:
+            year, week, _ = item["week"].isocalendar()
+            week_str = f"{year}-W{week:02}"
+            total = week_to_total.get(item["week"])
             result.append(
                 {
                     "week": week_str,
                     "lineage_group": item["lineage_group"],
-                    "count": item["lineage_count"],
-                    "percentage": round(percentage, 2),
+                    "count": item["count"],
+                    "percentage": round(item["count"] / total * 100, 2),
                 }
             )
 
+        result.sort(key=lambda x: x["week"])
         return result
+
+    def _get_custom_property_plot(self, queryset, property):
+        if property == "":
+            result_dict = {}
+        elif property == "sequencing_reason":
+            queryset = queryset.filter(properties__property__name="sequencing_reason")
+            # the value_char holds the sequencing reason values
+            grouped_queryset = (
+                queryset.values("properties__value_varchar")
+                .annotate(total=Count("properties__value_varchar"))
+                .order_by()
+            )
+            result_dict = {
+                item["properties__value_varchar"]: item["total"]
+                for item in grouped_queryset
+            }
+
+        else:
+            grouped_queryset = (
+                queryset.values(property)
+                .annotate(total=Count(property))
+                .order_by(property)
+            )
+            result_dict = {
+                str(item[property]): item["total"] for item in grouped_queryset
+            }  # str required for properties in date format
+
+        return result_dict
 
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
@@ -844,53 +681,175 @@ class SampleViewSet(
         return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
-    def filtered_statistics_plots(self, request: Request, *args, **kwargs):
+    def plot_samples_per_week(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request).filter(
+            collection_date__isnull=False
+        )
+
+        if not queryset.exists():
+            return Response(data=[])
+        else:
+            samples_per_week = self._get_samples_per_week(queryset)
+            return Response(data=list(samples_per_week.items()))
+
+    @action(detail=False, methods=["get"])
+    def plot_grouped_lineages_per_week(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request).filter(
+            collection_date__isnull=False
+        )
+
+        result_dict = {}
+        if not queryset.exists():
+            result_dict["grouped_lineages_per_week"] = {}
+        else:
+            result_dict["grouped_lineages_per_week"] = (
+                self._get_grouped_lineages_per_week(queryset)
+            )
+
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def plot_metadata_coverage(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
 
         result_dict = {}
-        # check if queryset has any records with a collection_date -> if not, return empty object
-        if not queryset.filter(collection_date__isnull=False).exists():
-            result_dict["samples_per_week"] = {}
-            result_dict["lineage_area_chart"] = {}
-            result_dict["lineage_bar_chart"] = {}
-            result_dict["lineage_grouped_bar_chart"] = {}
-        else:
-            queryset = queryset.annotate(
-                lineage_parent=Subquery(
-                    models.Lineage.objects.filter(name=OuterRef("lineage")).values(
-                        "parent"
-                    )[:1]
-                )
-            )
-            queryset = queryset.extra(
-                select={
-                    "week": 'EXTRACT(\'week\' FROM "sample"."collection_date")',
-                    "month": 'EXTRACT(\'month\' FROM "sample"."collection_date")',
-                    "year": 'EXTRACT(\'year\' FROM "sample"."collection_date")',
-                }
-            )
-            result_dict["samples_per_week"] = self._get_samples_per_week(queryset)
-            result_dict["lineage_area_chart"] = (
-                self.normalize_get_monthly_lineage_percentage_area_chart(queryset)
-            )
-            result_dict["lineage_bar_chart"] = (
-                self.normalize_get_weekly_lineage_percentage_bar_chart(queryset)
-            )
-            result_dict["lineage_grouped_bar_chart"] = (
-                self.get_weekly_lineage_grouped_percentage_bar_chart(queryset)
+        result_dict["metadata_coverage"] = SampleViewSet.get_metadata_coverage(queryset)
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def plot_custom(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+        sample_property = request.query_params["property"]
+
+        result_dict = {}
+        result_dict[sample_property] = self._get_custom_property_plot(
+            queryset, sample_property
+        )
+        return Response(data=result_dict)
+
+    @action(detail=False, methods=["get"])
+    def plot_custom_xy(self, request: Request, *args, **kwargs):
+        """
+        API call to plot data based on two properties: x and y categories.
+        Handles both flexible properties (sample2property table) and fixed sample table properties.
+        Returns:
+            - For string-type y property: dict with x categories as keys and lists of y categories with counts.
+            - For number-type y property: dict with x categories as keys and lists of y numbers.
+        """
+        queryset = self._get_filtered_queryset(request)
+        x_property = request.query_params.get("x_property")
+        y_property = request.query_params.get("y_property")
+
+        if not x_property or not y_property:
+            return Response(
+                {"detail": "Both x_property and y_property must be provided."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        result_dict["meta_data_coverage"] = SampleViewSet.get_meta_data_coverage(
-            queryset
-        )
-        result_dict["genomecomplete_chart"] = self._get_genomecomplete_chart(queryset)
-        result_dict["sequencing_tech"] = self._get_sequencingTech_chart(queryset)
-        result_dict["sequencing_reason"] = self._get_sequencingReason_chart(queryset)
-        result_dict["sample_type"] = self._get_sampleType_chart(queryset)
-        result_dict["host"] = self._get_host_chart(queryset)
-        result_dict["length"] = self._get_length_chart(queryset)
-        result_dict["lab"] = self._get_lab_chart(queryset)
-        result_dict["zip_code"] = self._get_zip_code_chart(queryset)
+        # Determine if x_property and y_property are flexible or fixed
+        flexible_properties = PropertyViewSet.get_custom_property_names()
+        x_is_flexible = x_property in flexible_properties
+        y_is_flexible = y_property in flexible_properties
+
+        result_dict = {}
+
+        if y_is_flexible:
+            # Handle flexible y_property
+            y_datatype = (
+                models.Property.objects.filter(name=y_property)
+                .values_list("datatype", flat=True)
+                .first()
+            )
+
+            if not y_datatype:
+                return Response(
+                    {"detail": f"Property {y_property} not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if x_is_flexible:
+                # Both x_property and y_property are flexible
+                grouped_queryset = (
+                    queryset.filter(
+                        properties__property__name__in=[x_property, y_property],
+                        properties__value_varchar__isnull=False,
+                        **{f"properties__{y_datatype}__isnull": False},
+                    )
+                    .values(
+                        "properties__value_varchar",
+                        f"properties__{y_datatype}",
+                    )
+                    .annotate(total=Count(f"properties__{y_datatype}"))
+                    .order_by("properties__value_varchar", f"properties__{y_datatype}")
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item["properties__value_varchar"])
+                    y_cat = str(item[f"properties__{y_datatype}"])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
+
+            else:
+                # x_property is fixed, y_property is flexible
+                grouped_queryset = (
+                    queryset.filter(
+                        **{f"{x_property}__isnull": False},
+                        properties__property__name=y_property,
+                        **{f"properties__{y_datatype}__isnull": False},
+                    )
+                    .values(x_property, f"properties__{y_datatype}")
+                    .annotate(total=Count(f"properties__{y_datatype}"))
+                    .order_by(x_property, f"properties__{y_datatype}")
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item[x_property])
+                    y_cat = str(item[f"properties__{y_datatype}"])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
+
+        else:
+            # Handle fixed y_property
+            if x_is_flexible:
+                # x_property is flexible, y_property is fixed
+                grouped_queryset = (
+                    queryset.filter(
+                        properties__property__name=x_property,
+                        **{f"{y_property}__isnull": False},
+                        properties__value_varchar__isnull=False,
+                    )
+                    .values("properties__value_varchar", y_property)
+                    .annotate(total=Count(y_property))
+                    .order_by("properties__value_varchar", y_property)
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item["properties__value_varchar"])
+                    y_cat = str(item[y_property])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
+
+            else:
+                # Both x_property and y_property are fixed
+                grouped_queryset = (
+                    queryset.filter(
+                        **{f"{x_property}__isnull": False},
+                        **{f"{y_property}__isnull": False},
+                    )
+                    .values(x_property, y_property)
+                    .annotate(total=Count(y_property))
+                    .order_by(x_property, y_property)
+                )
+                for item in grouped_queryset:
+                    x_cat = str(item[x_property])
+                    y_cat = str(item[y_property])
+                    count = item["total"]
+                    if x_cat not in result_dict:
+                        result_dict[x_cat] = []
+                    result_dict[x_cat].append({y_cat: count})
 
         return Response(data=result_dict)
 

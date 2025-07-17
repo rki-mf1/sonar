@@ -1,264 +1,284 @@
 <template>
   <div class="container">
-    <!-- seq per week plot-->
-    <div class="row">
-      <div class="col-lineage">
-        <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <PrimePanel v-else header="Week Calendar" class="w-full shadow-2">
-          <div style="height: 100%; width: 100%; display: flex; justify-content: center">
-            <PrimeChart
-              ref="weekCalendarPlot"
-              type="bar"
-              :data="samplesPerWeekChart()"
-              :options="samplesPerWeekChartOptions()"
-              style="width: 100%"
-            />
-          </div>
-        </PrimePanel>
-      </div>
-    </div>
-    <!-- lineage plots-->
-    <div class="row">
-      <div class="col-lineage">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <PrimePanel v-else header="Lineage Plot" class="w-full shadow-2">
-          <!-- lineage area plot-->
-          <h4>Area Plot - SARS-CoV-2 - Lineages Over Time</h4>
-          <div class="h-30rem plot">
-            <PrimeChart
-              ref="lineageAreaPlot"
-              type="line"
-              :data="lineage_areaData()"
-              :options="lineage_areaChartOptions()"
-              style="width: 100%; height: 100%"
-            />
-          </div>
-          <!-- lineage bar plot-->
-          <h4>Stacked Bar Plot - Lineage Distribution by Calendar Week</h4>
-          <div class="h-26rem plot">
-            <PrimeChart
-              ref="lineageBarPlot"
-              type="bar"
-              :data="lineage_barData()"
-              :options="lineage_barChartOptions()"
-              style="width: 100%; height: 100%"
-            />
-          </div>
-          <!-- Grouped lineage bar plot-->
-          <h4>Stacked Bar Plot - Grouped Lineage Distribution by Calendar Week</h4>
-          <div class="h-26rem plot">
-            <PrimeChart
-              ref="lineageGroupedBarPlot"
-              type="bar"
-              :data="lineage_grouped_barData()"
-              :options="lineage_barChartOptions()"
-              style="width: 100%; height: 100%"
-            />
-          </div>
-        </PrimePanel>
-      </div>
+    <PrimeDialog
+      v-model:visible="samplesStore.loading"
+      class="flex"
+      modal
+      :closable="false"
+      header="Loading..."
+    >
+      <ProgressSpinner
+        v-if="samplesStore.loading"
+        class="flex-1 p-3"
+        size="small"
+        style="color: whitesmoke"
+      />
+    </PrimeDialog>
+
+    <!-- sample count plot-->
+    <div class="panel">
+      <PrimePanel header="Number of Samples per Calendar Week" class="w-full shadow-2">
+        <div style="width: 100%; display: flex; justify-content: center">
+          <PrimeChart
+            type="bar"
+            :data="samplesPerWeekData()"
+            :options="samplesPerWeekOptions()"
+            style="width: 100%; height: 25vh"
+          />
+        </div>
+      </PrimePanel>
     </div>
 
-    <!-- meta data plot-->
-    <div class="row">
-      <div class="col-lineage">
-        <!-- Show Skeleton while loading, and Panel with Bar Chart after loading -->
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="100%" height="250px" />
-        <PrimePanel v-else header="Meta Data Coverage" class="w-full shadow-2">
-          <div style="height: 100%; width: 100%; display: flex; justify-content: center">
-            <PrimeChart
-              ref="metaDataPlot"
-              type="bar"
-              :data="metaDataChart()"
-              :options="metaDataChartOptions()"
-              style="width: 100%"
-            />
-          </div>
-        </PrimePanel>
-      </div>
+    <!-- lineage plot-->
+    <div class="panel">
+      <PrimePanel
+        header="Distribution of grouped Lineages per Calendar Week"
+        class="w-full shadow-2"
+      >
+        <!-- Toggle for chart type -->
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem">
+          <PrimeToggleButton
+            v-model="isBarChart"
+            :on-label="'Bar Chart'"
+            :off-label="'Area Chart'"
+            :on-icon="'pi pi-chart-bar'"
+            :off-icon="'pi pi-chart-line'"
+            class="w-full md:w-56"
+          />
+        </div>
+        <div style="width: 100%; display: flex; justify-content: center">
+          <PrimeChart
+            ref="lineageChart"
+            :key="isBarChart"
+            :type="isBarChart ? 'bar' : 'line'"
+            :data="isBarChart ? lineageBarData() : lineageAreaData()"
+            :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
+            style="width: 100%; height: 50vh"
+          />
+        </div>
+      </PrimePanel>
     </div>
 
-    <div class="row">
-      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_tech')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Sequencing Tech." class="w-full shadow-2">
-          <div style="justify-content: center" class="h-20rem">
-            <PrimeChart
-              type="doughnut"
-              :data="sequencingTechChartData()"
-              :options="sequencingTechChartOptions()"
-              style=""
-              class="h-full"
-            />
-          </div>
-        </PrimePanel>
-      </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('genome_completeness')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Genome completeness" class="w-full shadow-2">
-          <div style="display: flex; justify-content: center" class="h-20rem plot">
-            <PrimeChart
-              type="pie"
-              :data="genomeCompleteChart()"
-              :options="genome_pieChartOptions()"
-              style=""
-            />
-          </div>
-        </PrimePanel>
-      </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('sequencing_reason')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Sequencing Reason" class="w-full shadow-2">
-          <div class="h-20rem plot">
-            <PrimeChart
-              type="doughnut"
-              :data="sequencingReasonChartData()"
-              :options="sequencingReasonChartOptions()"
-            />
-          </div>
-        </PrimePanel>
-      </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('zip_code')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Zip Code" class="w-full shadow-2">
-          <div class="h-20rem plot">
+    <div
+      class="plots-container"
+      style="
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        width: 100%;
+      "
+    >
+      <!-- metadata plot-->
+      <div class="panel metadata-plot" style="grid-column: span 2">
+        <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
+          <div style="width: 100%; display: flex; justify-content: center">
             <PrimeChart
               type="bar"
-              :data="zipCodeChartData()"
-              :options="zipCodeChartOptions()"
-              class="w-full h-full"
+              :data="metadataCoverageData()"
+              :options="metadataCoverageOptions()"
+              style="width: 100%; height: 25vh"
             />
           </div>
         </PrimePanel>
       </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('sample_type')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Sample Type" class="w-full shadow-2">
-          <div class="h-20rem plot">
+      <!-- Property plots -->
+      <div v-for="(plot, index) in plots" :key="index" class="panel" style="grid-column: span 2">
+        <PrimePanel :header="plot.plotTitle" class="w-full shadow-2">
+          <div style="width: 100%; display: flex; justify-content: center">
+            <PrimeButton
+              icon="pi pi-times"
+              class="p-button-danger p-button-rounded"
+              style="height: 1.5rem; width: 1.5rem"
+              @click="removePropertyPlot(plot)"
+            />
             <PrimeChart
-              type="pie"
-              :data="sampleTypeChartData()"
-              :options="sampleTypeChartOptions()"
+              :type="getChartType(plot.type)"
+              :data="plot.data"
+              :options="plot.options"
+              style="width: 100%; height: 25vh"
             />
           </div>
         </PrimePanel>
       </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('lab')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Lab" class="w-full shadow-2">
-          <div class="h-20rem plot">
-            <PrimeChart
-              type="bar"
-              :data="labChartData()"
-              :options="labChartOptions()"
-              class="w-full h-full"
-            />
-          </div>
-        </PrimePanel>
-      </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('host')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Host" class="w-full shadow-2">
-          <div class="h-20rem plot">
-            <PrimeChart
-              type="bar"
-              :data="hostChartData()"
-              :options="hostChartOptions()"
-              class="w-full h-full"
-            />
-          </div>
-        </PrimePanel>
-      </div>
-
-      <div v-if="samplesStore.propertyMenuOptions.includes('length')" class="col">
-        <PrimeSkeleton v-if="samplesStore.loading" class="mb-2" width="250px" height="250px" />
-        <PrimePanel v-else header="Length" class="w-full shadow-2">
-          <div class="h-20rem plot">
-            <PrimeChart
-              type="bar"
-              :data="lengthChartData()"
-              :options="lengthChartOptions()"
-              style="width: 100%; height: 100%"
-            />
-            <!-- scatter -->
-          </div>
-        </PrimePanel>
+      <!-- + Button for Adding New Property Plots -->
+      <div class="add-plot-button">
+        <PrimeButton
+          label="Add Property Plot"
+          icon="pi pi-plus"
+          class="p-button-warning"
+          @click="showPlotSelectionDialog"
+        />
       </div>
     </div>
+    <!-- Plot Selection Dialog -->
+    <PrimeDialog v-model:visible="plotSelectionDialogVisible" header="Select Plot Type" modal>
+      <div style="display: flex; flex-direction: column; gap: 1rem">
+        <PrimeDropdown
+          v-model="selectedPlotType"
+          :options="plotTypes"
+          placeholder="Select Plot Type"
+          class="w-full"
+        />
+        <PrimeButton
+          label="Next"
+          icon="pi pi-arrow-right"
+          class="p-button-success"
+          :disabled="!selectedPlotType"
+          @click="showFeatureSelectionDialog"
+        />
+      </div>
+    </PrimeDialog>
+
+    <!-- Feature Selection Dialog -->
+    <PrimeDialog
+      v-model:visible="featureSelectionDialogVisible"
+      :header="`Select Features for ${selectedPlotType}`"
+      modal
+    >
+      <div style="display: flex; flex-direction: column; gap: 1rem">
+        <!-- Conditional rendering based on plot type -->
+        <div
+          v-if="
+            selectedPlotType === 'bar' ||
+            selectedPlotType === 'doughnut' ||
+            selectedPlotType === 'line'
+          "
+        >
+          <PrimeDropdown
+            v-model="selectedProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select Property"
+            class="w-full"
+          />
+        </div>
+        <div v-if="selectedPlotType === 'scatter'">
+          <PrimeDropdown
+            v-model="selectedXProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select X-Axis Property"
+            class="w-full"
+          />
+          <PrimeDropdown
+            v-model="selectedYProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select Y-Axis Property"
+            class="w-full"
+          />
+        </div>
+        <div v-if="selectedPlotType === 'histogram'">
+          <PrimeDropdown
+            v-model="selectedProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select Property"
+            class="w-full"
+          />
+          <PrimeInputNumber
+            v-model="selectedBinSize"
+            placeholder="Select Bin Size"
+            class="w-full"
+          />
+        </div>
+        <PrimeButton
+          label="Add Plot"
+          icon="pi pi-check"
+          class="p-button-success"
+          :disabled="!isFeatureSelectionValid"
+          @click="addPlot"
+        />
+      </div>
+    </PrimeDialog>
   </div>
 </template>
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples'
-import type { TooltipItem } from 'chart.js'
 import chroma from 'chroma-js'
-import { Chart, type ChartDataset, type BarElement } from 'chart.js'
-import type { CustomPercentageLabelsOptions } from '@/util/types'
-
-// Labels for bar plots, text inside the bar for values > 40%
-const percentageLabelPlugin = {
-  id: 'customPercentageLabels',
-  afterDatasetsDraw(chart: Chart<'bar'>, args: unknown, options: CustomPercentageLabelsOptions) {
-    if (!options.enabled) return
-
-    const ctx = chart.ctx
-    const datasets = chart.data.datasets
-
-    datasets.forEach((dataset: ChartDataset, datasetIndex: number) => {
-      ;(chart.getDatasetMeta(datasetIndex).data as BarElement[]).forEach((bar, index) => {
-        let value = dataset.data[index]
-        const percentage = `${value}%`
-
-        const x = bar.x
-        if (typeof value === 'string') {
-          value = parseFloat(value)
-          if (isNaN(value)) return
-        }
-        if (typeof value !== 'number') return
-        const { height } = bar.getProps(['height'], true)
-        const y =
-          value < options.threshold
-            ? bar.y - 10 // Display above the bar for small values
-            : bar.y + height / 2 // Center inside the bar for larger values
-
-        ctx.save()
-        ctx.font = '12px Arial'
-        ctx.fillStyle = '#000'
-        ctx.textAlign = 'center'
-        ctx.fillText(percentage, x, y)
-        ctx.restore()
-      })
-    })
-  },
-}
-
-Chart.register(percentageLabelPlugin)
+import type { ChartOptions, TooltipItem } from 'chart.js'
+import PrimeToggleButton from 'primevue/togglebutton'
+import PrimeInputNumber from 'primevue/inputnumber'
+import {
+  PlotType,
+  type SimplePlotData,
+  type HistogramData,
+  type PlotConfig,
+  type ScatterPlotData,
+} from '@/util/types'
 
 export default {
   name: 'PlotsView',
+  components: {
+    PrimeToggleButton,
+    PrimeInputNumber,
+  },
   data() {
     return {
       samplesStore: useSamplesStore(),
-      chartInstances: {},
+      isBarChart: true, // Toggle for lineage chart type
+      plots: [] as PlotConfig[],
+      plotSelectionDialogVisible: false,
+      featureSelectionDialogVisible: false,
+      selectedPlotType: null as PlotType | null,
+      selectedProperty: null as string | null,
+      selectedXProperty: null as string | null,
+      selectedYProperty: null as string | null,
+      selectedBinSize: null as number | null,
+      plotTypes: Object.values(PlotType),
     }
   },
-  watch: {
-    // "samplesStore.filteredStatisticsPlot"(newValue) {
-    //   this.updateCharts(); // Update charts when data changes
-    // }
+  computed: {
+    isFeatureSelectionValid(): boolean {
+      if (
+        this.selectedPlotType === 'bar' ||
+        this.selectedPlotType === 'doughnut' ||
+        this.selectedPlotType === 'line'
+      ) {
+        return !!this.selectedProperty
+      }
+      if (this.selectedPlotType === 'scatter') {
+        return !!this.selectedXProperty && !!this.selectedYProperty
+      }
+      if (this.selectedPlotType === 'histogram') {
+        return !!this.selectedProperty && !!this.selectedBinSize
+      }
+      return false
+    },
   },
   mounted() {
-    this.samplesStore.updateFilteredStatisticsPlots()
+    this.samplesStore.updatePlotSamplesPerWeek()
+    this.samplesStore.updatePlotGroupedLineagesPerWeek()
+    this.samplesStore.updatePlotMetadataCoverage()
   },
-  beforeUnmount() {},
   methods: {
+    isDataEmpty(
+      data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>,
+    ): boolean {
+      return (
+        !data ||
+        Object.keys(data).length === 0 ||
+        (Object.keys(data).length === 1 && Object.keys(data)[0] == 'null')
+      )
+    },
+    emptyChart() {
+      return {
+        labels: ['No data available'],
+        datasets: [
+          {
+            label: 'No data available',
+            data: [],
+          },
+        ],
+      }
+    },
+    generateColorPalette(itemCount: number): string[] {
+      return chroma
+        .scale(['#00429d', '#00b792', '#ffdb9d', '#fdae61', '#f84959', '#93003a'])
+        .mode('lch') // color mode (lch is perceptually uniform)
+        .colors(itemCount) // number of colors
+    },
+    getChartType(type: PlotType | null): string {
+      // Map 'histogram' to 'bar', otherwise return the original type
+      return type === 'histogram' ? 'bar' : type || ''
+    },
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] }
       const cleanedData = Object.fromEntries(
@@ -266,7 +286,10 @@ export default {
       )
       const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0
       const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0)
-      const noMetadataSamples = totalSamples - metadataSamples
+
+      const noneCount = data['None'] || 0
+      const noMetadataSamples = totalSamples - metadataSamples + noneCount
+
       const labels = [...Object.keys(cleanedData)]
       const dataset = [...Object.values(cleanedData)]
 
@@ -277,305 +300,263 @@ export default {
       }
       return { labels, data: dataset }
     },
-
-    generateColorPalette(itemCount: number): string[] {
-      return chroma
-        .scale(['#00429d', '#00b792', '#ffdb9d', '#fdae61', '#f84959', '#93003a']) // ['#9e0142', '#d53e4f', '#f46d43', '#fdae61', '#fee08b', '#e6f598', '#abdda4', '#66c2a5', '#3288bd', '#5e4fa2']
-        .mode('lch') // color mode (lch is perceptually uniform)
-        .colors(itemCount) // number of colors
+    removePropertyPlot(plot: PlotConfig) {
+      this.plots = this.plots.filter(
+        (item) => item.propertyName !== plot.propertyName || item.type !== plot.type,
+      )
     },
-    samplesPerWeekChart() {
-      const samples_per_week = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['samples_per_week']
+
+    samplesPerWeekData() {
+      const samples_per_week = this.samplesStore.plotSamplesPerWeek
+        ? this.samplesStore.plotSamplesPerWeek
         : {}
+      if (this.isDataEmpty(samples_per_week)) {
+        return this.emptyChart()
+      }
       const labels: string[] = []
       const data: number[] = []
-      if (samples_per_week && Object.keys(samples_per_week).length > 0) {
-        Object.keys(samples_per_week).forEach((key) => {
-          labels.push(key)
-          data.push(samples_per_week[key])
+      if (Array.isArray(samples_per_week) && samples_per_week.length > 0) {
+        samples_per_week.forEach((item) => {
+          if (Array.isArray(item) && item.length === 2) {
+            labels.push(item[0])
+            data.push(item[1])
+          } else {
+            console.error('Invalid item format in samples_per_week:', item)
+          }
         })
-        return {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Samples',
-              data: data,
-              backgroundColor: this.generateColorPalette(1),
-              borderColor: this.generateColorPalette(1).map((color) =>
-                chroma(color).darken(1.5).hex(),
-              ), // darkened border
-              borderWidth: 1,
-            },
-          ],
-        }
-      } else {
-        // Return an empty chart structure
-        return {
-          labels: ['No data available'],
-          datasets: [
-            {
-              label: 'Samples',
-              data: [], // no data points
-              backgroundColor: 'rgba(249, 115, 22, 0.2)',
-              borderColor: 'rgb(249, 115, 22)',
-              borderWidth: 1,
-            },
-          ],
-        }
       }
-    },
-    samplesPerWeekChartOptions() {
-      const documentStyle = getComputedStyle(document.documentElement)
-      const textColorSecondary = documentStyle.getPropertyValue('--text-color-secondary')
-      const surfaceBorder = documentStyle.getPropertyValue('--surface-border')
-      return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            ticks: {
-              color: textColorSecondary,
-            },
-            grid: {
-              color: surfaceBorder,
-            },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: textColorSecondary,
-            },
-            grid: {
-              color: surfaceBorder,
-            },
-          },
-        },
-      }
-    },
-    lineage_areaData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['lineage_area_chart']
-        : []
-      if (!_data || Object.keys(_data).length === 0) {
-        return this.emptyChartData()
-      }
-      const validData = _data.filter((item) => item.date !== 'None-None' && item.lineage !== null)
-      const lineages = [...new Set(validData.map((item) => item.lineage))]
-      const dates = [...new Set(validData.map((item) => item.date))].sort()
-      const colors = this.generateColorPalette(lineages.length)
-      const datasets = lineages.map((lineage, index) => ({
-        label: lineage,
-        data: dates.map(
-          (date) =>
-            validData.find((item) => item.date === date && item.lineage === lineage)?.percentage ||
-            0,
-        ),
-        fill: true,
-        backgroundColor: colors[index],
-        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
-        borderWidth: 1,
-      }))
-
-      return { labels: dates, datasets }
-    },
-    lineage_areaChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: false,
-            position: 'bottom',
-          },
-          tooltip: {
-            enabled: true,
-            mode: 'nearest',
-            intersect: false,
-            callbacks: {
-              label: function (tooltipItem: TooltipItem<'line'>) {
-                const dataset = tooltipItem.dataset
-                const value = tooltipItem.raw as number
-                return `${dataset.label}: ${value.toFixed(2)}%`
-              },
-            },
-          },
-          zoom: {
-            zoom: {
-              wheel: { enabled: true },
-              pinch: { enabled: true },
-              mode: 'x',
-            },
-            pan: {
-              enabled: true,
-              mode: 'x',
-            },
-          },
-          decimation: {
-            enabled: true,
-            algorithm: 'lttb',
-            samples: 1000,
-            threshold: 5,
-          },
-        },
-        scales: {
-          x: {
-            stacked: true,
-            beginAtZero: true,
-            min: 0,
-            max: 10,
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              callback: function (value: number) {
-                return value + '%'
-              },
-            },
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    lineage_barData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['lineage_bar_chart']
-        : []
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const lineages = [...new Set(_data.map((item) => item.lineage))]
-      const weeks = [...new Set(_data.map((item) => item.week))]
-      const colors = this.generateColorPalette(lineages.length)
-      const datasets = lineages.map((lineage, index) => ({
-        label: lineage,
-        data: weeks.map(
-          (week) =>
-            _data.find((item) => item.week === week && item.lineage === lineage)?.percentage || 0,
-        ),
-        backgroundColor: colors[index],
-        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
-        borderWidth: 2,
-      }))
-      return { labels: weeks, datasets }
-    },
-    lineage_barChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: { display: true, position: 'bottom' },
-          // tooltip: {
-          //   mode: 'index',
-          //   intersect: false,
-          // },
-          zoom: {
-            zoom: {
-              wheel: { enabled: true },
-              pinch: { enabled: true },
-              mode: 'x',
-            },
-            pan: {
-              enabled: true,
-              mode: 'x',
-            },
-          },
-        },
-        scales: {
-          x: {
-            stacked: true,
-            beginAtZero: true,
-            min: 0,
-            max: 30,
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              callback: function (value: number) {
-                return value + '%'
-              },
-            },
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    lineage_grouped_barData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['lineage_grouped_bar_chart']
-        : []
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const lineages = [...new Set(_data.map((item) => item.lineage_group))]
-      const weeks = [...new Set(_data.map((item) => item.week))]
-      const colors = this.generateColorPalette(lineages.length)
-      const datasets = lineages.map((lineage, index) => ({
-        label: lineage,
-        data: weeks.map(
-          (week) =>
-            _data.find((item) => item.week === week && item.lineage_group === lineage)
-              ?.percentage || 0,
-        ),
-        backgroundColor: colors[index],
-        borderColor: chroma(colors[index]).darken(0.5).hex(), // darkened border
-        borderWidth: 2,
-      }))
-      return { labels: weeks, datasets }
-    },
-    metaDataChart() {
-      // keep only those properties that have data, i.e. are in this.samplesStore.propertyTableOptions
-      // what about the property 'name' ?? its not in the list, but its always shown in the table
-      const coverage = Object.fromEntries(
-        Object.entries(
-          this.samplesStore.filteredStatisticsPlots?.['meta_data_coverage'] || {},
-        ).filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key)),
-      )
-
-      const totalCount = this.samplesStore.filteredCount
-      const labels = Object.keys(coverage)
-      const data = Object.values(coverage).map((value) => ((value / totalCount) * 100).toFixed(2))
-
       return {
         labels: labels,
         datasets: [
           {
-            label: 'Coverage (in %)',
+            label: 'Samples',
             data: data,
             backgroundColor: this.generateColorPalette(1),
             borderColor: this.generateColorPalette(1).map((color) =>
               chroma(color).darken(1.5).hex(),
-            ), // darkened border
-            borderWidth: 1,
+            ),
+            borderWidth: 1.5,
           },
         ],
       }
     },
-    metaDataChartOptions() {
+    samplesPerWeekOptions() {
       return {
-        animation: false,
+        animation: { duration: 1000 },
+        maintainAspectRatio: false,
         plugins: {
           legend: {
             display: false,
           },
-          customPercentageLabels: {
-            enabled: true,
-            threshold: 40,
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
           },
         },
         scales: {
+          x: {
+            stacked: true,
+            title: {
+              display: true,
+              text: 'Calendar Week',
+            },
+          },
+        },
+      }
+    },
+
+    get_lineage_data() {
+      const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek || []
+      if (!Array.isArray(lineages_per_week) || lineages_per_week.length === 0) {
+        console.error('lineages_per_week is undefined or empty')
+        return { lineages_per_week: [], lineages: [], colors: [], weeks: [] }
+      }
+      let lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
+        .filter((l) => l !== null)
+        .sort(new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare) // natural sort: ensure e.g. MC.2 < MC.10
+
+      if (lineages.includes('Unknown')) {
+        lineages = lineages.filter((l) => l !== 'Unknown')
+        lineages.push('Unknown')
+      }
+      const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
+      const colors = this.generateColorPalette(lineages.length - 1)
+      colors.push('#cccccc') // Add grey color for "Unknown"
+      return { lineages_per_week, lineages, colors, weeks }
+    },
+
+    lineageBarData() {
+      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data()
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: weeks.map(
+          (week) =>
+            lineages_per_week.find((item) => item.week === week && item.lineage_group === lineage)
+              ?.percentage || 0,
+        ),
+        backgroundColor: colors[index],
+        borderColor: chroma(colors[index]).darken(0.5).hex(),
+        borderWidth: 1.5,
+      }))
+      return { labels: weeks, datasets }
+    },
+
+    lineageAreaData() {
+      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data()
+      // Normalize data so that percentages for each week sum up to 100%
+      const datasets = lineages.map((lineage, index) => ({
+        label: lineage,
+        data: weeks.map((week) => {
+          const weekData = lineages_per_week.filter((item) => item.week === week)
+          const totalPercentage = weekData.reduce((sum, item) => sum + item.percentage, 0)
+          const lineageData =
+            weekData.find((item) => item.lineage_group === lineage)?.percentage || 0
+          return (lineageData / totalPercentage) * 100 // Normalize to 100%
+        }),
+        borderColor: colors[index],
+        backgroundColor: chroma(colors[index]).alpha(0.3).hex(),
+        fill: true,
+        borderWidth: 2.5,
+      }))
+      return { labels: weeks, datasets }
+    },
+
+    lineageBarChartOptions() {
+      return {
+        animation: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+          },
+          tooltip: {
+            callbacks: {
+              label: (context: TooltipItem<'bar'>) =>
+                `${context.dataset.label}: ${context.parsed.y}%`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            title: {
+              display: true,
+              text: 'Calendar Week',
+            },
+          },
           y: {
-            beginAtZero: true,
+            stacked: true,
+            min: 0,
+            max: 100,
+            ticks: {
+              callback: (value: number) => `${value}%`,
+            },
+          },
+        },
+      }
+    },
+
+    lineageAreaChartOptions() {
+      return {
+        animation: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+          },
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Calendar Week',
+            },
+          },
+          y: {
+            stacked: true, // Enable stacking
+            min: 0,
+            max: 100,
+            ticks: {
+              callback: (value: number) => `${value}%`,
+            },
+          },
+        },
+      }
+    },
+
+    metadataCoverageData() {
+      // keep only those properties that have data, i.e. are in this.samplesStore.metaCoverageOptions
+      const metadata_coverage = Object.fromEntries(
+        Object.entries(this.samplesStore.plotMetadataCoverage?.['metadata_coverage'] || {})
+          .filter(([key]) => this.samplesStore.metaCoverageOptions.includes(key))
+          .sort(),
+      )
+      if (this.isDataEmpty(metadata_coverage)) {
+        return this.emptyChart()
+      }
+      const totalCount = this.samplesStore.filteredCount
+      const labels = Object.keys(metadata_coverage)
+      const data = Object.values(metadata_coverage).map((value) =>
+        ((value / totalCount) * 100).toFixed(2),
+      )
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Coverage',
+            data: data,
+            backgroundColor: this.generateColorPalette(1),
+            borderColor: this.generateColorPalette(1).map((color) =>
+              chroma(color).darken(1.5).hex(),
+            ),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+    metadataCoverageOptions() {
+      return {
+        animation: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
+            zoom: {
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: (context: TooltipItem<'bar'>) =>
+                `${context.dataset.label}: ${context.parsed.y}%`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Property',
+            },
+          },
+          y: {
             ticks: {
               callback: function (value: number) {
                 return value + '%'
@@ -583,374 +564,364 @@ export default {
             },
           },
         },
-        responsive: true,
+      }
+    },
+    customChartOptions(not_display_legend = false, has_axes = true): ChartOptions {
+      return {
+        animation: { duration: 1000 },
         maintainAspectRatio: false,
-      }
-    },
-    genomeCompleteChart() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['genomecomplete_chart']
-        : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      const colors = this.generateColorPalette(labels.length)
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-          },
-        ],
-      }
-    },
-    genome_pieChartOptions() {
-      const textColor = '#333'
-      return {
-        animation: false,
         plugins: {
           legend: {
-            labels: {
-              usePointStyle: true,
-              color: textColor,
+            display: !not_display_legend,
+            position: 'bottom',
+          },
+          tooltip: {
+            callbacks: {
+              label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) =>
+                `${context.parsed.y} ${context.dataset.label}`,
             },
           },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    sequencingTechChartData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['sequencing_tech']
-        : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      const colors = this.generateColorPalette(labels.length)
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-            borderColor: colors.map((color) => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1,
-          },
-        ],
-      }
-    },
-    sequencingTechChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'bottom',
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    sequencingReasonChartData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['sequencing_reason']
-        : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      const colors = this.generateColorPalette(labels.length)
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-            borderColor: colors.map((color) => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1,
-          },
-        ],
-      }
-    },
-    sequencingReasonChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'bottom',
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    lengthChartData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['length']
-        : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: this.generateColorPalette(1),
-            borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex(),
-            ), // darkened border
-            borderWidth: 1,
-          },
-        ],
-      }
-    },
-    lengthChartOptions() {
-      return {
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    hostChartData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['host']
-        : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data,
-            backgroundColor: this.generateColorPalette(1),
-            borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex(),
-            ), // darkened border
-            borderWidth: 1,
-          },
-        ],
-      }
-    },
-    hostChartOptions() {
-      return {
-        animation: false,
-        indexAxis: 'y',
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
-    },
-    labChartData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['lab']
-        : {}
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data: data,
-            backgroundColor: this.generateColorPalette(1),
-            borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex(),
-            ), // darkened border
-            borderWidth: 1,
-          },
-        ],
-      }
-    },
-    labChartOptions() {
-      return {
-        plugins: {
-          legend: {
-            display: false,
-          },
           zoom: {
+            pan: {
+              enabled: true,
+              mode: 'x',
+            },
             zoom: {
               wheel: { enabled: true },
               pinch: { enabled: true },
               mode: 'x',
             },
-            pan: {
-              enabled: true,
-              mode: 'x',
-            },
-            limits: {
-              x: { min: 0, minRange: 10 },
-            },
           },
         },
-        scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true },
-        },
-        responsive: true,
+        scales: has_axes
+          ? {
+              x: {
+                title: {
+                  display: not_display_legend,
+                  text: this.selectedProperty || '',
+                },
+              },
+              y: {
+                title: {
+                  display: not_display_legend,
+                  text: 'Number of Samples',
+                },
+              },
+            }
+          : {},
+      }
+    },
+    customScatterPlotOptions(
+      y_feature: string,
+      x_feature: string,
+      x_axis_type:
+        | 'category'
+        | 'linear'
+        | 'time'
+        | 'logarithmic'
+        | 'timeseries'
+        | 'radialLinear' = 'category',
+      y_axis_type:
+        | 'category'
+        | 'linear'
+        | 'time'
+        | 'logarithmic'
+        | 'timeseries'
+        | 'radialLinear' = 'linear',
+    ): ChartOptions {
+      return {
+        animation: { duration: 1000 },
         maintainAspectRatio: false,
-      }
-    },
-    zipCodeChartData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['zip_code']
-        : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'Samples',
-            data,
-            backgroundColor: this.generateColorPalette(1),
-            borderColor: this.generateColorPalette(1).map((color) =>
-              chroma(color).darken(1.0).hex(),
-            ), // darkened border
-            borderWidth: 1,
-          },
-        ],
-      }
-    },
-    zipCodeChartOptions() {
-      return {
-        animation: false,
-        indexAxis: 'y', // Makes the bar chart horizontal
         plugins: {
           legend: {
-            display: false,
+            display: true,
+            title: {
+              display: true,
+              text: y_feature || '',
+            },
+            position: 'right',
+          },
+          tooltip: {
+            callbacks: {
+              title: (context: TooltipItem<'scatter'>[]) => {
+                // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur mltiple times in x-values
+                const raw = context[0].raw as { x: string; y: number; category: string }
+                return `Date: ${raw.x}`
+              },
+              label: (context: TooltipItem<'scatter'>) => {
+                const raw = context.raw as { x: string; y: number; category: string }
+                return `${y_feature}: ${raw.category}, ${x_feature}: ${raw.x}, ${raw.y} samples`
+              },
+            },
           },
           zoom: {
             pan: {
               enabled: true,
-              mode: 'yx',
+              mode: 'x',
             },
             zoom: {
-              wheel: {
-                enabled: false,
-                speed: 0.5,
-              },
-              mode: 'xy',
-            },
-            limits: {
-              x: { min: 0, minRange: 10 },
+              wheel: { enabled: true },
+              pinch: { enabled: true },
+              mode: 'x',
             },
           },
         },
         scales: {
           x: {
-            beginAtZero: true,
+            type: x_axis_type,
+            title: {
+              display: true,
+              text: x_feature || '',
+            },
           },
           y: {
-            ticks: {
-              autoSkip: false, // Ensure all labels
+            type: y_axis_type,
+            title: {
+              display: true,
+              text: 'Number of Samples',
             },
           },
         },
-        responsive: true,
-        maintainAspectRatio: false,
       }
     },
-    sampleTypeChartData() {
-      const _data = this.samplesStore.filteredStatisticsPlots
-        ? this.samplesStore.filteredStatisticsPlots['sample_type']
-        : {}
-      if (this.isDataEmpty(_data)) {
-        return this.emptyChartData()
-      }
-      const { labels, data } = this.cleanDataAndAddNullSamples(_data)
-      const colors = this.generateColorPalette(labels.length)
-      return {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-            borderColor: colors.map((color) => chroma(color).darken(1.0).hex()), // darkened border
-            borderWidth: 1,
-          },
-        ],
-      }
+    showPlotSelectionDialog() {
+      this.plotSelectionDialogVisible = true
     },
-    sampleTypeChartOptions() {
-      return {
-        animation: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'right',
-          },
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-      }
+    showFeatureSelectionDialog() {
+      this.plotSelectionDialogVisible = false
+      this.featureSelectionDialogVisible = true
     },
-    emptyChartData(label = 'No data available') {
-      return {
-        labels: [label],
-        datasets: [
-          {
-            label: 'No data available',
-            data: [],
-          },
-        ],
+    async addPlot() {
+      const plotData = await this.generatePlotData()
+      const plotTitle = this.selectedProperty
+        ? this.selectedProperty
+        : this.selectedXProperty && this.selectedYProperty
+          ? `${this.selectedXProperty} - ${this.selectedYProperty}`
+          : ''
+      const propertyName =
+        this.selectedProperty || `${this.selectedXProperty}_${this.selectedYProperty}`
+      const plotConfig: PlotConfig = {
+        type: this.selectedPlotType,
+        propertyName: propertyName,
+        plotTitle: plotTitle,
+        data: plotData,
+        options: this.generatePlotOptions(),
       }
+      this.plots.push(plotConfig)
+      this.resetSelections()
     },
-    isDataEmpty(
-      data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>,
-    ): boolean {
-      return (
-        !data ||
-        Object.keys(data).length === 0 ||
-        (Object.keys(data).length === 1 && Object.keys(data)[0] == 'null')
+    resetSelections() {
+      this.featureSelectionDialogVisible = false
+      this.selectedPlotType = null
+      this.selectedProperty = null
+      this.selectedXProperty = null
+      this.selectedYProperty = null
+      this.selectedBinSize = null
+    },
+    getHistogramPlotData(property: string, binSize: number): HistogramData {
+      const propertyData = this.samplesStore.propertyData[property] || {}
+      const minValue = Math.min(...Object.keys(propertyData).map(Number))
+      const maxValue = Math.max(...Object.keys(propertyData).map(Number))
+      const bins = Array.from(
+        { length: Math.ceil((maxValue - minValue) / binSize) },
+        (_, i) => minValue + i * binSize,
       )
+      const histogramData = bins.map((binStart) => {
+        const binEnd = binStart + binSize
+        const count = Object.entries(propertyData).reduce((sum, [key, value]) => {
+          const length = Number(key)
+          return length >= binStart && length < binEnd ? sum + Number(value) : sum
+        }, 0)
+        return count
+      })
+      const labels = bins.map((binStart) => `${binStart}-${binStart + binSize - 1}`)
+      const color = this.generateColorPalette(1)[0]
+      return {
+        labels: labels,
+        datasets: [
+          {
+            label: `samples`,
+            data: histogramData,
+            backgroundColor: color,
+            borderColor: chroma(color).darken(1.0).hex(),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+    getScatterPlotData(xProperty: string, yProperty: string) {
+      // scatterData data structure e.g {"2024-09-01": Array[{ILLUMIA:1}, {Nanopore:7}] ... }
+      const scatterData = this.samplesStore.propertyScatterData[`${xProperty}_${yProperty}`] || {}
+      const labels = Object.keys(scatterData)
+      // Determine if x-axis data is a date or categorical
+      const isDateFormat = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+      const xData = labels.map((label) => (isDateFormat(label) ? label : label))
+      // Extract y values and unwrap Proxy objects
+      const data = labels.flatMap((label, index) => {
+        const xValue = xData[index]
+        const values = scatterData[label as keyof typeof scatterData]
+        return (Array.isArray(values) ? values : []).flatMap((item: Record<string, number>) =>
+          Object.entries(item).map(([key, value]) => ({
+            x: xValue,
+            y: value,
+            category: key,
+          })),
+        )
+      })
+      const uniqueCategories = [...new Set(data.map((point) => point.category))]
+      const colors = this.generateColorPalette(uniqueCategories.length)
+      return {
+        labels: labels,
+        datasets: uniqueCategories.map((category, index) => ({
+          label: category, // Chart legend for each category
+          data: data
+            .filter((point) => point.category === category)
+            .map((point) => ({
+              x: point.x,
+              y: point.y,
+              category: point.category,
+            })),
+          backgroundColor: colors[index], // Assign color for the category
+          borderColor: chroma(colors[index]).darken(1.0).hex(),
+          borderWidth: 1.5,
+          pointRadius: 5,
+        })),
+      }
+    },
+    // categorical data in bar and lne charts
+    getBarLinePropertyPlotData(property: string) {
+      const propertyData = this.samplesStore.propertyData[property] || {}
+      if (this.isDataEmpty(propertyData)) {
+        return this.emptyChart()
+      }
+      const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
+      const baseColor = this.generateColorPalette(2)[0] // Single color for all bars/points
+      const colors = cleanedData.labels.map(
+        (label) => (label === 'Not Reported' ? '#cccccc' : baseColor), // Grey for "Not Reported", base color for others
+      )
+      return {
+        labels: cleanedData.labels,
+        datasets: [
+          {
+            label: `samples`,
+            data: cleanedData.data,
+            backgroundColor: colors,
+            borderColor: colors.map((color) => chroma(color).darken(1.5).hex()),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+    // categorical data in doughnut charts
+    getDoughnutPropertyPlotData(property: string) {
+      const propertyData = this.samplesStore.propertyData[property] || {}
+      if (this.isDataEmpty(propertyData)) {
+        return this.emptyChart()
+      }
+      const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
+      const colors = this.generateColorPalette(cleanedData.labels.length)
+      if (cleanedData.labels.includes('Not Reported')) {
+        colors.pop()
+        colors.push('#cccccc') // Add gray color for 'Not Reported'
+      }
+      return {
+        labels: cleanedData.labels,
+        datasets: [
+          {
+            label: `samples`,
+            data: cleanedData.data,
+            backgroundColor: colors,
+            borderColor: colors.map((color) => chroma(color).darken(1.5).hex()),
+            borderWidth: 1.5,
+          },
+        ],
+      }
+    },
+
+    async generatePlotData(): Promise<
+      HistogramData | SimplePlotData | ScatterPlotData | undefined
+    > {
+      // Fetch data from the server if not already available in samplesStore
+      if (
+        this.selectedPlotType === 'bar' ||
+        this.selectedPlotType === 'doughnut' ||
+        this.selectedPlotType === 'line'
+      ) {
+        if (
+          this.selectedProperty &&
+          (!this.samplesStore.propertyData ||
+            !Object.keys(this.samplesStore.propertyData).includes(this.selectedProperty) ||
+            !this.samplesStore.propertyData[this.selectedProperty] ||
+            Object.keys(this.samplesStore.propertyData[this.selectedProperty]).length === 0)
+        ) {
+          await this.samplesStore.updatePlotCustom(this.selectedProperty)
+        }
+        return this.selectedProperty
+          ? this.selectedPlotType === 'bar' || this.selectedPlotType === 'line'
+            ? (this.getBarLinePropertyPlotData(this.selectedProperty) as SimplePlotData)
+            : this.selectedPlotType === 'doughnut'
+              ? (this.getDoughnutPropertyPlotData(this.selectedProperty) as SimplePlotData)
+              : undefined
+          : undefined
+      }
+
+      if (this.selectedPlotType === 'scatter') {
+        if (this.selectedXProperty && !this.samplesStore.propertyData[this.selectedXProperty]) {
+          if (this.selectedXProperty && this.selectedYProperty) {
+            await this.samplesStore.updatePlotScatter(
+              this.selectedXProperty,
+              this.selectedYProperty,
+            )
+          }
+        }
+        return this.selectedXProperty && this.selectedYProperty
+          ? (this.getScatterPlotData(
+              this.selectedXProperty as string,
+              this.selectedYProperty as string,
+            ) as ScatterPlotData)
+          : undefined
+      }
+
+      if (this.selectedPlotType === 'histogram') {
+        if (
+          this.selectedProperty &&
+          (!this.samplesStore.propertyData ||
+            !Object.keys(this.samplesStore.propertyData).includes(this.selectedProperty) ||
+            !this.samplesStore.propertyData[this.selectedProperty] ||
+            Object.keys(this.samplesStore.propertyData[this.selectedProperty]).length === 0)
+        ) {
+          await this.samplesStore.updatePlotCustom(this.selectedProperty)
+        }
+        return this.selectedProperty && this.selectedBinSize !== null
+          ? (this.getHistogramPlotData(
+              this.selectedProperty,
+              this.selectedBinSize,
+            ) as HistogramData)
+          : undefined
+      }
+    },
+
+    generatePlotOptions() {
+      // Generate plot options based on selected plot type
+      if (this.selectedPlotType == 'scatter') {
+        return this.customScatterPlotOptions(
+          this.selectedYProperty ?? '',
+          this.selectedXProperty || '',
+        )
+      } else {
+        return this.customChartOptions(
+          this.selectedPlotType == 'histogram' ||
+            this.selectedPlotType == 'bar' ||
+            this.selectedPlotType == 'line',
+          this.selectedPlotType !== 'doughnut',
+        )
+      }
     },
   },
 }
 </script>
 
 <style scoped>
-.content {
-  height: 80%;
-  width: 98%;
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-  background-color: var(--text-color);
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-
 .container {
   display: flex;
   flex-wrap: wrap;
@@ -958,85 +929,26 @@ export default {
   overflow-x: auto;
   width: 98%;
 }
-.col-lineage {
-  width: 98%;
-}
-.row {
+.panel {
   display: flex;
   flex-wrap: wrap;
+  flex-direction: column;
   justify-content: center;
-  width: 98%;
-}
-
-.col {
-  flex: 1 1 25%;
-
-  max-width: 25%;
-  padding: 0.5rem;
-  box-sizing: border-box;
-}
-
-.plot {
-  display: flex;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-}
-
-/* Panel-Styling */
-.panel {
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  padding: 1rem;
-  display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 1em;
+  width: 100%;
 }
-
-.row:nth-child(1),
-.row:nth-child(2) {
-  .col {
-    flex: 1 1 100%;
-    max-width: 100%;
-  }
+.plots-container {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Responsive grid */
+  width: 100%;
 }
-
-/* Media Queries for different screen sizes */
-@media (max-width: 1024px) {
-  .row:nth-child(3),
-  .row:nth-child(4) {
-    .col {
-      flex: 1 1 50%;
-      max-width: 50%;
-    }
-  }
-
-  .row:nth-child(1),
-  .row:nth-child(2) {
-    .col {
-      flex: 1 1 90%; /* Größe reduzieren */
-      max-width: 90%;
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .row:nth-child(3),
-  .row:nth-child(4) {
-    .col {
-      flex: 1 1 50%;
-      max-width: 50%;
-    }
-  }
-
-  .row:nth-child(1),
-  .row:nth-child(2) {
-    .col {
-      flex: 1 1 100%;
-      max-width: 100%;
-    }
-  }
+.add-property-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 25vh;
 }
 </style>

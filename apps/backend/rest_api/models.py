@@ -556,6 +556,7 @@ class NucleotideMutation(models.Model):
         alt (TextField): The alternative nucleotide.
         start (BigIntegerField): The starting position of the mutation in ref(couting is 0 based).
         end (BigIntegerField): The ending position of the mutation in ref.
+        is_frameshift (BooleanField): Indicates if the mutation is a frameshift mutation.
         alignments (ManyToManyField): Many-to-many relationship with Alignment (representing samples) instances.
 
     Constraints:
@@ -568,13 +569,15 @@ class NucleotideMutation(models.Model):
     alt = models.TextField()
     start = models.BigIntegerField()
     end = models.BigIntegerField()
+    is_frameshift = models.BooleanField(default=False)
+
     alignments = models.ManyToManyField(
         Alignment,
         related_name="nucleotide_mutations",
     )
 
     def __str__(self) -> str:
-        return f"{self.start}-{self.end} {self.ref}>{self.alt}"
+        return f"{self.start}-{self.end} {self.ref}>{self.alt} {self.is_frameshift}"
 
     class Meta:
         db_table = "nucleotide_mutation"
@@ -606,7 +609,6 @@ class AminoAcidMutation(models.Model):
         start (BigIntegerField): The start position of the mutation in ref.
         end (BigIntegerField): The end position of the mutation in ref.
         parent (ManyToManyField): Many-to-many relationship with nucleotide mutations (multiple mutations can result in one amino acid mutation).
-        is_frameshift (BooleanField): Indicates if the mutation is a frameshift mutation.
         alignments (ManyToManyField): Many-to-many relationship with alignments (samples) containing this mutation.
 
     Constraints:
@@ -620,7 +622,6 @@ class AminoAcidMutation(models.Model):
     start = models.BigIntegerField()
     end = models.BigIntegerField()
     parent = models.ManyToManyField(NucleotideMutation)
-    is_frameshift = models.BooleanField(default=False)
     alignments = models.ManyToManyField(
         Alignment,
         related_name="amino_acid_mutations",
@@ -676,7 +677,6 @@ class FileProcessing(models.Model):
 
 
 class ImportLog(models.Model):
-
     class ImportType(models.TextChoices):
         UNKNOWN = "NUL", _("Unknown")
         SAMPLE = "SMP", _("Sample")
