@@ -142,7 +142,7 @@ class RepliconViewSet(viewsets.ModelViewSet):
             "accession", flat=True
         )
         if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(molecule__reference__accession=ref)
+            queryset = queryset.filter(reference__accession=ref)
         distinct_accessions = queryset.distinct()
 
         return Response(
@@ -484,12 +484,20 @@ class PropertyViewSet(
         ]
         if property_name in sample_property_fields:
             queryset = models.Sample.objects.all()
+            if ref := request.query_params.get("reference"):
+                queryset = queryset.filter(
+                    sequence__alignments__replicon__reference__accession=ref
+                )
             queryset = queryset.distinct(property_name)
             return Response(
                 {"values": [getattr(item, property_name) for item in queryset]},
                 status=status.HTTP_200_OK,
             )
         queryset = models.Sample2Property.objects.filter(property__name=property_name)
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(
+                sequence__alignments__replicon__reference__accession=ref
+            )
         datatype = queryset[0].property.datatype
         queryset = queryset.distinct(datatype)
         return Response(
@@ -951,16 +959,6 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"])
-    def distinct_lineages(self, request: Request, *args, **kwargs):
-        distinct_lineages = models.Lineage.objects.values_list(
-            "name", flat=True
-        ).distinct()
-        return Response(
-            {"lineages": distinct_lineages},
-            status=status.HTTP_200_OK,
-        )
 
     @action(detail=False, methods=["put"])
     def update_lineages(self, request: Request, *args, **kwargs):

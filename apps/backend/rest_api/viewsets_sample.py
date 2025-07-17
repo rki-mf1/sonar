@@ -101,9 +101,14 @@ class SampleViewSet(
         }
 
     @staticmethod
-    def get_statistics():
+    def get_statistics(reference=None):
         response_dict = {}
-        response_dict["samples_total"] = models.Sample.objects.all().count()
+        queryset = models.Sample.objects.all()
+        if reference:
+            queryset = queryset.filter(
+                sequence__alignments__replicon__reference__accession=reference
+            )
+        response_dict["samples_total"] = queryset.count()
 
         first_sample = (
             models.Sample.objects.filter(collection_date__isnull=False)
@@ -132,7 +137,9 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
-        response_dict = SampleViewSet.get_statistics()
+        response_dict = SampleViewSet.get_statistics(
+            reference=request.query_params.get("reference")
+        )
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
@@ -477,6 +484,20 @@ class SampleViewSet(
             for key, value in result.items()
             if key.startswith("not_null_count_")
         }
+
+    @action(detail=False, methods=["get"])
+    def distinct_lineages(self, request: Request, *args, **kwargs):
+        queryset = models.Sample.objects.values_list("lineage", flat=True)
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(
+                sequence__alignments__replicon__reference__accession=ref
+            )
+        distinct_lineages = queryset.distinct()
+
+        return Response(
+            {"lineages": distinct_lineages},
+            status=status.HTTP_200_OK,
+        )
 
     def _get_genomecomplete_chart(self, queryset):
         result_dict = {}

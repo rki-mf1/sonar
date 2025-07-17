@@ -187,7 +187,7 @@ export const useSamplesStore = defineStore('samples', {
         populated_metadata_fields: [],
       }
       try {
-        const statistics = await API.getInstance().getSampleStatistics()
+        const statistics = await API.getInstance().getSampleStatistics(this.accession)
         if (!statistics) {
           this.statistics = emptyStatistics
         } else {
@@ -287,7 +287,7 @@ export const useSamplesStore = defineStore('samples', {
       if (this.propertyValueOptions[propertyName]) return
       this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
-        .getSampleGenomePropertyValueOptions(propertyName)
+        .getSampleGenomePropertyValueOptions(propertyName, this.accession)
         .then((res) => {
           this.propertyValueOptions[propertyName].options = res.values
           this.propertyValueOptions[propertyName].loading = false
@@ -355,15 +355,15 @@ export const useSamplesStore = defineStore('samples', {
       }
     },
     async updateRepliconAccessionOptions() {
-      const res = await API.getInstance().getRepliconAccessionOptions()
+      const res = await API.getInstance().getRepliconAccessionOptions(this.accession)
       this.repliconAccessionOptions = res.accessions
     },
     async updateLineageOptions() {
-      const res = await API.getInstance().getLineageOptions()
+      const res = await API.getInstance().getLineageOptions(this.accession)
       this.lineageOptions = res.lineages
     },
     async updateSymbolOptions() {
-      const res = await API.getInstance().getGeneSymbolOptions()
+      const res = await API.getInstance().getGeneSymbolOptions(this.accession)
       this.symbolOptions = res.gene_symbols
     },
     isDateArray(value: unknown): value is Date[] {
@@ -397,7 +397,7 @@ export const useSamplesStore = defineStore('samples', {
 
       // insert dataset selection as a fixed filter at the beginning
       if (this.data_sets?.length > 0) {
-        this.data_sets = this.data_sets.map(value => value === "-Empty-" ? "" : value);
+        this.data_sets = this.data_sets.map((value) => (value === '-Empty-' ? '' : value))
         filters.filters.andFilter.unshift({
           label: 'Property',
           property_name: 'data_set',
