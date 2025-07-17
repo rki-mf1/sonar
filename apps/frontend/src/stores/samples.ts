@@ -109,7 +109,7 @@ export const useSamplesStore = defineStore('samples', {
   state: () => ({
     organism: null as string | null,
     accession: null as string | null,
-    data_sets: [] as string[],
+    data_sets: [] as (string | null)[],
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
@@ -182,7 +182,7 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
-    setDataset(organism: string | null, accession: string | null, data_sets: string[]) {
+    setDataset(organism: string | null, accession: string | null, data_sets: (string | null)[]) {
       this.organism = organism
       this.accession = accession
       this.data_sets = data_sets
