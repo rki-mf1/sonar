@@ -142,7 +142,7 @@ class RepliconViewSet(viewsets.ModelViewSet):
             "accession", flat=True
         )
         if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(molecule__reference__accession=ref)
+            queryset = queryset.filter(reference__accession=ref)
         distinct_accessions = queryset.distinct()
 
         return Response(
@@ -344,6 +344,46 @@ class ReferenceViewSet(
             {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
 
+    @action(detail=False, methods=["get"])
+    def dataset_options(self, request, *args, **kwargs):
+        """
+        For each organism in the Reference table, returns the corresponding
+        accession values found int the Reference table and
+        dataset values found in the Sample table.
+        """
+        queryset = models.Sample.objects.values(
+            accession=F("sequence__alignments__replicon__reference__accession"),
+            organism=F("sequence__alignments__replicon__reference__organism"),
+            data_set_value=F("data_set"),
+        ).distinct()
+
+        result = {}
+
+        for reference in queryset:
+            organism = reference["organism"]
+            accession = reference["accession"]
+            data_set_value = reference["data_set_value"]
+
+            if organism not in result:
+                result[organism] = {"accessions": set(), "data_sets": set()}
+            if accession is not None:
+                result[organism]["accessions"].add(accession)
+            if data_set_value is not None:
+                if data_set_value == "":
+                    # NOTE: if "-Empty-" string is changed here, it must be changed as well in samples.ts !!
+                    result[organism]["data_sets"].add("-Empty-")
+                else:
+                    result[organism]["data_sets"].add(data_set_value)
+
+        # sort data_set values
+        for organism in result:
+            result[organism]["data_sets"] = sorted(result[organism]["data_sets"])
+
+        return Response(
+            result,
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["post"])
     def delete_reference(self, request: Request, *args, **kwargs):
         if "accession" not in request.data:
@@ -444,12 +484,20 @@ class PropertyViewSet(
         ]
         if property_name in sample_property_fields:
             queryset = models.Sample.objects.all()
+            if ref := request.query_params.get("reference"):
+                queryset = queryset.filter(
+                    sequence__alignments__replicon__reference__accession=ref
+                )
             queryset = queryset.distinct(property_name)
             return Response(
                 {"values": [getattr(item, property_name) for item in queryset]},
                 status=status.HTTP_200_OK,
             )
         queryset = models.Sample2Property.objects.filter(property__name=property_name)
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(
+                sequence__alignments__replicon__reference__accession=ref
+            )
         datatype = queryset[0].property.datatype
         queryset = queryset.distinct(datatype)
         return Response(
@@ -652,6 +700,12 @@ class PropertyViewSet(
                 "query_type": "value_date",
                 "description": "Date when the sample data was last updated in the database (fixed prop.)",
                 "default": "current date and time",
+            },
+            {
+                "name": "data_set",
+                "query_type": "value_varchar",
+                "description": "Name of the data set",
+                "default": None,
             },
         ]  # from SAMPLE TABLE
 
@@ -905,18 +959,6 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"])
-    def distinct_lineages(self, request: Request, *args, **kwargs):
-        distinct_lineages = (
-            models.Lineage.objects.values_list("name", flat=True)
-            .distinct()
-            .order_by("name")
-        )
-        return Response(
-            {"lineages": distinct_lineages},
-            status=status.HTTP_200_OK,
-        )
 
     @action(detail=False, methods=["put"])
     def update_lineages(self, request: Request, *args, **kwargs):

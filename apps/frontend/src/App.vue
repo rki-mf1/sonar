@@ -1,10 +1,10 @@
 <template>
   <body>
     <main>
-      <header>
+      <header v-if="$route.name !== 'Landing'">
         <div class="flex flex-wrap justify-content-between">
           <div class="flex align-items-center justify-content-center">
-            <div style="font-size: 2rem; color: var(--text-color)">Sonar</div>
+            <div style="font-size: 2rem; color: var(--text-color)">{{ appTitle }}</div>
           </div>
           <div class="flex align-items-center justify-content-center">
             <PrimeMenubar :model="menuItems">
@@ -59,7 +59,7 @@ export default {
         {
           label: 'Home',
           icon: 'pi pi-home',
-          route: '/',
+          route: '/home',
         },
         {
           label: 'Plots',
@@ -78,6 +78,12 @@ export default {
     showFilters() {
       return this.$route.name === 'Home' || this.$route.name === 'Plots'
     },
+    appTitle() {
+      const { organism, accession, data_sets } = this.samplesStore
+      return organism && accession
+        ? `Sonar: ${organism} (${accession})${data_sets ? ' - ' + data_sets : ''}`
+        : 'Sonar'
+    },
   },
   watch: {
     'samplesStore.errorMessage'(newValue) {
@@ -88,18 +94,7 @@ export default {
       }
     },
   },
-  mounted() {
-    this.samplesStore.updateSamples()
-    this.samplesStore
-      .updateStatistics()
-      .then(() => this.samplesStore.updatePropertyOptions())
-      .then(() => this.samplesStore.updateSelectedColumns())
-    this.samplesStore.updateFilteredStatistics()
-    this.samplesStore.updateLineageOptions()
-    this.samplesStore.updateSymbolOptions()
-    this.samplesStore.updateRepliconAccessionOptions()
-    this.$root.$toastRef = this.$refs.toast ?? null
-  },
+  mounted() {},
 }
 </script>
 

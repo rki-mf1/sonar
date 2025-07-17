@@ -33,15 +33,12 @@ export default class API {
       Accept: 'application/json; version=1.0.1',
     }
   }
-  async getRequestFullUrl(
-    url: string,
-    params: Record<string, string | number | boolean>,
-    suppressError: boolean,
-  ) {
+
+  async getRequestFullUrl(url: string, params: Record<string, unknown>, suppressError: boolean) {
     return axios
       .get(url, {
-        data: {},
-        params: params,
+        params,
+        paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
         timeout: this.TIMEOUT,
       })
       .then((result) => result.data)
@@ -69,12 +66,14 @@ export default class API {
         }
       })
   }
-  getRequest(
-    url: string,
-    params: Record<string, string | number | boolean>,
-    suppressError: boolean,
-  ) {
-    return this.getRequestFullUrl(`${this.BACKEND_ADDRESS}${url}`, params, suppressError)
+
+  getRequest(url: string, params: Record<string, unknown> = {}, suppressError: boolean) {
+    const fullUrl = `${this.BACKEND_ADDRESS}${url}`
+    return this.getRequestFullUrl(fullUrl, params, suppressError)
+  }
+
+  getDatasetOptions() {
+    return this.getRequest(`references/dataset_options/`, {}, false)
   }
 
   getSampleGenomes(filters: FilterGroupRoot, params: Record<string, string | number | boolean>) {
@@ -214,28 +213,31 @@ export default class API {
     return this.getRequest(`properties/get_all_properties/`, {}, false)
   }
 
-  getSampleStatistics() {
-    return this.getRequest(`samples/statistics/`, {}, false)
+  getSampleStatistics(reference?: string | null) {
+    const params = reference ? { reference } : {}
+    return this.getRequest(`samples/statistics/`, params, false)
   }
 
-  getSampleGenomePropertyValueOptions(propertyName: string) {
-    // get unique value2 of each property_name
+  getSampleGenomePropertyValueOptions(propertyName: string, reference?: string | null) {
+    // get unique value of each property_name
+    const params = reference ? { reference } : {}
     return this.getRequest(
       `properties/distinct_properties/?property_name=${propertyName}`,
-      {},
+      params,
       false,
     )
   }
-  getRepliconAccessionOptions() {
-    const url = `replicons/distinct_accessions/`
-    return this.getRequest(url, {}, false)
+  getRepliconAccessionOptions(reference?: string | null) {
+    const params = reference ? { reference } : {}
+    return this.getRequest('replicons/distinct_accessions/', params, false)
   }
-  getLineageOptions() {
-    const url = `lineages/distinct_lineages/`
-    return this.getRequest(url, {}, false)
+  getLineageOptions(reference?: string | null) {
+    const params = reference ? { reference } : {}
+    return this.getRequest(`samples/distinct_lineages/`, params, false)
   }
-  getGeneSymbolOptions() {
-    return this.getRequest(`genes/distinct_gene_symbols/`, {}, false)
+  getGeneSymbolOptions(reference?: string | null) {
+    const params = reference ? { reference } : {}
+    return this.getRequest(`genes/distinct_gene_symbols/`, params, false)
   }
   parseQueryString(query: FilterGroupRoot) {
     // remove properties (e.g. empty date ranges) with no value

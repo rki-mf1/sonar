@@ -83,7 +83,7 @@ export type LineageFilter = {
 export type GenomeFilter = PropertyFilter | ProfileFilter
 
 export type FilterGroupFilters = {
-  andFilter: Record<string, string | number | boolean | string[]>[]
+  andFilter: Record<string, string | number | boolean | (string | null)[]>[]
   orFilter: FilterGroupFilters[]
 }
 
