@@ -113,7 +113,7 @@ class SampleViewSet(
         response_dict["samples_total"] = queryset.count()
 
         first_sample = (
-            models.Sample.objects.filter(collection_date__isnull=False)
+            queryset.filter(collection_date__isnull=False)
             .order_by("collection_date")
             .first()
         )
@@ -122,7 +122,7 @@ class SampleViewSet(
         )
 
         latest_sample = (
-            models.Sample.objects.filter(collection_date__isnull=False)
+            queryset.filter(collection_date__isnull=False)
             .order_by("-collection_date")
             .first()
         )
@@ -130,9 +130,7 @@ class SampleViewSet(
             latest_sample.collection_date if latest_sample else None
         )
         response_dict["populated_metadata_fields"] = (
-            SampleViewSet.get_populated_metadata_fields(
-                queryset=models.Sample.objects.all()
-            )
+            SampleViewSet.get_populated_metadata_fields(queryset=queryset)
         )
 
         return response_dict
