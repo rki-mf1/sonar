@@ -1,7 +1,6 @@
 import type { FilterGroupRoot } from '@/util/types'
 import axios from 'axios'
 import { saveAs } from 'file-saver'
-import qs from 'qs'
 import * as ExcelJS from 'exceljs'
 
 export default class API {
@@ -34,6 +33,7 @@ export default class API {
       Accept: 'application/json; version=1.0.1',
     }
   }
+
   async getRequestFullUrl(url: string, params: Record<string, unknown>, suppressError: boolean) {
     return axios
       .get(url, {
@@ -66,6 +66,7 @@ export default class API {
         }
       })
   }
+
   getRequest(url: string, params: Record<string, unknown> = {}, suppressError: boolean) {
     const fullUrl = `${this.BACKEND_ADDRESS}${url}`
     return this.getRequestFullUrl(fullUrl, params, suppressError)
@@ -97,10 +98,34 @@ export default class API {
     return this.getRequest(url, {}, false)
   }
 
-  getFilteredStatisticsPlots(params: FilterGroupRoot) {
+  getPlotSamplesPerWeek(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/filtered_statistics_plots/${queryString}`
+    const url = `samples/plot_samples_per_week/${queryString}`
     return this.getRequest(url, {}, false)
+  }
+
+  getPlotGroupedLineagesPerWeek(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_grouped_lineages_per_week/${queryString}`
+    return this.getRequest(url, {}, false)
+  }
+
+  getPlotMetadataCoverage(params: FilterGroupRoot) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_metadata_coverage/${queryString}`
+    return this.getRequest(url, {}, false)
+  }
+
+  getPlotCustom(params: FilterGroupRoot, property: string) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_custom/${queryString}`
+    return this.getRequest(url, { property: property }, false)
+  }
+
+  get2Properties(params: FilterGroupRoot, x_property: string, y_property: string) {
+    const queryString = this.parseQueryString(params)
+    const url = `samples/plot_custom_xy/${queryString}`
+    return this.getRequest(url, { x_property: x_property, y_property: y_property }, false)
   }
 
   async getSampleGenomesExport(

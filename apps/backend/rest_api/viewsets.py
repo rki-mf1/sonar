@@ -959,7 +959,7 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
-
+      
     @action(detail=False, methods=["put"])
     def update_lineages(self, request: Request, *args, **kwargs):
         tsv_file = request.FILES.get("lineages_file")

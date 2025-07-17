@@ -8,7 +8,10 @@ import {
   type ProfileFilter,
   type Statistics,
   type FilteredStatistics,
-  type FilteredStatisticsPlots,
+  type SamplesPerWeek,
+  type LineagePerWeek,
+  type PlotMetadataCoverage,
+  type PlotCustom,
   DjangoFilterType,
   StringDjangoFilterType,
   DateDjangoFilterType,
@@ -110,7 +113,12 @@ export const useSamplesStore = defineStore('samples', {
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
-    filteredStatisticsPlots: {} as FilteredStatisticsPlots,
+    plotSamplesPerWeek: [] as Array<SamplesPerWeek>,
+    plotGroupedLineagesPerWeek: [] as Array<LineagePerWeek>,
+    plotMetadataCoverage: {} as PlotMetadataCoverage,
+    propertyData: {} as Record<string, { [key: string]: number }>,
+    propertyScatterData: {} as Record<string, Array<Record<string, number>>>,
+    selectedCustomProperty: 'sequencing_reason',
     filteredCount: 0,
     loading: false,
     perPage: 10,
@@ -244,37 +252,175 @@ export const useSamplesStore = defineStore('samples', {
         this.filteredCount = 0
       }
     },
-    async updateFilteredStatisticsPlots() {
-      const emptyStatistics = {
-        samples_per_week: {},
-        meta_data_coverage: {},
-        genomecomplete_chart: {},
-        lineage_area_chart: [],
-        lineage_bar_chart: [],
-        lineage_grouped_bar_chart: [],
-        sequencing_tech: {},
-        sequencing_reason: {},
-        sample_type: {},
-        length: {},
-        lab: {},
-        zip_code: {},
-        host: {},
-      }
+    async updatePlotSamplesPerWeek() {
+      const emptyStatistics = [] as Array<SamplesPerWeek>
       try {
-        const filteredStatisticsPlots = await API.getInstance().getFilteredStatisticsPlots(
-          this.filters,
-        )
-        if (!filteredStatisticsPlots) {
-          this.filteredStatisticsPlots = emptyStatistics
+        const result = await API.getInstance().getPlotSamplesPerWeek(this.filters)
+        if (!result) {
+          this.plotSamplesPerWeek = emptyStatistics
         } else {
-          this.filteredStatisticsPlots = filteredStatisticsPlots
+          const completeWeeks = this.generateWeeksBetween(
+            result[0][0],
+            result[result.length - 1][0],
+          )
+          this.plotSamplesPerWeek = completeWeeks.map((week) => {
+            const entry = result.find((item: SamplesPerWeek) => item[0] === week)
+            return entry ? [entry[0], entry[1]] : [week, 0]
+          })
         }
       } catch (error) {
         // TODO how to handle request failure
-        console.error('Error fetching filtered statistics plots:', error)
-        this.filteredStatisticsPlots = emptyStatistics
+        console.error('Error fetching samples per week plot:', error)
+        this.plotSamplesPerWeek = emptyStatistics
       }
     },
+
+    generateWeeksBetween(startWeek: string, endWeek: string): string[] {
+      const weeks: string[] = []
+
+      // Parse the start and end weeks into year and week numbers
+      const startYear = parseInt(startWeek.split('-W')[0])
+      const startWeekNumber = parseInt(startWeek.split('-W')[1])
+      const endYear = parseInt(endWeek.split('-W')[0])
+      const endWeekNumber = parseInt(endWeek.split('-W')[1])
+
+      // Convert week number to date (start of the week)
+      const getDateFromWeek = (year: number, week: number): Date => {
+        const firstDayOfYear = new Date(year, 0, 1) // January 1st
+        const daysOffset =
+          (week - 1) * 7 +
+          (firstDayOfYear.getDay() <= 4
+            ? -firstDayOfYear.getDay() + 1
+            : 8 - firstDayOfYear.getDay()) // Adjust for ISO week start (Monday)
+        return new Date(year, 0, 1 + daysOffset)
+      }
+
+      const currentDate = getDateFromWeek(startYear, startWeekNumber)
+      const endDate = getDateFromWeek(endYear, endWeekNumber)
+
+      while (currentDate <= endDate) {
+        const year = currentDate.getFullYear()
+        const week = Math.ceil(
+          ((currentDate.getTime() - new Date(year, 0, 1).getTime()) / (1000 * 60 * 60 * 24) +
+            currentDate.getDay()) /
+            7,
+        ) // Calculate week number
+        weeks.push(`${year}-W${week.toString().padStart(2, '0')}`)
+        currentDate.setDate(currentDate.getDate() + 7) // Increment by one week
+      }
+
+      return weeks
+    },
+
+    processGroupedLineagesPerWeek(
+      data: Array<{ week: string; lineage_group: string; count: number; percentage: number }>,
+    ) {
+      // Extract all unique weeks and sort them
+      const allWeeks = [...new Set(data.map((item) => item.week))].sort(
+        (a, b) =>
+          new Date(parseInt(a.split('-W')[0]), parseInt(a.split('-W')[1])).getTime() -
+          new Date(parseInt(b.split('-W')[0]), parseInt(b.split('-W')[1])).getTime(),
+      )
+      const completeWeeks = this.generateWeeksBetween(allWeeks[0], allWeeks[allWeeks.length - 1])
+
+      // Create a map to store the processed data
+      const processedData = completeWeeks.map((week) => {
+        const entriesForWeek = data.filter((item) => item.week === week)
+        if (entriesForWeek.length > 0) {
+          return entriesForWeek // Include existing entries for the week
+        } else {
+          return {
+            week,
+            lineage_group: '',
+            count: 0,
+            percentage: 0.0,
+          } // Add missing week entry
+        }
+      })
+      return processedData.flat() // Flatten the nested array
+    },
+
+    async updatePlotGroupedLineagesPerWeek() {
+      const emptyStatistics = [] as Array<LineagePerWeek>
+      try {
+        const plotGroupedLineagesPerWeek = await API.getInstance().getPlotGroupedLineagesPerWeek(
+          this.filters,
+        )
+        if (!plotGroupedLineagesPerWeek) {
+          this.plotGroupedLineagesPerWeek = emptyStatistics
+        } else {
+          this.plotGroupedLineagesPerWeek = this.processGroupedLineagesPerWeek(
+            plotGroupedLineagesPerWeek.grouped_lineages_per_week,
+          )
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching grouped lineages per week plot:', error)
+        this.plotGroupedLineagesPerWeek = emptyStatistics
+      }
+    },
+
+    async updatePlotMetadataCoverage() {
+      const emptyStatistics = {
+        metadata_coverage: {},
+      }
+      try {
+        const plotMetadataCoverage = await API.getInstance().getPlotMetadataCoverage(this.filters)
+        if (!plotMetadataCoverage) {
+          this.plotMetadataCoverage = emptyStatistics
+        } else {
+          this.plotMetadataCoverage = plotMetadataCoverage
+        }
+      } catch (error) {
+        // TODO how to handle request failure
+        console.error('Error fetching metadata coverage plot:', error)
+        this.plotMetadataCoverage = emptyStatistics
+      }
+    },
+    async updatePlotCustom(sample_property: string) {
+      const emptyStatistics: { [key: string]: number } = {}
+      try {
+        const response = await API.getInstance().getPlotCustom(this.filters, sample_property)
+        const typedResponse = response as Record<string, PlotCustom>
+        if (!typedResponse || !typedResponse[sample_property]) {
+          this.propertyData[sample_property] = emptyStatistics
+        } else {
+          this.propertyData[sample_property] = Object.fromEntries(
+            Object.entries(typedResponse[sample_property]).map(([key, value]) => [
+              key,
+              Number(value),
+            ]),
+          )
+        }
+      } catch (error) {
+        console.error(
+          `Error fetching filtered statistics plots for property ${sample_property}:`,
+          error,
+        )
+        this.propertyData[sample_property] = emptyStatistics
+      }
+    },
+    async updatePlotScatter(sample_property_x: string, sample_property_y: string) {
+      const emptyStatistics: Array<Record<string, number>> = []
+      const key = `${sample_property_x}_${sample_property_y}`
+      try {
+        const response = await API.getInstance().get2Properties(
+          this.filters,
+          sample_property_x,
+          sample_property_y,
+        )
+        const typedResponse = response as Array<Record<string, number>>
+
+        this.propertyScatterData[key] = typedResponse
+      } catch (error) {
+        console.error(
+          `Error fetching scatter plot data for properties ${sample_property_x} and ${sample_property_y}:`,
+          error,
+        )
+        this.propertyScatterData[key] = emptyStatistics
+      }
+    },
+
     async setDefaultTimeRange() {
       this.timeRange = [
         new Date(this.statistics.first_sample_date),
@@ -316,14 +462,14 @@ export const useSamplesStore = defineStore('samples', {
 
     async updatePropertyOptions() {
       try {
-        const res = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
-        if (!res) {
+        const response = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+        if (!response) {
           console.error('API request failed')
           return
         }
-        const metaData = this.statistics?.populated_metadata_fields ?? []
+        const metadata = this.statistics?.populated_metadata_fields ?? []
         this.propertiesDict = {}
-        res.values.forEach(
+        response.values.forEach(
           (property: { name: string; query_type: string; description: string }) => {
             if (property.query_type === 'value_varchar') {
               this.propertiesDict[property.name] = Object.values(StringDjangoFilterType)
@@ -337,7 +483,7 @@ export const useSamplesStore = defineStore('samples', {
         // keep only those properties that have a coverage, i.e. that are not entirly empty
         // & drop the 'name' column because the ID column is fixed
         this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-          (key) => key !== 'name' && metaData.includes(key),
+          (key) => key !== 'name' && metadata.includes(key),
         )
         this.propertyMenuOptions = [
           'name',
@@ -346,8 +492,15 @@ export const useSamplesStore = defineStore('samples', {
           ),
         ]
         this.metaCoverageOptions = [
-          ...this.propertyMenuOptions.filter(
-            (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
+          ...this.propertyTableOptions.filter(
+            (prop) =>
+              ![
+                'name',
+                'init_upload_date',
+                'last_update_date',
+                'genomic_profiles',
+                'proteomic_profiles',
+              ].includes(prop),
           ),
         ]
       } catch (error) {

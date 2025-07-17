@@ -1,4 +1,5 @@
-import concurrent
+from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
 import glob
 import hashlib
 from itertools import zip_longest
@@ -32,6 +33,8 @@ from sonar_cli.config import KSIZE
 from sonar_cli.config import SCALED
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
+from sonar_cli.nextclade_ext import process_single_sample
+from sonar_cli.nextclade_ext import read_nextclade_json_streaming
 from sonar_cli.sourmash_ext import create_cluster_db
 from tqdm import tqdm
 
@@ -177,22 +180,159 @@ class sonarCache:
         if self.logfile_obj:
             self.logfile_obj.close()
 
+    def add_nextclade_json(  # noqa: C901
+        self, *fnames, data_dict_list, chunk_size=100, max_workers=8
+    ):
+        """
+
+        For each sample, extract the sequence name to construct a data dictionary similar to cache_sample.
+        However, we do not need to create it exactly like cache_sample because some variables are unnecessary.
+
+        These are the variables that we need to create :
+        name, refmol refmolid refseq_id source_acc sourceid translationid
+        algnid header sample_sequence_length nextclade_json_file, vcffile,  anno_vcf_file
+        ref_file var_parquet_file var_file include_nx
+
+        """
+        # Create lookup dictionary
+        sample_lookup_dict = {
+            sample_info["name"]: sample_info for sample_info in data_dict_list
+        }
+        refmol_acc = self.refacc
+        sample_data: List[Dict[str, Union[str, int]]] = []
+
+        # Make API call with the batch_data
+        api_client = APIClient(base_url=self.base_url)
+
+        if self.is_segment_import:
+            gene_rows = api_client.get_elements(molecule_acc=refmol_acc)
+        else:
+            gene_rows = api_client.get_elements(ref_acc=refmol_acc)
+
+        # Construct a dictionary from gene_rows
+        gene_cds_lookup = {}
+
+        for row in gene_rows:
+            gene_symbol = row.get("gene.gene_symbol")
+            replicon_acc = row.get("replicon.accession")
+            cds_list = row.get("cds_list", [])
+
+            for cds in cds_list:
+                cds_accession = cds.get("cds.accession")
+                if gene_symbol and replicon_acc and cds_accession:
+                    gene_cds_lookup[(gene_symbol, replicon_acc)] = cds_accession
+
+        # Process data in chunks
+        def process_sample_batch(sample_batch, sample_lookup_dict):
+            """Process a batch of samples with their corresponding lookup data"""
+            batch_results = []
+
+            for sample_data_dict in sample_batch:
+                seqName = sample_data_dict["seqId"]
+                # Skip if sample not found in lookup
+                if seqName not in sample_lookup_dict:
+                    self.error_logfile_obj.write(
+                        f"Warning: Sample {seqName} not found in fasta, skipping\n"
+                    )
+                    continue
+                data = sample_lookup_dict[seqName]
+                try:
+                    # Process the sample
+                    process_single_sample(
+                        sample_data_dict,
+                        refmol_acc,
+                        gene_to_cds=gene_cds_lookup,
+                        reference_seq=self.refmols[refmol_acc]["sequence"],
+                        output_file=data["var_file"],
+                        output_parquet_file=data["var_parquet_file"],
+                        debug=self.debug,
+                    )
+
+                    del data["var_file"]
+
+                    batch_results.append(data)
+
+                except Exception as e:
+                    LOGGER.error(f"Error processing sample {seqName}: {str(e)}")
+                    self.error_logfile_obj.write(
+                        f"Error processing sample {seqName}: {str(e)}\n"
+                    )
+                    continue
+
+            return batch_results
+
+        # Process each file in streaming fashion
+        for fname in fnames:
+            print(f"Processing file: {fname}")
+
+            # Stream through the JSON file in chunks
+            for file_chunk in read_nextclade_json_streaming(fname, chunk_size):
+                if not file_chunk:
+                    continue
+
+                seq_names_in_chunk = [sample["seqId"] for sample in file_chunk]
+                # print(seq_names_in_chunk)
+                # Create filtered sample data dict containing only samples in this chunk
+                filtered_sample_data = {
+                    seq_name: sample_lookup_dict[seq_name]
+                    for seq_name in seq_names_in_chunk
+                    if seq_name in sample_lookup_dict
+                }
+                try:
+                    # Split chunk into smaller batches for parallel processing
+                    batch_size = min(
+                        chunk_size // max_workers, 100
+                    )  # Smaller batches for parallel processing
+                    batches = [
+                        file_chunk[i : i + batch_size]
+                        for i in range(0, len(file_chunk), batch_size)
+                    ]
+
+                    # Process batches in parallel
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        future_to_batch = {
+                            executor.submit(
+                                process_sample_batch, batch, filtered_sample_data
+                            ): batch
+                            for batch in batches
+                        }
+
+                        # Collect results
+                        for future in as_completed(future_to_batch):
+                            try:
+                                batch_results = future.result()
+                                sample_data.extend(batch_results)
+                            except Exception as e:
+                                LOGGER.error(f"Error processing batch: {str(e)}")
+                                self.error_logfile_obj.write(
+                                    f"Error processing batch: {str(e)}\n"
+                                )
+                                continue
+
+                except Exception as e:
+                    LOGGER.error(f"Error processing chunk from {fname}: {str(e)}")
+                    self.error_logfile_obj.write(
+                        f"Error processing chunk from {fname}: {str(e)}\n"
+                    )
+                    continue
+        return sample_data
+
     def add_fasta_v2(
         self, *fnames, method=1, chunk_size=1000, max_workers=8
     ):  # noqa: C901
         """ """
         sample_data: List[Dict[str, Union[str, int]]] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for fname in fnames:
                 batch_data = []
                 for data in self.iter_fasta(fname):
                     batch_data.append(data)
                     if len(batch_data) == chunk_size:
-                        executor.submit(self.process_data_batch, batch_data, method)
+                        executor.submit(self.process_data_batch, batch_data)
                         batch_data = []
                 # Process any remaining data in the last batch
                 if batch_data:
-                    executor.submit(self.process_data_batch, batch_data, method)
+                    executor.submit(self.process_data_batch, batch_data)
             # Block until all tasks are done
             executor.shutdown(wait=True)
 
@@ -203,11 +343,12 @@ class sonarCache:
         return sample_data
 
     def process_data_batch(
-        self, batch_data: List[Dict[str, Union[str, int]]], method: str
+        self,
+        batch_data: List[Dict[str, Union[str, int]]],
     ):
         current_thread = threading.current_thread()
         LOGGER.debug(
-            f"Thread {current_thread.name} started processing batch of size {len(batch_data)} , method {method} "
+            f"Thread {current_thread.name} started processing batch of size {len(batch_data)} "
         )
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
@@ -239,7 +380,6 @@ class sonarCache:
         }
 
         for i, data in enumerate(batch_data):
-
             # get sample
             batch_data[i]["sampleid"], seqhash_from_DB = (
                 sample_dict[data["name"]]["sample_id"],
@@ -267,7 +407,7 @@ class sonarCache:
             # Create  path for cache file (e.g., .seq, .ref) and write them.
             # Data variable already point to the original batch_data[i], which if we update
             # the varaible, they altomatically update the original batch_data[i]
-            self.add_data_files(data, seqhash_from_DB, refseq_accession, method)
+            self.add_data_files(data, seqhash_from_DB, refseq_accession)
 
             # TODO: will exam how to work directly in memory
             # del batch_data[i]["sequence"]
@@ -492,7 +632,7 @@ class sonarCache:
             return None
 
     def add_data_files(
-        self, data: Dict[str, Any], seqhash: str, refseq_acc: str, method: int
+        self, data: Dict[str, Any], seqhash: str, refseq_acc: str
     ) -> Dict[str, Any]:
         """This function linked to the add_fasta
 
@@ -650,7 +790,6 @@ class sonarCache:
                     # seq = list(reversed(cds["sequence"] + "*"))
                     seq = list(full_seq)  # Convert AA sequence to list for tracking
                     for aa_pos, nuc_pos_list in enumerate(coords):
-
                         rows.append(
                             [elemid]
                             + nuc_pos_list
@@ -724,7 +863,6 @@ class sonarCache:
 
         for row in gene_rows:
             for cds_entry in row["cds_list"]:  # Iterate through cds_list
-
                 if prev_elem is None:
                     prev_elem = cds_entry["cds.id"]
                 elif cds_entry["cds.id"] != prev_elem:
