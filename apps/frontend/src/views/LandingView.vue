@@ -66,7 +66,7 @@ export default {
     return {
       samplesStore: useSamplesStore(),
       router: useRouter(),
-      datasetOptions: {},
+      datasetOptions: {} as Record<string, { accessions: (string | null)[]; data_sets: (string | null)[] }>,
       organisms: [] as string[],
       selectedOrganism: '',
       selectedAccession: '',

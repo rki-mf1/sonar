@@ -188,12 +188,12 @@ export default class API {
     return this.getRequest(`properties/get_all_properties/`, {}, false)
   }
 
-  getSampleStatistics(reference?: string) {
+  getSampleStatistics(reference?: string | null) {
     const params = reference ? { reference } : {}
     return this.getRequest(`samples/statistics/`, params, false)
   }
 
-  getSampleGenomePropertyValueOptions(propertyName: string, reference?: string) {
+  getSampleGenomePropertyValueOptions(propertyName: string, reference?: string | null) {
     // get unique value of each property_name
     const params = reference ? { reference } : {}
     return this.getRequest(
@@ -202,15 +202,15 @@ export default class API {
       false,
     )
   }
-  getRepliconAccessionOptions(reference?: string) {
+  getRepliconAccessionOptions(reference?: string | null) {
     const params = reference ? { reference } : {}
     return this.getRequest('replicons/distinct_accessions/', params, false)
   }
-  getLineageOptions(reference?: string) {
+  getLineageOptions(reference?: string | null) {
     const params = reference ? { reference } : {}
     return this.getRequest(`samples/distinct_lineages/`, params, false)
   }
-  getGeneSymbolOptions(reference?: string) {
+  getGeneSymbolOptions(reference?: string | null) {
     const params = reference ? { reference } : {}
     return this.getRequest(`genes/distinct_gene_symbols/`, params, false)
   }
