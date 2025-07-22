@@ -2,6 +2,7 @@ import type { FilterGroupRoot } from '@/util/types'
 import axios from 'axios'
 import { saveAs } from 'file-saver'
 import * as ExcelJS from 'exceljs'
+import qs from 'qs'
 
 export default class API {
   CODE_OK = 200
