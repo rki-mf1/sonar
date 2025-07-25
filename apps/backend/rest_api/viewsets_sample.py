@@ -142,16 +142,6 @@ class SampleViewSet(
         )
         return Response(data=response_dict, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["get"])
-    def samples_per_day(self, request: Request, *args, **kwargs):
-        queryset = (
-            models.Sample.objects.values("collection_date")
-            .annotate(count=Count("id"))
-            .order_by("collection_date")
-        )
-        dict = {str(item["collection_date"]): item["count"] for item in queryset}
-        return Response(data=dict)
-
     def _get_filtered_queryset(self, request: Request):
         queryset = models.Sample.objects.all()
         if filter_params := request.query_params.get("filters"):
@@ -160,6 +150,15 @@ class SampleViewSet(
             queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
 
         return queryset
+
+    @action(detail=False, methods=["get"])
+    def filtered_statistics(self, request: Request, *args, **kwargs):
+        queryset = self._get_filtered_queryset(request)
+
+        result_dict = {}
+        result_dict["filtered_total_count"] = queryset.count()
+
+        return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
     def genomes(self, request: Request, *args, **kwargs):
@@ -499,69 +498,6 @@ class SampleViewSet(
             status=status.HTTP_200_OK,
         )
 
-    def _get_genomecomplete_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("genome_completeness")
-            .annotate(total=Count("genome_completeness"))
-            .order_by()
-        )
-        result_dict = {
-            item["genome_completeness"]: item["total"] for item in grouped_queryset
-        }
-        return result_dict
-
-    def _get_length_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("length").annotate(total=Count("length")).order_by()
-        )
-        result_dict = {item["length"]: item["total"] for item in grouped_queryset}
-        return result_dict
-
-    def _get_lab_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("lab").annotate(total=Count("lab")).order_by()
-        )
-        result_dict = {item["lab"]: item["total"] for item in grouped_queryset}
-        return result_dict
-
-    def _get_host_chart(self, queryset):
-        result_dict = {}
-        grouped_queryset = (
-            queryset.values("host").annotate(total=Count("host")).order_by()
-        )
-        result_dict = {item["host"]: item["total"] for item in grouped_queryset}
-        return result_dict
-
-    def _get_custom_property_plot(self, queryset, sample_property):
-        if sample_property == "":
-            result_dict = {}
-        elif sample_property == "sequencing_reason":
-            queryset = queryset.filter(properties__property__name="sequencing_reason")
-            # the value_char holds the sequencing reason values
-            grouped_queryset = (
-                queryset.values("properties__value_varchar")
-                .annotate(total=Count("properties__value_varchar"))
-                .order_by()
-            )
-            result_dict = {
-                item["properties__value_varchar"]: item["total"]
-                for item in grouped_queryset
-            }
-
-        else:
-            grouped_queryset = (
-                queryset.values(sample_property)
-                .annotate(total=Count(sample_property))
-                .order_by(sample_property)
-            )
-            result_dict = {
-                str(item[sample_property]): item["total"] for item in grouped_queryset
-            }  # str required for properties in date format
-        return result_dict
-
     def _get_samples_per_week(self, queryset):
         """
         Return a dict mapping calendar week to count, for each week between
@@ -668,15 +604,6 @@ class SampleViewSet(
             }  # str required for properties in date format
 
         return result_dict
-
-    @action(detail=False, methods=["get"])
-    def filtered_statistics(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
-
-        result_dict = {}
-        result_dict["filtered_total_count"] = queryset.count()
-
-        return Response(data=result_dict)
 
     @action(detail=False, methods=["get"])
     def plot_samples_per_week(self, request: Request, *args, **kwargs):
@@ -871,12 +798,6 @@ class SampleViewSet(
         else:
             raise Exception(f"filter_method not found for:{filter.get('label')}")
         return q_obj
-
-    @action(detail=True, methods=["get"])
-    def get_all_sample_data(self, request: Request, *args, **kwargs):
-        sample = self.get_object()
-        serializer = SampleGenomesSerializer(sample)
-        return Response(serializer.data)
 
     def filter_label(
         self,
@@ -1259,64 +1180,6 @@ class SampleViewSet(
             exclude,
         )
 
-    def _convert_date(self, date: str):
-        datetime_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %z")
-        return datetime_obj.date()
-
-    # @action(detail=False, methods=["post"])
-    # def import_properties_tsv(self, request: Request, *args, **kwargs):
-    #     """
-    #     NOTE:
-    #     1. if prop is not exist in the database, it will not be created automatically
-    #     """
-    #     print("Importing properties...")
-    #     timer = datetime.now()
-    #     sample_id_column = request.data.get("sample_id_column")
-
-    #     column_mapping = self._convert_property_column_mapping(
-    #         json.loads(request.data.get("column_mapping"))
-    #     )
-    #     if not sample_id_column:
-    #         return Response(
-    #             {"detail": "No sample_id_column is provided"},
-    #             status=status.HTTP_400_BAD_REQUEST,
-    #         )
-    #     if not column_mapping:
-    #         return Response(
-    #             {"detail": "No column_mapping is provided, nothing to import."},
-    #             status=status.HTTP_200_OK,
-    #         )
-
-    #     if not request.FILES or "properties_tsv" not in request.FILES:
-    #         return Response("No file uploaded.", status=400)
-
-    #     tsv_file = request.FILES.get("properties_tsv")
-    #     # Determine the separator based on the file extension
-    #     file_name = tsv_file.name.lower()
-    #     if file_name.endswith(".csv"):
-    #         sep = ","
-    #     elif file_name.endswith(".tsv"):
-    #         sep = "\t"
-    #     else:
-    #         return Response(
-    #             {"detail": "Unsupported file format, please upload a CSV or TSV file."},
-    #             status=status.HTTP_400_BAD_REQUEST,
-    #         )
-    #     self._temp_save_file(tsv_file)
-    #     return Response(
-    #         {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
-    #     )
-
-    def _import_tsv(self, file_path):
-        header = None
-        with open(file_path, "r") as f:
-            reader = csv.reader(f, delimiter="\t")
-            for row in reader:
-                if not header:
-                    header = row
-                else:
-                    yield dict(zip(header, row))
-
     def _temp_save_file(self, uploaded_file: InMemoryUploadedFile):
         file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, uploaded_file.name)
         with open(file_path, "wb") as f:
@@ -1403,41 +1266,3 @@ class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixi
     def match(self, request: Request, *args, **kwargs):
         profile_filters = request.query_params.getlist("profile_filters")
         param_filters = request.query_params.getlist("param_filters")
-
-    @action(detail=False, methods=["get"])
-    def test_profile_filters():
-        pass
-
-
-def aggregate_below_threshold_lineages(lineages, threshold_count):
-    """
-    Aggregates below-threshold lineages by recursively moving counts up the lineage hierarchy
-    until they meet or exceed the specified threshold.
-
-    :param lineages: A dictionary with lineage names as keys and counts as values.
-    :param threshold_count: The threshold count (10% of total samples).
-    :return: A dictionary with lineages aggregated above the threshold.
-    """
-    above_threshold = {
-        lineage.name: count
-        for lineage, count in lineages.items()
-        if count >= threshold_count
-    }
-    below_threshold = {
-        lineage: count for lineage, count in lineages.items() if count < threshold_count
-    }
-
-    for lineage, count in below_threshold.items():
-        # Aggregate each below-threshold lineage recursively
-
-        if lineage.parent:
-            # band-aid, not perfect fix for not delivering ids instead of names
-            parent_obj = models.Lineage.objects.get(id=lineage.parent)
-            above_threshold[parent_obj.name] = (
-                above_threshold.get(parent_obj.name, 0) + count
-            )
-        else:
-            # If lineage has no parent, keep it as is
-            above_threshold[lineage.name] = above_threshold.get(lineage.name, 0) + count
-
-    return above_threshold
