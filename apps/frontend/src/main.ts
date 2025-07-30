@@ -35,6 +35,7 @@ import Message from 'primevue/message'
 import { OhVueIcon, addIcons } from 'oh-vue-icons'
 import { FaDna } from 'oh-vue-icons/icons'
 import { FaCalendarAlt } from 'oh-vue-icons/icons'
+import { GiRadarSweep } from 'oh-vue-icons/icons'
 import Toast from 'primevue/toast'
 import ToastService from 'primevue/toastservice'
 import AnimateOnScroll from 'primevue/animateonscroll'
@@ -45,7 +46,7 @@ import SplitterPanel from 'primevue/splitterpanel'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import Menu from 'primevue/menu'
-addIcons(FaDna, FaCalendarAlt)
+addIcons(FaDna, FaCalendarAlt, GiRadarSweep)
 
 // Import the chartjs plugin
 import { Chart as ChartJS } from 'chart.js/auto' // Ensure you're importing Chart.js
