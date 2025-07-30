@@ -1,5 +1,4 @@
 import base64
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 import datetime
 import gzip
@@ -17,8 +16,10 @@ import zipfile
 
 from Bio.Seq import Seq
 import magic
+from mpire import WorkerPool
 import pandas as pd
 from sonar_cli.logging import LoggingConfigurator
+from tqdm import tqdm
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
@@ -316,6 +317,39 @@ def chunk(arr_range, arr_size):
     return iter(lambda: tuple(islice(arr_range, arr_size)), ())
 
 
+def clear_sample_cache_batch_worker(sample_batch):
+    """
+    Worker function to clear cache files for a batch of samples using mpire.
+
+    Args:
+        sample_batch: List of sample dictionaries to process
+
+    Returns:
+        int: Number of samples processed successfully
+    """
+    processed_count = 0
+
+    for sample in sample_batch:
+        try:
+            try:
+                os.remove(sample["vcffile"] + ".gz")
+            except FileNotFoundError:
+                pass
+            try:
+                os.remove(sample["vcffile"] + ".gz.tbi")
+            except FileNotFoundError:
+                pass
+            processed_count += 1
+        except (TypeError, OSError) as e:
+            LOGGER.error(traceback.format_exc())
+            LOGGER.error("\nDebugging Information:")
+            LOGGER.error(e)
+            LOGGER.error("-----------")
+            LOGGER.error(sample)
+
+    return processed_count
+
+
 def clear_sample_cache(sample):
     try:
         try:
@@ -334,10 +368,41 @@ def clear_sample_cache(sample):
         LOGGER.error(sample)
 
 
-def clear_unnecessary_cache(samples, max_workers=4):
-    # I used ThreadPoolExecutorfor simplicity
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        executor.map(clear_sample_cache, samples)
+def clear_unnecessary_cache(samples, chunk_size=250, n_jobs=4, progress=True):
+    """
+    Clear cache files for samples using mpire WorkerPool with progress bar.
+
+    Args:
+        samples: List of sample dictionaries
+        chunk_size: Number of samples per chunk (default: 250)
+        n_jobs: Number of worker processes (default: 4)
+        progress: Whether to show progress bar (default: True)
+    """
+    if not samples:
+        return
+
+    # Create batches for parallel processing
+    batches = [samples[i : i + chunk_size] for i in range(0, len(samples), chunk_size)]
+
+    total_samples = len(samples)
+
+    # Use mpire WorkerPool for multiprocessing
+    with WorkerPool(n_jobs=n_jobs) as pool:
+        # Process with progress bar
+        with tqdm(
+            total=total_samples,
+            desc="Clearing cache files",
+            unit="samples",
+            bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+            disable=not progress,
+        ) as pbar:
+            # Use imap for processing with progress updates
+            for processed_count in pool.imap(
+                clear_sample_cache_batch_worker,
+                batches,
+            ):
+                # Update progress bar with actual processed count
+                pbar.update(processed_count)
 
 
 def get_fname(name, extension="", enable_parent_dir=False):

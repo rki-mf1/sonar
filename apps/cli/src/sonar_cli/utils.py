@@ -276,7 +276,9 @@ class sonarUtils:
             return
 
         start_seqcheck_time = get_current_time()
-        sample_data_dict_list = cache.add_fasta_v2(*fasta_files, chunk_size=CHUNK_SIZE)
+        sample_data_dict_list = cache.add_fasta_v2(
+            *fasta_files, chunk_size=CHUNK_SIZE, max_workers=threads
+        )
         prepare_seq_time = calculate_time_difference(
             start_seqcheck_time, get_current_time()
         )
@@ -363,7 +365,13 @@ class sonarUtils:
                 "Uploading and importing sequence mutation profiles into backend..."
             )
             cache_dict = {"job_id": job_id}
-            for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+            for chunk_number, sample_chunk in tqdm(
+                enumerate(passed_samples_chunk_list, 1),
+                total=len(passed_samples_chunk_list),
+                desc="Uploading sample",
+                unit="chunk",
+                bar_format=bar_format,
+            ):
                 LOGGER.debug(f"Uploading chunk {chunk_number}.")
                 sonarUtils.zip_import_upload_sample_singlethread(
                     cache_dict, sample_chunk, chunk_number
@@ -396,6 +404,7 @@ class sonarUtils:
                 for chunk_number, each_file in enumerate(
                     tqdm(
                         anno_result_list,
+                        total=len(anno_result_list),
                         desc="Uploading and importing annotations",
                         unit="file",
                         bar_format=bar_format,
@@ -511,7 +520,7 @@ class sonarUtils:
 
         start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples(
-            passed_align_samples, must_pass_paranoid
+            passed_align_samples, must_pass_paranoid, n_jobs=threads
         )
         LOGGER.info(
             f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}"
@@ -579,7 +588,13 @@ class sonarUtils:
                 "Uploading and importing sequence mutation profiles into backend..."
             )
             cache_dict = {"job_id": job_id}
-            for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+            for chunk_number, sample_chunk in tqdm(
+                enumerate(passed_samples_chunk_list, 1),
+                total=len(passed_samples_chunk_list),
+                desc="Uploading sample chunks",
+                unit="chunk",
+                bar_format=bar_format,
+            ):
                 LOGGER.debug(f"Uploading chunk {chunk_number}.")
                 sonarUtils.zip_import_upload_sample_singlethread(
                     cache_dict, sample_chunk, chunk_number
