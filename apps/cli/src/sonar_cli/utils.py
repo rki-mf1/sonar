@@ -426,7 +426,7 @@ class sonarUtils:
         else:
             LOGGER.info("Disable sending samples.")
         start_clean_time = get_current_time()
-        clear_unnecessary_cache(passed_samples_list, threads)
+        clear_unnecessary_cache(passed_samples_list, n_jobs=threads)
         LOGGER.info(
             f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
@@ -648,7 +648,7 @@ class sonarUtils:
         else:
             LOGGER.info("Disable sending samples.")
         start_clean_time = get_current_time()
-        clear_unnecessary_cache(passed_samples_list, threads)
+        clear_unnecessary_cache(passed_samples_list, n_jobs=threads)
         LOGGER.info(
             f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
