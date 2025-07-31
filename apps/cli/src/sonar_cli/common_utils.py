@@ -317,12 +317,14 @@ def chunk(arr_range, arr_size):
     return iter(lambda: tuple(islice(arr_range, arr_size)), ())
 
 
-def clear_sample_cache_batch_worker(sample_batch):
+def clear_sample_cache_batch_worker(*sample_batch):
     """
     Worker function to clear cache files for a batch of samples using mpire.
 
     Args:
         sample_batch: List of sample dictionaries to process
+        *args: Additional positional arguments (ignored)
+        **kwargs: Additional keyword arguments (ignored)
 
     Returns:
         int: Number of samples processed successfully
