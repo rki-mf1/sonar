@@ -191,7 +191,7 @@ class SampleViewSet(
 
             # fetch genomic and proteomic profiles
             genomic_profiles_qs = models.NucleotideMutation.objects.only(
-                "ref", "alt", "start", "end"
+                "ref", "alt", "start", "end", "is_frameshift"
             ).order_by("start")
             proteomic_profiles_qs = (
                 models.AminoAcidMutation.objects.only(
