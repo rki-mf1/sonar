@@ -256,9 +256,6 @@ class SampleViewSet(
             )
             serializer = SampleGenomesSerializer(queryset, many=True)
             timer = datetime.now()
-            LOGGER.info(
-                f"Serializer done in {datetime.now() - timer},Start to Format result"
-            )
             # Caching happens here
             return self.get_paginated_response(serializer.data)
         except ValueError as e:
