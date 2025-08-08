@@ -336,21 +336,9 @@ class SampleViewSet(
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
-        # check genomic profiles
-        annotations["has_genomic_profiles"] = Exists(
-            models.Sample.objects.filter(
-                sequence__alignments__nucleotide_mutations__isnull=False,
-                id=OuterRef("id"),
-            )
-        )
-
-        # check proteomic profiles
-        annotations["has_proteomic_profiles"] = Exists(
-            models.Sample.objects.filter(
-                sequence__alignments__amino_acid_mutations__isnull=False,
-                id=OuterRef("id"),
-            )
-        )
+        # check profiles
+        # Note: This was removed becasue it is slow and because these fields
+        # are basically always populated
 
         # check sample fields
         for field in models.Sample._meta.get_fields():
