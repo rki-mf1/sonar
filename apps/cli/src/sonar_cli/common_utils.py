@@ -399,7 +399,7 @@ def clear_unnecessary_cache(samples, chunk_size=250, n_jobs=4, progress=True):
             disable=not progress,
         ) as pbar:
             # Use imap for processing with progress updates
-            for processed_count in pool.imap(
+            for processed_count in pool.imap_unordered(
                 clear_sample_cache_batch_worker,
                 batches,
             ):

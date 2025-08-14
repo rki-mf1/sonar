@@ -1114,7 +1114,7 @@ class sonarCache:
                 disable=self.disable_progress,
             ) as pbar:
                 # Use imap for processing with progress updates
-                for batch_passed, batch_failed in pool.imap(
+                for batch_passed, batch_failed in pool.imap_unordered(
                     process_paranoid_batch_worker,
                     batch_data_list,
                 ):

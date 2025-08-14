@@ -107,8 +107,10 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
         ),
     )
     command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
-    code = run_cli(command)
-
+    try:
+        code = run_cli(command)
+    except SystemExit as e:
+        code = e.code
     assert code == 0
 
 
