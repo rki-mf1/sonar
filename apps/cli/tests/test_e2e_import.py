@@ -100,14 +100,11 @@ def test_add_zika_ref(monkeypatch, capfd, api_url):
 def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
-    monkeypatch.setattr(
-        "mpire.WorkerPool.imap_unordered",
-        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
-        ),
-    )
     command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
-    code = run_cli(command)
+    try:
+        code = run_cli(command)
+    except SystemExit as e:
+        code = e.code
     assert code == 0
 
 
@@ -116,14 +113,11 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
 def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
-    monkeypatch.setattr(
-        "mpire.WorkerPool.imap_unordered",
-        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
-        ),
-    )
     command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload --must-pass-paranoid"
-    code = run_cli(command)
+    try:
+        code = run_cli(command)
+    except SystemExit as e:
+        code = e.code
     assert code == 0
 
 
@@ -151,7 +145,7 @@ def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
+            func(**arg) for arg in args
         ),
     )
     code = run_cli(
@@ -167,7 +161,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
+            func(**arg) for arg in args
         ),
     )
     code = run_cli(
@@ -184,7 +178,7 @@ def test_mafft_anno_upload_rsv(monkeypatch, api_url, tmpfile_name):
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
+            func(**arg) for arg in args
         ),
     )
     command = f"import --db {api_url} -r OP975389.1 --method 1 --fasta ../../../test-data/RSV/RSV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
@@ -200,7 +194,7 @@ def test_mafft_anno_upload_mpox(monkeypatch, api_url, tmpfile_name):
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
+            func(**arg) for arg in args
         ),
     )
     command = f"import --db {api_url} -r NC_063383.1 --method 1 --fasta ../../../test-data/mpox/mpox_2.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
@@ -216,7 +210,7 @@ def test_mafft_anno_upload_ebola(monkeypatch, api_url, tmpfile_name):
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
+            func(**arg) for arg in args
         ),
     )
     command = f"import --db {api_url} -r NC_002549.1 --method 1 --fasta ../../../test-data/ebola/ebola_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
@@ -232,7 +226,7 @@ def test_mafft_anno_upload_dengue_type2(monkeypatch, api_url, tmpfile_name):
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
+            func(**arg) for arg in args
         ),
     )
     command = f"import --db {api_url} -r NC_001474.2 --method 1 --fasta ../../../test-data/dengue/type_2/dengue_type2_complete_13.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
@@ -248,7 +242,7 @@ def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) if isinstance(arg, dict) else func(*arg) for arg in args
+            func(**arg) for arg in args
         ),
     )
     command = f"import --db {api_url} -r NC_001802.1 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
