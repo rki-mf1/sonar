@@ -100,50 +100,41 @@ def mock_workerpool_methods(monkeypatch):  # noqa: C901
                 else:
                     effective_arg = arg
 
-                # If the pool is set to pass worker id, the worker signature
-                # is (worker_id, shared_objects, ...). Our recorded
-                # _mock_pass_worker_id flag tells us to insert a worker id
-                # as the first positional argument. Use the actual
-                # shared_objects value as the second positional arg.
-                worker_id_included = getattr(self, "_mock_pass_worker_id", False)
-                if worker_id_included:
-                    # choose a representative worker id: use shared_objects
-                    # object itself as the worker id when mpire does that in
-                    # this codebase (some callers use the cache instance)
-                    worker_id_val = getattr(self, "_mock_shared_objects", None)
-
                 if shared_args:
                     if isinstance(effective_arg, (tuple, list)):
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, *effective_arg)
-                        else:
-                            result = func(*shared_args, *effective_arg)
+                        try:
+                            print(
+                                "[mock_imap_unordered] effective_arg (seq)=",
+                                repr(effective_arg),
+                            )
+                        except Exception:
+                            pass
+                        result = func(*shared_args, *effective_arg)
                     elif isinstance(effective_arg, dict):
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, **effective_arg)
-                        else:
-                            result = func(*shared_args, **effective_arg)
+                        try:
+                            print(
+                                "[mock_imap_unordered] effective_arg (dict)=",
+                                repr(effective_arg),
+                            )
+                        except Exception:
+                            pass
+                        result = func(*shared_args, **effective_arg)
                     else:
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, effective_arg)
-                        else:
-                            result = func(*shared_args, effective_arg)
+                        try:
+                            print(
+                                "[mock_imap_unordered] effective_arg (single)=",
+                                repr(effective_arg),
+                            )
+                        except Exception:
+                            pass
+                        result = func(*shared_args, effective_arg)
                 else:
                     if isinstance(effective_arg, (tuple, list)):
-                        if worker_id_included:
-                            result = func(worker_id_val, *effective_arg)
-                        else:
-                            result = func(*effective_arg)
+                        result = func(*effective_arg)
                     elif isinstance(effective_arg, dict):
-                        if worker_id_included:
-                            result = func(worker_id_val, **effective_arg)
-                        else:
-                            result = func(**effective_arg)
+                        result = func(**effective_arg)
                     else:
-                        if worker_id_included:
-                            result = func(worker_id_val, effective_arg)
-                        else:
-                            result = func(effective_arg)
+                        result = func(effective_arg)
                 if callback:
                     callback(result)
                 yield result
@@ -158,22 +149,18 @@ def mock_workerpool_methods(monkeypatch):  # noqa: C901
 
         Respect WorkerPool.shared_objects when present.
         """
-        # Prefer any shared objects recorded at WorkerPool construction by our
-        # patched __init__ (see above). Fall back to common attribute names
-        # for older mpire implementations.
-        shared = getattr(self, "_mock_shared_objects", None)
-        if shared is None:
-            for attr_name in (
-                "shared_objects",
-                "_shared_objects",
-                "shared",
-                "_shared",
-                "shared_object",
-                "_shared_object",
-            ):
-                if hasattr(self, attr_name):
-                    shared = getattr(self, attr_name)
-                    break
+        shared = None
+        for attr_name in (
+            "shared_objects",
+            "_shared_objects",
+            "shared",
+            "_shared",
+            "shared_object",
+            "_shared_object",
+        ):
+            if hasattr(self, attr_name):
+                shared = getattr(self, attr_name)
+                break
         if isinstance(shared, (list, tuple)):
             shared_args = tuple(shared)
         elif shared is None:
@@ -192,45 +179,20 @@ def mock_workerpool_methods(monkeypatch):  # noqa: C901
                 else:
                     effective_arg = arg
 
-                worker_id_included = getattr(self, "_mock_pass_worker_id", False)
-                worker_id_val = (
-                    getattr(self, "_mock_shared_objects", None)
-                    if worker_id_included
-                    else None
-                )
-
                 if shared_args:
                     if isinstance(effective_arg, (tuple, list)):
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, *effective_arg)
-                        else:
-                            result = func(*shared_args, *effective_arg)
+                        result = func(*shared_args, *effective_arg)
                     elif isinstance(effective_arg, dict):
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, **effective_arg)
-                        else:
-                            result = func(*shared_args, **effective_arg)
+                        result = func(*shared_args, **effective_arg)
                     else:
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, effective_arg)
-                        else:
-                            result = func(*shared_args, effective_arg)
+                        result = func(*shared_args, effective_arg)
                 else:
                     if isinstance(effective_arg, (tuple, list)):
-                        if worker_id_included:
-                            result = func(worker_id_val, *effective_arg)
-                        else:
-                            result = func(*effective_arg)
+                        result = func(*effective_arg)
                     elif isinstance(effective_arg, dict):
-                        if worker_id_included:
-                            result = func(worker_id_val, **effective_arg)
-                        else:
-                            result = func(**effective_arg)
+                        result = func(**effective_arg)
                     else:
-                        if worker_id_included:
-                            result = func(worker_id_val, effective_arg)
-                        else:
-                            result = func(effective_arg)
+                        result = func(effective_arg)
                 if callback:
                     callback(result)
                 yield result
@@ -254,22 +216,18 @@ def mock_workerpool_methods(monkeypatch):  # noqa: C901
 
         Respect WorkerPool.shared_objects when present.
         """
-        # Prefer any shared objects recorded at WorkerPool construction by our
-        # patched __init__ (see above). Fall back to common attribute names
-        # for older mpire implementations.
-        shared = getattr(self, "_mock_shared_objects", None)
-        if shared is None:
-            for attr_name in (
-                "shared_objects",
-                "_shared_objects",
-                "shared",
-                "_shared",
-                "shared_object",
-                "_shared_object",
-            ):
-                if hasattr(self, attr_name):
-                    shared = getattr(self, attr_name)
-                    break
+        shared = None
+        for attr_name in (
+            "shared_objects",
+            "_shared_objects",
+            "shared",
+            "_shared",
+            "shared_object",
+            "_shared_object",
+        ):
+            if hasattr(self, attr_name):
+                shared = getattr(self, attr_name)
+                break
         if isinstance(shared, (list, tuple)):
             shared_args = tuple(shared)
         elif shared is None:
@@ -288,45 +246,20 @@ def mock_workerpool_methods(monkeypatch):  # noqa: C901
                 else:
                     effective_arg = arg
 
-                worker_id_included = getattr(self, "_mock_pass_worker_id", False)
-                worker_id_val = (
-                    getattr(self, "_mock_shared_objects", None)
-                    if worker_id_included
-                    else None
-                )
-
                 if shared_args:
                     if isinstance(effective_arg, (tuple, list)):
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, *effective_arg)
-                        else:
-                            result = func(*shared_args, *effective_arg)
+                        result = func(*shared_args, *effective_arg)
                     elif isinstance(effective_arg, dict):
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, **effective_arg)
-                        else:
-                            result = func(*shared_args, **effective_arg)
+                        result = func(*shared_args, **effective_arg)
                     else:
-                        if worker_id_included:
-                            result = func(worker_id_val, *shared_args, effective_arg)
-                        else:
-                            result = func(*shared_args, effective_arg)
+                        result = func(*shared_args, effective_arg)
                 else:
                     if isinstance(effective_arg, (tuple, list)):
-                        if worker_id_included:
-                            result = func(worker_id_val, *effective_arg)
-                        else:
-                            result = func(*effective_arg)
+                        result = func(*effective_arg)
                     elif isinstance(effective_arg, dict):
-                        if worker_id_included:
-                            result = func(worker_id_val, **effective_arg)
-                        else:
-                            result = func(**effective_arg)
+                        result = func(**effective_arg)
                     else:
-                        if worker_id_included:
-                            result = func(worker_id_val, effective_arg)
-                        else:
-                            result = func(effective_arg)
+                        result = func(effective_arg)
                 if callback:
                     callback(result)
                 yield result
@@ -350,31 +283,11 @@ def mock_workerpool_methods(monkeypatch):  # noqa: C901
 
     def _mocked_init(self, *a, shared_objects=None, **kw):
         # store for our mock lookup
-        # store any shared_objects passed at construction time
         setattr(self, "_mock_shared_objects", shared_objects)
-        # record whether the pool was configured to pass the worker id
-        pass_worker_flag = kw.get("pass_worker_id", False)
-        setattr(self, "_mock_pass_worker_id", pass_worker_flag)
         # call original init with same args
         return original_init(self, *a, shared_objects=shared_objects, **kw)
 
     monkeypatch.setattr("mpire.pool.WorkerPool.__init__", _mocked_init)
-    # Also wrap set_shared_objects so calls done after construction are
-    # recorded into our predictable attribute. Some code calls
-    # pool.set_shared_objects(obj) after init instead of passing via
-    # __init__, so we must capture that.
-    original_set_shared_objects = mpire.pool.WorkerPool.set_shared_objects
-
-    def _mocked_set_shared_objects(self, shared_objects):
-        try:
-            setattr(self, "_mock_shared_objects", shared_objects)
-        except Exception:
-            pass
-        return original_set_shared_objects(self, shared_objects)
-
-    monkeypatch.setattr(
-        "mpire.pool.WorkerPool.set_shared_objects", _mocked_set_shared_objects
-    )
 
 
 @pytest.fixture(scope="session")
