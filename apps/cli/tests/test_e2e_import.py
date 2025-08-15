@@ -101,8 +101,10 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
     command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
-    code = run_cli(command)
-
+    try:
+        code = run_cli(command)
+    except SystemExit as e:
+        code = e.code
     assert code == 0
 
 
@@ -112,8 +114,10 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload --must-pass-paranoid"
-    code = run_cli(command)
-
+    try:
+        code = run_cli(command)
+    except SystemExit as e:
+        code = e.code
     assert code == 0
 
 
@@ -138,6 +142,7 @@ def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
 @pytest.mark.order(5)
 def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
+
     code = run_cli(
         f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft  --no-skip --no-upload --must-pass-paranoid"
     )
