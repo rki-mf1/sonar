@@ -12,22 +12,50 @@ from sonar_cli.config import ANNO_TOOL_PATH
 API_BASE_URL = "http://127.0.0.1:8000/api"
 ACCESION_SARSCOV2 = "MN908947.3"
 
-# PYTEST FIXTURES
-# @pytest.fixture(autouse=True)
-# def mock_workerpool_imap_unordered(monkeypatch):
-#     """Mock mpire's WorkerPool.imap_unordered function
-#     This is necessary to work around crashes caused by trying to calculate
-#     coverage with multiprocess subprocesses, and also to make the tests
-#     reproducible (ordered).
-#     """
-#     monkeypatch.setattr(
-#         "mpire.WorkerPool.imap_unordered",
-#         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-#             func(**arg) for arg in args
-#         ),
-#     )
 
-# monkeypatch.setattr("mpire.WorkerPool")
+# PYTEST FIXTURES
+@pytest.fixture(autouse=True)
+def mock_workerpool_methods(monkeypatch):  # noqa: C901
+    """Mock mpire's WorkerPool methods for testing
+    This is necessary to work around crashes caused by trying to calculate
+    coverage with multiprocess subprocesses, and also to make the tests
+    reproducible (ordered).
+    """
+
+    def mock_imap_unordered(
+        self, func, args=(), kwds={}, callback=None, error_callback=None
+    ):
+        """Mock imap_unordered to work sequentially"""
+        results = []
+        for arg in args:
+            try:
+                result = func(**arg)
+                results.append(result)
+                if callback:
+                    callback(result)
+            except Exception as e:
+                if error_callback:
+                    error_callback(e)
+                else:
+                    raise
+        return iter(results)
+
+    def mock_imap(self, func, args=(), kwds={}, callback=None, error_callback=None):
+        """Mock imap to work sequentially"""
+        for arg in args:
+            try:
+                result = func(arg)
+                if callback:
+                    callback(result)
+                yield result
+            except Exception as e:
+                if error_callback:
+                    error_callback(e)
+                else:
+                    raise
+
+    monkeypatch.setattr("mpire.WorkerPool.imap_unordered", mock_imap_unordered)
+    monkeypatch.setattr("mpire.WorkerPool.imap", mock_imap)
 
 
 @pytest.fixture(scope="session")
