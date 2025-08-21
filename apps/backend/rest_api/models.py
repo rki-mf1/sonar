@@ -589,39 +589,17 @@ class NucleotideMutation(models.Model):
 
     class Meta:
         db_table = "nucleotide_mutation"
-        # indexes = [
-        #     models.Index(fields=["start"]),
-        #     models.Index(fields=["end"]),
-        #     models.Index(fields=["ref"]),
-        #     models.Index(fields=["alt"]),
-        # ]
-        # models.Index(fields=['start', 'end']), # Range Queries
-        # models.Index(fields=['ref', 'alt']),
-        # models.Index(fields=['end', 'ref', 'alt']),  # Composite for SNP queries
-        # models.Index(fields=['alt', 'end',  'start']),  # Composite for DEL queries
-        # models.Index(fields=['alt', 'end', 'ref']),  # Composite for INS queries
         indexes = [
-            # ===== SNP Queries =====
-            # Primary SNP index: end + ref + alt (most selective order)
-            models.Index(fields=["end", "ref", "alt"], name="nt_snp_end_ref_alt_idx"),
-            # Alternative SNP index: ref + end + alt (for ref-based lookups)
-            models.Index(fields=["ref", "end", "alt"], name="nt_snp_ref_end_alt_idx"),
-            # ===== DELETION Queries =====
-            # Deletion index: start + end + alt (alt="" for deletions)
-            models.Index(
-                fields=["start", "end", "alt"], name="nt_del_start_end_alt_idx"
-            ),
-            # Alternative deletion index: alt + start + end (empty alt first)
-            models.Index(
-                fields=["alt", "start", "end"], name="nt_del_alt_start_end_idx"
-            ),
-            # ===== INSERTION Queries =====
-            # Insertion index: end + ref + alt (same as SNP, but alt contains insertion)
-            # Note: This is covered by the SNP indexes above
-            # ===== Range Queries =====
-            # Position range index for start/end queries
-            models.Index(fields=["start", "end"], name="nt_position_range_idx"),
+            models.Index(fields=["start"]),
+            models.Index(fields=["end"]),
+            models.Index(fields=["ref"]),
+            models.Index(fields=["alt"]),
         ]
+        (models.Index(fields=["start", "end"]),)  # Range Queries
+        (models.Index(fields=["ref", "alt"]),)
+        (models.Index(fields=["end", "ref", "alt"]),)  # Composite for SNP queries
+        (models.Index(fields=["alt", "end", "start"]),)  # Composite for DEL queries
+        (models.Index(fields=["alt", "end", "ref"]),)  # Composite for INS queries
 
         constraints = [
             UniqueConstraint(
@@ -668,42 +646,12 @@ class AminoAcidMutation(models.Model):
 
     class Meta:
         db_table = "amino_acid_mutation"
-        # indexes = [
-        #     models.Index(fields=["cds"]),
-        #     models.Index(fields=["start"]),
-        #     models.Index(fields=["end"]),
-        #     models.Index(fields=["ref"]),
-        #     models.Index(fields=["alt"]),
-        # ]
         indexes = [
-            # ===== SNP Queries =====
-            # Primary SNP index: cds + end + ref + alt (includes gene via cds)
-            models.Index(
-                fields=["cds", "end", "ref", "alt"], name="aa_snp_cds_end_ref_alt_idx"
-            ),
-            # Alternative SNP index: end + ref + alt + cds
-            models.Index(
-                fields=["end", "ref", "alt", "cds"], name="aa_snp_end_ref_alt_cds_idx"
-            ),
-            # ===== DELETION Queries =====
-            # Deletion index: cds + start + end + alt (alt="" for deletions)
-            models.Index(
-                fields=["cds", "start", "end", "alt"],
-                name="aa_del_cds_start_end_alt_idx",
-            ),
-            # Alternative deletion index: alt + cds + start + end (empty alt first)
-            models.Index(
-                fields=["alt", "cds", "start", "end"],
-                name="aa_del_alt_cds_start_end_idx",
-            ),
-            # ===== INSERTION Queries =====
-            # Insertion index: cds + end + ref + alt (same as SNP pattern)
-            # Note: This is covered by the SNP indexes above
-            # ===== CDS-based Queries =====
-            # CDS + position range for gene-specific queries
-            models.Index(
-                fields=["cds", "start", "end"], name="aa_cds_position_range_idx"
-            ),
+            models.Index(fields=["cds"]),
+            models.Index(fields=["start"]),
+            models.Index(fields=["end"]),
+            models.Index(fields=["ref"]),
+            models.Index(fields=["alt"]),
         ]
         constraints = [
             UniqueConstraint(
