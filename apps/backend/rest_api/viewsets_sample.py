@@ -44,7 +44,6 @@ from rest_framework.response import Response
 from covsonar_backend.settings import DEBUG
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from rest_api.customDRF import CachedCountLimitOffsetPagination
 from rest_api.customDRF import SerializedOutputCachePagination
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleGenomesExportStreamSerializer
@@ -86,7 +85,7 @@ class SampleViewSet(
     lookup_field = "name"
     filter_fields = ["name"]
     pagination_class = SerializedOutputCachePagination
-    # CachedCountLimitOffsetPagination (good one)
+    # CachedCountLimitOffsetPagination (simple and good one)
 
     @property
     def filter_label_to_methods(self):

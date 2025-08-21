@@ -7,9 +7,12 @@ from rest_framework.utils.urls import remove_query_param
 from rest_framework.utils.urls import replace_query_param
 
 
-# ------------- method 4
+# ------------- Method 4, this is a simple method to cache the count of a queryset
 def CachedCountQueryset(queryset, timeout=60 * 60 * 24, cache_name="default"):
     """
+    This method we cache only count of a queryset, but not the result from whole queryset.
+    (Surprisingly improved the performance of the API)
+
     Return copy of queryset with queryset.count() wrapped to cache result for `timeout` seconds.
     """
     cache = caches[cache_name]
@@ -52,11 +55,11 @@ class CachedCountLimitOffsetPagination(LimitOffsetPagination):
         )
 
 
-# ------------- MARK I - Serialized Output Cache + COUNT queries cached (shared across pages)
+# ------------- Method 6 - Serialized Output Cache + COUNT queries cached (shared across pages)
 class SerializedOutputCachePagination(LimitOffsetPagination):
     """method 6
     Two-Level Caching:
-    - Level 1: COUNT queries cached (shared across pages)
+    - Level 1: COUNT queries cached (shared across pages) (similar to method 4)
     - Level 2: Full serialized responses cached (page-specific caching, doesn't cache entire dataset)
     * Caches the final serialized output (JSON) instead of just the queryset,
     so the expensive serializer processing work (database queries) will not be repeated.
@@ -83,7 +86,7 @@ class SerializedOutputCachePagination(LimitOffsetPagination):
 
         cached_response = cache.get(cache_key)
         if cached_response is not None:
-            print(f"Cache HIT for serialized output: {cache_key}")
+            # print(f"Cache HIT for serialized output: {cache_key}")
             # Restore all pagination state from cache
             self.count = cached_response["count"]
             self.has_next = cached_response["has_next"]
@@ -92,7 +95,7 @@ class SerializedOutputCachePagination(LimitOffsetPagination):
             # Return empty list since we'll use cached serialized data
             return []
 
-        print(f"Cache MISS for serialized output: {cache_key}")
+        # print(f"No Cache for serialized output: {cache_key}")
 
         # Cache miss - need to fetch and serialize
         # First, get cached count using the cached count queryset
