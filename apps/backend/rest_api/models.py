@@ -165,10 +165,6 @@ class Gene(models.Model):
 
     class Meta:
         db_table = "gene"
-        indexes = [
-            # protein symbol lookups in AA queries
-            models.Index(fields=["symbol"], name="gene_symbol_idx"),
-        ]
 
 
 class CDS(models.Model):
@@ -194,10 +190,6 @@ class CDS(models.Model):
 
     class Meta:
         db_table = "cds"
-        # For CDS to Gene lookups in AA mutations
-        indexes = [
-            models.Index(fields=["gene"], name="cds_gene_idx"),
-        ]
 
 
 class CDSSegment(models.Model):
