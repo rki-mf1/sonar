@@ -186,7 +186,7 @@ class CDS(models.Model):
     accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
     sequence = models.TextField(blank=True, null=True)
     gene = models.ForeignKey(Gene, models.CASCADE)
-    description = models.CharField(max_length=100, blank=True, null=True)
+    description = models.CharField(max_length=150, blank=True, null=True)
 
     class Meta:
         db_table = "cds"

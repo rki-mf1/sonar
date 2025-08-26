@@ -102,7 +102,10 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                 """
                 gene_feature = type: gene, location: [26244:26472](+), qualifiers: Key: gene, Value: ['E']
                 """
-                gene_symbol = gene_feature.qualifiers.get("gene", [None])[0]
+                gene_symbol = (
+                    gene_feature.qualifiers.get("gene", [None])[0]
+                    or gene_feature.qualifiers.get("locus_tag", [None])[0]
+                )
                 if gene_symbol is None:
                     raise ValueError(
                         f"No gene symbol found for feature at {gene_feature.location}."
@@ -125,9 +128,14 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
             ]
             for cds_feature in cds_features:
                 # TODO add note to cds table (e.g. ORF1)
-                gene_symbol = cds_feature.qualifiers.get("gene", [None])[0]
+                gene_symbol = (
+                    cds_feature.qualifiers.get("gene", [None])[0]
+                    or cds_feature.qualifiers.get("locus_tag", [None])[0]
+                )
                 if gene_symbol is None:
-                    raise ValueError("No gene symbol found.")
+                    raise ValueError(
+                        f"No gene symbol found for CDS feature at {cds_feature.location}."
+                    )
                 gene = gene_id_to_gene_obj.get(gene_symbol, None)
                 if gene is None:
                     raise ValueError("No gene object found for CDS.")
@@ -145,9 +153,12 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                 f for f in record.features if f.type in ["mat_peptide", "sig_peptide"]
             ]
             for peptide_feature in peptide_features:
-                gene_symbol = peptide_feature.qualifiers.get("gene", [None])[0]
+                gene_symbol = (
+                    peptide_feature.qualifiers.get("gene", [None])[0]
+                    or peptide_feature.qualifiers.get("locus_tag", [None])[0]
+                )
                 if gene_symbol is None:
-                    raise ValueError("No gene symbol found.")
+                    raise ValueError("No gene symbol found for peptide feature.")
                 cds_objects = gene_id_to_cds_obj.get(gene_symbol, None)
                 cds_segments = CDSSegment.objects.filter(
                     cds__in=[cds.pk for cds in cds_objects]
@@ -312,7 +323,6 @@ def _put_cds_from_feature(feature: SeqFeature.SeqFeature, gene: Gene) -> CDS:
     cds = find_or_create(
         {"gene": gene.pk, "accession": cds_update_data["accession"]}, CDS, CDSSerializer
     )
-
     for attr_name, value in cds_update_data.items():
         setattr(cds, attr_name, value)
     return CDSSerializer(cds).update(cds, cds_update_data)
