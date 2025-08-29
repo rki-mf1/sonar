@@ -296,9 +296,9 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     print(e)
                     print(f"{mutation.ref}{mutation.end}{mutation.alt}")
                     continue
-            sorted_label_list = [
-                item[2] for item in sorted(label_list, key=lambda x: (x[0], x[1]))
-            ]
+        sorted_label_list = [
+            item[2] for item in sorted(label_list, key=lambda x: (x[0], x[1]))
+        ]
         return sorted_label_list
 
     def create_NT_format(self, mutation: models.NucleotideMutation):
