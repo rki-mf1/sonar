@@ -587,6 +587,12 @@ class NucleotideMutation(models.Model):
             models.Index(fields=["ref"]),
             models.Index(fields=["alt"]),
         ]
+        (models.Index(fields=["start", "end"]),)  # Range Queries
+        (models.Index(fields=["ref", "alt"]),)
+        (models.Index(fields=["end", "ref", "alt"]),)  # Composite for SNP queries
+        (models.Index(fields=["alt", "end", "start"]),)  # Composite for DEL queries
+        (models.Index(fields=["alt", "end", "ref"]),)  # Composite for INS queries
+
         constraints = [
             UniqueConstraint(
                 name="unique_nt_mutation",
