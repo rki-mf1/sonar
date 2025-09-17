@@ -441,6 +441,7 @@ export const useSamplesStore = defineStore('samples', {
     },
 
     async updateSelectedColumns() {
+      // ensure property order for table columns
       const properties = [
         'lineage',
         'collection_date',
@@ -482,9 +483,13 @@ export const useSamplesStore = defineStore('samples', {
         )
         // keep only those properties that have a coverage, i.e. that are not entirly empty
         // & drop the 'name' column because the ID column is fixed
-        this.propertyTableOptions = Object.keys(this.propertiesDict).filter(
-          (key) => key !== 'name' && metadata.includes(key),
-        )
+        this.propertyTableOptions = Object.keys(this.propertiesDict)
+          .filter(
+            (key) =>
+              key !== 'name' &&
+              (metadata.includes(key) || ['genomic_profiles', 'proteomic_profiles'].includes(key)),
+          )
+          .sort(); // Sort alphabetically
         this.propertyMenuOptions = [
           'name',
           ...this.propertyTableOptions.filter(
