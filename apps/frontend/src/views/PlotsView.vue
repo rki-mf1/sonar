@@ -598,9 +598,9 @@ export default {
           tooltip: {
             callbacks: {
               label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) => {
-                const value = context.raw;
+                const value = context.raw
                 // const label = context.label || 'Unknown Category';
-                return `${value} samples`;
+                return `${value} samples`
               },
             },
           },
