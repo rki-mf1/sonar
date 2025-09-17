@@ -489,7 +489,7 @@ export const useSamplesStore = defineStore('samples', {
               key !== 'name' &&
               (metadata.includes(key) || ['genomic_profiles', 'proteomic_profiles'].includes(key)),
           )
-          .sort(); // Sort alphabetically
+          .sort()
         this.propertyMenuOptions = [
           'name',
           ...this.propertyTableOptions.filter(
