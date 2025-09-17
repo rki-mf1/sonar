@@ -1,3 +1,5 @@
+import argparse
+
 import pandas as pd
 from pango_aliasor.aliasor import Aliasor
 
@@ -46,3 +48,13 @@ def main(output_file):
     final_df.to_csv(output_file, sep="\t", index=False)
 
     return output_file
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate lineage mappings.")
+    parser.add_argument(
+        "-o", "--output", required=True, help="Path to the output TSV file"
+    )
+    args = parser.parse_args()
+
+    main(args.output)

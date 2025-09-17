@@ -517,7 +517,7 @@ export const useSamplesStore = defineStore('samples', {
       this.repliconAccessionOptions = res.accessions
     },
     async updateLineageOptions() {
-      const res = await API.getInstance().getLineageOptions(this.accession)
+      const res = await API.getInstance().getFullLineageOptions()
       this.lineageOptions = res.lineages
     },
     async updateSymbolOptions() {
