@@ -31,7 +31,7 @@ class SampleRaw:
     refmolid: int
     seq_file: str
     seqhash: str
-    sample_sequence_length: int
+    sequence_length: int
     sourceid: int
     translationid: int
     include_nx: bool
@@ -76,7 +76,7 @@ class VCFInfoNMDRaw:
     percent_of_transcripts_affected: str
 
 
-class SampleImport:
+class SonarImport:
     def __init__(
         self,
         path: pathlib.Path,
@@ -105,21 +105,27 @@ class SampleImport:
         return self.sample_raw.name
 
     def get_sequence_obj(self):
-        self.sequence = Sequence(seqhash=self.sample_raw.seqhash)
-        return self.sequence
-
-    def get_sample_obj(self):
-        if not self.sequence:
-            raise Exception("Sequence object not created yet")
-        self.sequence = Sequence.objects.get(seqhash=self.sequence.seqhash)
-        self.sample = Sample(
+        """
+        Fetch or create a Sequence object based on the seqhash value in SampleRaw.
+        Updates or sets the name, length, and last_update_date fields.
+        """
+        self.sequence, created = Sequence.objects.get_or_create(
             name=self.sample_raw.name,
-            sequence=self.sequence,
-            length=self.sample_raw.sample_sequence_length,
-            last_update_date=timezone.now(),
-            # properties=self.sample_raw.properties,
+            defaults={
+                "seqhash": self.sample_raw.seqhash,
+                "length": self.sample_raw.sequence_length,
+                "last_update_date": timezone.now(),
+            },
         )
-        return self.sample
+
+        # If the sequence already exists, update its fields
+        if not created:
+            self.sequence.seqhash = self.sample_raw.seqhash
+            self.sequence.length = self.sample_raw.sequence_length
+            self.sequence.last_update_date = timezone.now()
+            self.sequence.save()
+
+        return self.sequence
 
     def update_replicon_obj(self, replicon_cache: dict[str, Replicon]):
         if self.sample_raw.source_acc not in replicon_cache:

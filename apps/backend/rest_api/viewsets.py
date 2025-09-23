@@ -91,11 +91,11 @@ class AlignmentViewSet(
     @action(detail=False, methods=["post"])
     def get_bulk_alignment_data(self, request: Request, *args, **kwargs):
         data = json.loads(request.body.decode("utf-8"))
-        sample_data_list = data.get("sample_data", [])
+        sequence_data_list = data.get("sample_data", [])
 
         # Extract values from the list
-        seqhash_values = [item.get("seqhash") for item in sample_data_list]
-        replicon_id_values = [item.get("replicon_id") for item in sample_data_list]
+        seqhash_values = [item.get("seqhash") for item in sequence_data_list]
+        replicon_id_values = [item.get("replicon_id") for item in sequence_data_list]
 
         queryset = models.Alignment.objects.filter(
             reduce(
@@ -109,18 +109,16 @@ class AlignmentViewSet(
         queryset = queryset.select_related("sequence")
 
         # Convert the queryset to a list of dictionaries
-        # sample_data = list(queryset.values())
-        sample_data = list(
-            queryset.extra(
-                select={"alignement_id": "alignment.id", "sequence_id": "sequence.id"}
-            ).values(
+        # sequence_data = list(queryset.values())
+        sequence_data = list(
+            queryset.values(
                 "replicon_id",
-                "alignement_id",
+                "id",  # alignment ID
                 "sequence_id",
-                "sequence__sample__name",
+                "sequence__name",
             )
         )
-        return Response(data=sample_data, status=status.HTTP_200_OK)
+        return Response(data=sequence_data, status=status.HTTP_200_OK)
 
 
 class RepliconViewSet(viewsets.ModelViewSet):
@@ -532,6 +530,7 @@ class PropertyViewSet(
 
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
+        # TODO lenght is now a sequence property, how to handle?
         """
         "value_integer",
         "value_float",
@@ -565,12 +564,6 @@ class PropertyViewSet(
                 "name": "collection_date",
                 "query_type": "value_date",
                 "description": "Date when the sample was collected (predefined prop.)",
-                "default": None,
-            },
-            {
-                "name": "length",
-                "query_type": "value_integer",
-                "description": "Length of the genetic sequence (predefined prop.)",
                 "default": None,
             },
             {
@@ -718,8 +711,9 @@ class FileUploadViewSet(viewsets.ViewSet):
 
         # Step 2: Check if this is a property upload (based on jobID)
         if "_prop" in jobID:
-            # Property upload: Check for sample_id_column and column_mapping
+            # Property upload: Check for sample_id_column, sequences_id_column and column_mapping
             sample_id_column = request.data.get("sample_id_column")
+            sequences_id_column = request.data.get("sequences_id_column")
             column_mapping_json = request.data.get("column_mapping")
 
             # Validate sample_id_column
@@ -756,6 +750,7 @@ class FileUploadViewSet(viewsets.ViewSet):
                 pickle.dump(
                     {
                         "sample_id_column": sample_id_column,
+                        "sequences_id_column": sequences_id_column,
                         "column_mapping": column_mapping,
                     },
                     pickle_file,

@@ -1183,8 +1183,9 @@ class SampleViewSet(
             )
         sample_model = (
             models.Sample.objects.filter(name=sample_name)
+            .prefetch_related("sequences")
             .extra(select={"sample_id": "sample.id"})
-            .values("sample_id", "name", "sequence__seqhash")
+            .values("sample_id", "name", "sequences__seqhash")
         )
         if sample_model:
             sample_data = list(sample_model)[0]
@@ -1206,8 +1207,8 @@ class SampleViewSet(
             sample_data_list = data.get("sample_data", [])
             sample_model = (
                 models.Sample.objects.filter(name__in=sample_data_list)
-                .extra(select={"sample_id": "sample.id"})
-                .values("sample_id", "name", "sequence__seqhash")
+                .prefetch_related("sequences")
+                .values("id", "name", "sequences__seqhash")
             )
             # Convert the QuerySet to a list of dictionaries
             sample_data = list(sample_model)
@@ -1221,10 +1222,9 @@ class SampleViewSet(
                     {
                         "sample_id": None,
                         "name": missing_sample,
-                        "sequence__seqhash": None,
+                        "sequences__seqhash": None,
                     }
                 )
-
             return Response(sample_data, status=status.HTTP_200_OK)
         except json.JSONDecodeError:
             return Response(

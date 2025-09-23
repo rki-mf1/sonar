@@ -12,13 +12,25 @@ class Sequence(models.Model):
     Represents a genetic sequence (sample) identified by a unique hash.
 
     Attributes:
-        seqhash (CharField): A unique identifier for the sequence (max length 200).
+        seqhash (CharField): Identifier for the sequence (max length 200).
+        length (IntegerField, optional): Length of the sequence
+        init_upload_date (DateTimeField, auto_now=True): Timestamp of the initial upload.
+        last_update_date (DateTimeField, optional): Timestamp of the last update to the sequence.
     """
 
-    seqhash = models.CharField(unique=True, max_length=200)
+    seqhash = models.CharField(max_length=200)
+    name = models.CharField(unique=True, max_length=200)
+    init_upload_date = models.DateTimeField(auto_now=True)
+    last_update_date = models.DateTimeField(blank=True, null=True)
+    length = models.IntegerField(blank=True, null=True)
 
     class Meta:
         db_table = "sequence"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["init_upload_date"]),
+            models.Index(fields=["last_update_date"]),
+        ]
 
 
 class Alignment(models.Model):
@@ -446,7 +458,7 @@ class Sample(models.Model):
     Attributes:
         name (CharField, unique): Unique identifier for the sample.
         datahash (CharField): (Not used at the moment) hash all metadata (include property metadata) for comparison before updating
-        sequence (ForeignKey): The sequence associated with the sample.
+        sequences (ManyToManyField): The sequences associated with the sample.
         sequencing_tech (CharField, optional): Sequencing technology used.
         country (CharField, optional): Country of origin for the sample.
         host (CharField, optional): The host organism of the sample.
@@ -454,10 +466,7 @@ class Sample(models.Model):
         lab (CharField, optional): The lab where the sample was processed.
         lineage (CharField, optional): Lineage identifier for the sample.
         genome_completeness (CharField, optional): Indicator of the genome completeness.
-        length (IntegerField, optional): Length of the sequence in the sample.
         collection_date (DateField, optional): The date the sample was collected.
-        init_upload_date (DateTimeField, auto_now=True): Timestamp of the initial upload.
-        last_update_date (DateTimeField, optional): Timestamp of the last update to the sample.
         data_set (CharField, optional): The data set the sample is part of, e.g. rKI, Gisaid.
         properties (ManyToManyField, optional): User-defined properties assigned to the sample.
 
@@ -466,20 +475,20 @@ class Sample(models.Model):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    datahash = models.CharField(max_length=50)
-    sequence = models.ForeignKey(Sequence, models.DO_NOTHING)
+    lineage = models.CharField(max_length=50, blank=True, null=True)
+    genome_completeness = models.CharField(max_length=50, blank=True, null=True)
+    collection_date = models.DateField(blank=True, null=True)
+    data_set = models.CharField(max_length=50, blank=True, null=True)
     sequencing_tech = models.CharField(max_length=50, blank=True, null=True)
     country = models.CharField(max_length=50, blank=True, null=True)
     host = models.CharField(max_length=50, blank=True, null=True)
     zip_code = models.CharField(max_length=50, blank=True, null=True)
     lab = models.CharField(max_length=50, blank=True, null=True)
-    lineage = models.CharField(max_length=50, blank=True, null=True)
-    genome_completeness = models.CharField(max_length=50, blank=True, null=True)
-    length = models.IntegerField(blank=True, null=True)
-    collection_date = models.DateField(blank=True, null=True)
     init_upload_date = models.DateTimeField(auto_now=True)
     last_update_date = models.DateTimeField(blank=True, null=True)
-    data_set = models.CharField(max_length=50, blank=True, null=True)
+    datahash = models.CharField(max_length=50)
+
+    sequences = models.ManyToManyField(Sequence, related_name="samples")
 
     class Meta:
         db_table = "sample"
@@ -493,9 +502,9 @@ class Sample(models.Model):
             models.Index(fields=["lineage"]),
             models.Index(fields=["genome_completeness"]),
             models.Index(fields=["collection_date"]),
+            models.Index(fields=["data_set"]),
             models.Index(fields=["init_upload_date"]),
             models.Index(fields=["last_update_date"]),
-            models.Index(fields=["data_set"]),
         ]
 
     def save(self, *args, **kwargs):
