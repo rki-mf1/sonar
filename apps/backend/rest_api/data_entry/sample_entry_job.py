@@ -797,6 +797,9 @@ def _process_property_file(
     Logic for processing a batch of the property file
     """
     properties_df = pd.DataFrame.from_dict(batch_as_dict, dtype=object)
+    if sample_name_column == related_sequences_column:
+        properties_df[f"{sample_name_column}_name"] = properties_df[sample_name_column]
+        sample_name_column = f"{sample_name_column}_name"
     properties_df[related_sequences_column] = properties_df[
         related_sequences_column
     ].apply(lambda x: x.split() if x else [])
