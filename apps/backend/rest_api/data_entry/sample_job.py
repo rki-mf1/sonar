@@ -9,10 +9,11 @@ from rest_api.models import Sequence
 
 def delete_sample(sample_list: list):
     data = {}
-    filtered_ref_sample = Sample.objects.filter(name__in=sample_list)
-    sample_ids = list(filtered_ref_sample.values_list("id", flat=True))
-    seqhash_ids = list(filtered_ref_sample.values_list("sequence_id", flat=True))
-    deleted_sample = filtered_ref_sample.delete()
+    # TODO delete sequence or sample + all related sequences
+    filtered_ref_sequence = Sequence.objects.filter(name__in=sample_list)
+    sample_ids = list(filtered_ref_sequence.values_list("id", flat=True))
+    seqhash_ids = list(filtered_ref_sequence.values_list("sequence_id", flat=True))
+    deleted_sample = filtered_ref_sequence.delete()
     LOGGER.info(f"Sample IDs: {sample_ids}")
     if DEBUG:
         print("\n")

@@ -474,6 +474,9 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all distinct lineage entries from the Sample table.
+        """
         queryset = models.Sample.objects.values_list("lineage", flat=True)
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(
@@ -485,6 +488,14 @@ class SampleViewSet(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=False, methods=["get"])
+    def full_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all lineages from the Lineage table.
+        """
+        lineages = models.Lineage.objects.values_list("name", flat=True)
+        return Response(data={"lineages": list(lineages)}, status=status.HTTP_200_OK)
 
     def _get_samples_per_week(self, queryset):
         """
@@ -1183,8 +1194,9 @@ class SampleViewSet(
             )
         sample_model = (
             models.Sample.objects.filter(name=sample_name)
+            .prefetch_related("sequences")
             .extra(select={"sample_id": "sample.id"})
-            .values("sample_id", "name", "sequence__seqhash")
+            .values("sample_id", "name", "sequences__seqhash")
         )
         if sample_model:
             sample_data = list(sample_model)[0]
@@ -1206,8 +1218,8 @@ class SampleViewSet(
             sample_data_list = data.get("sample_data", [])
             sample_model = (
                 models.Sample.objects.filter(name__in=sample_data_list)
-                .extra(select={"sample_id": "sample.id"})
-                .values("sample_id", "name", "sequence__seqhash")
+                .prefetch_related("sequences")
+                .values("id", "name", "sequences__seqhash")
             )
             # Convert the QuerySet to a list of dictionaries
             sample_data = list(sample_model)
@@ -1221,10 +1233,9 @@ class SampleViewSet(
                     {
                         "sample_id": None,
                         "name": missing_sample,
-                        "sequence__seqhash": None,
+                        "sequences__seqhash": None,
                     }
                 )
-
             return Response(sample_data, status=status.HTTP_200_OK)
         except json.JSONDecodeError:
             return Response(

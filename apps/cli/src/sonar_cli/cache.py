@@ -359,12 +359,11 @@ class sonarCache:
         )
         sample_dict = {
             sample_info["name"]: {
-                "sample_id": sample_info["sample_id"],
-                "sequence_seqhash": sample_info["sequence__seqhash"],
+                "sample_id": sample_info.get("sample_id"),
+                "sequence_seqhash": sample_info.get("sequence__seqhash"),
             }
             for sample_info in json_response
         }
-
         # fecth Alignment
         # NOTE: need to evaluate this stmt id more.
         # we assume refmolid == replicon_id == sourceid
@@ -463,7 +462,7 @@ class sonarCache:
             "algnid": algnid,
             "header": header,
             "seqhash": seqhash,
-            "sample_sequence_length": len(sequence),
+            "sequence_length": len(sequence),
             # "sample_sequence": sequence,
             "seq_file": seqfile,
             "vcffile": vcffile,

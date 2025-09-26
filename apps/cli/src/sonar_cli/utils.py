@@ -142,6 +142,10 @@ class sonarUtils:
                 )
                 sys.exit(1)
             sample_id_column = properties["name"]
+            if "sequences" in properties:
+                sequences_id_column = properties["sequences"]
+            else:
+                sequences_id_column = properties["name"]
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
@@ -213,6 +217,7 @@ class sonarUtils:
                 if not no_upload_sample:
                     sonarUtils._import_properties(
                         sample_id_column,
+                        sequences_id_column,
                         properties,
                         csv_files,
                         tsv_files,
@@ -727,6 +732,7 @@ class sonarUtils:
     @staticmethod
     def _import_properties(  # noqa: C901
         sample_id_column: str,
+        sequences_id_column: str,
         properties: Dict[str, Dict[str, str] | str],
         csv_files: List[str],
         tsv_files: List[str],
@@ -736,7 +742,8 @@ class sonarUtils:
         Imports properties to the database in a single request by zipping all files in memory.
 
         Args:
-            sample_id_column: Column name for sample IDs.
+            sample_id_column: Column name for sample names.
+            sequences_id_column: Column for sequence ID linking
             properties: A dictionary of properties where the key is a sample name, and the value is another dictionary of properties for that sample.
             csv_files: List of CSV files to include.
             tsv_files: List of TSV files to include.
@@ -747,8 +754,12 @@ class sonarUtils:
         all_files = tsv_files + csv_files
         job_ids = []
 
-        filtered_properties = {k: v for k, v in properties.items() if k != "name"}
-        columns_to_use = list(filtered_properties.keys()) + [sample_id_column]
+        filtered_properties = {
+            k: v for k, v in properties.items() if k not in ["name", "sequences"]
+        }
+        columns_to_use = list(filtered_properties.keys()) + list(
+            set([sample_id_column, sequences_id_column])
+        )
         # Create an in-memory ZIP file
         for _file in all_files:
             LOGGER.info(f"Processing file: {_file}")
@@ -800,6 +811,7 @@ class sonarUtils:
                 file = {"zip_file": ("properties.zip", zip_buffer, "application/zip")}
                 data = {
                     "sample_id_column": sample_id_column,
+                    "sequences_id_column": sequences_id_column,
                     "column_mapping": json.dumps(filtered_properties),
                     "job_id": job_id,
                 }
@@ -873,7 +885,9 @@ class sonarUtils:
         - Dict[str, str]: Dictionary mapping column names to property details.
 
         Note:
-            "name" key is special case, we use this to link the sample ID.
+            "name" and "sequences" keys are special case
+            if name (without sequence) is geiven: we use the name column= sequence id as sample name and for linking
+            if sequence is given, we use name as unique sample name and sequences for linking sample to (multiple) sequences.
         """
         propnames = {}
 
@@ -911,6 +925,8 @@ class sonarUtils:
                 prop, col = link.split("=")
                 if prop.upper() == "NAME":
                     propnames["name"] = col
+                elif prop.upper() == "SEQUENCES":
+                    propnames["sequences"] = col
 
         else:
             LOGGER.info("Reading property names from user-provided '--cols'")
@@ -922,10 +938,12 @@ class sonarUtils:
                     sys.exit(1)
                 # Handle sample ID linking
                 prop, col = link.split("=")
-                if prop.upper() == "NAME":
+                if prop.upper() == "SEQUENCES":
+                    propnames["sequences"] = col
+                    continue
+                elif prop.upper() == "NAME":
                     propnames["name"] = col
                     continue
-
                 _row_df = prop_df[
                     prop_df["name"].str.fullmatch(prop, na=False, case=False)
                 ]
@@ -946,7 +964,7 @@ class sonarUtils:
         valid_propnames = {}
 
         for col, prop_info in propnames.items():
-            if col == "name":
+            if col in ["name", "sequences"]:
                 # Check if 'ID' exists in the provided CSV/TSV files
                 valid_propnames[col] = prop_info
                 id_column = prop_info
@@ -957,7 +975,7 @@ class sonarUtils:
                 ]
                 if missing_in_files:
                     LOGGER.error(
-                        f"Mapping ID column '{id_column}' does not exist in the provided files: {', '.join(missing_in_files)}."
+                        f"Mapping {col} column '{id_column}' does not exist in the provided files: {', '.join(missing_in_files)}."
                     )
                     sys.exit(
                         1
@@ -981,7 +999,7 @@ class sonarUtils:
         LOGGER.info("(Input table column name -> Sonar database property name)")
 
         for prop, prop_info in propnames.items():
-            if prop == "name":
+            if prop in ["name", "sequences"]:
                 LOGGER.info(f"{prop_info} -> {prop}")
                 continue
             db_property_name = prop_info.get("db_property_name", "N/A")
