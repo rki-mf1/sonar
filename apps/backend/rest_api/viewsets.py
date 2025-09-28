@@ -115,7 +115,7 @@ class AlignmentViewSet(
                 "replicon_id",
                 "id",  # alignment ID
                 "sequence_id",
-                "sequence__name",
+                "sequence__samples__name",
             )
         )
         return Response(data=sequence_data, status=status.HTTP_200_OK)
@@ -317,8 +317,8 @@ class ReferenceViewSet(
         dataset values found in the Sample table.
         """
         queryset = models.Sample.objects.values(
-            accession=F("sequence__alignments__replicon__reference__accession"),
-            organism=F("sequence__alignments__replicon__reference__organism"),
+            accession=F("sequences__alignments__replicon__reference__accession"),
+            organism=F("sequences__alignments__replicon__reference__organism"),
             data_set_value=F("data_set"),
         ).distinct()
 

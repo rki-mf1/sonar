@@ -10,25 +10,25 @@ from rest_api.models import Sequence
 def delete_sample(sample_list: list):
     data = {}
     # TODO delete sequence or sample + all related sequences
-    filtered_ref_sequence = Sequence.objects.filter(name__in=sample_list)
-    sample_ids = list(filtered_ref_sequence.values_list("id", flat=True))
-    seqhash_ids = list(filtered_ref_sequence.values_list("sequence_id", flat=True))
-    deleted_sample = filtered_ref_sequence.delete()
+    samples_qs = Sample.objects.filter(name__in=sample_list)
+    sample_ids = list(samples_qs.values_list("id", flat=True))
+
+    seqhash_ids = list(
+        Sequence.objects.filter(samples__in=samples_qs).values_list("id", flat=True)
+    )
+    deleted_info = samples_qs.delete()  # returns (num_deleted, dict_of_models)
     LOGGER.info(f"Sample IDs: {sample_ids}")
     if DEBUG:
-        print("\n")
-        print("Seqhash IDs", seqhash_ids)
-        # number of objects deleted and a dictionary with the number of deletions per object type
-    LOGGER.info(f"Deleted sample: {deleted_sample}")
+        print("\nSeqhash IDs", seqhash_ids)
+
+    LOGGER.info(f"Deleted sample: {deleted_info}")
 
     # Filter sequences without associated samples
     clean_unused_sequences()
 
     # TODO: Delete Annotation
 
-    data["deleted_samples_count"] = (
-        deleted_sample[1]["rest_api.Sample"] if deleted_sample[0] != 0 else 0
-    )
+    data["deleted_samples_count"] = deleted_info[1].get("rest_api.Sample", 0)
 
     return data
 

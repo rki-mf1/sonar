@@ -124,8 +124,8 @@ class SequenceSerializer(serializers.ModelSerializer):
 
 class SampleSerializer(serializers.ModelSerializer):
     name = serializers.CharField(required=True)
-    sequence = serializers.PrimaryKeyRelatedField(
-        queryset=models.Sequence.objects.all()
+    sequences = serializers.PrimaryKeyRelatedField(
+        queryset=models.Sequence.objects.all(), many=True
     )
 
     class Meta:
@@ -205,13 +205,14 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
     genomic_profiles = serializers.SerializerMethodField()
     proteomic_profiles = serializers.SerializerMethodField()
+    sequences = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = models.Sample
         fields = [
             "id",
             "name",
-            "sequence_id",
+            "sequences",
             "datahash",
             "properties",
             "genomic_profiles",
@@ -224,7 +225,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         custom_properties = Sample2PropertySerializer(
             obj.properties, many=True, read_only=True
         ).data
-        filter_list = ["properties", "name", "sequence", "id", "datahash"]
+        filter_list = ["properties", "name", "sequences", "id", "datahash"]
         sample_properties = [
             field.name
             for field in models.Sample._meta.get_fields()
@@ -241,14 +242,15 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         # genomic_profiles are prefetched for genomes endpoint
         dict = {}
 
-        for alignment in obj.sequence.alignments.all():
-            for mutation in alignment.genomic_profiles:
-                annotations = []
-                for nucleotide_mutation in alignment.nucleotide_mutations.all():
-                    if nucleotide_mutation == mutation:
-                        for annotation in nucleotide_mutation.alignment_annotations:
-                            annotations.append(str(annotation))
-                dict[self.create_NT_format(mutation)] = annotations
+        for sequence in obj.sequences.all():
+            for alignment in sequence.alignments.all():
+                for mutation in alignment.genomic_profiles:
+                    annotations = []
+                    for nucleotide_mutation in alignment.nucleotide_mutations.all():
+                        if nucleotide_mutation == mutation:
+                            for annotation in nucleotide_mutation.alignment_annotations:
+                                annotations.append(str(annotation))
+                    dict[self.create_NT_format(mutation)] = annotations
         return dict
 
     def define_proteomic_label(
@@ -276,9 +278,11 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     def get_proteomic_profiles(self, obj: models.Sample):
         # proteomic_profiles are prefetched
         label_list = []
-        alignments = obj.sequence.alignments.prefetch_related(
-            "amino_acid_mutations__cds__gene",
-        )
+        alignments = []
+        for sequence in obj.sequences.all().prefetch_related(
+            "alignments__amino_acid_mutations__cds__gene"
+        ):
+            alignments.extend(sequence.alignments.all())
         for alignment in alignments:
             for mutation in alignment.amino_acid_mutations.all():
                 try:
@@ -328,15 +332,16 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
 
     def get_genomic_profiles(self, obj: models.Sample):
         list = []
-        for alignment in obj.sequence.alignments.all():
-            for mutation in alignment.genomic_profiles:
-                variant = {}
-                variant["variant.id"] = mutation.id
-                variant["variant.ref"] = mutation.ref
-                variant["variant.alt"] = mutation.alt
-                variant["variant.start"] = mutation.start
-                variant["variant.end"] = mutation.end
-                list.append(variant)
+        for sequence in obj.sequences.all():
+            for alignment in sequence.alignments.all():
+                for mutation in alignment.genomic_profiles:
+                    variant = {}
+                    variant["variant.id"] = mutation.id
+                    variant["variant.ref"] = mutation.ref
+                    variant["variant.alt"] = mutation.alt
+                    variant["variant.start"] = mutation.start
+                    variant["variant.end"] = mutation.end
+                    list.append(variant)
         return list
 
 

@@ -353,17 +353,21 @@ class sonarCache:
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
 
-        # fecth sample_hash
+        # fetcth sample_sequences
         json_response = api_client.get_bulk_sample_data(
             [data["name"] for data in batch_data]
         )
+        print("Sample data from API:")
+        print(json_response)
         sample_dict = {
             sample_info["name"]: {
                 "sample_id": sample_info.get("sample_id"),
-                "sequence_seqhash": sample_info.get("sequence__seqhash"),
+                "sequences_names": [e.names for e in sample_info.get("sequences")],
+                "sequences_seqhash": [e.seqhash for e in sample_info.get("sequences")],
             }
             for sample_info in json_response
         }
+        print(sample_dict)
         # fecth Alignment
         # NOTE: need to evaluate this stmt id more.
         # we assume refmolid == replicon_id == sourceid
@@ -373,8 +377,10 @@ class sonarCache:
                 for data in batch_data
             ]
         )
-        alignemnt_dict = {
-            data["sequence__sample__name"]: data["alignement_id"]
+        print("alignment data from API:")
+        print(json_response)
+        alignment_dict = {
+            data["sequence__sample__name"]: data["alignment_id"]
             for data in json_response
         }
 
@@ -399,7 +405,7 @@ class sonarCache:
             batch_data[i]["refseq_id"] = self.get_refseq_id(refseq_accession)
 
             # Check Alignment if it exists or not (sample and seqhash)
-            batch_data[i]["algnid"] = alignemnt_dict.get(data["name"], None)
+            batch_data[i]["algnid"] = alignment_dict.get(data["name"], None)
 
             batch_data[i]["include_nx"] = self.include_nx
 

@@ -186,7 +186,7 @@ class APIClient:
             "GET", endpoint=self.get_sample_data_endpoint, params=params
         )
         if len(json_response) > 0:
-            return (json_response["sample_id"], json_response["sequence__seqhash"])
+            return (json_response["sample_id"], json_response["sequences"])
         else:
             return (None, None)
 

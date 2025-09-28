@@ -108,8 +108,8 @@ class SampleViewSet(
         queryset = models.Sample.objects.all()
         if reference:
             queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=reference
-            )
+                sequences__alignments__replicon__reference__accession=reference
+            ).distinct()
         response_dict["samples_total"] = queryset.count()
 
         first_sample = (
@@ -211,25 +211,25 @@ class SampleViewSet(
                 proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
 
             # optimize queryset by prefetching and storing profiles as attributes
-            queryset = queryset.select_related("sequence").prefetch_related(
+            queryset = queryset.prefetch_related(
+                "sequences",
                 "properties__property",
                 Prefetch(
-                    "sequence__alignments__nucleotide_mutations",
+                    "sequences__alignments__nucleotide_mutations",
                     queryset=genomic_profiles_qs,
                     to_attr="genomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__amino_acid_mutations",
+                    "sequences__alignments__amino_acid_mutations",
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__nucleotide_mutations__annotations",
+                    "sequences__alignments__nucleotide_mutations__annotations",
                     queryset=annotation_qs,
                     to_attr="alignment_annotations",
                 ),
             )
-
             # apply ordering if specified
             ordering = request.query_params.get("ordering")
             if ordering:
@@ -480,7 +480,7 @@ class SampleViewSet(
         queryset = models.Sample.objects.values_list("lineage", flat=True)
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=ref
+                sequences__alignments__replicon__reference__accession=ref
             )
         distinct_lineages = queryset.distinct()
 
@@ -893,7 +893,7 @@ class SampleViewSet(
         )
 
         alignment_qs = models.Alignment.objects.filter(**query)
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
 
         if exclude:
             return ~Q(**filters)
@@ -968,7 +968,7 @@ class SampleViewSet(
             & (mutation_alt)
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1003,7 +1003,7 @@ class SampleViewSet(
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1029,7 +1029,7 @@ class SampleViewSet(
             nucleotide_mutations__end=last_deleted,
             nucleotide_mutations__alt="",
         )
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1058,7 +1058,7 @@ class SampleViewSet(
             amino_acid_mutations__alt="",
         )
 
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
 
         if exclude:
             return ~Q(**filters)
@@ -1079,7 +1079,7 @@ class SampleViewSet(
             nucleotide_mutations__ref=ref_nuc,
             nucleotide_mutations__alt=alt_nuc,
         )
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1103,7 +1103,7 @@ class SampleViewSet(
             amino_acid_mutations__alt=alt_aa,
             amino_acid_mutations__cds__gene__symbol=protein_symbol,
         )
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1133,9 +1133,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__accession=accession)
+            return ~Q(sequences__alignments__replicon__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__accession=accession)
+            return Q(sequences__alignments__replicon__accession=accession)
 
     def filter_reference(
         self,
@@ -1145,9 +1145,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__reference__accession=accession)
+            return ~Q(sequences__alignments__replicon__reference__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__reference__accession=accession)
+            return Q(sequences__alignments__replicon__reference__accession=accession)
 
     def filter_sublineages(
         self,
