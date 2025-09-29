@@ -46,6 +46,7 @@ def parse_args(args=None):
     database_parser = create_parser_database()
     output_parser = create_parser_output()
     sample_parser = create_parser_sample()
+    sequence_parser = create_parser_sequence()
     property_parser = create_parser_property()
     reference_parser = create_parser_reference()
     thread_parser = create_parser_thread()
@@ -77,8 +78,12 @@ def parse_args(args=None):
         subparsers, database_parser, thread_parser, reference_parser, general_parser
     )
 
-    subparsers, _ = create_subparser_delete(
+    subparsers, _ = create_subparser_delete_sample(
         subparsers, database_parser, sample_parser, general_parser
+    )
+
+    subparsers, _ = create_subparser_delete_sequence(
+        subparsers, database_parser, sequence_parser, general_parser
     )
 
     # property
@@ -224,7 +229,34 @@ def create_subparser_delete_reference(
     return subparsers, parser
 
 
-def create_subparser_delete(
+def create_subparser_delete_sample(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    """
+    Creates an 'delete_sample' subparser with command-specific arguments and options for the command-line interface.
+
+    Args:
+        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'delete' subparser to.
+        parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments and options.
+
+    Returns:
+        argparse.ArgumentParser: The created 'delete_sample' subparser.
+    """
+    parser_delete_sample = subparsers.add_parser(
+        "delete-sample",
+        help="Deletes samples from the database",
+        parents=parent_parsers,
+    )
+    parser_delete_sample.add_argument(
+        "--force",
+        help="skip user confirmation.",
+        action="store_true",
+    )
+
+    return subparsers, parser_delete_sample
+
+
+def create_subparser_delete_sequence(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
     """
@@ -235,19 +267,20 @@ def create_subparser_delete(
         parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments and options.
 
     Returns:
-        argparse.ArgumentParser: The created 'delete' subparser.
+        argparse.ArgumentParser: The created 'delete_sequence' subparser.
     """
-    parser = subparsers.add_parser(
-        "delete-sample",
-        help="Deletes samples from the database",
+    parser_delete_sequence = subparsers.add_parser(
+        "delete-sequence",
+        help="Deletes sequences from the database",
         parents=parent_parsers,
     )
-    parser.add_argument(
+    parser_delete_sequence.add_argument(
         "--force",
         help="skip user confirmation.",
         action="store_true",
     )
-    return subparsers, parser
+
+    return subparsers, parser_delete_sequence
 
 
 def create_parser_database() -> argparse.ArgumentParser:
@@ -303,6 +336,32 @@ def create_parser_sample() -> argparse.ArgumentParser:
         "--sample-file",
         metavar="FILE",
         help="file containing sample accession(s) to consider (one per line)",
+        type=str,
+        nargs="+",
+        default=[],
+    )
+    return parser
+
+
+def create_parser_sequence() -> argparse.ArgumentParser:
+    """Creates a 'sample' parent parser with common arguments and options for the command-line interface.
+
+    Returns:
+        argparse.ArgumentParser: The created 'sample' parent parser.
+    """
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument(
+        "--sequence",
+        metavar="STR",
+        help="sequence accession(s) to consider",
+        type=str,
+        nargs="+",
+        default=[],
+    )
+    parser.add_argument(
+        "--sequence-file",
+        metavar="FILE",
+        help="file containing sequence accession(s) to consider (one per line)",
         type=str,
         nargs="+",
         default=[],
@@ -1035,6 +1094,37 @@ def handle_delete_sample(args: argparse.Namespace):
         sonarUtils.delete_sample(samples=samples)  # reference=args.reference,
 
 
+def handle_delete_sequence(args: argparse.Namespace):
+    """
+    Handle deleting a sequence from the database.
+
+    This function removes specified sequences from the database. The sequences can be
+    provided as command line arguments or within a file. If the 'force' option is
+    not set, the user is prompted to confirm the deletion.
+
+    Args:
+        args (argparse.Namespace): Parsed command line arguments containing the
+                                        sequence names to be deleted and the 'force' flag.
+
+    Raises:
+        FileNotFoundError: If the specified sample file is not found.
+        SystemExit: If none of the specified samples are found in the database.
+    """
+    force_enabled = getattr(args, "force", False)
+    decision = ""
+
+    if not force_enabled:
+        while decision not in ("YES", "NO"):
+            decision = input("Are you sure you want to perform this action? [YES/NO]: ")
+            decision = decision.upper()
+
+    if decision == "YES" or force_enabled:
+        sequences = combine_sample_argument(
+            samples=args.sequence, sample_files=args.sequence_file
+        )
+        sonarUtils.delete_sequence(sequences=sequences)  # reference=args.reference,
+
+
 def handle_lineage(args: argparse.Namespace):
     sonarUtils1.upload_lineage(
         pathogen=args.pathogen, lineage_file=args.lineage, output_file=args.out
@@ -1083,6 +1173,11 @@ def execute_commands(args):  # noqa: C901
             parse_args(["delete-sample", "-h"])
         else:
             handle_delete_sample(args)
+    elif args.command == "delete-sequence":
+        if len(sys.argv[1:]) == 1:
+            parse_args(["delete-sequence", "-h"])
+        else:
+            handle_delete_sequence(args)
     elif args.command == "tasks":
         handle_tasks(args)
     elif args.command == "import-lineage":

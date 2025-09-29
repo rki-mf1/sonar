@@ -28,7 +28,7 @@ def test_match_pipe(capfd, api_url):
 # match covid
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(15)
-def test_match_profile_count(capfd, api_url):
+def test_match_profile_count_covid(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -36,7 +36,7 @@ def test_match_profile_count(capfd, api_url):
     assert code == 0
 
 
-def test_match_profile(capfd, api_url):
+def test_match_profile_covid(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --profile G22992A --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()

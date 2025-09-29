@@ -20,6 +20,7 @@ from django.db.models import Case
 from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
+from django.db.models import F
 from django.db.models import IntegerField
 from django.db.models import Max
 from django.db.models import Min
@@ -44,7 +45,8 @@ from rest_framework.response import Response
 from covsonar_backend.settings import DEBUG
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from rest_api.data_entry.sample_job import delete_sample
+from rest_api.data_entry.sample_job import delete_samples
+from rest_api.data_entry.sample_job import delete_sequences
 from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
 from rest_api.utils import define_profile
@@ -108,8 +110,8 @@ class SampleViewSet(
         queryset = models.Sample.objects.all()
         if reference:
             queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=reference
-            )
+                sequences__alignments__replicon__reference__accession=reference
+            ).distinct()
         response_dict["samples_total"] = queryset.count()
 
         first_sample = (
@@ -211,25 +213,25 @@ class SampleViewSet(
                 proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
 
             # optimize queryset by prefetching and storing profiles as attributes
-            queryset = queryset.select_related("sequence").prefetch_related(
+            queryset = queryset.prefetch_related(
+                "sequences",
                 "properties__property",
                 Prefetch(
-                    "sequence__alignments__nucleotide_mutations",
+                    "sequences__alignments__nucleotide_mutations",
                     queryset=genomic_profiles_qs,
                     to_attr="genomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__amino_acid_mutations",
+                    "sequences__alignments__amino_acid_mutations",
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__nucleotide_mutations__annotations",
+                    "sequences__alignments__nucleotide_mutations__annotations",
                     queryset=annotation_qs,
                     to_attr="alignment_annotations",
                 ),
             )
-
             # apply ordering if specified
             ordering = request.query_params.get("ordering")
             if ordering:
@@ -474,10 +476,13 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def distinct_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all distinct lineage entries from the Sample table.
+        """
         queryset = models.Sample.objects.values_list("lineage", flat=True)
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=ref
+                sequences__alignments__replicon__reference__accession=ref
             )
         distinct_lineages = queryset.distinct()
 
@@ -485,6 +490,14 @@ class SampleViewSet(
             {"lineages": distinct_lineages},
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=False, methods=["get"])
+    def full_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all lineages from the Lineage table.
+        """
+        lineages = models.Lineage.objects.values_list("name", flat=True)
+        return Response(data={"lineages": list(lineages)}, status=status.HTTP_200_OK)
 
     def _get_samples_per_week(self, queryset):
         """
@@ -882,7 +895,7 @@ class SampleViewSet(
         )
 
         alignment_qs = models.Alignment.objects.filter(**query)
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
 
         if exclude:
             return ~Q(**filters)
@@ -957,7 +970,7 @@ class SampleViewSet(
             & (mutation_alt)
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -992,7 +1005,7 @@ class SampleViewSet(
         )
         alignment_qs = models.Alignment.objects.filter(mutation_condition)
 
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1018,7 +1031,7 @@ class SampleViewSet(
             nucleotide_mutations__end=last_deleted,
             nucleotide_mutations__alt="",
         )
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1047,7 +1060,7 @@ class SampleViewSet(
             amino_acid_mutations__alt="",
         )
 
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
 
         if exclude:
             return ~Q(**filters)
@@ -1068,7 +1081,7 @@ class SampleViewSet(
             nucleotide_mutations__ref=ref_nuc,
             nucleotide_mutations__alt=alt_nuc,
         )
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1092,7 +1105,7 @@ class SampleViewSet(
             amino_acid_mutations__alt=alt_aa,
             amino_acid_mutations__cds__gene__symbol=protein_symbol,
         )
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
         if exclude:
             return ~Q(**filters)
         return Q(**filters)
@@ -1122,9 +1135,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__accession=accession)
+            return ~Q(sequences__alignments__replicon__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__accession=accession)
+            return Q(sequences__alignments__replicon__accession=accession)
 
     def filter_reference(
         self,
@@ -1134,9 +1147,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__reference__accession=accession)
+            return ~Q(sequences__alignments__replicon__reference__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__reference__accession=accession)
+            return Q(sequences__alignments__replicon__reference__accession=accession)
 
     def filter_sublineages(
         self,
@@ -1175,57 +1188,60 @@ class SampleViewSet(
         return file_path
 
     @action(detail=False, methods=["get"])
-    def get_sample_data(self, request: Request, *args, **kwargs):
-        sample_name = request.GET.get("sample_data")
-        if not sample_name:
+    def get_sequence_data(self, request: Request, *args, **kwargs):
+        sequence_name = request.GET.get("sample_data")
+        if not sequence_name:
             return Response(
                 {"detail": "Sample name is missing"}, status=status.HTTP_400_BAD_REQUEST
             )
-        sample_model = (
-            models.Sample.objects.filter(name=sample_name)
-            .extra(select={"sample_id": "sample.id"})
-            .values("sample_id", "name", "sequence__seqhash")
+        sequence = (
+            models.Sequence.objects.filter(name=sequence_name)
+            .annotate(
+                sequence_id=F("id"),
+                sequence_seqhash=F("seqhash"),
+            )
+            .values("sequence_id", "name", "sequence_seqhash")
         )
-        if sample_model:
-            sample_data = list(sample_model)[0]
-            if len(sample_model) > 1:
-                # Not sure ....---
-                print("more than one sample was using same name.")
+        if sequence:
+            sequence_data = list(sequence)[0]
         else:
-            print("Cannot find:", sample_name)
-            sample_data = {}
+            print("Cannot find:", sequence_name)
+            sequence_data = {}
 
-        return Response(data=sample_data)
+        return Response(data=sequence_data)
 
     @action(detail=False, methods=["post"])
-    def get_bulk_sample_data(self, request: Request, *args, **kwargs):
+    def get_bulk_sequence_data(self, request: Request, *args, **kwargs):
         try:
             # Parse the JSON data from the request body
             data = json.loads(request.body.decode("utf-8"))
-            # example to be parsed data: {"sample_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
-            sample_data_list = data.get("sample_data", [])
-            sample_model = (
-                models.Sample.objects.filter(name__in=sample_data_list)
-                .extra(select={"sample_id": "sample.id"})
-                .values("sample_id", "name", "sequence__seqhash")
+            # example to be parsed data: {"sequence_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
+            sequence_data_list = data.get("sequence_data", [])
+
+            sequence_model = (
+                models.Sequence.objects.filter(name__in=sequence_data_list)
+                .annotate(
+                    sequence_id=F("id"),
+                    sequence_seqhash=F("seqhash"),
+                )
+                .values("sequence_id", "name", "sequence_seqhash")
             )
             # Convert the QuerySet to a list of dictionaries
-            sample_data = list(sample_model)
+            sequence_data = list(sequence_model)
 
             # Check for missing samples and add them to the result
-            missing_samples = set(sample_data_list) - set(
-                item["name"] for item in sample_data
+            missing_samples = set(sequence_data_list) - set(
+                item["name"] for item in sequence_data
             )
             for missing_sample in missing_samples:
-                sample_data.append(
+                sequence_data.append(
                     {
-                        "sample_id": None,
+                        "sequence_id": None,
                         "name": missing_sample,
-                        "sequence__seqhash": None,
+                        "sequence_seqhash": None,
                     }
                 )
-
-            return Response(sample_data, status=status.HTTP_200_OK)
+            return Response(sequence_data, status=status.HTTP_200_OK)
         except json.JSONDecodeError:
             return Response(
                 {"detail": "Invalid JSON data / structure"},
@@ -1241,9 +1257,22 @@ class SampleViewSet(
             print("Reference Accession:", reference_accession)
             print("Sample List:", sample_list)
 
-        sample_data = delete_sample(sample_list=sample_list)
+        sample_data = delete_samples(sample_list=sample_list)
 
         return Response(data=sample_data)
+
+    @action(detail=False, methods=["post"])
+    def delete_sequence_data(self, request: Request, *args, **kwargs):
+        sequence_data = {}
+        reference_accession = request.data.get("reference_accession", "")
+        sequence_list = json.loads(request.data.get("sequence_list"))
+        if DEBUG:
+            print("Reference Accession:", reference_accession)
+            print("Sequence List:", sequence_list)
+
+        sequence_data = delete_sequences(sequence_list=sequence_list)
+
+        return Response(data=sequence_data)
 
 
 class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin):
