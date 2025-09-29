@@ -38,7 +38,7 @@ class SampleRaw:
     var_parquet_file: Optional[str] = None
     vcffile: Optional[str] = None
     algnid: Optional[int] = None
-    sampleid: Optional[int] = None
+    sequenceid: Optional[int] = None
     refseq_id: Optional[int] = None
     source_acc: Optional[str] = None
     algn_file: Optional[str] = None

@@ -79,14 +79,28 @@ class AlignmentViewSet(
         url_path="get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)",
     )
     def get_alignment_data(self, request: Request, seqhash=None, replicon_id=None):
-        sample_data = {}
         queryset = self.queryset.filter(
-            sequence__seqhash=seqhash, replicon_id=replicon_id
+            sequence__seqhash=seqhash,
+            replicon_id=replicon_id,
+        ).select_related("sequence")
+
+        sequence_data = list(
+            queryset.annotate(
+                alignment_id=F("id"),
+                sequence_name=F("sequence__name"),
+            ).values(
+                "replicon_id",
+                "alignment_id",
+                "sequence_id",
+                "sequence_name",
+            )
         )
-        sample_data = queryset.values()
-        if sample_data:
-            sample_data = sample_data[0]
-        return Response(sample_data, status=status.HTTP_200_OK)
+
+        # Falls nur ein Datensatz zurückkommt, als einzelnes Dict liefern
+        if sequence_data:
+            return Response(sequence_data[0], status=status.HTTP_200_OK)
+        else:
+            return Response({}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=["post"])
     def get_bulk_alignment_data(self, request: Request, *args, **kwargs):
@@ -111,13 +125,17 @@ class AlignmentViewSet(
         # Convert the queryset to a list of dictionaries
         # sequence_data = list(queryset.values())
         sequence_data = list(
-            queryset.values(
+            queryset.annotate(
+                alignment_id=F("id"),
+                sequence_name=F("sequence__name"),
+            ).values(
                 "replicon_id",
-                "id",  # alignment ID
+                "alignment_id",
                 "sequence_id",
-                "sequence__samples__name",
+                "sequence_name",
             )
         )
+
         return Response(data=sequence_data, status=status.HTTP_200_OK)
 
 

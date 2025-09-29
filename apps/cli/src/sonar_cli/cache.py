@@ -33,7 +33,7 @@ from sonar_cli.config import KSIZE
 from sonar_cli.config import SCALED
 from sonar_cli.config import TMP_CACHE
 from sonar_cli.logging import LoggingConfigurator
-from sonar_cli.nextclade_ext import process_single_sample
+from sonar_cli.nextclade_ext import process_single_sequence
 from sonar_cli.nextclade_ext import read_nextclade_json_streaming
 from sonar_cli.sourmash_ext import create_cluster_db
 from tqdm import tqdm
@@ -120,10 +120,10 @@ class sonarCache:
         os.makedirs(self.error_dir, exist_ok=True)
         os.makedirs(self.anno_dir, exist_ok=True)
 
-        self._samplefiles = set()
-        self.sampleinput_total = 0
-        self._samplefiles_to_profile = 0
-        self._samples_dict = dict()
+        self._sequencefiles = set()
+        self.sequenceinput_total = 0
+        self._sequencefiles_to_profile = 0
+        self._sequences_dict = dict()
 
         self._refs = set()
         self._lifts = {}
@@ -185,21 +185,21 @@ class sonarCache:
     ):
         """
 
-        For each sample, extract the sequence name to construct a data dictionary similar to cache_sample.
-        However, we do not need to create it exactly like cache_sample because some variables are unnecessary.
+        For each sequence, extract the sequence name to construct a data dictionary similar to cache_sequence.
+        However, we do not need to create it exactly like cache_sequence because some variables are unnecessary.
 
         These are the variables that we need to create :
         name, refmol refmolid refseq_id source_acc sourceid translationid
-        algnid header sample_sequence_length nextclade_json_file, vcffile,  anno_vcf_file
+        algnid header sequence_length nextclade_json_file, vcffile,  anno_vcf_file
         ref_file var_parquet_file var_file include_nx
 
         """
         # Create lookup dictionary
-        sample_lookup_dict = {
-            sample_info["name"]: sample_info for sample_info in data_dict_list
+        sequence_lookup_dict = {
+            sequence_info["name"]: sequence_info for sequence_info in data_dict_list
         }
         refmol_acc = self.refacc
-        sample_data: List[Dict[str, Union[str, int]]] = []
+        sequence_data: List[Dict[str, Union[str, int]]] = []
 
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
@@ -223,23 +223,23 @@ class sonarCache:
                     gene_cds_lookup[(gene_symbol, replicon_acc)] = cds_accession
 
         # Process data in chunks
-        def process_sample_batch(sample_batch, sample_lookup_dict):
-            """Process a batch of samples with their corresponding lookup data"""
+        def process_sequence_batch(sequence_batch, sequence_lookup_dict):
+            """Process a batch of sequences with their corresponding lookup data"""
             batch_results = []
 
-            for sample_data_dict in sample_batch:
-                seqName = sample_data_dict["seqId"]
-                # Skip if sample not found in lookup
-                if seqName not in sample_lookup_dict:
+            for sequence_data_dict in sequence_batch:
+                seqName = sequence_data_dict["seqId"]
+                # Skip if sequence not found in lookup
+                if seqName not in sequence_lookup_dict:
                     self.error_logfile_obj.write(
-                        f"Warning: Sample {seqName} not found in fasta, skipping\n"
+                        f"Warning: sequence {seqName} not found in fasta, skipping\n"
                     )
                     continue
-                data = sample_lookup_dict[seqName]
+                data = sequence_lookup_dict[seqName]
                 try:
-                    # Process the sample
-                    process_single_sample(
-                        sample_data_dict,
+                    # Process the sequence
+                    process_single_sequence(
+                        sequence_data_dict,
                         refmol_acc,
                         gene_to_cds=gene_cds_lookup,
                         reference_seq=self.refmols[refmol_acc]["sequence"],
@@ -253,9 +253,9 @@ class sonarCache:
                     batch_results.append(data)
 
                 except Exception as e:
-                    LOGGER.error(f"Error processing sample {seqName}: {str(e)}")
+                    LOGGER.error(f"Error processing sequence {seqName}: {str(e)}")
                     self.error_logfile_obj.write(
-                        f"Error processing sample {seqName}: {str(e)}\n"
+                        f"Error processing sequence {seqName}: {str(e)}\n"
                     )
                     continue
 
@@ -270,13 +270,13 @@ class sonarCache:
                 if not file_chunk:
                     continue
 
-                seq_names_in_chunk = [sample["seqId"] for sample in file_chunk]
+                seq_names_in_chunk = [seq["seqId"] for seq in file_chunk]
                 # print(seq_names_in_chunk)
-                # Create filtered sample data dict containing only samples in this chunk
-                filtered_sample_data = {
-                    seq_name: sample_lookup_dict[seq_name]
+                # Create filtered sequence data dict containing only sequences in this chunk
+                filtered_sequence_data = {
+                    seq_name: sequence_lookup_dict[seq_name]
                     for seq_name in seq_names_in_chunk
-                    if seq_name in sample_lookup_dict
+                    if seq_name in sequence_lookup_dict
                 }
                 try:
                     # Split chunk into smaller batches for parallel processing
@@ -292,7 +292,7 @@ class sonarCache:
                     with ThreadPoolExecutor(max_workers=max_workers) as executor:
                         future_to_batch = {
                             executor.submit(
-                                process_sample_batch, batch, filtered_sample_data
+                                process_sequence_batch, batch, filtered_sequence_data
                             ): batch
                             for batch in batches
                         }
@@ -301,7 +301,7 @@ class sonarCache:
                         for future in as_completed(future_to_batch):
                             try:
                                 batch_results = future.result()
-                                sample_data.extend(batch_results)
+                                sequence_data.extend(batch_results)
                             except Exception as e:
                                 LOGGER.error(f"Error processing batch: {str(e)}")
                                 self.error_logfile_obj.write(
@@ -315,13 +315,13 @@ class sonarCache:
                         f"Error processing chunk from {fname}: {str(e)}\n"
                     )
                     continue
-        return sample_data
+        return sequence_data
 
     def add_fasta_v2(
         self, *fnames, method=1, chunk_size=1000, max_workers=8
     ):  # noqa: C901
         """ """
-        sample_data: List[Dict[str, Union[str, int]]] = []
+        sequence_data: List[Dict[str, Union[str, int]]] = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for fname in fnames:
                 batch_data = []
@@ -338,9 +338,9 @@ class sonarCache:
 
         # merge all queue results
         while not self.result_queue.empty():
-            sample_data.extend(self.result_queue.get())
+            sequence_data.extend(self.result_queue.get())
 
-        return sample_data
+        return sequence_data
 
     def process_data_batch(
         self,
@@ -353,21 +353,17 @@ class sonarCache:
         # Make API call with the batch_data
         api_client = APIClient(base_url=self.base_url)
 
-        # fetcth sample_sequences
-        json_response = api_client.get_bulk_sample_data(
+        # fetcth sequences
+        json_response = api_client.get_bulk_sequence_data(
             [data["name"] for data in batch_data]
         )
-        print("Sample data from API:")
-        print(json_response)
-        sample_dict = {
-            sample_info["name"]: {
-                "sample_id": sample_info.get("sample_id"),
-                "sequences_names": [e.names for e in sample_info.get("sequences")],
-                "sequences_seqhash": [e.seqhash for e in sample_info.get("sequences")],
+        sequence_dict = {
+            sequence_info["name"]: {
+                "sequence_id": sequence_info.get("sequence_id"),
+                "sequence_seqhash": sequence_info.get("sequence_seqhash"),
             }
-            for sample_info in json_response
+            for sequence_info in json_response
         }
-        print(sample_dict)
         # fecth Alignment
         # NOTE: need to evaluate this stmt id more.
         # we assume refmolid == replicon_id == sourceid
@@ -377,18 +373,15 @@ class sonarCache:
                 for data in batch_data
             ]
         )
-        print("alignment data from API:")
-        print(json_response)
         alignment_dict = {
-            data["sequence__sample__name"]: data["alignment_id"]
-            for data in json_response
+            data["sequence_name"]: data["alignment_id"] for data in json_response
         }
 
         for i, data in enumerate(batch_data):
-            # get sample
-            batch_data[i]["sampleid"], seqhash_from_DB = (
-                sample_dict[data["name"]]["sample_id"],
-                sample_dict[data["name"]]["sequence_seqhash"],
+            # get sequence id from DB if existis, else None
+            batch_data[i]["sequenceid"], seqhash_from_DB = (
+                sequence_dict[data["name"]]["sequence_id"],
+                sequence_dict[data["name"]]["sequence_seqhash"],
             )
 
             # reuse the ref mols
@@ -396,15 +389,17 @@ class sonarCache:
             batch_data[i]["sourceid"] = data[
                 "refmolid"
             ]  # if self.refmols[self.default_refmol_acc]["id"]== data["refmolid"] else None
+
             batch_data[i]["source_acc"] = (
                 self.refmols[self.default_refmol_acc]["accession"]
                 if self.refmols[self.default_refmol_acc]["id"] == data["refmolid"]
                 else data["refmol"]
             )
+
             refseq_accession = data["refmol"]
             batch_data[i]["refseq_id"] = self.get_refseq_id(refseq_accession)
 
-            # Check Alignment if it exists or not (sample and seqhash)
+            # Check Alignment if it exists or not (sequence and seqhash)
             batch_data[i]["algnid"] = alignment_dict.get(data["name"], None)
 
             batch_data[i]["include_nx"] = self.include_nx
@@ -413,23 +408,23 @@ class sonarCache:
             # Data variable already point to the original batch_data[i], which if we update
             # the varaible, they altomatically update the original batch_data[i]
             self.add_data_files(data, seqhash_from_DB, refseq_accession)
-
             # TODO: will exam how to work directly in memory
             # del batch_data[i]["sequence"]
             # reformat data and only neccessay keys are kept.
-            _return_data = self.cache_sample(**batch_data[i])
+            _return_data = self.cache_sample_sequence(**batch_data[i])
             batch_data[i] = _return_data
 
         # Note: remove batch_data[i] with empty dict
         batch_data = list(filter(None, batch_data))
+        # print('final batch data', batch_data)
         # add result to queue
         self.result_queue.put(batch_data)
         # return batch_data
 
-    def cache_sample(
+    def cache_sample_sequence(
         self,
         name,
-        sampleid,
+        sequenceid,
         seqhash,
         sequence,
         header,
@@ -453,12 +448,11 @@ class sonarCache:
     ):
         """
         The function takes in a bunch of arguments and returns a filename.
-        :return: A list of dictionaries. Each dictionary contains the information for a single sample.
+        :return: A list of dictionaries. Each dictionary contains the information for a single sequence.
         """
-
         data = {
             "name": name,
-            "sampleid": sampleid,
+            "sequenceid": sequenceid,
             "refmol": refmol,  # from molecule (replicon)table, moleculd accession <-- we dont use this key at backend
             "refmolid": refmolid,  # from molecule table, moleculd id <-- we dont use this key at backend
             "refseq_id": refseq_id,  # The reference sequence ID. <-- we dont use this key at backend
@@ -482,7 +476,7 @@ class sonarCache:
             "include_nx": include_nx,
         }
         # fname = name  # self.get_sample_fname(name)  # return fname with full path
-        self.sampleinput_total = self.sampleinput_total + 1
+        self.sequenceinput_total = self.sequenceinput_total + 1
         # NOTE: write files only need to be processed
         if self.allow_updates or algnid is None:
             # try:
@@ -490,19 +484,19 @@ class sonarCache:
             # except OSError:
             #     os.makedirs(os.path.dirname(fname), exist_ok=True)
             #     self.write_pickle(fname, data)
-            self._samplefiles_to_profile += 1
+            self._sequencefiles_to_profile += 1
             # NOTE: IF previous_seqhash != current_seqhash, we have realign and update the variant?
             # uncomment below to enable this
             return data
         elif seqhash is not None:  # changes in seq content
-            self._samplefiles_to_profile += 1
+            self._sequencefiles_to_profile += 1
             return data
 
         # we skip the existing one
         return {}
 
-    def get_sample_fname(self, sample_name):
-        fn = slugify(hashlib.sha1(sample_name.encode("utf-8")).hexdigest())
+    def get_sequence_fname(self, sequence_name):
+        fn = slugify(hashlib.sha1(sequence_name.encode("utf-8")).hexdigest())
         return os.path.join(self.sample_dir, fn[:2], fn + ".sample")
 
     def iter_fasta(self, *fnames: str) -> Iterator[Dict[str, Union[str, int]]]:
@@ -555,7 +549,7 @@ class sonarCache:
                 'properties': {}}
         """
         try:
-            sample_id = header.replace("\t", " ").replace("|", " ").split(" ")[0]
+            sequence_id = header.replace("\t", " ").replace("|", " ").split(" ")[0]
         except AttributeError:
             # Handle the 'NoneType' object has no attribute 'replace' error
             LOGGER.error("Invalid FASTA format")
@@ -569,12 +563,12 @@ class sonarCache:
             # blast assignment for acession
             try:
                 best_aln_dict = self.blast_best_aln[fname]
-                refmol = best_aln_dict[sample_id]
-                LOGGER.debug(f"Using refmol_acc: {refmol}, {sample_id}")
+                refmol = best_aln_dict[sequence_id]
+                LOGGER.debug(f"Using refmol_acc: {refmol}, {sequence_id}")
             except Exception as e:
                 LOGGER.error(f"An error occurred: {e}")
                 sys.exit(
-                    f"input error: {sample_id} refers to an unknown reference molecule ({self._molregex.search(header)})."
+                    f"input error: {sequence_id} refers to an unknown reference molecule ({self._molregex.search(header)})."
                 )
         seq = harmonize_seq(seq)
         seq = remove_charfromsequence_data(seq, char="-")
@@ -582,7 +576,7 @@ class sonarCache:
         refmolid = self.refmols[refmol]["id"]
 
         return {
-            "name": sample_id,
+            "name": sequence_id,
             "header": header,
             "seqhash": seqhash,
             "sequence": seq,
@@ -645,7 +639,7 @@ class sonarCache:
         and it calls sub function to create all related files.
 
         Args:
-            data (dict): The data for the sample.
+            data (dict): The data for the sequence.
             seqhash (str): The sequence hash, optional.
             refseq_acc (str): accession from reference table.
             method (int): alignment method
@@ -657,8 +651,8 @@ class sonarCache:
         # 1. force update?
 
         # In cases:
-        # 1. sample is reuploaded under the same name but changes in sequence (fasta)
-        # 2. New Sample (no algnid found in database)
+        # 1. Sequence is reuploaded under the same name but changes in sequence (fasta)
+        # 2. New Sequence (no algnid found in database)
         if self.allow_updates or data["algnid"] is None or data["seqhash"] != seqhash:
             data["seqfile"] = self.cache_sequence(data["seqhash"], data["sequence"])
 
@@ -685,7 +679,7 @@ class sonarCache:
         else:
             # In cases:
             # 2. if no changed in sequence., use the existing cache and ID
-            # 3. if different samples but have similar sequence/varaint, use exiting alignID and map back to sample
+            # 3. if different sequnce but have similar sequence/variant, use exiting alignID and map back to sequence
             data["seqhash"] = None
             data["seqfile"] = None
             data["reffile"] = None
@@ -714,8 +708,8 @@ class sonarCache:
 
         return data
 
-    def iter_samples(self, _samplefiles):
-        for fname in _samplefiles:
+    def iter_sequences(self, _sequencefiles):
+        for fname in _sequencefiles:
             yield self.read_pickle(fname)
 
     def cache_sequence(self, seqhash, sequence):
@@ -937,37 +931,37 @@ class sonarCache:
         except Exception:
             return None
 
-    def perform_paranoid_cached_samples(  # noqa: C901
-        self, sample_data_dict_list, must_pass_paranoid
+    def perform_paranoid_cached_sequences(  # noqa: C901
+        self, sequence_data_dict_list, must_pass_paranoid
     ) -> list:
         """
         This function performs the paranoid test without fetching variants from the database.
         It will read the var file and compare it with the original sequence.
-        Combination of 'import_cached_samples' and 'paranoid_check' function
+        Combination of 'import_cached_sequences' and 'paranoid_check' function
 
 
         Return:
-            list[Dict]: List of dict sample.
+            list[Dict]: List of dict sequence.
         """
-        list_fail_samples = []
-        passed_samples_list = []
-        total_samples = len(sample_data_dict_list)
-        for sample_data in tqdm(
-            sample_data_dict_list,
-            total=total_samples,
+        list_fail_sequences = []
+        passed_sequences_list = []
+        total_sequences = len(sequence_data_dict_list)
+        for sequence_data in tqdm(
+            sequence_data_dict_list,
+            total=total_sequences,
             desc="Paranoid Check...",
-            unit="samples",
+            unit="sequences",
             bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
             disable=self.disable_progress,
         ):
             try:
                 iter_dna_list = []
                 # NOTE: right now, we no longer need var_file.
-                del sample_data["var_file"]
-                del sample_data["lift_file"]
-                if sample_data["var_parquet_file"] is not None:
+                del sequence_data["var_file"]
+                del sequence_data["lift_file"]
+                if sequence_data["var_parquet_file"] is not None:
                     # SECTION:ReadVar
-                    var_df = pd.read_parquet(sample_data["var_parquet_file"])
+                    var_df = pd.read_parquet(sequence_data["var_parquet_file"])
                     # Currently var_df might be empty if the imported sequence
                     # is identical to the reference
                     if not var_df.empty:
@@ -977,18 +971,18 @@ class sonarCache:
                         )
                     else:
                         LOGGER.warning(
-                            f"Paranoid test: var file ({sample_data['var_parquet_file']}) is missing for sample {sample_data['name']}"
+                            f"Paranoid test: var file ({sequence_data['var_parquet_file']}) is missing for sequence {sequence_data['name']}"
                         )
                     # SECTION: Paranoid
-                    if sample_data["seqhash"] is not None:
+                    if sequence_data["seqhash"] is not None:
                         # Get Reference sequence.
                         seq = list(
-                            self.get_refseq(refmol_acc=sample_data["source_acc"])
+                            self.get_refseq(refmol_acc=sequence_data["source_acc"])
                         )
 
                         prefix = ""
                         gaps = {".", " "}
-                        sample_name = sample_data["name"]
+                        sequence_name = sequence_data["name"]
 
                         for vardata in iter_dna_list:
                             if vardata["alt"] in gaps:
@@ -1004,14 +998,14 @@ class sonarCache:
 
                         # seq is now a restored version from variant dict.
                         seq = prefix + "".join(seq)
-                        with open(sample_data["seq_file"], "r") as handle:
+                        with open(sequence_data["seq_file"], "r") as handle:
                             orig_seq = handle.read()
 
-                        seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
+                        seq = ">" + sequence_data["seqhash"] + "\n" + seq + "\n"
 
                         if seq != orig_seq:
                             LOGGER.warning(
-                                f"Failed paranoid test for sample '{sample_name}'"
+                                f"Failed paranoid test for sequence '{sequence_name}'"
                             )
 
                             # Only for printing the sequences with some indication
@@ -1027,10 +1021,10 @@ class sonarCache:
                             LOGGER.debug(f"Rebuilt : {seq}")
 
                             # NOTE: comment this part, for now, we need to discuss which
-                            # information we want to report for the failed sample.
+                            # information we want to report for the failed sequence.
                             with open(
                                 os.path.join(
-                                    self.error_dir, f"{sample_name}.error.var"
+                                    self.error_dir, f"{sequence_name}.error.var"
                                 ),
                                 "w+",
                             ) as handle:
@@ -1039,28 +1033,28 @@ class sonarCache:
 
                             qryfile = os.path.join(
                                 self.error_dir,
-                                sample_name + ".error.restored_sample.fa",
+                                sequence_name + ".error.restored_sample.fa",
                             )
                             reffile = os.path.join(
                                 self.error_dir,
-                                sample_name + ".error.original_sample.fa",
+                                sequence_name + ".error.original_sample.fa",
                             )
 
                             # NOTE: comment this part, for now, we need to discuss which
-                            # information we want to report for the failed sample.
+                            # information we want to report for the failed sequence.
                             with open(qryfile, "w+") as handle:
                                 handle.write(seq)
                             with open(reffile, "w+") as handle:
                                 handle.write(orig_seq)
 
-                            #  ref_name = sample_data["refmol"]
+                            #  ref_name = sequence_data["refmol"]
                             #  output_paranoid = os.path.join(
                             #     self.basedir,
-                            #     f"{sample_name}.withref.{ref_name}.fail-paranoid.fna",
+                            #     f"{sequence_name}.withref.{ref_name}.fail-paranoid.fna",
                             # )
 
                             paranoid_dict = {
-                                "sample_name": sample_name,
+                                "sequence_name": sequence_name,
                                 # "qryfile": qryfile,
                                 # "reffile": reffile,
                                 # "output_paranoid": output_paranoid,
@@ -1069,11 +1063,11 @@ class sonarCache:
                             paranoid_dict = {}
 
                         if paranoid_dict:
-                            list_fail_samples.append(paranoid_dict)
+                            list_fail_sequences.append(paranoid_dict)
                         elif not paranoid_dict:
-                            passed_samples_list.append(sample_data)
-                    # sample_name = sample_data["name"]
-                    # passed_samples_list.append(sample_data)
+                            passed_sequences_list.append(sequence_data)
+                    # sequence_name = sequence_data["name"]
+                    # passed_sequences_list.append(sequence_data)
 
             except Exception as e:
                 LOGGER.error("\n------- Fatal Error ---------")
@@ -1082,32 +1076,32 @@ class sonarCache:
                 LOGGER.error(e)
                 traceback.print_exc()
                 LOGGER.error("\n During insert:")
-                LOGGER.error(sample_data)
+                LOGGER.error(sequence_data)
                 sys.exit("Unknown import error")
 
-        count_sample = total_samples - len(list_fail_samples)
-        LOGGER.info(f"Total passed samples: {count_sample}")
+        count_sequence = total_sequences - len(list_fail_sequences)
+        LOGGER.info(f"Total passed sequences: {count_sequence}")
 
-        if list_fail_samples:
+        if list_fail_sequences:
             LOGGER.warning(
-                "Some samples fail in sanity check; please check import.log under the cache directory."
+                "Some sequences fail in sanity check; please check import.log under the cache directory."
             )
-            # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
+            # LOGGER.info(f"Total Fail: {len(list_fail_sequences)}.")
 
             # NOTE: comment this part, for now, we need to discuss which
-            # information we want to report for the failed sample.
-            # self.paranoid_align_multi(list_fail_samples, threads)
+            # information we want to report for the failed sequence.
+            # self.paranoid_align_multi(list_fail_sequences, threads)
 
-            # currently, we report only failed sample IDs.
-            self.error_logfile_obj.write("Fail sample during alignment:----\n")
-            LOGGER.warning("Failed sample IDs:")
-            for fail_sample in list_fail_samples:
-                self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
-                LOGGER.warning(fail_sample["sample_name"])
+            # currently, we report only failed sequence IDs.
+            self.error_logfile_obj.write("Fail sequence during alignment:----\n")
+            LOGGER.warning("Failed sequence IDs:")
+            for fail_sequence in list_fail_sequences:
+                self.error_logfile_obj.write(f"{fail_sequence['sequence_name']}\n")
+                LOGGER.warning(fail_sequence["sequence_name"])
             if must_pass_paranoid:
                 sys.exit("Some sequences failed the paranoid test, aborting.")
 
-        return passed_samples_list
+        return passed_sequences_list
 
     def build_snpeff_cache(self, reference):  # noqa: C901
         """Build snpEff cache for the given reference,

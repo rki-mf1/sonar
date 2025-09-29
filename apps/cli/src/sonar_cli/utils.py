@@ -287,7 +287,7 @@ class sonarUtils:
         )
         LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
         cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
-        LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
+        LOGGER.info(f"Total input sequences: {cache.sequenceinput_total}")
 
         # Map Nextclade JSON files and Fasta files (sequence names)
         start_align_time = get_current_time()
@@ -463,7 +463,7 @@ class sonarUtils:
         )
         LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
         cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
-        LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
+        LOGGER.info(f"Total input sequences: {cache.sequenceinput_total}")
 
         # Align sequences and process
         aligner = sonarAligner(
@@ -472,8 +472,8 @@ class sonarUtils:
             allow_updates=cache.allow_updates,
             debug=cache.debug,
         )
-        l = cache._samplefiles_to_profile
-        LOGGER.info(f"Total samples that need to be processed: {l}")
+        l = cache._sequencefiles_to_profile
+        LOGGER.info(f"Total sequences that need to be processed: {l}")
         if l == 0:
             return
         start_align_time = get_current_time()
@@ -515,7 +515,7 @@ class sonarUtils:
         )
 
         start_paranoid_time = get_current_time()
-        passed_samples_list = cache.perform_paranoid_cached_samples(
+        passed_samples_list = cache.perform_paranoid_cached_sequences(
             passed_align_samples, must_pass_paranoid
         )
         LOGGER.info(
@@ -525,7 +525,7 @@ class sonarUtils:
             f"Paranoid test usage time: {calculate_time_difference(start_paranoid_time, get_current_time())}\n"
         )
         n = ANNO_CHUNK_SIZE
-        passed_samples_chunk_list = [
+        passed_sequences_chunk_list = [
             tuple(
                 list(passed_samples_list[i : i + n]),
             )
@@ -545,7 +545,7 @@ class sonarUtils:
                     pool.set_shared_objects(cache)
                     raw_anno_result_list = pool.map_unordered(
                         sonarUtils.annotate_sample,
-                        passed_samples_chunk_list,
+                        passed_sequences_chunk_list,
                         progress_bar=True,
                         progress_bar_options={
                             "position": 0,
@@ -584,13 +584,13 @@ class sonarUtils:
                 "Uploading and importing sequence mutation profiles into backend..."
             )
             cache_dict = {"job_id": job_id}
-            for chunk_number, sample_chunk in enumerate(passed_samples_chunk_list, 1):
+            for chunk_number, sample_chunk in enumerate(passed_sequences_chunk_list, 1):
                 LOGGER.debug(f"Uploading chunk {chunk_number}.")
                 sonarUtils.zip_import_upload_sample_singlethread(
                     cache_dict, sample_chunk, chunk_number
                 )
             # Wait for all chunk to be processed
-            incomplete_chunks = set(range(1, len(passed_samples_chunk_list)))
+            incomplete_chunks = set(range(1, len(passed_sequences_chunk_list)))
             while len(incomplete_chunks) > 0:
                 chunks_tmp = incomplete_chunks.copy()
                 for chunk_number in chunks_tmp:

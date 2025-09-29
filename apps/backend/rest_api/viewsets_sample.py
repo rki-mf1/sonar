@@ -20,6 +20,7 @@ from django.db.models import Case
 from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
+from django.db.models import F
 from django.db.models import IntegerField
 from django.db.models import Max
 from django.db.models import Min
@@ -1186,57 +1187,60 @@ class SampleViewSet(
         return file_path
 
     @action(detail=False, methods=["get"])
-    def get_sample_data(self, request: Request, *args, **kwargs):
-        sample_name = request.GET.get("sample_data")
-        if not sample_name:
+    def get_sequence_data(self, request: Request, *args, **kwargs):
+        sequence_name = request.GET.get("sample_data")
+        if not sequence_name:
             return Response(
                 {"detail": "Sample name is missing"}, status=status.HTTP_400_BAD_REQUEST
             )
-        sample_model = (
-            models.Sample.objects.filter(name=sample_name)
-            .prefetch_related("sequences")
-            .extra(select={"sample_id": "sample.id"})
-            .values("sample_id", "name", "sequences__seqhash")
+        sequence = (
+            models.Sequence.objects.filter(name=sequence_name)
+            .annotate(
+                sequence_id=F("id"),
+                sequence_seqhash=F("seqhash"),
+            )
+            .values("sequence_id", "name", "sequence_seqhash")
         )
-        if sample_model:
-            sample_data = list(sample_model)[0]
-            if len(sample_model) > 1:
-                # Not sure ....---
-                print("more than one sample was using same name.")
+        if sequence:
+            sequence_data = list(sequence)[0]
         else:
-            print("Cannot find:", sample_name)
-            sample_data = {}
+            print("Cannot find:", sequence_name)
+            sequence_data = {}
 
-        return Response(data=sample_data)
+        return Response(data=sequence_data)
 
     @action(detail=False, methods=["post"])
-    def get_bulk_sample_data(self, request: Request, *args, **kwargs):
+    def get_bulk_sequence_data(self, request: Request, *args, **kwargs):
         try:
             # Parse the JSON data from the request body
             data = json.loads(request.body.decode("utf-8"))
-            # example to be parsed data: {"sample_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
-            sample_data_list = data.get("sample_data", [])
-            sample_model = (
-                models.Sample.objects.filter(name__in=sample_data_list)
-                .prefetch_related("sequences")
-                .values("id", "name", "sequences__seqhash")
+            # example to be parsed data: {"sequence_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
+            sequence_data_list = data.get("sequence_data", [])
+
+            sequence_model = (
+                models.Sequence.objects.filter(name__in=sequence_data_list)
+                .annotate(
+                    sequence_id=F("id"),
+                    sequence_seqhash=F("seqhash"),
+                )
+                .values("sequence_id", "name", "sequence_seqhash")
             )
             # Convert the QuerySet to a list of dictionaries
-            sample_data = list(sample_model)
+            sequence_data = list(sequence_model)
 
             # Check for missing samples and add them to the result
-            missing_samples = set(sample_data_list) - set(
-                item["name"] for item in sample_data
+            missing_samples = set(sequence_data_list) - set(
+                item["name"] for item in sequence_data
             )
             for missing_sample in missing_samples:
-                sample_data.append(
+                sequence_data.append(
                     {
-                        "sample_id": None,
+                        "sequence_id": None,
                         "name": missing_sample,
-                        "sequences__seqhash": None,
+                        "sequence_seqhash": None,
                     }
                 )
-            return Response(sample_data, status=status.HTTP_200_OK)
+            return Response(sequence_data, status=status.HTTP_200_OK)
         except json.JSONDecodeError:
             return Response(
                 {"detail": "Invalid JSON data / structure"},
