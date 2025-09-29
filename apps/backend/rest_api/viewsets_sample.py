@@ -45,7 +45,8 @@ from rest_framework.response import Response
 from covsonar_backend.settings import DEBUG
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from rest_api.data_entry.sample_job import delete_sample
+from rest_api.data_entry.sample_job import delete_samples
+from rest_api.data_entry.sample_job import delete_sequences
 from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
 from rest_api.utils import define_profile
@@ -1256,9 +1257,22 @@ class SampleViewSet(
             print("Reference Accession:", reference_accession)
             print("Sample List:", sample_list)
 
-        sample_data = delete_sample(sample_list=sample_list)
+        sample_data = delete_samples(sample_list=sample_list)
 
         return Response(data=sample_data)
+
+    @action(detail=False, methods=["post"])
+    def delete_sequence_data(self, request: Request, *args, **kwargs):
+        sequence_data = {}
+        reference_accession = request.data.get("reference_accession", "")
+        sequence_list = json.loads(request.data.get("sequence_list"))
+        if DEBUG:
+            print("Reference Accession:", reference_accession)
+            print("Sequence List:", sequence_list)
+
+        sequence_data = delete_sequences(sequence_list=sequence_list)
+
+        return Response(data=sequence_data)
 
 
 class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin):

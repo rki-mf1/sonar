@@ -75,11 +75,19 @@ def test_delete_fakeprop(capfd, api_url):
     assert code == 0
 
 
-# delete non existing sample
 def test_delete_sample(monkeypatch, capfd, api_url):
     code = run_cli(f"delete-sample --db {api_url} --sample fake-id --force")
     out, err = capfd.readouterr()
     assert "0 of 1 samples found and deleted." in err
+    assert code == 0
+
+
+# delete non existing sequence
+def test_delete_sequence(monkeypatch, capfd, api_url):
+    code = run_cli(f"delete-sequence --db {api_url} --sequence fake-id --force")
+    out, err = capfd.readouterr()
+    print(out, err, code)
+    assert "0 of 1 sequences found and deleted." in err
     assert code == 0
 
 

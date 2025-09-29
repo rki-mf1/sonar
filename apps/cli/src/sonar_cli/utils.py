@@ -1430,19 +1430,7 @@ class sonarUtils:
     @staticmethod
     def delete_reference(reference):
         LOGGER.info("Start to delete....the process is not reversible.")
-
-        # delete only reference will also delete the whole linked data.
-        # if samples_ids:
-        #    if debug:
-        #        logging.info(f"Delete: {samples_ids}")
-        #    for sample in samples_ids:
-        #        # dbm.delete_seqhash(sample["seqhash"])
-        #        dbm.delete_alignment(
-        #            seqhash=sample["seqhash"], element_id=_ref_element_id
-        #        )
-
         json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
-
         LOGGER.info(
             f"{json_response['samples_count']} alignments that are linked to the reference will also be deleted."
         )
@@ -1456,7 +1444,7 @@ class sonarUtils:
             db (str): The database to delete samples from.
             samples (list[str]): A list of samples to be deleted.  x
 
-        NOTE: if we delete a sample, then all alignment that related
+        NOTE: if we delete a sample, then all sequences that related
         to this sample will also deleted.
         """
         if len(samples) == 0:
@@ -1469,11 +1457,27 @@ class sonarUtils:
         deleted = json_response["deleted_samples_count"]
         LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
 
+    @staticmethod
+    def delete_sequence(reference: str = None, sequences: List[str] = []) -> None:
         """
+        Delete sequences from the database.
 
-        LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
-        LOGGER.info(f"{after_count} samples remain in the database.")
+        Args:
+            db (str): The database to delete samples from.
+            sequences (list[str]): A list of sequences to be deleted.  x
+
+        NOTE: if we delete a sequences, then all alignment that related
+        to this sequence will also deleted.
         """
+        if len(sequences) == 0:
+            LOGGER.info("Nothing to delete.")
+
+        json_response = APIClient(base_url=BASE_URL).post_delete_sequence(
+            reference, sequences=sequences
+        )
+
+        deleted = json_response["deleted_sequences_count"]
+        LOGGER.info(f"{deleted} of {len(sequences)} sequences found and deleted.")
 
     @staticmethod
     def add_property(

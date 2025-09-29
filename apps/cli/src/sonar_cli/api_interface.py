@@ -35,6 +35,7 @@ class APIClient:
     post_add_reference_endpoint = "references/import_gbk/"
     post_delete_reference_endpoint = "references/delete_reference/"
     post_delete_sample_endpoint = "samples/delete_sample_data/"
+    post_delete_sequence_endpoint = "samples/delete_sequence_data/"
     post_import_property_upload_endpoint = "samples/import_properties_tsv/"
     post_import_upload_endpoint = "file_uploads/import_upload/"
     post_add_property_endpoint = "properties/add_property/"
@@ -395,6 +396,19 @@ class APIClient:
         json_response = self._make_request(
             "POST",
             endpoint=self.post_delete_sample_endpoint,
+            data=data,
+        )
+        return json_response
+
+    def post_delete_sequence(self, reference_accession, sequences: List[str] = []):
+        data = {
+            "reference_accession": reference_accession,
+            "sequence_list": json.dumps(sequences),
+        }
+
+        json_response = self._make_request(
+            "POST",
+            endpoint=self.post_delete_sequence_endpoint,
             data=data,
         )
         return json_response
