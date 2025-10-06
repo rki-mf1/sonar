@@ -1,6 +1,7 @@
 import re
 import subprocess
 import sys
+import traceback
 
 import parasail
 from pywfa import cigartuples_to_str
@@ -31,8 +32,8 @@ def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
             refseq = refseq[::-1]
             qryseq = qryseq[::-1]
 
-        reference_length = len(refseq)
-        a = WavefrontAligner(
+        # reference_length = len(refseq)
+        alignment = WavefrontAligner(
             refseq,
             match=match,
             mismatch=mismatch,
@@ -40,18 +41,20 @@ def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
             gap_extension=gapextend,
             span="ends-free",
             distance="affine",
-            pattern_begin_free=reference_length,
-            pattern_end_free=reference_length,
+            # pattern_begin_free=reference_length,
+            # pattern_end_free=reference_length,
             text_begin_free=0,
             text_end_free=0,
             wildcard="N",
+            memory_mode="biwfa",
         )
-        alignment = a(qryseq)
+
+        alignment.wavefront_align(qryseq)
+
         if alignment.status != 0:  # alignment was not successful
-            LOGGER.error("An error occurred in align_WFA")
+            LOGGER.error(f"An error occurred in align_WFA, status: {alignment.status}")
             if left_align_indels:
                 qryseq = qryseq[::-1]
-            LOGGER.error(f"Input sequence: {qryseq}")
             sys.exit("--stop--")
 
         cigartuple = alignment.cigartuples
@@ -67,7 +70,9 @@ def align_WFA(qryseq, refseq, gapopen=6, gapextend=1):
 
     except Exception as e:
         LOGGER.error(f"An error occurred in align_WFA: {e}")
-        LOGGER.error(f"Input seq: {align_WFA}")
+        LOGGER.error(f"WFA alignment traceback: {traceback.format_exc()}")
+        LOGGER.error(f"Query sequence length: {len(qryseq) if qryseq else 'None'}")
+        LOGGER.error(f"Reference sequence length: {len(refseq) if refseq else 'None'}")
         sys.exit("--stop--")
 
     return (
