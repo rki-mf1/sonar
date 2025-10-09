@@ -591,3 +591,14 @@ def test_match_aa_influ(capfd, api_url):
 
     assert "16" == lines[-1]
     assert code == 0
+
+
+@pytest.mark.xdist_group(name="group4")
+@pytest.mark.order(3)
+def test_match_mpox(capfd, api_url):
+    code = run_cli(f"match --db {api_url} -r NC_063383.1  --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+
+    assert "20" == lines[-1]
+    assert code == 0
