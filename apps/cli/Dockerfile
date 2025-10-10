@@ -20,6 +20,5 @@ COPY src/ /code/src
 RUN conda config --set solver classic
 RUN conda env create -n sonar-cli -f environment.yml --yes
 RUN conda run -n sonar-cli poetry install --only main --no-interaction
-RUN conda run -n sonar-cli pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
 
 ENTRYPOINT ["conda", "run", "-n", "sonar-cli", "sonar-cli"]

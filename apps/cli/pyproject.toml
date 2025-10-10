@@ -28,7 +28,6 @@ colorlog = "^6.8.0"
 packaging = "^24.0"
 pango-aliasor = "^0.3.0"
 pyarrow = "^19.0.0"
-pywfa = "^0.5.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"

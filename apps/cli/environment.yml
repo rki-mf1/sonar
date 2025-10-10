@@ -12,6 +12,9 @@ dependencies:
   - snpeff=5.2
   - sourmash-minimal=4.8.14
   - pre-commit
+  - pip
+  - pip:
+      - git+https://github.com/JosephLalli/pywfa.git@ce138c3
 variables:
   REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
   _JAVA_OPTIONS: -Xms128m -Xmx4g
