@@ -280,6 +280,8 @@ def test_wfa_anno_no_upload_covid(monkeypatch, api_url, tmpfile_name):
 def test_wfa_anno_no_upload_mpox(monkeypatch, api_url, tmpfile_name):
     """Test import command using wfa method"""
     monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setenv("FILTER_DELETE_SIZE", "200000")  # we keep all sequences
+
     command = f"import --db {api_url}  -r NC_063383.1 --method 3 --fasta ../../../test-data/mpox/mpox_20.fasta.xz --cache {tmpfile_name}/wfa -t 1  --auto-anno --must-pass-paranoid --skip-nx"
     code = run_cli(command)
 
