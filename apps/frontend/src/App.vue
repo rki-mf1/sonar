@@ -1,7 +1,7 @@
 <template>
   <body>
     <main>
-      <header v-if="$route.name !== 'Landing'">
+      <header v-if="$route.name !== 'Home'">
         <div class="flex flex-wrap justify-content-between">
           <div class="flex align-items-center justify-content-center">
             <div style="font-size: 2rem; color: var(--text-color)">{{ appTitle }}</div>
@@ -59,7 +59,12 @@ export default {
         {
           label: 'Home',
           icon: 'pi pi-home',
-          route: '/home',
+          route: '/',
+        },
+        {
+          label: 'Table',
+          icon: 'pi pi-table',
+          route: '/table',
         },
         {
           label: 'Plots',
@@ -76,7 +81,7 @@ export default {
   },
   computed: {
     showFilters() {
-      return this.$route.name === 'Home' || this.$route.name === 'Plots'
+      return this.$route.name === 'Table' || this.$route.name === 'Plots'
     },
     appTitle() {
       const { organism, accession, data_sets } = this.samplesStore
