@@ -215,6 +215,10 @@ export default {
     PrimeToggleButton,
     PrimeInputNumber,
   },
+  props: {
+    accession: { type: String, required: true },
+    datasets: { type: String, required: true },
+  },
   data() {
     return {
       samplesStore: useSamplesStore(),

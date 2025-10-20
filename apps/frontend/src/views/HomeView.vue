@@ -111,7 +111,13 @@ export default {
             this.selectedAccession,
             this.selectedDatasets,
           )
-          this.router.push({ name: 'Table' })
+          this.router.push({
+            name: 'Table',
+            params: {
+              accession: this.selectedAccession,
+              datasets: this.selectedDatasets.join('+'),
+            },
+          })
           this.loading = false
         }, 50) // delay to trigger loading animation -> there has to be a better solution!
       } else {

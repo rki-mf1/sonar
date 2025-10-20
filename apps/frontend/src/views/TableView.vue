@@ -215,6 +215,10 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 
 export default {
   name: 'TableView',
+  props: {
+    accession: { type: String, required: true },
+    datasets: { type: String, required: true },
+  },
 
   data() {
     return {

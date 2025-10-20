@@ -55,31 +55,22 @@ export default {
   data() {
     return {
       samplesStore: useSamplesStore(),
-      menuItems: [
-        {
-          label: 'Home',
-          icon: 'pi pi-home',
-          route: '/',
-        },
-        {
-          label: 'Table',
-          icon: 'pi pi-table',
-          route: '/table',
-        },
-        {
-          label: 'Plots',
-          icon: 'pi pi-chart-bar',
-          route: '/plots',
-        },
-        {
-          label: 'About',
-          icon: 'pi pi-star',
-          route: '/about',
-        },
-      ],
     }
   },
   computed: {
+    menuItems() {
+      const { accession, data_sets } = this.samplesStore
+
+      const base =
+        accession && data_sets && data_sets.length ? `/${accession}/${data_sets.join('+')}` : null
+
+      return [
+        { label: 'Home', icon: 'pi pi-home', route: '/' },
+        { label: 'Table', icon: 'pi pi-table', route: base ? `${base}/table` : '/' },
+        { label: 'Plots', icon: 'pi pi-chart-bar', route: base ? `${base}/plots` : '/' },
+        { label: 'About', icon: 'pi pi-star', route: '/about' },
+      ]
+    },
     showFilters() {
       return this.$route.name === 'Table' || this.$route.name === 'Plots'
     },
