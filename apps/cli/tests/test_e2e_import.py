@@ -263,12 +263,12 @@ def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
 def test_wfa_anno_no_upload_covid(monkeypatch, api_url, tmpfile_name):
     """Test import command using wfa method"""
     monkeypatch.chdir(Path(__file__).parent)
-    monkeypatch.setattr(
-        "mpire.WorkerPool.imap_unordered",
-        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-            func(**arg) for arg in args
-        ),
-    )
+    # monkeypatch.setattr(
+    #     "mpire.WorkerPool.imap_unordered",
+    #     lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+    #         func(**arg) for arg in args
+    #     ),
+    # )
     command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/wfa -t 1 --no-upload --auto-anno --must-pass-paranoid --skip-nx"
     code = run_cli(command)
 
