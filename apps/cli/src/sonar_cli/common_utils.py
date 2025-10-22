@@ -317,39 +317,36 @@ def chunk(arr_range, arr_size):
     return iter(lambda: tuple(islice(arr_range, arr_size)), ())
 
 
-def clear_sample_cache_batch_worker(*sample_batch):
+def clear_sample_cache_worker(**sample):
     """
-    Worker function to clear cache files for a batch of samples using mpire.
+    Worker function to clear cache files for a single sample using mpire.
+
+    This function is designed to be called by mpire's WorkerPool with automatic
+    chunking via the chunk_size parameter. Each call processes one sample.
 
     Args:
-        sample_batch: List of sample dictionaries to process
-        *args: Additional positional arguments (ignored)
-        **kwargs: Additional keyword arguments (ignored)
+        sample: Sample dictionary with a 'vcffile' key pointing to the VCF file path
 
     Returns:
-        int: Number of samples processed successfully
+        bool: True if successful, False if failed
     """
-    processed_count = 0
-
-    for sample in sample_batch:
+    try:
         try:
-            try:
-                os.remove(sample["vcffile"] + ".gz")
-            except FileNotFoundError:
-                pass
-            try:
-                os.remove(sample["vcffile"] + ".gz.tbi")
-            except FileNotFoundError:
-                pass
-            processed_count += 1
-        except (TypeError, OSError) as e:
-            LOGGER.error(traceback.format_exc())
-            LOGGER.error("\nDebugging Information:")
-            LOGGER.error(e)
-            LOGGER.error("-----------")
-            LOGGER.error(sample)
-
-    return processed_count
+            os.remove(sample["vcffile"] + ".gz")
+        except FileNotFoundError:
+            pass
+        try:
+            os.remove(sample["vcffile"] + ".gz.tbi")
+        except FileNotFoundError:
+            pass
+        return True
+    except (TypeError, OSError) as e:
+        LOGGER.error(traceback.format_exc())
+        LOGGER.error("\nDebugging Information:")
+        LOGGER.error(e)
+        LOGGER.error("-----------")
+        LOGGER.error(sample)
+        return False
 
 
 def clear_sample_cache(sample):
@@ -370,21 +367,25 @@ def clear_sample_cache(sample):
         LOGGER.error(sample)
 
 
-def clear_unnecessary_cache(samples, chunk_size=250, n_jobs=4, progress=True):
+def clear_unnecessary_cache(samples, chunk_size=250, n_jobs=1, progress=True):
     """
-    Clear cache files for samples using mpire WorkerPool with progress bar.
+    Clear temporary VCF cache files (.gz and .gz.tbi) for processed samples.
+    These files are temporary artifacts from the annotation/variant calling process
+    and can safely be removed to free up disk space.
 
     Args:
         samples: List of sample dictionaries
-        chunk_size: Number of samples per chunk (default: 250)
-        n_jobs: Number of worker processes (default: 4)
+        chunk_size: Number of samples per chunk for parallel processing. (default: 250)
+        n_jobs: Number of worker processes. (default: 1)
         progress: Whether to show progress bar (default: True)
+
+    Note:
+        Files will be removed per sample:
+        - {vcffile}.gz: Compressed VCF file with variant calls
+        - {vcffile}.gz.tbi: Tabix index for the compressed VCF
     """
     if not samples:
         return
-
-    # Create batches for parallel processing
-    batches = [samples[i : i + chunk_size] for i in range(0, len(samples), chunk_size)]
 
     total_samples = len(samples)
 
@@ -398,12 +399,14 @@ def clear_unnecessary_cache(samples, chunk_size=250, n_jobs=4, progress=True):
             bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
             disable=not progress,
         ) as pbar:
-            # Use imap for processing with progress updates
+            # Use imap_unordered with automatic chunking
             for processed_count in pool.imap_unordered(
-                clear_sample_cache_batch_worker,
-                batches,
+                clear_sample_cache_worker,
+                samples,
+                chunk_size=chunk_size,
+                iterable_len=total_samples,
             ):
-                # Update progress bar with actual processed count
+                # Update progress bar (each result is True for success, False for failure)
                 pbar.update(processed_count)
 
 

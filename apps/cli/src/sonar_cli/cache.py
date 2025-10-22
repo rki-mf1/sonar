@@ -46,6 +46,7 @@ LOGGER = LoggingConfigurator.get_logger()
 def process_paranoid_batch_worker(cache_instance_data, *batch_data):  # noqa: C901
     """
     Standalone worker function for paranoid batch processing using mpire.
+
     This function processes a batch of samples for paranoid testing.
 
     Args:
@@ -1069,20 +1070,20 @@ class sonarCache:
             return None
 
     def perform_paranoid_cached_samples(  # noqa: C901
-        self, sample_data_dict_list, must_pass_paranoid, chunk_size=50, n_jobs=8
+        self, sample_data_dict_list, must_pass_paranoid, chunk_size=50, n_jobs=1
     ) -> list:
         """
         This function performs the paranoid test without fetching variants from the database.
         It will read the var file and compare it with the original sequence.
-        Combination of 'import_cached_samples' and 'paranoid_check' function
+        Combination of 'import_cached_samples' and 'paranoid_check' function.
 
-        Parallelized using mpire WorkerPool for improved performance.
+        Use mpire WorkerPool for improved performance.
 
         Args:
             sample_data_dict_list: List of sample data dictionaries
             must_pass_paranoid: Whether to exit if paranoid tests fail
-            chunk_size: Number of samples to process in each batch
-            n_jobs: Maximum number of worker processes
+            chunk_size: Number of samples to process in each batch. (default: 50)
+            n_jobs: Maximum number of worker processes. (default: 1)
 
         Return:
             list[Dict]: List of dict sample.
@@ -1130,7 +1131,8 @@ class sonarCache:
 
         if list_fail_samples:
             LOGGER.warning(
-                "Some samples fail in sanity check; please check import.log under the cache directory."
+                "Some samples fail in sanity check; "
+                "please check import.log under the cache directory."
             )
             # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
 

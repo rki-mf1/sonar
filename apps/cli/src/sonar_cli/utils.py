@@ -40,8 +40,12 @@ from sonar_cli.common_utils import read_var_parquet_file
 from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import BASE_URL
+from sonar_cli.config import CACHE_CLEAR_CHUNK_SIZE
+from sonar_cli.config import CACHE_CLEAR_N_JOBS
 from sonar_cli.config import CHUNK_SIZE
 from sonar_cli.config import KSIZE
+from sonar_cli.config import PARANOID_CHUNK_SIZE
+from sonar_cli.config import PARANOID_N_JOBS
 from sonar_cli.config import PROP_CHUNK_SIZE
 from sonar_cli.config import SCALED
 from sonar_cli.logging import LoggingConfigurator
@@ -426,7 +430,11 @@ class sonarUtils:
         else:
             LOGGER.info("Disable sending samples.")
         start_clean_time = get_current_time()
-        clear_unnecessary_cache(passed_samples_list, n_jobs=threads)
+        clear_unnecessary_cache(
+            passed_samples_list,
+            chunk_size=CACHE_CLEAR_CHUNK_SIZE,
+            n_jobs=CACHE_CLEAR_N_JOBS,
+        )
         LOGGER.info(
             f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
@@ -520,7 +528,10 @@ class sonarUtils:
 
         start_paranoid_time = get_current_time()
         passed_samples_list = cache.perform_paranoid_cached_samples(
-            passed_align_samples, must_pass_paranoid, n_jobs=threads
+            passed_align_samples,
+            must_pass_paranoid,
+            chunk_size=PARANOID_CHUNK_SIZE,
+            n_jobs=PARANOID_N_JOBS,
         )
         LOGGER.info(
             f"[runtime] Paranoid test: {calculate_time_difference(start_paranoid_time, get_current_time())}"
@@ -648,7 +659,11 @@ class sonarUtils:
         else:
             LOGGER.info("Disable sending samples.")
         start_clean_time = get_current_time()
-        clear_unnecessary_cache(passed_samples_list, n_jobs=threads)
+        clear_unnecessary_cache(
+            passed_samples_list,
+            chunk_size=CACHE_CLEAR_CHUNK_SIZE,
+            n_jobs=CACHE_CLEAR_N_JOBS,
+        )
         LOGGER.info(
             f"[runtime] Clear cache: {calculate_time_difference(start_clean_time, get_current_time())}"
         )
