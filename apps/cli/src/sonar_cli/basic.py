@@ -382,7 +382,7 @@ def construct_query(  # noqa: C901
     float_pattern_range = re.compile(
         r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
     )
-    reference_query = {"label": "Replicon", "exclude": False, "accession": reference}
+    reference_query = {"label": "Reference", "exclude": False, "accession": reference}
     final_query = {"andFilter": [reference_query], "orFilter": []}
     LOGGER.debug(f"Input Samples:{samples}")
     LOGGER.debug(f"Input Profiles:{profiles}")

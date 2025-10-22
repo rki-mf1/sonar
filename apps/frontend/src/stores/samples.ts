@@ -107,6 +107,9 @@ function parseDateToDateRangeFilter(data: Date[]) {
 
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
+    organism: null as string | null,
+    accession: null as string | null,
+    data_sets: [] as (string | null)[],
     samples: [],
     statistics: {} as Statistics,
     filteredStatistics: {} as FilteredStatistics,
@@ -179,6 +182,11 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
+    setDataset(organism: string | null, accession: string | null, data_sets: (string | null)[]) {
+      this.organism = organism
+      this.accession = accession
+      this.data_sets = data_sets
+    },
     async updateStatistics() {
       const emptyStatistics = {
         samples_total: 0,
@@ -187,7 +195,7 @@ export const useSamplesStore = defineStore('samples', {
         populated_metadata_fields: [],
       }
       try {
-        const statistics = await API.getInstance().getSampleStatistics()
+        const statistics = await API.getInstance().getSampleStatistics(this.accession)
         if (!statistics) {
           this.statistics = emptyStatistics
         } else {
@@ -425,7 +433,7 @@ export const useSamplesStore = defineStore('samples', {
       if (this.propertyValueOptions[propertyName]) return
       this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
-        .getSampleGenomePropertyValueOptions(propertyName)
+        .getSampleGenomePropertyValueOptions(propertyName, this.accession)
         .then((res) => {
           this.propertyValueOptions[propertyName].options = res.values
           this.propertyValueOptions[propertyName].loading = false
@@ -500,15 +508,15 @@ export const useSamplesStore = defineStore('samples', {
       }
     },
     async updateRepliconAccessionOptions() {
-      const res = await API.getInstance().getRepliconAccessionOptions()
+      const res = await API.getInstance().getRepliconAccessionOptions(this.accession)
       this.repliconAccessionOptions = res.accessions
     },
     async updateLineageOptions() {
-      const res = await API.getInstance().getLineageOptions()
+      const res = await API.getInstance().getLineageOptions(this.accession)
       this.lineageOptions = res.lineages
     },
     async updateSymbolOptions() {
-      const res = await API.getInstance().getGeneSymbolOptions()
+      const res = await API.getInstance().getGeneSymbolOptions(this.accession)
       this.symbolOptions = res.gene_symbols
     },
     isDateArray(value: unknown): value is Date[] {
@@ -534,11 +542,31 @@ export const useSamplesStore = defineStore('samples', {
       return { filters: getFilterGroupFilters(this.filterGroup) }
     },
     filters(): FilterGroupRoot {
-      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters))
+      const filters = JSON.parse(JSON.stringify(this.filterGroupsFilters)) as FilterGroupRoot
+
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
-      return filters as FilterGroupRoot
+
+      // insert dataset selection as a fixed filter at the beginning
+      if (this.data_sets?.length > 0) {
+        this.data_sets = this.data_sets.map((value) => (value === '-Empty-' ? '' : value))
+        filters.filters.andFilter.unshift({
+          label: 'Property',
+          property_name: 'data_set',
+          filter_type: 'in',
+          value: this.data_sets,
+        })
+      }
+      if (this.accession) {
+        filters.filters.andFilter.unshift({
+          label: 'Reference',
+          exclude: false,
+          accession: this.accession,
+        })
+      }
+
+      return filters
     },
   },
 })

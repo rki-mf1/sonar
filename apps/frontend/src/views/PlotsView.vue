@@ -48,6 +48,10 @@
         </div>
         <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
+            v-if="
+              samplesStore.plotGroupedLineagesPerWeek &&
+              samplesStore.plotGroupedLineagesPerWeek.length
+            "
             ref="lineageChart"
             :key="isBarChart"
             :type="isBarChart ? 'bar' : 'line'"
@@ -55,6 +59,7 @@
             :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
             style="width: 100%; height: 50vh"
           />
+          <div v-else>No lineage data available.</div>
         </div>
       </PrimePanel>
     </div>
@@ -244,6 +249,16 @@ export default {
     },
   },
   mounted() {
+    this.samplesStore.updateSamples()
+    this.samplesStore
+      .updateStatistics()
+      .then(() => this.samplesStore.updatePropertyOptions())
+      .then(() => this.samplesStore.updateSelectedColumns())
+    this.samplesStore.updateFilteredStatistics()
+    this.samplesStore.updateLineageOptions()
+    this.samplesStore.updateSymbolOptions()
+    this.samplesStore.updateRepliconAccessionOptions()
+
     this.samplesStore.updatePlotSamplesPerWeek()
     this.samplesStore.updatePlotGroupedLineagesPerWeek()
     this.samplesStore.updatePlotMetadataCoverage()
@@ -382,13 +397,18 @@ export default {
         .filter((l) => l !== null)
         .sort(new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare) // natural sort: ensure e.g. MC.2 < MC.10
 
+      let colors
       if (lineages.includes('Unknown')) {
         lineages = lineages.filter((l) => l !== 'Unknown')
-        lineages.push('Unknown')
+        lineages.unshift('Unknown')
+        colors = this.generateColorPalette(lineages.length - 1)
+        colors.unshift('#cccccc') // Add grey color for "Unknown"
+      } else {
+        colors = this.generateColorPalette(lineages.length)
       }
+
       const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
-      const colors = this.generateColorPalette(lineages.length - 1)
-      colors.push('#cccccc') // Add grey color for "Unknown"
+
       return { lineages_per_week, lineages, colors, weeks }
     },
 

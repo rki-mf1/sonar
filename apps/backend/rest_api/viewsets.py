@@ -128,21 +128,12 @@ class RepliconViewSet(viewsets.ModelViewSet):
     serializer_class = RepliconSerializer
 
     @action(detail=False, methods=["get"])
-    def distinct_genes(self, request: Request, *args, **kwargs):
-        queryset = models.Replicon.objects.distinct("symbol").values("symbol")
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(molecule__reference__accession=ref)
-        return Response(
-            {"genes": [item["symbol"] for item in queryset]}, status=status.HTTP_200_OK
-        )
-
-    @action(detail=False, methods=["get"])
     def distinct_accessions(self, request: Request, *args, **kwargs):
         queryset = models.Replicon.objects.only("accession").values_list(
             "accession", flat=True
         )
         if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(molecule__reference__accession=ref)
+            queryset = queryset.filter(reference__accession=ref)
         distinct_accessions = queryset.distinct()
 
         return Response(
@@ -171,30 +162,6 @@ class RepliconViewSet(viewsets.ModelViewSet):
             sample_data = queryset_obj.values()
             for obj in sample_data:
                 obj["translation_id"] = 1
-        return Response(data=sample_data, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"])
-    def get_source_data(self, request: Request, *args, **kwargs):
-        """
-        Returns the source data given a molecule id.
-
-        Args:
-            molecule_id (int): The id of the molecule.
-
-        Returns:
-            Optional[str]: The source if it exists, None otherwise.
-
-        """
-        sample_data = {}
-
-        if molecule_id := request.query_params.get("molecule_id"):
-            queryset = self.queryset.filter(reference__accession=molecule_id)
-            sample_data = queryset.values()
-        else:
-            return Response(
-                {"detail": "Accession ID is missing"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         return Response(data=sample_data, status=status.HTTP_200_OK)
 
 
@@ -344,6 +311,46 @@ class ReferenceViewSet(
             {"detail": "File uploaded successfully"}, status=status.HTTP_201_CREATED
         )
 
+    @action(detail=False, methods=["get"])
+    def dataset_options(self, request, *args, **kwargs):
+        """
+        For each organism in the Reference table, returns the corresponding
+        accession values found int the Reference table and
+        dataset values found in the Sample table.
+        """
+        queryset = models.Sample.objects.values(
+            accession=F("sequence__alignments__replicon__reference__accession"),
+            organism=F("sequence__alignments__replicon__reference__organism"),
+            data_set_value=F("data_set"),
+        ).distinct()
+
+        result = {}
+
+        for reference in queryset:
+            organism = reference["organism"]
+            accession = reference["accession"]
+            data_set_value = reference["data_set_value"]
+
+            if organism not in result:
+                result[organism] = {"accessions": set(), "data_sets": set()}
+            if accession is not None:
+                result[organism]["accessions"].add(accession)
+            if data_set_value is not None:
+                if data_set_value == "":
+                    # NOTE: if "-Empty-" string is changed here, it must be changed as well in samples.ts !!
+                    result[organism]["data_sets"].add("-Empty-")
+                else:
+                    result[organism]["data_sets"].add(data_set_value)
+
+        # sort data_set values
+        for organism in result:
+            result[organism]["data_sets"] = sorted(result[organism]["data_sets"])
+
+        return Response(
+            result,
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["post"])
     def delete_reference(self, request: Request, *args, **kwargs):
         if "accession" not in request.data:
@@ -444,58 +451,25 @@ class PropertyViewSet(
         ]
         if property_name in sample_property_fields:
             queryset = models.Sample.objects.all()
+            if ref := request.query_params.get("reference"):
+                queryset = queryset.filter(
+                    sequence__alignments__replicon__reference__accession=ref
+                )
             queryset = queryset.distinct(property_name)
             return Response(
                 {"values": [getattr(item, property_name) for item in queryset]},
                 status=status.HTTP_200_OK,
             )
         queryset = models.Sample2Property.objects.filter(property__name=property_name)
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(
+                sequence__alignments__replicon__reference__accession=ref
+            )
         datatype = queryset[0].property.datatype
         queryset = queryset.distinct(datatype)
         return Response(
             {"values": [getattr(item, datatype) for item in queryset]},
             status=status.HTTP_200_OK,
-        )
-
-    @action(detail=False, methods=["get"])
-    def unique_collection_dates(self, request: Request, *args, **kwargs):
-        queryset = models.Sample2Property.objects.filter(
-            property__name="COLLECTION_DATE", value_date__isnull=False
-        ).distinct("value_date")
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(
-                sample__sequence__alignment__element__molecule__reference__accession=ref
-            )
-        queryset = queryset.distinct("value_text")
-        date_list = [item.value_date for item in queryset]
-        return Response(data={"collection_dates": date_list}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"])
-    def unique_countries(self, request: Request, *args, **kwargs):
-        queryset = models.Sample2Property.objects.filter(
-            property__name="COUNTRY", value_text__isnull=False
-        )
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(
-                sample__sequence__alignment__element__molecule__reference__accession=ref
-            )
-        queryset = queryset.distinct("value_text")
-        country_list = [item.value_text for item in queryset]
-        return Response(data={"countries": country_list}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"])
-    def unique_sequencing_techs(self, request: Request, *args, **kwargs):
-        queryset = models.Sample2Property.objects.filter(
-            property__name="SEQ_TECH", value_text__isnull=False
-        )
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(
-                sample__sequence__alignment__element__molecule__reference__accession=ref
-            )
-        queryset = queryset.distinct("value_text")
-        sequencing_tech_list = [item.value_text for item in queryset]
-        return Response(
-            data={"sequencing_techs": sequencing_tech_list}, status=status.HTTP_200_OK
         )
 
     @action(detail=False, methods=["get"])
@@ -653,6 +627,12 @@ class PropertyViewSet(
                 "description": "Date when the sample data was last updated in the database (fixed prop.)",
                 "default": "current date and time",
             },
+            {
+                "name": "data_set",
+                "query_type": "value_varchar",
+                "description": "Name of the data set",
+                "default": None,
+            },
         ]  # from SAMPLE TABLE
 
         cols = [
@@ -694,57 +674,6 @@ class PropertyViewSet(
         queryset = queryset.distinct("name")
         property_names = [item.name for item in queryset]
         return property_names
-
-
-# class AAMutationViewSet(
-#     viewsets.GenericViewSet,
-#     generics.mixins.ListModelMixin,
-# ):
-#     # input sequencing_tech list, country list, gene list, include partial bool,
-#     # reference_value int, min_nb_freq int = 1?
-#     queryset = models.Replicon.objects.all()
-
-#     @action(detail=False, methods=["get"])
-#     def mutation_frequency(self, request: Request, *args, **kwargs):
-#         country_list = request.query_params.getlist("countries")
-#         sequencing_tech_list = request.query_params.getlist("seq_techs")
-#         gene_list = request.query_params.getlist("genes")
-#         include_partial = bool(request.query_params.get("include_partial"))
-#         reference_value = request.query_params.get("reference_value")
-#         min_nb_freq = request.query_params.get("min_nb_freq")
-
-#         samples_query = models.Sample.objects.filter(
-#             sample2property__property__name="COUNTRY",
-#             sample2property__value_text__in=country_list,
-#         ).filter(
-#             sample2property__property__name="SEQ_TECH",
-#             sample2property__value_text__in=sequencing_tech_list,
-#         )
-#         if not include_partial:
-#             samples_query.filter(
-#                 sample2property__property__name="GENOME_COMPLETENESS",
-#                 sample2property__value_text="complete",
-#             )
-#         mutation_query = (
-#             models.Mutation.objects.filter(
-#                 element__molecule__reference__accession=reference_value
-#             )
-#             .filter(alignments__sequence__sample_set__in=samples_query)
-#             .filter(element__symbol__in=gene_list)
-#             .annotate(mutation_count=Count("alignments__sequence__sample_set"))
-#             .filter(mutation_count__gte=min_nb_freq)
-#             .order_by("-mutation_count")
-#         )
-#         response = [
-#             {
-#                 "symbol": mutation.element.symbol,
-#                 "mutation": mutation.label,
-#                 "count": mutation.mutation_count,
-#             }
-#             for mutation in mutation_query
-#         ]
-
-#         return Response(data=response, status=status.HTTP_200_OK)
 
 
 class ResourceViewSet(viewsets.ViewSet):
@@ -905,18 +834,6 @@ class LineageViewSet(
         list = [str(lineage) for lineage in sublineages]
         list.sort()
         return Response(data={"sublineages": list}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"])
-    def distinct_lineages(self, request: Request, *args, **kwargs):
-        distinct_lineages = (
-            models.Lineage.objects.values_list("name", flat=True)
-            .distinct()
-            .order_by("name")
-        )
-        return Response(
-            {"lineages": distinct_lineages},
-            status=status.HTTP_200_OK,
-        )
 
     @action(detail=False, methods=["put"])
     def update_lineages(self, request: Request, *args, **kwargs):

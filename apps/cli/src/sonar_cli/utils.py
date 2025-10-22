@@ -1190,7 +1190,6 @@ class sonarUtils:
             )
         )
 
-        params["reference_accession"] = reference
         params["showNX"] = showNX
         params["vcf_format"] = True if format == "vcf" else False
 
