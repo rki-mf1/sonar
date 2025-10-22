@@ -44,6 +44,7 @@ from rest_framework.response import Response
 from covsonar_backend.settings import DEBUG
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from rest_api.customDRF import SerializedOutputCachePagination
 from rest_api.data_entry.sample_job import delete_sample
 from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
@@ -83,6 +84,8 @@ class SampleViewSet(
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
     filter_fields = ["name"]
+    pagination_class = SerializedOutputCachePagination
+    # CachedCountLimitOffsetPagination (simple and good one)
 
     @property
     def filter_label_to_methods(self):
@@ -244,16 +247,14 @@ class SampleViewSet(
             if vcf_format:
                 return self._return_vcf_format(queryset)
 
-            # default response
+            # Cache check happens here
             queryset = self.paginate_queryset(queryset)
             LOGGER.info(
                 f"Query time done in {datetime.now() - timer},Start to Format result"
             )
             serializer = SampleGenomesSerializer(queryset, many=True)
             timer = datetime.now()
-            LOGGER.info(
-                f"Serializer done in {datetime.now() - timer},Start to Format result"
-            )
+            # Caching happens here
             return self.get_paginated_response(serializer.data)
         except ValueError as e:
             return Response(data={"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -854,7 +855,6 @@ class SampleViewSet(
                 )
 
             else:
-
                 raise ValueError(
                     f"Unsupported mutation type: {parsed_mutation.get('label')}"
                 )
