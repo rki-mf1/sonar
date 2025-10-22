@@ -481,23 +481,25 @@ def test_match_aa_mut_rsv(capfd, api_url):
 
 
 # match mpox
-@pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(15)
+@pytest.mark.xdist_group(name="group4")
+@pytest.mark.order(3)
 def test_match_profile_count_mpox(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r NC_063383.1  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "2" == lines[-1]
+    assert "20" == lines[-1]
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group4")
+@pytest.mark.order(4)
 def test_match_aa_mut_mpox(capfd, api_url):
     code = run_cli(
         f"match --db {api_url}  -r NC_063383.1 --profile OPG136:D98L --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "2" == lines[-1]
+    assert "20" == lines[-1]
     assert code == 0
 
 

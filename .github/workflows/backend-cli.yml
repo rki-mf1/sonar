@@ -31,7 +31,6 @@ jobs:
         run: |
           conda info
           poetry install
-          poetry run pip install git+https://git@github.com/kcleal/pywfa.git@9c5e192
       - name: Hello sonar-cli 🐶
         run: sonar-cli -v
       - name: Start backend containers 🙈

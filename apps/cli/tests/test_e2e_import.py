@@ -258,21 +258,36 @@ def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-# @pytest.mark.xdist_group(name="group1")
-# @pytest.mark.order(7)
-# def test_wfa_anno_no_upload(monkeypatch, api_url, tmpfile_name):
-#     """Test import command using wfa method"""
-#     monkeypatch.chdir(Path(__file__).parent)
-#     monkeypatch.setattr(
-#         "mpire.WorkerPool.imap_unordered",
-#         lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
-#             func(**arg) for arg in args
-#         ),
-#     )
-#     command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/wfa -t 2 --no-upload"
-#     code = run_cli(command)
+@pytest.mark.xdist_group(name="group4")
+@pytest.mark.order(1)
+def test_wfa_anno_no_upload_covid(monkeypatch, api_url, tmpfile_name):
+    """Test import command using wfa method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    # monkeypatch.setattr(
+    #     "mpire.WorkerPool.imap_unordered",
+    #     lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+    #         func(**arg) for arg in args
+    #     ),
+    # )
+    command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/wfa -t 1 --no-upload --auto-anno --must-pass-paranoid --skip-nx"
+    code = run_cli(command)
 
-#     assert code == 0
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group4")
+@pytest.mark.order(2)
+def test_wfa_anno_no_upload_mpox(monkeypatch, api_url, tmpfile_name):
+    """Test import command using wfa method"""
+    monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setenv(
+        "sonar_cli.config.FILTER_DELETE_SIZE", "200000"
+    )  # we keep all sequences
+
+    command = f"import --db {api_url}  -r NC_063383.1 --method 3 --fasta ../../../test-data/mpox/mpox_20.fasta.xz --cache {tmpfile_name}/wfa -t 1  --auto-anno --must-pass-paranoid --skip-nx"
+    code = run_cli(command)
+
+    assert code == 0
 
 
 @pytest.mark.xdist_group(name="group1")
