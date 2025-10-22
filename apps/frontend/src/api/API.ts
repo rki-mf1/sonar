@@ -236,6 +236,9 @@ export default class API {
     const params = reference ? { reference } : {}
     return this.getRequest(`samples/distinct_lineages/`, params, false)
   }
+  getFullLineageOptions() {
+    return this.getRequest(`samples/full_lineages/`, {}, false)
+  }
   getGeneSymbolOptions(reference?: string | null) {
     const params = reference ? { reference } : {}
     return this.getRequest(`genes/distinct_gene_symbols/`, params, false)

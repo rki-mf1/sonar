@@ -160,13 +160,13 @@
           <PrimeDropdown
             v-model="selectedXProperty"
             :options="samplesStore.metaCoverageOptions"
-            placeholder="Select X-Axis Property"
+            placeholder="Select X-Axis Property (Date or Numeric or Categorical)"
             class="w-full"
           />
           <PrimeDropdown
             v-model="selectedYProperty"
             :options="samplesStore.metaCoverageOptions"
-            placeholder="Select Y-Axis Property"
+            placeholder="Select Y-Axis Property (Categorical)"
             class="w-full"
           />
         </div>
@@ -174,7 +174,7 @@
           <PrimeDropdown
             v-model="selectedProperty"
             :options="samplesStore.metaCoverageOptions"
-            placeholder="Select Property"
+            placeholder="Select a Numeric Property"
             class="w-full"
           />
           <PrimeInputNumber
@@ -597,8 +597,11 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) =>
-                `${context.parsed.y} ${context.dataset.label}`,
+              label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) => {
+                const value = context.raw
+                // const label = context.label || 'Unknown Category';
+                return `${value} samples`
+              },
             },
           },
           zoom: {
@@ -664,7 +667,7 @@ export default {
           tooltip: {
             callbacks: {
               title: (context: TooltipItem<'scatter'>[]) => {
-                // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur mltiple times in x-values
+                // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur multiple times in x-values
                 const raw = context[0].raw as { x: string; y: number; category: string }
                 return `Date: ${raw.x}`
               },
@@ -771,6 +774,9 @@ export default {
     },
     getScatterPlotData(xProperty: string, yProperty: string) {
       // scatterData data structure e.g {"2024-09-01": Array[{ILLUMIA:1}, {Nanopore:7}] ... }
+      if (this.samplesStore.propertyScatterData[`${xProperty}_${yProperty}`] === undefined) {
+        this.samplesStore.updatePlotScatter(xProperty, yProperty)
+      }
       const scatterData = this.samplesStore.propertyScatterData[`${xProperty}_${yProperty}`] || {}
       const labels = Object.keys(scatterData)
       // Determine if x-axis data is a date or categorical

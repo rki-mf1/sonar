@@ -174,7 +174,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 
 | File                     | Usage                                                                                                                 |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `test-data/sars-cov-2/lineages_2024_01_15_full.tsv`           | Used in the `python manage.py import_lineage` command.                                                                |
+| `test-data/sars-cov-2/lineages_full_2025_09.tsv`           | Used in the `python manage.py import_lineage` command.                                                                |
 | `test-data/sars-cov-2/sars-cov-2.180.tsv`        | Input sample containing meta information (tsv).                                                                       |
 | `test-data/sars-cov-2/MN908947.nextclade.gb`         | Reference genome of SARS-CoV-2 in GenBank format.                                                                     |
 | `apps/backend/conf/initdb-test/dump-sonar-12-test-db.sql` | SQL dump files, an easy way to test by importing the SQL file into the database for testing and working with pytest." |
