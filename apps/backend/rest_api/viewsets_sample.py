@@ -494,7 +494,9 @@ class SampleViewSet(
         """
         API action to return all lineages from the Lineage table.
         """
-        lineages = models.Lineage.objects.values_list("name", flat=True)
+        lineages = models.Lineage.objects.order_by("name").values_list(
+            "name", flat=True
+        )
         return Response(data={"lineages": list(lineages)}, status=status.HTTP_200_OK)
 
     def _get_samples_per_week(self, queryset):
