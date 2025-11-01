@@ -43,142 +43,6 @@ from tqdm import tqdm
 LOGGER = LoggingConfigurator.get_logger()
 
 
-def process_paranoid_batch_worker(cache_instance_data, *batch_data):  # noqa: C901
-    """
-    Standalone worker function for paranoid batch processing using mpire.
-
-    This function processes a batch of samples for paranoid testing.
-
-    Args:
-        batch_data: Tuple containing (sample_batch, error_dir)
-        cache_instance_data: Dictionary containing necessary data from cache instance
-
-    Returns:
-        Tuple of (batch_passed_samples, batch_fail_samples)
-    """
-
-    # Initialize logger for this worker
-    worker_logger = LoggingConfigurator.get_logger()
-
-    sample_batch, error_dir = batch_data
-    batch_fail_samples = []
-    batch_passed_samples = []
-
-    worker_logger.debug(
-        f"Worker started paranoid check for batch of size {len(sample_batch)}"
-    )
-
-    for sample_data in sample_batch:
-        try:
-            iter_dna_list = []
-            # NOTE: right now, we no longer need var_file.
-            if "var_file" in sample_data:
-                del sample_data["var_file"]
-            if "lift_file" in sample_data:
-                del sample_data["lift_file"]
-
-            if sample_data["var_parquet_file"] is not None:
-                # SECTION:ReadVar
-                var_df = pd.read_parquet(sample_data["var_parquet_file"])
-                # Currently var_df might be empty if the imported sequence
-                # is identical to the reference
-                if not var_df.empty:
-                    nt_df = var_df[(var_df["type"] == "nt")]
-                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
-                        "records"
-                    )
-                else:
-                    worker_logger.warning(
-                        f"Paranoid test: var file ({sample_data['var_parquet_file']}) is missing for sample {sample_data['name']}"
-                    )
-
-                # SECTION: Paranoid
-                if sample_data["seqhash"] is not None:
-                    # Get Reference sequence from cache_instance_data
-                    ref_sequence = cache_instance_data["refmols"][
-                        sample_data["source_acc"]
-                    ]["sequence"]
-                    seq = list(ref_sequence)
-
-                    prefix = ""
-                    gaps = {".", " "}
-                    sample_name = sample_data["name"]
-
-                    for vardata in iter_dna_list:
-                        if vardata["alt"] in gaps:
-                            for i in range(vardata["start"], vardata["end"]):
-                                seq[i] = ""
-                        elif vardata["alt"] == ".":
-                            for i in range(vardata["start"], vardata["end"]):
-                                seq[i] = ""
-                        elif vardata["start"] >= 0:
-                            seq[vardata["start"]] = vardata["alt"]
-                        else:
-                            prefix = vardata["alt"]
-
-                    # seq is now a restored version from variant dict.
-                    seq = prefix + "".join(seq)
-                    with open(sample_data["seq_file"], "r") as handle:
-                        orig_seq = handle.read()
-
-                    seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
-
-                    if seq != orig_seq:
-                        worker_logger.warning(
-                            f"Failed paranoid test for sample '{sample_name}'"
-                        )
-
-                        # Only for printing the sequences with some indication
-                        # of mismatches between the original and target sequence
-                        min_len = min(len(orig_seq), len(seq))
-                        mismatches = []
-                        for a, b in zip(list(orig_seq[:min_len]), list(seq[:min_len])):
-                            mismatches.append("|" if a == b else "X")
-                        worker_logger.debug(f"Original: {orig_seq}")
-                        worker_logger.debug(f"        : {''.join(mismatches)}")
-                        worker_logger.debug(f"Rebuilt : {seq}")
-
-                        # NOTE: comment this part, for now, we need to discuss which
-                        # information we want to report for the failed sample.
-                        with open(
-                            os.path.join(error_dir, f"{sample_name}.error.var"),
-                            "w+",
-                        ) as handle:
-                            for vardata in iter_dna_list:
-                                handle.write(str(vardata) + "\n")
-
-                        qryfile = os.path.join(
-                            error_dir,
-                            sample_name + ".error.restored_sample.fa",
-                        )
-                        reffile = os.path.join(
-                            error_dir,
-                            sample_name + ".error.original_sample.fa",
-                        )
-
-                        # NOTE: comment this part, for now, we need to discuss which
-                        # information we want to report for the failed sample.
-                        with open(qryfile, "w+") as handle:
-                            handle.write(seq)
-                        with open(reffile, "w+") as handle:
-                            handle.write(orig_seq)
-
-                        paranoid_dict = {
-                            "sample_name": sample_name,
-                        }
-                        batch_fail_samples.append(paranoid_dict)
-                    else:
-                        batch_passed_samples.append(sample_data)
-
-        except Exception as e:
-            worker_logger.error(
-                f"Error processing sample {sample_data.get('name', 'unknown')}: {str(e)}"
-            )
-            continue
-
-    return batch_passed_samples, batch_fail_samples
-
-
 # not sure we need a class for sample or not
 
 
@@ -1092,17 +956,8 @@ class sonarCache:
         passed_samples_list = []
         total_samples = len(sample_data_dict_list)
 
-        # Create batches for parallel processing
-        batches = [
-            sample_data_dict_list[i : i + chunk_size]
-            for i in range(0, len(sample_data_dict_list), chunk_size)
-        ]
-
         # Prepare data that workers will need from this instance
         cache_instance_data = {"refmols": self.refmols, "error_dir": self.error_dir}
-
-        # Prepare batch data for workers
-        batch_data_list = [(batch, self.error_dir) for batch in batches]
 
         # Use mpire WorkerPool for multiprocessing
         with WorkerPool(n_jobs=n_jobs, shared_objects=cache_instance_data) as pool:
@@ -1116,8 +971,8 @@ class sonarCache:
             ) as pbar:
                 # Use imap for processing with progress updates
                 for batch_passed, batch_failed in pool.imap_unordered(
-                    process_paranoid_batch_worker,
-                    batch_data_list,
+                    self.process_paranoid_batch_worker,
+                    sample_data_dict_list,
                 ):
                     passed_samples_list.extend(batch_passed)
                     list_fail_samples.extend(batch_failed)
@@ -1150,6 +1005,123 @@ class sonarCache:
                 sys.exit("Some sequences failed the paranoid test, aborting.")
 
         return passed_samples_list
+
+    def process_paranoid_batch_worker(  # noqa: C901
+        self, cache_instance_data, **sample_data
+    ):
+        """
+        Standalone worker function for paranoid batch processing using mpire.
+
+        Args:
+            cache_instance_data: Dictionary containing necessary data from cache instance
+            **sample_data: Sample data as keyword arguments (unpacked from dict)
+
+        Returns:
+            Tuple of ([passed_sample] or [], [failed_sample] or [])
+        """
+        # Initialize logger for this worker
+        worker_logger = LoggingConfigurator.get_logger()
+
+        try:
+            iter_dna_list = []
+            batch_passed = []
+            batch_failed = []
+
+            var_parquet_file_path = sample_data.get("var_parquet_file")
+
+            # NOTE: right now, we no longer need var_file.
+            if "var_file" in sample_data:
+                del sample_data["var_file"]
+            if "lift_file" in sample_data:
+                del sample_data["lift_file"]
+
+            if var_parquet_file_path is not None:
+                # SECTION:ReadVar
+                var_df = pd.read_parquet(var_parquet_file_path)
+
+                if not var_df.empty:
+                    nt_df = var_df[(var_df["type"] == "nt")]
+                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                        "records"
+                    )
+                    worker_logger.debug(
+                        f"Sample {sample_data['name']}: Found {len(iter_dna_list)} mutations"
+                    )
+                else:
+                    worker_logger.warning(
+                        f"Paranoid test: var file ({var_parquet_file_path}) is empty for sample {sample_data['name']}"
+                    )
+
+                # SECTION: Paranoid
+                if sample_data["seqhash"] is not None:
+                    ref_sequence = cache_instance_data["refmols"][
+                        sample_data["source_acc"]
+                    ]["sequence"]
+                    seq = list(ref_sequence)
+
+                    prefix = ""
+                    gaps = {".", " "}
+                    sample_name = sample_data["name"]
+
+                    for vardata in iter_dna_list:
+                        if vardata["alt"] in gaps:
+                            for i in range(vardata["start"], vardata["end"]):
+                                seq[i] = ""
+                        elif vardata["alt"] == ".":
+                            for i in range(vardata["start"], vardata["end"]):
+                                seq[i] = ""
+                        elif vardata["start"] >= 0:
+                            seq[vardata["start"]] = vardata["alt"]
+                        else:
+                            prefix = vardata["alt"]
+
+                    seq = prefix + "".join(seq)
+                    with open(sample_data["seq_file"], "r") as handle:
+                        orig_seq = handle.read()
+
+                    seq = ">" + sample_data["seqhash"] + "\n" + seq + "\n"
+
+                    if seq != orig_seq:
+                        worker_logger.warning(
+                            f"Failed paranoid test for sample '{sample_name}'"
+                        )
+
+                        # Save error files
+                        with open(
+                            os.path.join(
+                                cache_instance_data["error_dir"],
+                                f"{sample_name}.error.var",
+                            ),
+                            "w+",
+                        ) as handle:
+                            for vardata in iter_dna_list:
+                                handle.write(str(vardata) + "\n")
+
+                        paranoid_dict = {"sample_name": sample_name}
+                        batch_failed.append(paranoid_dict)
+                    else:
+                        worker_logger.debug(
+                            f"Sample {sample_data['name']}: Passed paranoid check with {len(iter_dna_list)} mutations"
+                        )
+                        batch_passed.append(sample_data)
+            else:
+                # No var_parquet_file (identical to reference)
+                batch_passed.append(sample_data)
+
+            # Return as lists for consistency with batch processing
+            return (batch_passed, batch_failed)
+
+        except Exception as e:
+            worker_logger.error(
+                f"Error processing sample {sample_data.get('name', 'unknown')}: {str(e)}"
+            )
+            worker_logger.error(traceback.format_exc())
+            raise
+            # Return error as failed sample
+            # return (
+            #     [],
+            #     [{"sample_name": sample_data.get("name", "unknown"), "error": str(e)}],
+            # )
 
     def build_snpeff_cache(self, reference):  # noqa: C901
         """Build snpEff cache for the given reference,

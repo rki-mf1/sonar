@@ -206,11 +206,52 @@ def test_mafft_anno_upload_dengue_type2(monkeypatch, api_url, tmpfile_name):
 
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(11)
-def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
-    """Test rsv sample import command using mafft method"""
+def test_mafft_upload_hiv(monkeypatch, api_url, tmpfile_name):
+    """Test hiv sample import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
+    monkeypatch.setattr(
+        "mpire.WorkerPool.map_unordered",
+        lambda self, func, args=(), kwds={}, callback=None, error_callback=None: (
+            func(arg) for arg in args
+        ),
+    )
 
-    command = f"import --db {api_url} -r NC_001802.1 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    def smart_imap_unordered(self, func, args_list, **kwargs):
+        """
+        Checks if WorkerPool and function is initialized with shared_objects.
+
+        - If WorkerPool has shared_objects → pass it as first arg (paranoid check)
+        - Otherwise → don't pass it (normal alignment)
+        """
+        # functions that need shared_objects
+        needs_shared_objects = ["process_paranoid_batch_worker"]
+        func_name = getattr(func, "__name__", "")
+        for data_dict in args_list:
+            if func_name in needs_shared_objects:
+                # Case: paranoid processing (needs shared_objects)
+                # Get cache instance from the bound method
+                cache_instance = getattr(func, "__self__", None)
+
+                # Serialize cache instance to dict (mimicking mpire's shared_objects)
+                if cache_instance:
+                    cache_data = {
+                        "basedir": cache_instance.basedir,
+                        "refacc": cache_instance.refacc,
+                        "refmols": cache_instance.refmols,
+                        "error_dir": cache_instance.error_dir,
+                        # Add other needed attributes
+                    }
+                else:
+                    cache_data = {}
+                yield func(cache_data, **data_dict)
+            else:
+                # Case: normal processing (no shared_objects)
+                # func is a bound method (e.g., aligner.process_cached_sample)
+                # so it already has 'self', just pass the dict as **kwargs
+                yield func(**data_dict)
+
+    monkeypatch.setattr("mpire.WorkerPool.imap_unordered", smart_imap_unordered)
+    command = f"import --db {api_url} -r NC_001802.1 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --no-skip --skip-nx --must-pass-paranoid"
     code = run_cli(command)
     assert code == 0
 
