@@ -973,6 +973,7 @@ class sonarCache:
                 for batch_passed, batch_failed in pool.imap_unordered(
                     self.process_paranoid_batch_worker,
                     sample_data_dict_list,
+                    chunk_size=chunk_size
                 ):
                     passed_samples_list.extend(batch_passed)
                     list_fail_samples.extend(batch_failed)
