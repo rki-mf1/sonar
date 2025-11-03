@@ -41,6 +41,7 @@
 </template>
 
 <script lang="ts">
+import router from '@/router'
 import { RouterView, type RouteLocationNormalized } from 'vue-router'
 import 'primeicons/primeicons.css'
 import Filters from './components/FilterBar.vue'
@@ -70,11 +71,11 @@ export default {
       const items = [{ label: 'Home', icon: 'pi pi-home', route: '/' }]
       // dont show menu items 'Table'/'Plots' for 'Sample' view
       if (this.$route.name !== 'Sample') {
-        const tableRoute = this.$router.resolve({
+        const tableRoute = router.resolve({
           name: 'Table',
           query: selectionQuery,
         }).href
-        const plotsRoute = this.$router.resolve({
+        const plotsRoute = router.resolve({
           name: 'Plots',
           query: selectionQuery,
         }).href
