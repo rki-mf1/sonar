@@ -67,25 +67,28 @@ export default {
       const { accession, data_sets } = this.samplesStore
       const selectionQuery = buildSelectionQuery(accession, data_sets)
 
-      return [
-        { label: 'Home', icon: 'pi pi-home', route: '/' },
-        { label: 'Table', icon: 'pi pi-table', route: { name: 'Table', query: selectionQuery } },
-        {
-          label: 'Plots',
-          icon: 'pi pi-chart-bar',
-          route: { name: 'Plots', query: selectionQuery },
-        },
-        { label: 'About', icon: 'pi pi-star', route: '/about' },
-      ]
+      const items = [{ label: 'Home', icon: 'pi pi-home', route: '/' }]
+      // dont show menu items 'Table'/'Plots' for 'Sample' view
+      if (this.$route.name !== 'Sample') {
+        items.push(
+          { label: 'Table', icon: 'pi pi-table', route: { name: 'Table', query: selectionQuery } },
+          {
+            label: 'Plots',
+            icon: 'pi pi-chart-bar',
+            route: { name: 'Plots', query: selectionQuery },
+          },
+        )
+      }
+      items.push({ label: 'About', icon: 'pi pi-star', route: '/about' })
+
+      return items
     },
     showFilters() {
       return this.$route.name === 'Table' || this.$route.name === 'Plots'
     },
     appTitle() {
-      const { organism, accession, data_sets } = this.samplesStore
-      return organism && accession
-        ? `Sonar: ${organism} (${accession})${data_sets ? ' - ' + data_sets : ''}`
-        : 'Sonar'
+      const organism = this.samplesStore.organism
+      return organism ? `Sonar - ${organism}` : 'Sonar'
     },
   },
   watch: {
