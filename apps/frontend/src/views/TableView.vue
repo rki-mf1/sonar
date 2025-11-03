@@ -209,6 +209,7 @@
 
 <script lang="ts">
 import API from '@/api/API'
+import { decodeDatasetsParam, safeDecodeURIComponent } from '@/util/routeParams'
 import { useSamplesStore } from '@/stores/samples'
 import { type Property, type RowSelectEvent, type SelectedRowData } from '@/util/types'
 import type { DataTableSortEvent } from 'primevue/datatable'
@@ -235,20 +236,46 @@ export default {
       notSortable: ['genomic_profiles', 'proteomic_profiles'],
     }
   },
-  computed: {},
+  computed: {
+    selectionKey(): string {
+      const { accession, dataset = [] } = this.$route.query
+      return JSON.stringify({ accession, dataset })
+    },
+  },
+  watch: {
+    selectionKey: {
+      immediate: true,
+      handler() {
+        this.applySelectionFromRoute()
+      },
+    },
+  },
   mounted() {
-    this.samplesStore.updateSamples()
-    this.samplesStore
-      .updateStatistics()
-      .then(() => this.samplesStore.updatePropertyOptions())
-      .then(() => this.samplesStore.updateSelectedColumns())
-    this.samplesStore.updateFilteredStatistics()
-    this.samplesStore.updateLineageOptions()
-    this.samplesStore.updateSymbolOptions()
-    this.samplesStore.updateRepliconAccessionOptions()
     this.$root.$toastRef = this.$refs.toast ?? null
   },
   methods: {
+    // keep table in sync with route params
+    applySelectionFromRoute() {
+      const accession =
+        typeof this.$route.query.accession === 'string'
+          ? safeDecodeURIComponent(this.$route.query.accession)
+          : null
+      if (!accession) return
+      const datasets = decodeDatasetsParam(this.$route.query.dataset)
+      this.samplesStore.setDataset(this.samplesStore.organism, accession, datasets)
+      this.loadSamplesAndMetadata()
+    },
+    loadSamplesAndMetadata() {
+      this.samplesStore.updateSamples()
+      this.samplesStore
+        .updateStatistics()
+        .then(() => this.samplesStore.updatePropertyOptions())
+        .then(() => this.samplesStore.updateSelectedColumns())
+      this.samplesStore.updateFilteredStatistics()
+      this.samplesStore.updateLineageOptions()
+      this.samplesStore.updateSymbolOptions()
+      this.samplesStore.updateRepliconAccessionOptions()
+    },
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find((property) => property.name === propertyName)
       return property ? property.value : undefined

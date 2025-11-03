@@ -197,6 +197,7 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples'
+import { decodeDatasetsParam, safeDecodeURIComponent } from '@/util/routeParams'
 import chroma from 'chroma-js'
 import type { ChartOptions, TooltipItem } from 'chart.js'
 import PrimeToggleButton from 'primevue/togglebutton'
@@ -235,6 +236,10 @@ export default {
     }
   },
   computed: {
+    selectionKey(): string {
+      const { accession, dataset = [] } = this.$route.query
+      return JSON.stringify({ accession, dataset })
+    },
     isFeatureSelectionValid(): boolean {
       if (
         this.selectedPlotType === 'bar' ||
@@ -252,22 +257,42 @@ export default {
       return false
     },
   },
-  mounted() {
-    this.samplesStore.updateSamples()
-    this.samplesStore
-      .updateStatistics()
-      .then(() => this.samplesStore.updatePropertyOptions())
-      .then(() => this.samplesStore.updateSelectedColumns())
-    this.samplesStore.updateFilteredStatistics()
-    this.samplesStore.updateLineageOptions()
-    this.samplesStore.updateSymbolOptions()
-    this.samplesStore.updateRepliconAccessionOptions()
-
-    this.samplesStore.updatePlotSamplesPerWeek()
-    this.samplesStore.updatePlotGroupedLineagesPerWeek()
-    this.samplesStore.updatePlotMetadataCoverage()
+  watch: {
+    selectionKey: {
+      immediate: true,
+      handler() {
+        this.applySelectionFromRoute()
+      },
+    },
   },
+  mounted() {},
   methods: {
+    // keep plots in sync with route params
+    applySelectionFromRoute() {
+      const accession =
+        typeof this.$route.query.accession === 'string'
+          ? safeDecodeURIComponent(this.$route.query.accession)
+          : null
+      if (!accession) return
+      const datasets = decodeDatasetsParam(this.$route.query.dataset)
+      this.samplesStore.setDataset(this.samplesStore.organism ?? null, accession, datasets)
+      this.loadPlotsData()
+    },
+    loadPlotsData() {
+      this.samplesStore.updateSamples()
+      this.samplesStore
+        .updateStatistics()
+        .then(() => this.samplesStore.updatePropertyOptions())
+        .then(() => this.samplesStore.updateSelectedColumns())
+      this.samplesStore.updateFilteredStatistics()
+      this.samplesStore.updateLineageOptions()
+      this.samplesStore.updateSymbolOptions()
+      this.samplesStore.updateRepliconAccessionOptions()
+
+      this.samplesStore.updatePlotSamplesPerWeek()
+      this.samplesStore.updatePlotGroupedLineagesPerWeek()
+      this.samplesStore.updatePlotMetadataCoverage()
+    },
     isDataEmpty(
       data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>,
     ): boolean {

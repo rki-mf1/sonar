@@ -14,10 +14,9 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/:accession/:datasets/table',
+      path: '/table',
       name: 'Table',
       component: TableView,
-      props: true,
     },
     {
       path: '/sample/:id',
@@ -25,10 +24,9 @@ const router = createRouter({
       component: SampleView,
     },
     {
-      path: '/:accession/:datasets/plots',
+      path: '/plots',
       name: 'Plots',
       component: PlotsView,
-      props: true,
     },
     {
       path: '/about',

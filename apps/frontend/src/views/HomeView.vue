@@ -57,6 +57,7 @@
 
 <script lang="ts">
 import API from '@/api/API'
+import { buildSelectionQuery } from '@/util/routeParams'
 import { useSamplesStore } from '@/stores/samples'
 import { useRouter } from 'vue-router'
 
@@ -106,17 +107,12 @@ export default {
       if (this.selectedOrganism && this.selectedAccession) {
         this.loading = true
         setTimeout(() => {
-          this.samplesStore.setDataset(
-            this.selectedOrganism,
-            this.selectedAccession,
-            this.selectedDatasets,
-          )
+          const datasets = [...(this.selectedDatasets ?? [])]
+          this.samplesStore.setDataset(this.selectedOrganism, this.selectedAccession, datasets)
+
           this.router.push({
             name: 'Table',
-            params: {
-              accession: this.selectedAccession,
-              datasets: this.selectedDatasets.join('+'),
-            },
+            query: buildSelectionQuery(this.selectedAccession, datasets),
           })
           this.loading = false
         }, 50) // delay to trigger loading animation -> there has to be a better solution!

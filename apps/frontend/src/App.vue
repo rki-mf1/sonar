@@ -45,6 +45,11 @@ import { RouterView } from 'vue-router'
 import 'primeicons/primeicons.css'
 import Filters from './components/FilterBar.vue'
 import { useSamplesStore } from '@/stores/samples'
+import {
+  buildSelectionQuery,
+  decodeDatasetsParam,
+  safeDecodeURIComponent,
+} from '@/util/routeParams'
 
 export default {
   name: 'App',
@@ -60,14 +65,16 @@ export default {
   computed: {
     menuItems() {
       const { accession, data_sets } = this.samplesStore
-
-      const base =
-        accession && data_sets && data_sets.length ? `/${accession}/${data_sets.join('+')}` : null
+      const selectionQuery = buildSelectionQuery(accession, data_sets)
 
       return [
         { label: 'Home', icon: 'pi pi-home', route: '/' },
-        { label: 'Table', icon: 'pi pi-table', route: base ? `${base}/table` : '/' },
-        { label: 'Plots', icon: 'pi pi-chart-bar', route: base ? `${base}/plots` : '/' },
+        { label: 'Table', icon: 'pi pi-table', route: { name: 'Table', query: selectionQuery } },
+        {
+          label: 'Plots',
+          icon: 'pi pi-chart-bar',
+          route: { name: 'Plots', query: selectionQuery },
+        },
         { label: 'About', icon: 'pi pi-star', route: '/about' },
       ]
     },
@@ -82,6 +89,13 @@ export default {
     },
   },
   watch: {
+    // whenver navigating to Table or Plots, sync the selection from route with store
+    $route: {
+      immediate: true,
+      handler(route) {
+        this.syncSelectionFromRoute(route)
+      },
+    },
     'samplesStore.errorMessage'(newValue) {
       if (newValue) {
         this.showToastError(newValue)
@@ -91,6 +105,19 @@ export default {
     },
   },
   mounted() {},
+  methods: {
+    syncSelectionFromRoute(route) {
+      if (!['Table', 'Plots'].includes((route.name as string) ?? '')) {
+        return
+      }
+      const accession =
+        typeof route.query?.accession === 'string'
+          ? safeDecodeURIComponent(route.query.accession)
+          : null
+      const datasets = decodeDatasetsParam(route.query?.dataset)
+      this.samplesStore.setDataset(this.samplesStore.organism, accession, datasets)
+    },
+  },
 }
 </script>
 
