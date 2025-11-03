@@ -41,7 +41,7 @@
 </template>
 
 <script lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterView, type RouteLocationNormalized } from 'vue-router'
 import 'primeicons/primeicons.css'
 import Filters from './components/FilterBar.vue'
 import { useSamplesStore } from '@/stores/samples'
@@ -70,13 +70,17 @@ export default {
       const items = [{ label: 'Home', icon: 'pi pi-home', route: '/' }]
       // dont show menu items 'Table'/'Plots' for 'Sample' view
       if (this.$route.name !== 'Sample') {
+        const tableRoute = this.$router.resolve({
+          name: 'Table',
+          query: selectionQuery,
+        }).href
+        const plotsRoute = this.$router.resolve({
+          name: 'Plots',
+          query: selectionQuery,
+        }).href
         items.push(
-          { label: 'Table', icon: 'pi pi-table', route: { name: 'Table', query: selectionQuery } },
-          {
-            label: 'Plots',
-            icon: 'pi pi-chart-bar',
-            route: { name: 'Plots', query: selectionQuery },
-          },
+          { label: 'Table', icon: 'pi pi-table', route: tableRoute },
+          { label: 'Plots', icon: 'pi pi-chart-bar', route: plotsRoute },
         )
       }
       items.push({ label: 'About', icon: 'pi pi-star', route: '/about' })
@@ -95,7 +99,7 @@ export default {
     // whenver navigating to Table or Plots, sync the selection from route with store
     $route: {
       immediate: true,
-      handler(route) {
+      handler(route: RouteLocationNormalized) {
         this.syncSelectionFromRoute(route)
       },
     },
@@ -109,7 +113,7 @@ export default {
   },
   mounted() {},
   methods: {
-    syncSelectionFromRoute(route) {
+    syncSelectionFromRoute(route: RouteLocationNormalized) {
       if ((route.name as string) === 'Home') {
         this.samplesStore.$reset()
         return
