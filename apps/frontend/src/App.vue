@@ -110,6 +110,10 @@ export default {
   mounted() {},
   methods: {
     syncSelectionFromRoute(route) {
+      if ((route.name as string) === 'Home') {
+        this.samplesStore.$reset()
+        return
+      }
       if (!['Table', 'Plots'].includes((route.name as string) ?? '')) {
         return
       }
