@@ -32,8 +32,11 @@
       </header>
 
       <div class="content">
-        <Filters v-if="showFilters" />
-        <RouterView />
+        <Filters v-if="showFilters && !showInvalidURLMessage" />
+        <div v-if="showInvalidURLMessage">
+          <PrimeMessage severity="error">Invalid URL</PrimeMessage>
+        </div>
+        <RouterView v-else />
       </div>
     </main>
     <PrimeToast ref="toast" />
@@ -94,6 +97,20 @@ export default {
     appTitle() {
       const organism = this.samplesStore.organism
       return organism ? `Sonar - ${organism}` : 'Sonar'
+    },
+    showInvalidURLMessage() {
+      const routeName = this.$route.name as string | undefined
+      if (!['Table', 'Plots'].includes(routeName ?? '')) {
+        return false
+      }
+      if (this.samplesStore.loading) {
+        return false
+      }
+      if (!this.samplesStore.accession) {
+        return false
+      }
+      const total = this.samplesStore.statistics?.samples_total
+      return typeof total === 'number' && total === 0
     },
   },
   watch: {
