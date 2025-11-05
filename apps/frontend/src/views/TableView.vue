@@ -255,7 +255,13 @@ export default {
         typeof this.$route.query.accession === 'string'
           ? safeDecodeURIComponent(this.$route.query.accession)
           : null
-      if (!accession) return
+      if (!accession) {
+        console.log('Invalid URL: missing accession parameter.')
+        if (this.$route.name === 'Table') {
+          this.$router.replace({ name: 'Home' })
+        }
+        return
+      }
       const datasets = decodeDatasetsParam(this.$route.query.dataset)
       this.samplesStore.setDataset(this.samplesStore.organism, accession, datasets)
       this.loadSamplesAndMetadata()
