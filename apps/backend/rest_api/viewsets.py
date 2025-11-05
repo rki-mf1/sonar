@@ -389,8 +389,8 @@ class ReferenceViewSet(
     @action(detail=False, methods=["get"])
     def get_all_references(self, request: Request, *args, **kwargs):
         queryset = models.Reference.objects.all()
-        sample_data = queryset.values()
-        return Response(data=sample_data, status=status.HTTP_200_OK)
+        reference_data = queryset.values()
+        return Response(data=reference_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def get_reference_file(self, request: Request, *args, **kwargs):
@@ -740,22 +740,26 @@ class FileUploadViewSet(viewsets.ViewSet):
                     {"detail": "No sample_id_column is provided"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-
+            if not sequences_id_column:
+                LOGGER.info(
+                    "No sequences_id_column is provided, sample names are equal to sequence names"
+                )
             # Validate column_mapping
-            if not column_mapping_json:
-                return Response(
-                    {"detail": "No column_mapping is provided, nothing to import."},
-                    status=status.HTTP_400_BAD_REQUEST,
+            if column_mapping_json == "{}" or column_mapping_json is None:
+                LOGGER.info(
+                    "No column_mapping is provided, samples imported into samples table without meta data"
                 )
-            # Convert column_mapping from JSON to dict
-            column_mapping = self._convert_property_column_mapping(
-                json.loads(column_mapping_json)
-            )
-            if not column_mapping:
-                return Response(
-                    {"detail": "No column_mapping could be processed."},
-                    status=status.HTTP_400_BAD_REQUEST,
+                column_mapping = {}
+            else:
+                # Convert column_mapping from JSON to dict
+                column_mapping = self._convert_property_column_mapping(
+                    json.loads(column_mapping_json)
                 )
+                if not column_mapping:
+                    return Response(
+                        {"detail": "No column_mapping could be processed."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             filename = (
                 datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]

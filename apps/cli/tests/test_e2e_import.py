@@ -106,7 +106,7 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
+    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
     code = run_cli(command)
 
     assert code == 0
@@ -123,7 +123,7 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload --must-pass-paranoid"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload --must-pass-paranoid"
     code = run_cli(command)
 
     assert code == 0
@@ -140,7 +140,7 @@ def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
     #         func(** arg) for arg in args
     #     ),
     # )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --auto-anno --tsv sars-cov-2/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE --must-pass-paranoid"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/mafft -t 2 --auto-anno --tsv ../../../test-data/sars-cov-2/SARS-CoV-2_6.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_REASON sample_type=SAMPLE_TYPE --must-pass-paranoid"
     code = run_cli(command)
 
     assert code == 0
@@ -157,7 +157,7 @@ def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
         ),
     )
     code = run_cli(
-        f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft  --no-skip --no-upload --must-pass-paranoid"
+        f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/mafft  --no-skip --no-upload --must-pass-paranoid"
     )
     assert code == 0
 
@@ -173,7 +173,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
         ),
     )
     code = run_cli(
-        f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 1 --no-upload --must-pass-paranoid"
+        f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/mafft -t 1 --no-upload --must-pass-paranoid"
     )
     assert code == 0
 
@@ -181,7 +181,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(7)
 def test_mafft_anno_upload_rsv(monkeypatch, api_url, tmpfile_name):
-    """Test rsv sample import command using mafft method"""
+    """Test rsv sequence import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
@@ -196,8 +196,18 @@ def test_mafft_anno_upload_rsv(monkeypatch, api_url, tmpfile_name):
 
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(8)
+def test_add_rsv_samples(monkeypatch, api_url, tmpfile_name):
+    monkeypatch.chdir(Path(__file__).parent)
+    command = f"import --db {api_url} -r OP975389.1 --tsv ../../../test-data/RSV/RSV_20.tsv --cache {tmpfile_name}/mafft --cols name=name"
+    code = run_cli(command)
+
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(8)
 def test_mafft_anno_upload_mpox(monkeypatch, api_url, tmpfile_name):
-    """Test rsv sample import command using mafft method"""
+    """Test mpox sequence import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
@@ -205,15 +215,17 @@ def test_mafft_anno_upload_mpox(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r NC_063383.1 --method 1 --fasta ../../../test-data/mpox/mpox_2.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
-    code = run_cli(command)
+    command_import = f"import --db {api_url} -r NC_063383.1 --method 1 --fasta ../../../test-data/mpox/mpox_2.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command_import)
+    command_samples = f"import --db {api_url} -r NC_063383.1 --tsv ../../../test-data/mpox/mpox_2.tsv --cache {tmpfile_name}/mafft --cols name=name"
+    code = run_cli(command_samples)
     assert code == 0
 
 
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(9)
 def test_mafft_anno_upload_ebola(monkeypatch, api_url, tmpfile_name):
-    """Test rsv sample import command using mafft method"""
+    """Test ebola sample import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
@@ -221,15 +233,17 @@ def test_mafft_anno_upload_ebola(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r NC_002549.1 --method 1 --fasta ../../../test-data/ebola/ebola_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
-    code = run_cli(command)
+    command_import = f"import --db {api_url} -r NC_002549.1 --method 1 --fasta ../../../test-data/ebola/ebola_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command_import)
+    command_samples = f"import --db {api_url} -r NC_002549.1 --tsv ../../../test-data/ebola/ebola_20.tsv --cache {tmpfile_name}/mafft --cols name=name"
+    code = run_cli(command_samples)
     assert code == 0
 
 
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(10)
 def test_mafft_anno_upload_dengue_type2(monkeypatch, api_url, tmpfile_name):
-    """Test rsv sample import command using mafft method"""
+    """Test dengue sample import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
@@ -237,15 +251,17 @@ def test_mafft_anno_upload_dengue_type2(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r NC_001474.2 --method 1 --fasta ../../../test-data/dengue/type_2/dengue_type2_complete_13.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
-    code = run_cli(command)
+    command_import = f"import --db {api_url} -r NC_001474.2 --method 1 --fasta ../../../test-data/dengue/type_2/dengue_type2_complete_13.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command_import)
+    command_samples = f"import --db {api_url} -r NC_001474.2  --tsv ../../../test-data/dengue/type_2/dengue_type2_complete_13.tsv --cache {tmpfile_name}/mafft --cols name=name"
+    code = run_cli(command_samples)
     assert code == 0
 
 
 @pytest.mark.xdist_group(name="group1")
 @pytest.mark.order(11)
 def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
-    """Test rsv sample import command using mafft method"""
+    """Test hiv sample import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
     monkeypatch.setattr(
         "mpire.WorkerPool.imap_unordered",
@@ -253,8 +269,10 @@ def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
             func(**arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r NC_001802.1 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
-    code = run_cli(command)
+    command_import = f"import --db {api_url} -r NC_001802.1 --method 1 --fasta ../../../test-data/HIV/HIV_20.fasta.xz --cache {tmpfile_name}/mafft -t 2 --skip-nx --must-pass-paranoid"
+    code = run_cli(command_import)
+    command_samples = f"import --db {api_url} -r NC_001802.1 --tsv ../../../test-data/HIV/HIV_20.tsv --cache {tmpfile_name}/mafft --cols name=name"
+    code = run_cli(command_samples)
     assert code == 0
 
 
@@ -269,7 +287,7 @@ def test_mafft_anno_upload_hiv(monkeypatch, api_url, tmpfile_name):
 #             func(**arg) for arg in args
 #         ),
 #     )
-#     command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/wfa -t 2 --no-upload"
+#     command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/wfa -t 2 --no-upload"
 #     code = run_cli(command)
 
 #     assert code == 0
@@ -303,7 +321,7 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
             func(arg) for arg in args
         ),
     )
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2 --tsv sars-cov-2/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_TYPE sample_type=SAMPLE_TYPE"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2 --tsv ../../../test-data/sars-cov-2/SARS-CoV-2_6.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_TYPE sample_type=SAMPLE_TYPE"
     code = run_cli(command)
 
     assert code == 0
@@ -332,9 +350,19 @@ def test_add_influ_gbk(monkeypatch, capfd, api_url):
 
 @pytest.mark.xdist_group(name="group3")
 @pytest.mark.order(2)
-def test_add_influ_segment(monkeypatch, api_url, tmpfile_name):
+def test_add_influenza_sequences(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
     command = f"import --db {api_url} -r NC_026438.1 --method 1 --fasta ../../../test-data/influenza/influenza-A/H1N1PDM_California/H1N1.sequences.fasta.xz --cache {tmpfile_name}/mafft_influ -t 7 --auto-anno"
+    code = run_cli(command)
+
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group3")
+@pytest.mark.order(3)
+def test_add_influenza_samples(monkeypatch, api_url, tmpfile_name):
+    monkeypatch.chdir(Path(__file__).parent)
+    command = f"import --db {api_url} -r NC_026438.1 --tsv ../../../test-data/influenza/influenza-A/H1N1PDM_California/H1N1PDM.sequences.tsv --cache {tmpfile_name}/mafft_influ --cols name=name collection_date=date country=location lineage=lineages sequences=sequences"
     code = run_cli(command)
 
     assert code == 0
