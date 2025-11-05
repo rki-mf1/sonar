@@ -209,6 +209,7 @@
 
 <script lang="ts">
 import API from '@/api/API'
+import router from '@/router'
 import { decodeDatasetsParam, safeDecodeURIComponent } from '@/util/routeParams'
 import { useSamplesStore } from '@/stores/samples'
 import { type Property, type RowSelectEvent, type SelectedRowData } from '@/util/types'
@@ -257,9 +258,7 @@ export default {
           : null
       if (!accession) {
         console.log('Invalid URL: missing accession parameter.')
-        if (this.$route.name === 'Table') {
-          this.$router.replace({ name: 'Home' })
-        }
+        router.replace({ name: 'Home' })
         return
       }
       const datasets = decodeDatasetsParam(this.$route.query.dataset)

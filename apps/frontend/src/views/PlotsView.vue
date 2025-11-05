@@ -196,6 +196,7 @@
 </template>
 
 <script lang="ts">
+import router from '@/router'
 import { useSamplesStore } from '@/stores/samples'
 import { decodeDatasetsParam, safeDecodeURIComponent } from '@/util/routeParams'
 import chroma from 'chroma-js'
@@ -271,9 +272,7 @@ export default {
           : null
       if (!accession) {
         console.log('Invalid URL: missing accession parameter.')
-        if (this.$route.name === 'Plots') {
-          this.$router.replace({ name: 'Home' })
-        }
+        router.replace({ name: 'Home' })
         return
       }
       const datasets = decodeDatasetsParam(this.$route.query.dataset)
