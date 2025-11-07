@@ -591,3 +591,55 @@ def test_match_aa_influ(capfd, api_url):
 
     assert "16" == lines[-1]
     assert code == 0
+
+
+def test_match_aa_2_influ(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r NC_026438.1 --profile CY121680.1:HA:S220T --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+
+    assert "16" == lines[-1]
+    assert code == 0
+
+
+def test_match_nt_snp_influ(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r NC_026438.1 --profile NC_026435.1:C447G --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_fail_match_nt_snp_influ(capfd, api_url):
+    with pytest.raises(SystemExit) as e:
+        run_cli(f"match --db {api_url} -r NC_026438.1 --profile C447G --count")
+    out, err = capfd.readouterr()
+    assert "Reference NC_026438.1 has 8 replicons" in err
+    assert e.value.code == 1
+
+
+def test_match_nt_ins_influ(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r NC_026438.1 --profile NC_026435.1:A2274ATGAATTTAACTTGTCCTTCATGAAAAAATGCTTGTTTCTACTA --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+
+    assert "1" == lines[-1]
+    assert code == 0
+
+
+def test_match_nt_del_influ(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r NC_026438.1 --profile CY121680.1:del:1722-1752 --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+
+    assert "16" == lines[-1]
+    assert code == 0

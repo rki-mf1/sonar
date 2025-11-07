@@ -76,170 +76,20 @@ OPERATORS = {
     "default": "exact",
 }
 
-IUPAC_CODES = {
-    "nt": {
-        "A": set("A"),
-        "C": set("C"),
-        "G": set("G"),
-        "T": set("T"),
-        "R": set("AGR"),
-        "Y": set("CTY"),
-        "S": set("GCS"),
-        "W": set("ATW"),
-        "K": set("GTK"),
-        "M": set("ACM"),
-        "B": set("CGTB"),
-        "D": set("AGTD"),
-        "H": set("ACTH"),
-        "V": set("ACGV"),
-        "N": set("ACGTRYSWKMBDHVN"),
-        "n": set("N"),
-    },
-    "aa": {
-        "A": set("A"),
-        "R": set("R"),
-        "N": set("N"),
-        "D": set("D"),
-        "C": set("C"),
-        "Q": set("Q"),
-        "E": set("E"),
-        "G": set("G"),
-        "H": set("H"),
-        "I": set("I"),
-        "L": set("L"),
-        "K": set("K"),
-        "M": set("M"),
-        "F": set("F"),
-        "P": set("P"),
-        "S": set("S"),
-        "T": set("T"),
-        "W": set("W"),
-        "Y": set("Y"),
-        "V": set("V"),
-        "U": set("U"),
-        "O": set("O"),
-        "B": set("DNB"),
-        "Z": set("EQZ"),
-        "J": set("ILJ"),
-        "Φ": set("VILFWYMΦ"),
-        "Ω": set("FWYHΩ"),
-        "Ψ": set("VILMΨ"),
-        "π": set("PGASπ"),
-        "ζ": set("STHNQEDKRζ"),
-        "+": set("KRH+"),
-        "-": set("DE-"),
-        "X": set("ARNDCQEGHILKMFPSTWYVUOBZJΦΩΨπζ+-X"),
-        "x": set("X"),
-    },
-}
-
-
-regexes = {
-    "snv": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?([A-Z]+)([0-9]+)(=?[A-Zxn]+)$"),
-    "del": re.compile(r"^(\^*)(|[^:]+:)?([^:]+:)?del:(=?[0-9]+)(|-=?[0-9]+)?$"),
-}
-# snv
-# LOGGER.debug(match.group(0))  match pattern T5386G S:E484K ^S:N501Y
-# LOGGER.debug(match.group(1)) not ^
-# LOGGER.debug(match.group(2))
-# LOGGER.debug(match.group(3)) gene name
-# LOGGER.debug(match.group(4)) REF
-# LOGGER.debug(match.group(5)) POS
-# LOGGER.debug(match.group(6)) ALT
-# del
-# LOGGER.debug(match.group(0))  match pattern 	^del:99-102 ^S:del:99-102
-# LOGGER.debug(match.group(1)) not ^
-# LOGGER.debug(match.group(2))
-# LOGGER.debug(match.group(3)) gene name
-# LOGGER.debug(match.group(4)) START
-# LOGGER.debug(match.group(5)) END
-
-
-def define_profile(mutation):  # noqa: C901
-    """
-    Parse and validate mutation profile.
-    """
-    _query = {"label": ""}
-    match = None
-    for mutation_type, regex in regexes.items():
-        match = regex.match(mutation)
-        if match:
-            gene_name = match.group(3)[:-1] if match.group(3) else None
-
-            if mutation_type == "snv":
-                alt = match.group(6)
-                ref = match.group(4)
-
-                # Validate alternates based on IUPAC codes
-                alt_is_aa = all(c in IUPAC_CODES["aa"] for c in alt)
-                alt_is_nt = all(c in IUPAC_CODES["nt"] for c in alt)
-
-                if gene_name:  # AA mutation
-                    if not alt_is_aa:
-                        LOGGER.error(
-                            f"Invalid AA mutation: '{alt}' contains non-AA characters."
-                        )
-                        sys.exit(1)
-                    if ref not in IUPAC_CODES["aa"]:
-                        LOGGER.error(
-                            f"Invalid AA reference: '{ref}' is not a valid amino acid."
-                        )
-                        sys.exit(1)
-                    _query["alt_aa"] = alt
-                    _query["ref_aa"] = ref
-                    _query["ref_pos"] = match.group(5)
-                    _query["protein_symbol"] = gene_name
-                    _query["label"] = "SNP AA" if len(alt) == 1 else "Ins AA"
-                else:  # NT mutation
-                    if not alt_is_nt or ref not in IUPAC_CODES["nt"]:
-                        error_message = (
-                            f"Invalid NT mutation: '{alt}' contains non-NT characters."
-                            if not alt_is_nt
-                            else f"Invalid NT reference: '{ref}' is not a valid nucleotide."
-                        )
-                        LOGGER.error(error_message)
-
-                        if alt_is_aa:
-                            LOGGER.error(
-                                "Did you mean an AA query? Querying for AA mutations without specifying a gene name is not allowed."
-                            )
-                        sys.exit(1)
-                    _query["alt_nuc"] = alt
-                    _query["ref_nuc"] = ref
-                    _query["ref_pos"] = match.group(5)
-                    _query["label"] = "SNP Nt" if len(alt) == 1 else "Ins Nt"
-
-            elif mutation_type == "del":
-                _query["first_deleted"] = match.group(4)
-                _query["last_deleted"] = match.group(5)[1:]
-
-                if gene_name:  # AA deletion
-                    _query["protein_symbol"] = gene_name
-                    _query["label"] = "Del AA"
-                else:  # NT deletion
-                    _query["label"] = "Del Nt"
-
-            # Flag for exclusion
-            negate = True if match.group(1) else False
-            _query["exclude"] = negate
-            break
-
-    if not match:
-        LOGGER.error(f"Invalid mutation notation '{mutation}'.")
-        sys.exit(1)
-
-    return _query
-
 
 def create_profile_query(profiles=[]):
     final_result = {}
     _temp_result = {}
     # create filter with level(depth)
     for _index, profile_set in enumerate(profiles):
-        and_filter = {"andFilter": []}
-        for mutation in profile_set:
-            _query = define_profile(mutation)
-            and_filter["andFilter"].append(_query)
+        and_filter = {
+            "andFilter": [
+                {
+                    "label": "DNA/AA Profile",
+                    "value": ",".join(profile for profile in profile_set),
+                }
+            ]
+        }
         _temp_result[_index] = and_filter
     # convert to final result.
     final_result = convert_to_desired_structure(_temp_result, 0)
@@ -382,8 +232,7 @@ def construct_query(  # noqa: C901
     float_pattern_range = re.compile(
         r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
     )
-    reference_query = {"label": "Reference", "exclude": False, "accession": reference}
-    final_query = {"andFilter": [reference_query], "orFilter": []}
+    final_query = {"reference_accession": reference, "andFilter": [], "orFilter": []}
     LOGGER.debug(f"Input Samples:{samples}")
     LOGGER.debug(f"Input Profiles:{profiles}")
     LOGGER.debug(f"Input Properties:{properties}")
