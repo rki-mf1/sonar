@@ -128,7 +128,7 @@ def resolve_ambiguous_NT_AA(type, char):
     return selected_chars
 
 
-def define_profile(mutation, protein_symbols, replicons):
+def define_profile(mutation: str, protein_symbols: set, replicons: set):
     """
     Parse and validate mutation profile.
     Supported formats:
@@ -166,12 +166,12 @@ def define_profile(mutation, protein_symbols, replicons):
                     else:
                         raise ValueError(
                             f"Invalid gene symbol: '{second_id}'. "
-                            f"Valid genes: {', '.join(sorted(protein_symbols)[:10])}..."
+                            f"Valid genes: {', '.join(sorted(list(protein_symbols))[:10])}..."
                         )
                 else:
                     raise ValueError(
                         f"Invalid replicon accession: '{first_id}'. "
-                        f"Valid replicons: {', '.join(sorted(replicons)[:10])}..."
+                        f"Valid replicons: {', '.join(sorted(list(replicons))[:10])}..."
                     )
 
             # case 2: only one group, e.g HA:S220T or NC_026438.1:A435G
@@ -184,8 +184,8 @@ def define_profile(mutation, protein_symbols, replicons):
                     raise ValueError(
                         f"Unknown identifier: '{first_id}'. "
                         f"Not a valid replicon or gene name.\n"
-                        f"Valid genes: {', '.join(sorted(protein_symbols)[:5])}...\n"
-                        f"Valid replicons: {', '.join(sorted(replicons)[:5])}..."
+                        f"Valid genes: {', '.join(sorted(list(protein_symbols))[:5])}...\n"
+                        f"Valid replicons: {', '.join(sorted(list(replicons))[:5])}..."
                     )
             # case 3: no group, e.g A435G, → gene_name and replicon_accession == None
             if mutation_type == "snv":

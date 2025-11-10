@@ -8,6 +8,7 @@ from datetime import timedelta
 import json
 import os
 import re
+import time
 import traceback
 from typing import Generator
 
@@ -84,17 +85,44 @@ class SampleViewSet(
     filter_fields = ["name"]
     _cached_gene_symbols = None
     _cached_replicons = None
+    _cache_timestamp = None
+    CACHE_TTL = 3600 * 24  # 1 day
 
     @classmethod
-    def get_gene_symbols(cls):
-        if cls._cached_gene_symbols is None:
-            cls._cached_gene_symbols = get_distinct_gene_symbols()
+    def get_gene_symbols(cls, force_refresh=False):
+        """
+        update cached gene symbol set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_gene_symbols is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            symbols = get_distinct_gene_symbols()
+            cls._cached_gene_symbols = set(symbols)
+
         return cls._cached_gene_symbols
 
     @classmethod
-    def get_replicons(cls):
-        if cls._cached_replicons is None:
-            cls._cached_replicons = get_distinct_replicon_accessions()
+    def get_replicons(cls, force_refresh=False):
+        """
+        update cached replicon accession set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_replicons is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            replicons_list = get_distinct_replicon_accessions()
+            cls._cached_replicons = set(replicons_list)
+            cls._cache_timestamp = now
+
         return cls._cached_replicons
 
     @property
@@ -235,20 +263,30 @@ class SampleViewSet(
         return method(**filter_kwargs)
 
     def _get_filtered_queryset(self, request: Request):
-        queryset = models.Sample.objects.all()
-        if filter_params := request.query_params.get("filters"):
-            filters = json.loads(filter_params)
-            LOGGER.info(f"Genomes Query, conditions: {filters}")
-            reference_accession = filters.get("reference_accession")
-            if not reference_accession:
-                raise ValueError("reference_accession is required in filter structure")
-            q_filter = self.resolve_recursive_genome_filter(
-                filters, reference_accession
+        if not (filter_params := request.query_params.get("filters")):
+            return models.Sample.objects.all()
+        filters = json.loads(filter_params)
+        reference_accession = filters.get("reference_accession")
+
+        LOGGER.info(f"Genomes Query, conditions: {filters}")
+
+        if not reference_accession:
+            raise ValueError("Reference accession is required in filters.")
+
+        q_filter = self.resolve_recursive_genome_filter(filters, reference_accession)
+        queryset = (
+            models.Sample.objects.filter(
+                q_filter,
+                sequences__alignments__replicon__reference__accession=reference_accession,
             )
-            q_filter &= Q(
-                sequences__alignments__replicon__reference__accession=reference_accession
+            .prefetch_related(
+                "sequences",
+                "sequences__alignments",
+                "sequences__alignments__replicon",
+                "sequences__alignments__replicon__reference",
             )
-            queryset = models.Sample.objects.filter(q_filter).distinct()
+            .distinct()
+        )
         return queryset
 
     # actions
@@ -1034,6 +1072,52 @@ class SampleViewSet(
             return ~Q(**query)
         return Q(**query)
 
+    def filter_nt_mutations(
+        self,
+        mutation_condition,
+        exclude: bool = False,
+        replicon_accession: str = None,
+    ):
+        if replicon_accession:
+            mutation_condition &= Q(replicon__accession=replicon_accession)
+
+        # Use EXISTS subquery instead of JOIN
+        mutation_subquery = models.NucleotideMutation.objects.filter(
+            mutation_condition, alignments__sequence__samples=OuterRef("pk")
+        )
+
+        if exclude:
+            return Q(
+                pk__in=models.Sample.objects.exclude(
+                    pk__in=models.Sample.objects.filter(Exists(mutation_subquery))
+                )
+            )
+
+        return Q(Exists(mutation_subquery))
+
+    def filter_aa_mutations(
+        self,
+        mutation_condition,
+        exclude: bool = False,
+        replicon_accession: str = None,
+    ):
+        if replicon_accession:
+            mutation_condition &= Q(replicon__accession=replicon_accession)
+
+        # Use EXISTS subquery instead of JOIN
+        mutation_subquery = models.AminoAcidMutation.objects.filter(
+            mutation_condition, alignments__sequence__samples=OuterRef("pk")
+        )
+
+        if exclude:
+            return Q(
+                pk__in=models.Sample.objects.exclude(
+                    pk__in=models.Sample.objects.filter(Exists(mutation_subquery))
+                )
+            )
+
+        return Q(Exists(mutation_subquery))
+
     def filter_snp_profile_nt(
         self,
         # gene_symbol: str,
@@ -1046,34 +1130,16 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nuc (e.g. T28175C).
-        # Create Q() objects for each condition
         if alt_nuc == "N":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="nt", char=alt_nuc):
-                mutation_alt = mutation_alt | Q(mutations__alt=x)
-            # Unsupported lookup 'alt_in' for ForeignKey or join on the field not permitted.
-            # mutation_alt = Q(
-            #     mutations__alt_in=resolve_ambiguous_NT_AA(type="nt", char = alt_nuc)
-            # )
+                mutation_alt |= Q(alt=x)
         else:
-            if alt_nuc == "n":
-                alt_nuc = "N"
-            mutation_alt = Q(nucleotide_mutations__alt=alt_nuc)
+            mutation_alt = Q(alt=alt_nuc if alt_nuc != "n" else "N")
 
-        mutation_condition = (
-            Q(nucleotide_mutations__end=ref_pos)
-            & Q(nucleotide_mutations__ref=ref_nuc)
-            & mutation_alt
-        )
-        if replicon_accession:
-            mutation_condition &= Q(
-                nucleotide_mutations__replicon__accession=replicon_accession
-            )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-        filters = {"sequences__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        mutation_condition = Q(end=ref_pos) & Q(ref=ref_nuc) & mutation_alt
+
+        return self.filter_nt_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_snp_profile_aa(
         self,
@@ -1092,28 +1158,17 @@ class SampleViewSet(
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
-                mutation_alt = mutation_alt | Q(amino_acid_mutations__alt=x)
+                mutation_alt | Q(alt=x)
         else:
-            if alt_aa == "x":
-                alt_aa = "X"
-            mutation_alt = Q(amino_acid_mutations__alt=alt_aa)
+            mutation_alt = Q(alt=alt_aa if alt_aa != "x" else "X")
 
         mutation_condition = (
-            Q(amino_acid_mutations__end=ref_pos)
-            & Q(amino_acid_mutations__ref=ref_aa)
+            Q(end=ref_pos)
+            & Q(ref=ref_aa)
             & (mutation_alt)
-            & Q(amino_acid_mutations__cds__gene__symbol=protein_symbol)
+            & Q(cds__gene__symbol=protein_symbol)
         )
-        if replicon_accession:
-            mutation_condition &= Q(
-                amino_acid_mutations__cds__gene__replicon__accession=replicon_accession
-            )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-
-        filters = {"sequences__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        return self.filter_aa_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_del_profile_nt(
         self,
@@ -1129,21 +1184,10 @@ class SampleViewSet(
         if last_deleted == "":
             last_deleted = first_deleted
 
-        mutation_condition = Q(
-            nucleotide_mutations__start=int(first_deleted) - 1,
-            nucleotide_mutations__end=last_deleted,
-            nucleotide_mutations__alt="",
+        mutation_condition = (
+            Q(start=int(first_deleted) - 1) & Q(end=int(last_deleted)) & Q(alt="")
         )
-        if replicon_accession:
-            mutation_condition &= Q(
-                nucleotide_mutations__replicon__accession=replicon_accession
-            )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-
-        filters = {"sequences__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        return self.filter_nt_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_del_profile_aa(
         self,
@@ -1162,23 +1206,14 @@ class SampleViewSet(
         if last_deleted == "":
             last_deleted = first_deleted
 
-        mutation_condition = Q(
-            amino_acid_mutations__cds__gene__symbol__iexact=protein_symbol,
-            amino_acid_mutations__start=int(first_deleted) - 1,
-            amino_acid_mutations__end=last_deleted,
-            amino_acid_mutations__alt="",
+        mutation_condition = (
+            Q(cds__gene__symbol__iexact=protein_symbol)
+            & Q(start=int(first_deleted) - 1)
+            & Q(end=int(last_deleted))
+            & Q(alt="")
         )
 
-        if replicon_accession:
-            mutation_condition &= Q(
-                amino_acid_mutations__cds__gene__replicon__accession=replicon_accession
-            )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-        filters = {"sequences__alignments__in": alignment_qs}
-
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        return self.filter_aa_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_ins_profile_nt(
         self,
@@ -1191,20 +1226,8 @@ class SampleViewSet(
         **kwargs,
     ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nucs (e.g. T133102TTT)
-        mutation_condition = Q(
-            nucleotide_mutations__end=ref_pos,
-            nucleotide_mutations__ref=ref_nuc,
-            nucleotide_mutations__alt=alt_nuc,
-        )
-        if replicon_accession:
-            mutation_condition &= Q(
-                nucleotide_mutations__replicon__accession=replicon_accession
-            )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-        filters = {"sequences__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        mutation_condition = Q(end=ref_pos) & Q(ref=ref_nuc) & Q(alt=alt_nuc)
+        return self.filter_nt_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_ins_profile_aa(
         self,
@@ -1220,22 +1243,14 @@ class SampleViewSet(
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aas (e.g. OPG197:A34AK)
         if protein_symbol not in self.get_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
-        mutation_condition = Q(
-            amino_acid_mutations__end=ref_pos,
-            amino_acid_mutations__ref=ref_aa,
-            amino_acid_mutations__alt=alt_aa,
-            amino_acid_mutations__cds__gene__symbol=protein_symbol,
+        mutation_condition = (
+            Q(end=ref_pos)
+            & Q(ref=ref_aa)
+            & Q(alt=alt_aa)
+            & Q(cds__gene__symbol=protein_symbol)
         )
 
-        if replicon_accession:
-            mutation_condition &= Q(
-                amino_acid_mutations__cds__gene__replicon__accession=replicon_accession
-            )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-        filters = {"sequences__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        return self.filter_aa_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_sample(
         self,
