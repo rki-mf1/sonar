@@ -112,7 +112,7 @@ class Replicon(models.Model):
     Attributes:
         length (BigIntegerField, optional): Length of the replicon in base pairs.
         sequence (TextField): Full nucleotide sequence of the replicon.
-        accession (CharField, unique, optional): (NCBI) accession of sequence.
+        accession (CharField, unique, required): (NCBI) accession of sequence.
         description (CharField, optional): Additional description of the replicon.
         type (CharField, optional): Type of replicon (e.g., chromosome, plasmid).
         segment_number (BigIntegerField, optional): Segment number if applicable.
@@ -124,7 +124,7 @@ class Replicon(models.Model):
 
     length = models.BigIntegerField(blank=True, null=True)
     sequence = models.TextField()
-    accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    accession = models.CharField(max_length=50, unique=True)
     description = models.CharField(max_length=400, blank=True, null=True)
     type = models.CharField(max_length=50, blank=True, null=True)
     segment_number = models.BigIntegerField(blank=True, null=True)
@@ -145,7 +145,7 @@ class Gene(models.Model):
         end (BigIntegerField): End position on the replicon.
         forward_strand (BooleanField): Indicates if the gene is on the forward strand.
         symbol (CharField, optional): Gene symbol or abbreviation (max length 50).
-        accession (CharField, optional): Accession id gene
+        accession (CharField): Accession id gene
         sequence (TextField, optional): Nucleotide sequence of the gene.
         replicon (ForeignKey): Reference to the replicon where the gene is located.
         type (TextChoices, optional): Classification of the gene (e.g., CDS, rRNA, tRNA).
@@ -159,7 +159,7 @@ class Gene(models.Model):
     end = models.BigIntegerField()
     forward_strand = models.BooleanField()
     symbol = models.CharField(max_length=50, blank=True, null=True)
-    accession = models.CharField(max_length=50, unique=False, blank=True, null=True)
+    accession = models.CharField(max_length=50, unique=False)
     sequence = models.TextField(blank=True, null=True)
     locus_tag = models.CharField(max_length=100, blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.CASCADE)
@@ -185,7 +185,7 @@ class CDS(models.Model):
     Filled with information from the gene bank file via gbk_import
 
     Attributes:
-        accession (CharField, optional, unique): Unique accession nid of gene.
+        accession (CharField, required, unique): Unique accession nid of gene.
         sequence (TextField, optional): Nucleotide sequence of the CDS.
         gene (ForeignKey): Reference to the associated gene (CASCADE deletion).
         description (CharField, optional): Functional description of the CDS (max length 100).
@@ -195,7 +195,7 @@ class CDS(models.Model):
         - Enforces uniqueness on the accession number if provided.
     """
 
-    accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    accession = models.CharField(max_length=50, unique=True)
     sequence = models.TextField(blank=True, null=True)
     gene = models.ForeignKey(Gene, models.CASCADE)
     description = models.CharField(max_length=100, blank=True, null=True)
@@ -393,9 +393,9 @@ class Reference(models.Model):
 
     Attributes:
         name (CharField, optional, unique): Name of the gene bank file (max length 50).
-        accession (CharField, optional, unique): Accession number of the gene bank file (max length 50).
+        accession (CharField, required, unique): Accession number of the gene bank file (max length 50).
         description (CharField, optional): Description of the reference (max length 400).
-        organism (CharField, optional): Name of the organism from which the reference is derived (max length 50).
+        organism (CharField, required): Name of the organism from which the reference is derived (max length 50).
         mol_type (CharField, optional): Type of molecule (e.g., DNA, RNA) for the reference (max length 50).
         isolate (CharField, optional): Isolate or strain information (max length 50).
         host (CharField, optional): Host organism for the reference sequence (max length 50).
@@ -409,9 +409,9 @@ class Reference(models.Model):
     """
 
     name = models.CharField(max_length=600, unique=True, blank=True, null=True)
-    accession = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    accession = models.CharField(max_length=50, unique=True)
     description = models.CharField(max_length=400, blank=True, null=True)
-    organism = models.CharField(max_length=50, blank=True, null=True)
+    organism = models.CharField(max_length=50)
     mol_type = models.CharField(max_length=50, blank=True, null=True)
     isolate = models.CharField(max_length=50, blank=True, null=True)
     host = models.CharField(max_length=50, blank=True, null=True)
