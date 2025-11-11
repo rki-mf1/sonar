@@ -79,7 +79,7 @@ export default {
       return this.$route.name === 'Home' || this.$route.name === 'Plots'
     },
     appTitle() {
-      const { organism, accession, data_sets } = this.samplesStore
+      const { organism, reference_accession: accession, data_sets } = this.samplesStore
       return organism && accession
         ? `Sonar: ${organism} (${accession})${data_sets ? ' - ' + data_sets : ''}`
         : 'Sonar'

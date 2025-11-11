@@ -240,18 +240,24 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
     def get_genomic_profiles(self, obj: models.Sample):
         # genomic_profiles are prefetched for genomes endpoint
-        dict = {}
+        genomic_profiles = {}
 
         for sequence in obj.sequences.all():
             for alignment in sequence.alignments.all():
+                replicon = alignment.replicon
+                replicon_acc = replicon.accession
+                if replicon_acc not in genomic_profiles:
+                    genomic_profiles[replicon_acc] = {}
                 for mutation in alignment.genomic_profiles:
                     annotations = []
                     for nucleotide_mutation in alignment.nucleotide_mutations.all():
                         if nucleotide_mutation == mutation:
                             for annotation in nucleotide_mutation.alignment_annotations:
                                 annotations.append(str(annotation))
-                    dict[self.create_NT_format(mutation)] = annotations
-        return dict
+                    genomic_profiles[replicon_acc][
+                        self.create_NT_format(mutation)
+                    ] = annotations
+        return genomic_profiles
 
     def define_proteomic_label(
         self,

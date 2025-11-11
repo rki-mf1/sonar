@@ -108,7 +108,7 @@ function parseDateToDateRangeFilter(data: Date[]) {
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
     organism: null as string | null,
-    accession: null as string | null,
+    reference_accession: null as string | null,
     data_sets: [] as (string | null)[],
     samples: [],
     statistics: {} as Statistics,
@@ -182,9 +182,9 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
-    setDataset(organism: string | null, accession: string | null, data_sets: (string | null)[]) {
+    setDataset(organism: string | null, reference_accession: string | null, data_sets: (string | null)[]) {
       this.organism = organism
-      this.accession = accession
+      this.reference_accession = reference_accession
       this.data_sets = data_sets
     },
     async updateStatistics() {
@@ -195,7 +195,7 @@ export const useSamplesStore = defineStore('samples', {
         populated_metadata_fields: [],
       }
       try {
-        const statistics = await API.getInstance().getSampleStatistics(this.accession)
+        const statistics = await API.getInstance().getSampleStatistics(this.reference_accession)
         if (!statistics) {
           this.statistics = emptyStatistics
         } else {
@@ -433,7 +433,7 @@ export const useSamplesStore = defineStore('samples', {
       if (this.propertyValueOptions[propertyName]) return
       this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
-        .getSampleGenomePropertyValueOptions(propertyName, this.accession)
+        .getSampleGenomePropertyValueOptions(propertyName, this.reference_accession)
         .then((res) => {
           this.propertyValueOptions[propertyName].options = res.values
           this.propertyValueOptions[propertyName].loading = false
@@ -513,7 +513,7 @@ export const useSamplesStore = defineStore('samples', {
       }
     },
     async updateRepliconAccessionOptions() {
-      const res = await API.getInstance().getRepliconAccessionOptions(this.accession)
+      const res = await API.getInstance().getRepliconAccessionOptions(this.reference_accession)
       this.repliconAccessionOptions = res.accessions
     },
     async updateLineageOptions() {
@@ -521,7 +521,7 @@ export const useSamplesStore = defineStore('samples', {
       this.lineageOptions = res.lineages
     },
     async updateSymbolOptions() {
-      const res = await API.getInstance().getGeneSymbolOptions(this.accession)
+      const res = await API.getInstance().getGeneSymbolOptions(this.reference_accession)
       this.symbolOptions = res.gene_symbols
     },
     isDateArray(value: unknown): value is Date[] {
@@ -552,6 +552,10 @@ export const useSamplesStore = defineStore('samples', {
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
+      // Set reference accession at root level
+      if (this.reference_accession) {
+        filters.reference_accession = this.reference_accession
+      }
 
       // insert dataset selection as a fixed filter at the beginning
       if (this.data_sets?.length > 0) {
@@ -563,14 +567,6 @@ export const useSamplesStore = defineStore('samples', {
           value: this.data_sets,
         })
       }
-      if (this.accession) {
-        filters.filters.andFilter.unshift({
-          label: 'Reference',
-          exclude: false,
-          accession: this.accession,
-        })
-      }
-
       return filters
     },
   },

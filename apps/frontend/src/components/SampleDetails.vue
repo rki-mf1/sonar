@@ -21,17 +21,27 @@
           </div>
         </div>
       </template>
-
       <template v-if="key === 'genomic_profiles'">
-        <strong>{{ key }}: </strong>
-        <div style="white-space: normal; word-wrap: break-word">
-          <GenomicProfileLabel
-            v-for="(variant, index) in Object.keys(value as GenomicProfile)"
-            :key="variant"
-            :variant-string="variant"
-            :annotations="genomicProfileValue(value)[variant]"
-            :is-last="index === Object.keys(value).length - 1"
-          />
+        <strong>{{ key }}:</strong>
+
+        <div
+          v-for="(repliconData, repliconAcc) in value"
+          :key="repliconAcc"
+          style="margin-left: 10px; margin-top: 4px"
+        >
+          <!-- Replicon header -->
+          <div><strong>{{ repliconAcc }}</strong></div>
+
+          <!-- Variants for this replicon -->
+          <div style="white-space: normal; word-wrap: break-word; margin-left: 14px;">
+            <GenomicProfileLabel
+              v-for="(annotations, variant, idx) in repliconData"
+              :key="variant"
+              :variant-string="variant"
+              :annotations="annotations"
+              :is-last="idx === Object.keys(repliconData).length - 1"
+            />
+          </div>
         </div>
       </template>
 

@@ -28,7 +28,7 @@
             />
             <h4 class="text-primary mt-0 mb-0">Accession</h4>
             <PrimeDropdown
-              v-model="selectedAccession"
+              v-model="selectedReferenceAccession"
               :options="accessions"
               placeholder="Select an Accession"
               filter
@@ -72,7 +72,7 @@ export default {
       >,
       organisms: [] as string[],
       selectedOrganism: '',
-      selectedAccession: '' as string | null,
+      selectedReferenceAccession: '' as string | null,
       selectedDatasets: [] as (string | null)[],
       loading: false,
     }
@@ -89,7 +89,7 @@ export default {
   watch: {
     // when ever selectedOrganism is changed, choose first available option
     selectedOrganism() {
-      this.selectedAccession = this.accessions[0] || null
+      this.selectedReferenceAccession = this.accessions[0] || null
       this.selectedDatasets = this.data_sets
     },
   },
@@ -103,12 +103,12 @@ export default {
       this.selectedOrganism = this.organisms[0]
     },
     proceed() {
-      if (this.selectedOrganism && this.selectedAccession) {
+      if (this.selectedOrganism && this.selectedReferenceAccession) {
         this.loading = true
         setTimeout(() => {
           this.samplesStore.setDataset(
             this.selectedOrganism,
-            this.selectedAccession,
+            this.selectedReferenceAccession,
             this.selectedDatasets,
           )
           this.router.push({ name: 'Home' })

@@ -266,9 +266,16 @@ class SampleViewSet(
         if not (filter_params := request.query_params.get("filters")):
             return models.Sample.objects.all()
         filters = json.loads(filter_params)
-        reference_accession = filters.get("reference_accession")
+        if "reference_accession" in request.query_params:
+            reference_accession = (
+                request.query_params.get("reference_accession").strip('"').strip()
+            )
+        else:
+            reference_accession = filters.get("reference_accession")
 
-        LOGGER.info(f"Genomes Query, conditions: {filters}")
+        LOGGER.info(
+            f"Genomes Query, conditions: {filters}, reference: {reference_accession}"
+        )
 
         if not reference_accession:
             raise ValueError("Reference accession is required in filters.")
@@ -540,78 +547,73 @@ class SampleViewSet(
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
-        def add_annotation(name, filter_kwargs):
-            annotations[f"not_null_count_{name}"] = Count(
-                Case(
-                    When(
-                        Exists(
-                            models.Sample.objects.filter(
-                                id=OuterRef("id"), **filter_kwargs
-                            )
-                        ),
-                        then=1,
-                    ),
-                    output_field=IntegerField(),
-                )
+        queryset_nt = queryset.annotate(
+            mutation_count=Count(
+                "sequences__alignments__nucleotide_mutations", distinct=True
             )
-
-        # check genomic and proteomic profiles
-        add_annotation(
-            "genomic_profiles",
-            {"sequence__alignments__nucleotide_mutations__isnull": False},
         )
-        add_annotation(
-            "proteomic_profiles",
-            {"sequence__alignments__amino_acid_mutations__isnull": False},
+        queryset_aa = queryset.annotate(
+            mutation_count=Count(
+                "sequences__alignments__amino_acid_mutations", distinct=True
+            )
         )
+        samples_with_nt_mutations = queryset_nt.filter(mutation_count__gt=0)
+        samples_with_aa_mutations = queryset_aa.filter(mutation_count__gt=0)
 
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
                 field_name = field.name
+
                 if field.get_internal_type() == "CharField":
-                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
-                        **{field_name: ""}
+                    # Count non-empty strings
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        "id",
+                        filter=Q(**{f"{field_name}__isnull": False})
+                        & ~Q(**{f"{field_name}": ""}),
+                        distinct=True,
                     )
                 else:
-                    condition = Q(**{f"{field_name}__isnull": False})
+                    # Count non-null values
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        "id",
+                        filter=Q(**{f"{field_name}__isnull": False}),
+                        distinct=True,
+                    )
 
-                annotations[f"not_null_count_{field_name}"] = Count(
-                    Case(When(condition, then=1), output_field=IntegerField())
-                )
-
-        # mapping from property name to datatype
         property_to_datatype = dict(
             models.Property.objects.values_list("name", "datatype")
         )
         property_names = PropertyViewSet.get_custom_property_names()
-        # annotate custom properties based on datatype
+
         for property_name in property_names:
             datatype = property_to_datatype.get(property_name)
             if not datatype:
                 LOGGER.warning(f"Property {property_name} not found")
                 continue
+
             try:
                 annotations[f"not_null_count_{property_name}"] = Count(
-                    Case(
-                        When(
-                            Exists(
-                                models.Sample.objects.filter(
-                                    id=OuterRef("id"),
-                                    properties__property__name=property_name,
-                                    **{f"properties__{datatype}__isnull": False},
-                                )
-                            ),
-                            then=1,
-                        ),
-                        output_field=IntegerField(),
-                    )
+                    "properties",
+                    filter=(
+                        Q(properties__property__name=property_name)
+                        & Q(**{f"properties__{datatype}__isnull": False})
+                    ),
+                    distinct=True,
                 )
             except Exception as e:
                 LOGGER.error(
                     f"Error with property {property_name} (datatype: {datatype}): {e}"
                 )
 
+        # Apply aggregations
         result = queryset.aggregate(**annotations)
+        result["not_null_count_genomic_profiles"] = (
+            samples_with_nt_mutations.count()
+        )  # len(queryset)
+        result["not_null_count_proteomic_profiles"] = (
+            samples_with_aa_mutations.count()
+        )  # len(queryset)
+
         return {
             key.replace("not_null_count_", ""): value
             for key, value in result.items()
@@ -781,7 +783,6 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def plot_metadata_coverage(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-
         result_dict = {}
         result_dict["metadata_coverage"] = SampleViewSet.get_metadata_coverage(queryset)
         return Response(data=result_dict)
@@ -1083,7 +1084,7 @@ class SampleViewSet(
 
         # Use EXISTS subquery instead of JOIN
         mutation_subquery = models.NucleotideMutation.objects.filter(
-            mutation_condition, alignments__sequence__samples=OuterRef("pk")
+            mutation_condition, alignments__sequences__samples=OuterRef("pk")
         )
 
         if exclude:
@@ -1106,7 +1107,7 @@ class SampleViewSet(
 
         # Use EXISTS subquery instead of JOIN
         mutation_subquery = models.AminoAcidMutation.objects.filter(
-            mutation_condition, alignments__sequence__samples=OuterRef("pk")
+            mutation_condition, alignments__sequences__samples=OuterRef("pk")
         )
 
         if exclude:
