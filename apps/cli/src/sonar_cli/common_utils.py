@@ -1,5 +1,4 @@
 import base64
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 import datetime
 import gzip
@@ -17,8 +16,10 @@ import zipfile
 
 from Bio.Seq import Seq
 import magic
+from mpire import WorkerPool
 import pandas as pd
 from sonar_cli.logging import LoggingConfigurator
+from tqdm import tqdm
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
@@ -316,6 +317,38 @@ def chunk(arr_range, arr_size):
     return iter(lambda: tuple(islice(arr_range, arr_size)), ())
 
 
+def clear_sample_cache_worker(**sample):
+    """
+    Worker function to clear cache files for a single sample using mpire.
+
+    This function is designed to be called by mpire's WorkerPool with automatic
+    chunking via the chunk_size parameter. Each call processes one sample.
+
+    Args:
+        sample: Sample dictionary with a 'vcffile' key pointing to the VCF file path
+
+    Returns:
+        bool: True if successful, False if failed
+    """
+    try:
+        try:
+            os.remove(sample["vcffile"] + ".gz")
+        except FileNotFoundError:
+            pass
+        try:
+            os.remove(sample["vcffile"] + ".gz.tbi")
+        except FileNotFoundError:
+            pass
+        return True
+    except (TypeError, OSError) as e:
+        LOGGER.error(traceback.format_exc())
+        LOGGER.error("\nDebugging Information:")
+        LOGGER.error(e)
+        LOGGER.error("-----------")
+        LOGGER.error(sample)
+        return False
+
+
 def clear_sample_cache(sample):
     try:
         try:
@@ -334,10 +367,47 @@ def clear_sample_cache(sample):
         LOGGER.error(sample)
 
 
-def clear_unnecessary_cache(samples, max_workers=4):
-    # I used ThreadPoolExecutorfor simplicity
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        executor.map(clear_sample_cache, samples)
+def clear_unnecessary_cache(samples, chunk_size=250, n_jobs=1, progress=True):
+    """
+    Clear temporary VCF cache files (.gz and .gz.tbi) for processed samples.
+    These files are temporary artifacts from the annotation/variant calling process
+    and can safely be removed to free up disk space.
+
+    Args:
+        samples: List of sample dictionaries
+        chunk_size: Number of samples per chunk for parallel processing. (default: 250)
+        n_jobs: Number of worker processes. (default: 1)
+        progress: Whether to show progress bar (default: True)
+
+    Note:
+        Files will be removed per sample:
+        - {vcffile}.gz: Compressed VCF file with variant calls
+        - {vcffile}.gz.tbi: Tabix index for the compressed VCF
+    """
+    if not samples:
+        return
+
+    total_samples = len(samples)
+
+    # Use mpire WorkerPool for multiprocessing
+    with WorkerPool(n_jobs=n_jobs) as pool:
+        # Process with progress bar
+        with tqdm(
+            total=total_samples,
+            desc="Clearing cache files",
+            unit="samples",
+            bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+            disable=not progress,
+        ) as pbar:
+            # Use imap_unordered with automatic chunking
+            for processed_count in pool.imap_unordered(
+                clear_sample_cache_worker,
+                samples,
+                chunk_size=chunk_size,
+                iterable_len=total_samples,
+            ):
+                # Update progress bar (each result is True for success, False for failure)
+                pbar.update(processed_count)
 
 
 def get_fname(name, extension="", enable_parent_dir=False):

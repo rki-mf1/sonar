@@ -19,6 +19,7 @@ from typing import Optional
 from typing import Union
 import zipfile
 
+from mpire import WorkerPool
 import pandas as pd
 from sonar_cli.api_interface import APIClient
 from sonar_cli.common_utils import file_collision
@@ -932,13 +933,20 @@ class sonarCache:
             return None
 
     def perform_paranoid_cached_sequences(  # noqa: C901
-        self, sequence_data_dict_list, must_pass_paranoid
+        self, sequence_data_dict_list, must_pass_paranoid, chunk_size=50, n_jobs=1
     ) -> list:
         """
         This function performs the paranoid test without fetching variants from the database.
         It will read the var file and compare it with the original sequence.
-        Combination of 'import_cached_sequences' and 'paranoid_check' function
+        Combination of 'import_cached_sequences' and 'paranoid_check' function.
 
+        Use mpire WorkerPool for improved performance.
+
+        Args:
+            sample_data_dict_list: List of sample data dictionaries
+            must_pass_paranoid: Whether to exit if paranoid tests fail
+            chunk_size: Number of samples to process in each batch. (default: 50)
+            n_jobs: Maximum number of worker processes. (default: 1)
 
         Return:
             list[Dict]: List of dict sequence.
@@ -946,162 +954,173 @@ class sonarCache:
         list_fail_sequences = []
         passed_sequences_list = []
         total_sequences = len(sequence_data_dict_list)
-        for sequence_data in tqdm(
-            sequence_data_dict_list,
-            total=total_sequences,
-            desc="Paranoid Check...",
-            unit="sequences",
-            bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
-            disable=self.disable_progress,
-        ):
-            try:
-                iter_dna_list = []
-                # NOTE: right now, we no longer need var_file.
-                del sequence_data["var_file"]
-                del sequence_data["lift_file"]
-                if sequence_data["var_parquet_file"] is not None:
-                    # SECTION:ReadVar
-                    var_df = pd.read_parquet(sequence_data["var_parquet_file"])
-                    # Currently var_df might be empty if the imported sequence
-                    # is identical to the reference
-                    if not var_df.empty:
-                        nt_df = var_df[(var_df["type"] == "nt")]
-                        iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
-                            "records"
-                        )
-                    else:
-                        LOGGER.warning(
-                            f"Paranoid test: var file ({sequence_data['var_parquet_file']}) is missing for sequence {sequence_data['name']}"
-                        )
-                    # SECTION: Paranoid
-                    if sequence_data["seqhash"] is not None:
-                        # Get Reference sequence.
-                        seq = list(
-                            self.get_refseq(refmol_acc=sequence_data["source_acc"])
-                        )
 
-                        prefix = ""
-                        gaps = {".", " "}
-                        sequence_name = sequence_data["name"]
+        # Prepare data that workers will need from this instance
+        cache_instance_data = {"refmols": self.refmols, "error_dir": self.error_dir}
 
-                        for vardata in iter_dna_list:
-                            if vardata["alt"] in gaps:
-                                for i in range(vardata["start"], vardata["end"]):
-                                    seq[i] = ""
-                            elif vardata["alt"] == ".":
-                                for i in range(vardata["start"], vardata["end"]):
-                                    seq[i] = ""
-                            elif vardata["start"] >= 0:
-                                seq[vardata["start"]] = vardata["alt"]
-                            else:
-                                prefix = vardata["alt"]
+        # Use mpire WorkerPool for multiprocessing
+        with WorkerPool(n_jobs=n_jobs, shared_objects=cache_instance_data) as pool:
+            # Process with progress bar
+            with tqdm(
+                total=total_sequences,
+                desc="Paranoid Check...",
+                unit="samples",
+                bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
+                disable=self.disable_progress,
+            ) as pbar:
+                # Use imap for processing with progress updates
+                for batch_passed, batch_failed in pool.imap_unordered(
+                    self.process_paranoid_batch_worker,
+                    sequence_data_dict_list,
+                    chunk_size=chunk_size,
+                ):
+                    passed_sequences_list.extend(batch_passed)
+                    list_fail_sequences.extend(batch_failed)
 
-                        # seq is now a restored version from variant dict.
-                        seq = prefix + "".join(seq)
-                        with open(sequence_data["seq_file"], "r") as handle:
-                            orig_seq = handle.read()
+                    # Update progress bar
+                    batch_size = len(batch_passed) + len(batch_failed)
+                    pbar.update(batch_size)
 
-                        seq = ">" + sequence_data["seqhash"] + "\n" + seq + "\n"
-
-                        if seq != orig_seq:
-                            LOGGER.warning(
-                                f"Failed paranoid test for sequence '{sequence_name}'"
-                            )
-
-                            # Only for printing the sequences with some indication
-                            # of mismatches between the original and target sequence
-                            min_len = min(len(orig_seq), len(seq))
-                            mismatches = []
-                            for a, b in zip(
-                                list(orig_seq[:min_len]), list(seq[:min_len])
-                            ):
-                                mismatches.append("|" if a == b else "X")
-                            LOGGER.debug(f"Original: {orig_seq}")
-                            LOGGER.debug(f"        : {''.join(mismatches)}")
-                            LOGGER.debug(f"Rebuilt : {seq}")
-
-                            # NOTE: comment this part, for now, we need to discuss which
-                            # information we want to report for the failed sequence.
-                            with open(
-                                os.path.join(
-                                    self.error_dir, f"{sequence_name}.error.var"
-                                ),
-                                "w+",
-                            ) as handle:
-                                for vardata in iter_dna_list:
-                                    handle.write(str(vardata) + "\n")
-
-                            qryfile = os.path.join(
-                                self.error_dir,
-                                sequence_name + ".error.restored_sample.fa",
-                            )
-                            reffile = os.path.join(
-                                self.error_dir,
-                                sequence_name + ".error.original_sample.fa",
-                            )
-
-                            # NOTE: comment this part, for now, we need to discuss which
-                            # information we want to report for the failed sequence.
-                            with open(qryfile, "w+") as handle:
-                                handle.write(seq)
-                            with open(reffile, "w+") as handle:
-                                handle.write(orig_seq)
-
-                            #  ref_name = sequence_data["refmol"]
-                            #  output_paranoid = os.path.join(
-                            #     self.basedir,
-                            #     f"{sequence_name}.withref.{ref_name}.fail-paranoid.fna",
-                            # )
-
-                            paranoid_dict = {
-                                "sequence_name": sequence_name,
-                                # "qryfile": qryfile,
-                                # "reffile": reffile,
-                                # "output_paranoid": output_paranoid,
-                            }
-                        else:
-                            paranoid_dict = {}
-
-                        if paranoid_dict:
-                            list_fail_sequences.append(paranoid_dict)
-                        elif not paranoid_dict:
-                            passed_sequences_list.append(sequence_data)
-                    # sequence_name = sequence_data["name"]
-                    # passed_sequences_list.append(sequence_data)
-
-            except Exception as e:
-                LOGGER.error("\n------- Fatal Error ---------")
-                LOGGER.error(traceback.format_exc())
-                LOGGER.error("\nDebugging Information:")
-                LOGGER.error(e)
-                traceback.print_exc()
-                LOGGER.error("\n During insert:")
-                LOGGER.error(sequence_data)
-                sys.exit("Unknown import error")
-
-        count_sequence = total_sequences - len(list_fail_sequences)
-        LOGGER.info(f"Total passed sequences: {count_sequence}")
+        count_sample = total_sequences - len(list_fail_sequences)
+        LOGGER.info(f"Total passed samples: {count_sample}")
 
         if list_fail_sequences:
             LOGGER.warning(
-                "Some sequences fail in sanity check; please check import.log under the cache directory."
+                "Some samples fail in sanity check; "
+                "please check import.log under the cache directory."
             )
-            # LOGGER.info(f"Total Fail: {len(list_fail_sequences)}.")
+            # LOGGER.info(f"Total Fail: {len(list_fail_samples)}.")
 
             # NOTE: comment this part, for now, we need to discuss which
-            # information we want to report for the failed sequence.
-            # self.paranoid_align_multi(list_fail_sequences, threads)
+            # information we want to report for the failed sample.
+            # self.paranoid_align_multi(list_fail_samples, threads)
 
-            # currently, we report only failed sequence IDs.
-            self.error_logfile_obj.write("Fail sequence during alignment:----\n")
-            LOGGER.warning("Failed sequence IDs:")
-            for fail_sequence in list_fail_sequences:
-                self.error_logfile_obj.write(f"{fail_sequence['sequence_name']}\n")
-                LOGGER.warning(fail_sequence["sequence_name"])
+            # currently, we report only failed sample IDs.
+            self.error_logfile_obj.write("Fail sample during alignment:----\n")
+            LOGGER.warning("Failed sample IDs:")
+            for fail_sample in list_fail_sequences:
+                self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
+                LOGGER.warning(fail_sample["sample_name"])
             if must_pass_paranoid:
                 sys.exit("Some sequences failed the paranoid test, aborting.")
 
         return passed_sequences_list
+
+    def process_paranoid_batch_worker(  # noqa: C901
+        self, cache_instance_data, **sequence_data
+    ):
+        """
+        Standalone worker function for paranoid batch processing using mpire.
+
+        Args:
+            cache_instance_data: Dictionary containing necessary data from cache instance
+            **sequence_data: Sequence data as keyword arguments (unpacked from dict)
+
+        Returns:
+            Tuple of ([passed_sequence] or [], [failed_sequence] or [])
+        """
+        # Initialize logger for this worker
+        worker_logger = LoggingConfigurator.get_logger()
+
+        try:
+            iter_dna_list = []
+            batch_passed = []
+            batch_failed = []
+
+            var_parquet_file_path = sequence_data.get("var_parquet_file")
+
+            # NOTE: right now, we no longer need var_file.
+            if "var_file" in sequence_data:
+                del sequence_data["var_file"]
+            if "lift_file" in sequence_data:
+                del sequence_data["lift_file"]
+
+            if var_parquet_file_path is not None:
+                # SECTION:ReadVar
+                var_df = pd.read_parquet(var_parquet_file_path)
+
+                if not var_df.empty:
+                    nt_df = var_df[(var_df["type"] == "nt")]
+                    iter_dna_list = nt_df[["ref", "alt", "start", "end"]].to_dict(
+                        "records"
+                    )
+                    worker_logger.debug(
+                        f"Sequence {sequence_data['name']}: Found {len(iter_dna_list)} mutations"
+                    )
+                else:
+                    worker_logger.warning(
+                        f"Paranoid test: var file ({var_parquet_file_path}) is empty for sample {sequence_data['name']}"
+                    )
+
+                # SECTION: Paranoid
+                if sequence_data["seqhash"] is not None:
+                    ref_sequence = cache_instance_data["refmols"][
+                        sequence_data["source_acc"]
+                    ]["sequence"]
+                    seq = list(ref_sequence)
+
+                    prefix = ""
+                    gaps = {".", " "}
+                    sequence_name = sequence_data["name"]
+
+                    for vardata in iter_dna_list:
+                        if vardata["alt"] in gaps:
+                            for i in range(vardata["start"], vardata["end"]):
+                                seq[i] = ""
+                        elif vardata["alt"] == ".":
+                            for i in range(vardata["start"], vardata["end"]):
+                                seq[i] = ""
+                        elif vardata["start"] >= 0:
+                            seq[vardata["start"]] = vardata["alt"]
+                        else:
+                            prefix = vardata["alt"]
+
+                    # seq is now a restored version from variant dict.
+                    seq = prefix + "".join(seq)
+                    with open(sequence_data["seq_file"], "r") as handle:
+                        orig_seq = handle.read()
+
+                    seq = ">" + sequence_data["seqhash"] + "\n" + seq + "\n"
+
+                    if seq != orig_seq:
+                        worker_logger.warning(
+                            f"Failed paranoid test for sequence '{sequence_name}'"
+                        )
+                        with open(
+                            os.path.join(
+                                cache_instance_data["error_dir"],
+                                f"{sequence_name}.error.var",
+                            ),
+                            "w+",
+                        ) as handle:
+                            for vardata in iter_dna_list:
+                                handle.write(str(vardata) + "\n")
+
+                        paranoid_dict = {"sequence_name": sequence_name}
+                        batch_failed.append(paranoid_dict)
+                    else:
+                        worker_logger.debug(
+                            f"Sequence {sequence_data['name']}: Passed paranoid check with {len(iter_dna_list)} mutations"
+                        )
+                        batch_passed.append(sequence_data)
+            else:
+                # No var_parquet_file (identical to reference)
+                batch_passed.append(sequence_data)
+
+            # Return as lists for consistency with batch processing
+            return (batch_passed, batch_failed)
+
+        except Exception as e:
+            worker_logger.error(
+                f"Error processing sample {sequence_data.get('name', 'unknown')}: {str(e)}"
+            )
+            worker_logger.error(traceback.format_exc())
+            raise
+            # Return error as failed sequence
+            # return (
+            #     [],
+            #     [{"sequence_name": sequence_data.get("name", "unknown"), "error": str(e)}],
+            # )
 
     def build_snpeff_cache(self, reference):  # noqa: C901
         """Build snpEff cache for the given reference,

@@ -1,2 +1,3 @@
 apps/cli/test-data/MN908947.nextclade.gb
 apps/cli/test-data/SARS-COV2_12.fasta
+test-data/sars-cov-2/SARS-CoV-2_1000_o.tsv.xz
