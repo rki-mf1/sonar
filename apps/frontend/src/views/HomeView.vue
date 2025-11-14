@@ -121,7 +121,7 @@ export default {
           this.loading = false
         }, 50) // delay to trigger loading animation -> there has to be a better solution!
       } else {
-        alert('Please select at least an organism and an accession.')
+        alert('Please select at least an organism and an reference accession.')
       }
     },
   },

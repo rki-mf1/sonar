@@ -68,8 +68,8 @@ export default {
   },
   computed: {
     menuItems() {
-      const { accession, data_sets } = this.samplesStore
-      const selectionQuery = buildSelectionQuery(accession, data_sets)
+      const { reference_accession, data_sets } = this.samplesStore
+      const selectionQuery = buildSelectionQuery(reference_accession, data_sets)
 
       const items = [{ label: 'Home', icon: 'pi pi-home', route: '/' }]
       // dont show menu items 'Table'/'Plots' for 'Sample' view
@@ -139,12 +139,12 @@ export default {
       if (!['Table', 'Plots'].includes((route.name as string) ?? '')) {
         return
       }
-      const accession =
-        typeof route.query?.accession === 'string'
-          ? safeDecodeURIComponent(route.query.accession)
+      const reference_accession =
+        typeof route.query?.reference_accession === 'string'
+          ? safeDecodeURIComponent(route.query.reference_accession)
           : null
       const datasets = decodeDatasetsParam(route.query?.dataset)
-      this.samplesStore.setDataset(this.samplesStore.organism, accession, datasets)
+      this.samplesStore.setDataset(this.samplesStore.organism, reference_accession, datasets)
     },
   },
 }

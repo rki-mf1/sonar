@@ -65,10 +65,10 @@ function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
     }
   }
   for (const filter of filterGroup.filters.repliconFilters) {
-    if (filter.accession) {
+    if (filter.replicon_accession) {
       summary.andFilter.push({
         label: filter.label,
-        accession: filter.accession,
+        replicon_accession: filter.replicon_accession,
         exclude: filter.exclude,
       })
     }

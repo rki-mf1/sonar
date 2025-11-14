@@ -234,8 +234,8 @@ export default {
   },
   computed: {
     selectionKey(): string {
-      const { accession, dataset = [] } = this.$route.query
-      return JSON.stringify({ accession, dataset })
+      const { reference_accession, dataset = [] } = this.$route.query
+      return JSON.stringify({ reference_accession, dataset })
     },
     isFeatureSelectionValid(): boolean {
       if (
@@ -266,17 +266,17 @@ export default {
   methods: {
     // keep plots in sync with route params
     applySelectionFromRoute() {
-      const accession =
-        typeof this.$route.query.accession === 'string'
-          ? safeDecodeURIComponent(this.$route.query.accession)
+      const reference_accession =
+        typeof this.$route.query.reference_accession === 'string'
+          ? safeDecodeURIComponent(this.$route.query.reference_accession)
           : null
-      if (!accession) {
-        console.log('Invalid URL: missing accession parameter.')
+      if (!reference_accession) {
+        console.log('Invalid URL: missing reference_accession parameter.')
         router.replace({ name: 'Home' })
         return
       }
       const datasets = decodeDatasetsParam(this.$route.query.dataset)
-      this.samplesStore.setDataset(this.samplesStore.organism ?? null, accession, datasets)
+      this.samplesStore.setDataset(this.samplesStore.organism ?? null, reference_accession, datasets)
       this.loadPlotsData()
     },
     loadPlotsData() {

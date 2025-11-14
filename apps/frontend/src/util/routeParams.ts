@@ -19,10 +19,10 @@ export function decodeDatasetsParam(source: unknown): (string | null)[] {
   return []
 }
 
-export function buildSelectionQuery(accession: string | null, datasets: (string | null)[]) {
+export function buildSelectionQuery(reference_accession: string | null, datasets: (string | null)[]) {
   const query: Record<string, string | string[]> = {}
-  if (accession) {
-    query.accession = accession
+  if (reference_accession) {
+    query.reference_accession = reference_accession
   }
   if (datasets?.length) {
     query.dataset = datasets.map((value) => value ?? '')

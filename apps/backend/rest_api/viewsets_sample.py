@@ -263,6 +263,9 @@ class SampleViewSet(
         return method(**filter_kwargs)
 
     def _get_filtered_queryset(self, request: Request):
+        """
+        retrieve filtered queryset Sample based on request parameters
+        """
         if not (filter_params := request.query_params.get("filters")):
             return models.Sample.objects.all()
         filters = json.loads(filter_params)
@@ -653,11 +656,10 @@ class SampleViewSet(
         the earliest and latest collection_date.
         Weeks with zero records will be present with value 0.
         """
-
         weekly_qs = (
             queryset.annotate(week=TruncWeek("collection_date"))
             .values("week")
-            .annotate(count=Count("id"))
+            .annotate(count=Count("id", distinct=True))
             .order_by("week")
         )
 
@@ -756,6 +758,7 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def plot_samples_per_week(self, request: Request, *args, **kwargs):
+        print(request)
         queryset = self._get_filtered_queryset(request).filter(
             collection_date__isnull=False
         )
