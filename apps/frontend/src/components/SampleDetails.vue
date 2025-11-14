@@ -37,11 +37,11 @@
           <!-- Variants for this replicon -->
           <div style="white-space: normal; word-wrap: break-word; margin-left: 14px">
             <GenomicProfileLabel
-              v-for="(annotations, variant, idx) in repliconData"
-              :key="variant"
-              :variant-string="variant"
-              :annotations="annotations"
-              :is-last="idx === Object.keys(repliconData).length - 1"
+              v-for="(variantKey, idx) in Object.keys(repliconData as Record<string, any>)"
+              :key="variantKey"
+              :variant-string="variantKey"
+              :annotations="(repliconData as Record<string, any>)[variantKey]"
+              :is-last="idx === Object.keys(repliconData as Record<string, any>).length - 1"
             />
           </div>
         </div>
@@ -60,10 +60,10 @@
           </div>
           <div style="white-space: normal; word-wrap: break-word">
             <GenomicProfileLabel
-              v-for="(variant, index) in AA_mutations"
-              :key="variant"
-              :variant-string="variant"
-              :is-last="index === Object.keys(AA_mutations).length - 1"
+              v-for="(variantKey, idx) in Object.keys(AA_mutations as Record<string, number>)"
+              :key="variantKey"
+              :variant-string="variantKey"
+              :is-last="idx === Object.keys(AA_mutations as Record<string, number>).length - 1"
             />
           </div>
         </div>

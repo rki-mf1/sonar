@@ -276,7 +276,11 @@ export default {
         return
       }
       const datasets = decodeDatasetsParam(this.$route.query.dataset)
-      this.samplesStore.setDataset(this.samplesStore.organism ?? null, reference_accession, datasets)
+      this.samplesStore.setDataset(
+        this.samplesStore.organism ?? null,
+        reference_accession,
+        datasets,
+      )
       this.loadPlotsData()
     },
     loadPlotsData() {
