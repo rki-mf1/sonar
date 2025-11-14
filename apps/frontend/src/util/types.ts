@@ -68,7 +68,7 @@ export type ProfileFilter = {
 
 export type RepliconFilter = {
   label: string
-  accession: string
+  replicon_accession: string
   exclude: boolean
 }
 
@@ -88,6 +88,7 @@ export type FilterGroupFilters = {
 }
 
 export type FilterGroupRoot = {
+  reference_accession?: string
   limit?: number
   offset?: number
   filters: FilterGroupFilters

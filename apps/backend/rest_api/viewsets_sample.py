@@ -8,11 +8,10 @@ from datetime import timedelta
 import json
 import os
 import re
+import time
 import traceback
 from typing import Generator
 
-from dateutil.rrule import rrule
-from dateutil.rrule import WEEKLY
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
 from django.db.models import BooleanField
@@ -20,9 +19,8 @@ from django.db.models import Case
 from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
+from django.db.models import F
 from django.db.models import IntegerField
-from django.db.models import Max
-from django.db.models import Min
 from django.db.models import OuterRef
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -44,11 +42,13 @@ from rest_framework.response import Response
 from covsonar_backend.settings import DEBUG
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from rest_api.data_entry.sample_job import delete_sample
+from rest_api.data_entry.sample_job import delete_samples
+from rest_api.data_entry.sample_job import delete_sequences
 from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
 from rest_api.utils import define_profile
 from rest_api.utils import get_distinct_gene_symbols
+from rest_api.utils import get_distinct_replicon_accessions
 from rest_api.utils import resolve_ambiguous_NT_AA
 from rest_api.utils import Response
 from rest_api.utils import strtobool
@@ -83,6 +83,47 @@ class SampleViewSet(
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
     filter_fields = ["name"]
+    _cached_gene_symbols = None
+    _cached_replicons = None
+    _cache_timestamp = None
+    CACHE_TTL = 3600 * 24  # 1 day
+
+    @classmethod
+    def get_gene_symbols(cls, force_refresh=False):
+        """
+        update cached gene symbol set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_gene_symbols is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            symbols = get_distinct_gene_symbols()
+            cls._cached_gene_symbols = set(symbols)
+
+        return cls._cached_gene_symbols
+
+    @classmethod
+    def get_replicons(cls, force_refresh=False):
+        """
+        update cached replicon accession set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_replicons is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            replicons_list = get_distinct_replicon_accessions()
+            cls._cached_replicons = set(replicons_list)
+            cls._cache_timestamp = now
+
+        return cls._cached_replicons
 
     @property
     def filter_label_to_methods(self):
@@ -108,8 +149,8 @@ class SampleViewSet(
         queryset = models.Sample.objects.all()
         if reference:
             queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=reference
-            )
+                sequences__alignments__replicon__reference__accession=reference
+            ).distinct()
         response_dict["samples_total"] = queryset.count()
 
         first_sample = (
@@ -135,21 +176,136 @@ class SampleViewSet(
 
         return response_dict
 
+    def _get_reference_replicon_count(self, reference_accession):
+        """
+        Returns the number of replicons for a given reference.
+        Returns None if reference not found.
+        """
+        return models.Replicon.objects.filter(
+            reference__accession=reference_accession
+        ).count()
+
+    def _resolve_replicon_for_query(self, parsed_mutation, reference_accession):
+        """
+        Determines which replicon to use for mutation query.
+
+        Returns:
+            - replicon_accession (str) if successful
+            - Raises ValueError if ambiguous (multiple replicons without explicit accession)
+        """
+        # case 1: replicon accession in parsed mutation
+        if (
+            "replicon_accession" in parsed_mutation
+            and parsed_mutation["replicon_accession"]
+        ):
+            return parsed_mutation["replicon_accession"]
+
+        # case 2: no replicon accession in parsed mutation
+        replicon_count = self._get_reference_replicon_count(reference_accession)
+        print("replicon_count", replicon_count)
+
+        if replicon_count is None or replicon_count == 0:
+            raise ValueError(f"No replicons found for reference {reference_accession}.")
+
+        if replicon_count == 1:
+            # one replicon: use this replicon
+            replicon = models.Replicon.objects.get(
+                reference__accession=reference_accession
+            )
+            return replicon.accession
+
+        # case 3: multiple replicons per reference, parsed mutation without replicon accession
+        if replicon_count > 1:
+            raise ValueError(
+                f"Reference {reference_accession} has {replicon_count} replicons. "
+                f"Please specify replicon accession (e.g., NC_026438.1:A425G)."
+            )
+
+    def resolve_recursive_genome_filter(
+        self, filters, reference_accession=None, depth=0
+    ) -> Q:
+        indent = "  " * depth
+        LOGGER.debug(f"{indent}resolve_genome_filter called, depth={depth}")
+        LOGGER.debug(f"{indent}filters: {filters}")
+        q_obj = Q()
+        # Process single filter at current level
+        if "label" in filters:
+            q_obj &= self.eval_basic_filter(filters, reference_accession)
+
+        # Process AND filters
+        for f in filters.get("andFilter", []):
+            if "orFilter" in f or "andFilter" in f:
+                # Recursive call for nested filters
+                q_obj &= self.resolve_recursive_genome_filter(
+                    f, reference_accession, depth + 1
+                )
+            else:
+                q_obj &= self.eval_basic_filter(f, reference_accession)
+
+        # Process OR filters
+        for or_filter in filters.get("orFilter", []):
+            q_obj |= self.resolve_recursive_genome_filter(
+                or_filter, reference_accession, depth + 1
+            )
+        return q_obj
+
+    def eval_basic_filter(self, filter_dict, reference_accession=None) -> Q:
+        """
+        Evaluate a single basic filter.
+        """
+        label = filter_dict.get("label")
+        method = self.filter_label_to_methods.get(label)
+        if not method:
+            raise Exception(f"Filter method not found for: {label}")
+        # Pass reference_accession to filter methods
+        filter_kwargs = {**filter_dict, "reference_accession": reference_accession}
+
+        return method(**filter_kwargs)
+
+    def _get_filtered_queryset(self, request: Request):
+        """
+        retrieve filtered queryset Sample based on request parameters
+        """
+        if not (filter_params := request.query_params.get("filters")):
+            return models.Sample.objects.all()
+        filters = json.loads(filter_params)
+        if "reference_accession" in request.query_params:
+            reference_accession = (
+                request.query_params.get("reference_accession").strip('"').strip()
+            )
+        else:
+            reference_accession = filters.get("reference_accession")
+
+        LOGGER.info(
+            f"Genomes Query, conditions: {filters}, reference: {reference_accession}"
+        )
+
+        if not reference_accession:
+            raise ValueError("Reference accession is required in filters.")
+
+        q_filter = self.resolve_recursive_genome_filter(filters, reference_accession)
+        queryset = (
+            models.Sample.objects.filter(
+                q_filter,
+                sequences__alignments__replicon__reference__accession=reference_accession,
+            )
+            .prefetch_related(
+                "sequences",
+                "sequences__alignments",
+                "sequences__alignments__replicon",
+                "sequences__alignments__replicon__reference",
+            )
+            .distinct()
+        )
+        return queryset
+
+    # actions
     @action(detail=False, methods=["get"])
     def statistics(self, request: Request, *args, **kwargs):
         response_dict = SampleViewSet.get_statistics(
             reference=request.query_params.get("reference")
         )
         return Response(data=response_dict, status=status.HTTP_200_OK)
-
-    def _get_filtered_queryset(self, request: Request):
-        queryset = models.Sample.objects.all()
-        if filter_params := request.query_params.get("filters"):
-            filters = json.loads(filter_params)
-            LOGGER.info(f"Genomes Query, conditions: {filters}")
-            queryset = models.Sample.objects.filter(self.resolve_genome_filter(filters))
-
-        return queryset
 
     @action(detail=False, methods=["get"])
     def filtered_statistics(self, request: Request, *args, **kwargs):
@@ -211,25 +367,25 @@ class SampleViewSet(
                 proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
 
             # optimize queryset by prefetching and storing profiles as attributes
-            queryset = queryset.select_related("sequence").prefetch_related(
+            queryset = queryset.prefetch_related(
+                "sequences",
                 "properties__property",
                 Prefetch(
-                    "sequence__alignments__nucleotide_mutations",
+                    "sequences__alignments__nucleotide_mutations",
                     queryset=genomic_profiles_qs,
                     to_attr="genomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__amino_acid_mutations",
+                    "sequences__alignments__amino_acid_mutations",
                     queryset=proteomic_profiles_qs,
                     to_attr="proteomic_profiles",
                 ),
                 Prefetch(
-                    "sequence__alignments__nucleotide_mutations__annotations",
+                    "sequences__alignments__nucleotide_mutations__annotations",
                     queryset=annotation_qs,
                     to_attr="alignment_annotations",
                 ),
             )
-
             # apply ordering if specified
             ordering = request.query_params.get("ordering")
             if ordering:
@@ -394,78 +550,73 @@ class SampleViewSet(
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
-        def add_annotation(name, filter_kwargs):
-            annotations[f"not_null_count_{name}"] = Count(
-                Case(
-                    When(
-                        Exists(
-                            models.Sample.objects.filter(
-                                id=OuterRef("id"), **filter_kwargs
-                            )
-                        ),
-                        then=1,
-                    ),
-                    output_field=IntegerField(),
-                )
+        queryset_nt = queryset.annotate(
+            mutation_count=Count(
+                "sequences__alignments__nucleotide_mutations", distinct=True
             )
-
-        # check genomic and proteomic profiles
-        add_annotation(
-            "genomic_profiles",
-            {"sequence__alignments__nucleotide_mutations__isnull": False},
         )
-        add_annotation(
-            "proteomic_profiles",
-            {"sequence__alignments__amino_acid_mutations__isnull": False},
+        queryset_aa = queryset.annotate(
+            mutation_count=Count(
+                "sequences__alignments__amino_acid_mutations", distinct=True
+            )
         )
+        samples_with_nt_mutations = queryset_nt.filter(mutation_count__gt=0)
+        samples_with_aa_mutations = queryset_aa.filter(mutation_count__gt=0)
 
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
                 field_name = field.name
+
                 if field.get_internal_type() == "CharField":
-                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
-                        **{field_name: ""}
+                    # Count non-empty strings
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        "id",
+                        filter=Q(**{f"{field_name}__isnull": False})
+                        & ~Q(**{f"{field_name}": ""}),
+                        distinct=True,
                     )
                 else:
-                    condition = Q(**{f"{field_name}__isnull": False})
+                    # Count non-null values
+                    annotations[f"not_null_count_{field_name}"] = Count(
+                        "id",
+                        filter=Q(**{f"{field_name}__isnull": False}),
+                        distinct=True,
+                    )
 
-                annotations[f"not_null_count_{field_name}"] = Count(
-                    Case(When(condition, then=1), output_field=IntegerField())
-                )
-
-        # mapping from property name to datatype
         property_to_datatype = dict(
             models.Property.objects.values_list("name", "datatype")
         )
         property_names = PropertyViewSet.get_custom_property_names()
-        # annotate custom properties based on datatype
+
         for property_name in property_names:
             datatype = property_to_datatype.get(property_name)
             if not datatype:
                 LOGGER.warning(f"Property {property_name} not found")
                 continue
+
             try:
                 annotations[f"not_null_count_{property_name}"] = Count(
-                    Case(
-                        When(
-                            Exists(
-                                models.Sample.objects.filter(
-                                    id=OuterRef("id"),
-                                    properties__property__name=property_name,
-                                    **{f"properties__{datatype}__isnull": False},
-                                )
-                            ),
-                            then=1,
-                        ),
-                        output_field=IntegerField(),
-                    )
+                    "properties",
+                    filter=(
+                        Q(properties__property__name=property_name)
+                        & Q(**{f"properties__{datatype}__isnull": False})
+                    ),
+                    distinct=True,
                 )
             except Exception as e:
                 LOGGER.error(
                     f"Error with property {property_name} (datatype: {datatype}): {e}"
                 )
 
+        # Apply aggregations
         result = queryset.aggregate(**annotations)
+        result["not_null_count_genomic_profiles"] = (
+            samples_with_nt_mutations.count()
+        )  # len(queryset)
+        result["not_null_count_proteomic_profiles"] = (
+            samples_with_aa_mutations.count()
+        )  # len(queryset)
+
         return {
             key.replace("not_null_count_", ""): value
             for key, value in result.items()
@@ -480,7 +631,7 @@ class SampleViewSet(
         queryset = models.Sample.objects.values_list("lineage", flat=True)
         if ref := request.query_params.get("reference"):
             queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=ref
+                sequences__alignments__replicon__reference__accession=ref
             )
         distinct_lineages = queryset.distinct()
 
@@ -505,11 +656,10 @@ class SampleViewSet(
         the earliest and latest collection_date.
         Weeks with zero records will be present with value 0.
         """
-
         weekly_qs = (
             queryset.annotate(week=TruncWeek("collection_date"))
             .values("week")
-            .annotate(count=Count("id"))
+            .annotate(count=Count("id", distinct=True))
             .order_by("week")
         )
 
@@ -608,6 +758,7 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def plot_samples_per_week(self, request: Request, *args, **kwargs):
+        print(request)
         queryset = self._get_filtered_queryset(request).filter(
             collection_date__isnull=False
         )
@@ -637,7 +788,6 @@ class SampleViewSet(
     @action(detail=False, methods=["get"])
     def plot_metadata_coverage(self, request: Request, *args, **kwargs):
         queryset = self._get_filtered_queryset(request)
-
         result_dict = {}
         result_dict["metadata_coverage"] = SampleViewSet.get_metadata_coverage(queryset)
         return Response(data=result_dict)
@@ -779,55 +929,43 @@ class SampleViewSet(
 
         return Response(data=result_dict)
 
-    def resolve_genome_filter(self, filters) -> Q:
-        q_obj = Q()
-        for filter in filters.get("andFilter", []):
-            if "orFilter" in filter or "andFilter" in filter:
-                q_obj &= self.resolve_genome_filter(filter)
-            else:
-                q_obj &= self.eval_basic_filter(q_obj, filter)
-        if "label" in filters:
-            q_obj &= self.eval_basic_filter(q_obj, filters)
-        for or_filter in filters.get("orFilter", []):
-            q_obj |= self.resolve_genome_filter(or_filter)
-        return q_obj
-
-    def eval_basic_filter(self, q_obj, filter):
-        method = self.filter_label_to_methods.get(filter.get("label"))
-        if method:
-            q_obj = method(qs=q_obj, **filter)
-        else:
-            raise Exception(f"filter_method not found for:{filter.get('label')}")
-        return q_obj
-
     def filter_label(
         self,
         value,
+        reference_accession=None,
         exclude: bool = False,
         *args,
         **kwargs,
     ):
         final_query = Q()
-
         # Split the input value by either commas, semicolom, whitespace, or combinations of these,
         # remove seperators from string end
         mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
         for mutation in mutations:
-            parsed_mutation = define_profile(mutation)
-            # check valid protien name
+            parsed_mutation = define_profile(
+                mutation, self.get_gene_symbols(), self.get_replicons()
+            )
+            # resolve replicon accession
+            if parsed_mutation["label"] in ["SNP Nt", "Ins Nt", "Del Nt"]:
+                replicon_accession = self._resolve_replicon_for_query(
+                    parsed_mutation, reference_accession
+                )
+                parsed_mutation["replicon_accession"] = replicon_accession
+            # Validate protein name for AA mutations
             if (
                 "protein_symbol" in parsed_mutation
-                and parsed_mutation["protein_symbol"] not in get_distinct_gene_symbols()
+                and parsed_mutation["protein_symbol"] not in self.get_gene_symbols()
             ):
                 raise ValueError(
                     f"Invalid protein name: {parsed_mutation['protein_symbol']}."
                 )
-            # Check the parsed mutation type and call the appropriate filter function
+            # Check the parsed mutation type and call appropriate filter function
             if parsed_mutation.get("label") == "SNP Nt":
                 q_obj = self.filter_snp_profile_nt(
                     ref_nuc=parsed_mutation["ref_nuc"],
                     ref_pos=int(parsed_mutation["ref_pos"]),
                     alt_nuc=parsed_mutation["alt_nuc"],
+                    replicon_accession=parsed_mutation["replicon_accession"],
                 )
 
             elif parsed_mutation.get("label") == "SNP AA":
@@ -842,6 +980,7 @@ class SampleViewSet(
                 q_obj = self.filter_del_profile_nt(
                     first_deleted=parsed_mutation["first_deleted"],
                     last_deleted=parsed_mutation.get("last_deleted", ""),
+                    replicon_accession=parsed_mutation["replicon_accession"],
                 )
 
             elif parsed_mutation.get("label") == "Del AA":
@@ -856,6 +995,7 @@ class SampleViewSet(
                     ref_nuc=parsed_mutation["ref_nuc"],
                     ref_pos=int(parsed_mutation["ref_pos"]),
                     alt_nuc=parsed_mutation["alt_nuc"],
+                    replicon_accession=parsed_mutation["replicon_accession"],
                 )
 
             elif parsed_mutation.get("label") == "Ins AA":
@@ -871,7 +1011,6 @@ class SampleViewSet(
                 raise ValueError(
                     f"Unsupported mutation type: {parsed_mutation.get('label')}"
                 )
-
             # Combine queries with AND operator (&) for each mutation
             final_query &= q_obj
 
@@ -895,7 +1034,7 @@ class SampleViewSet(
         )
 
         alignment_qs = models.Alignment.objects.filter(**query)
-        filters = {"sequence__alignments__in": alignment_qs}
+        filters = {"sequences__alignments__in": alignment_qs}
 
         if exclude:
             return ~Q(**filters)
@@ -939,41 +1078,74 @@ class SampleViewSet(
             return ~Q(**query)
         return Q(**query)
 
+    def filter_nt_mutations(
+        self,
+        mutation_condition,
+        exclude: bool = False,
+        replicon_accession: str = None,
+    ):
+        if replicon_accession:
+            mutation_condition &= Q(replicon__accession=replicon_accession)
+
+        # Use EXISTS subquery instead of JOIN
+        mutation_subquery = models.NucleotideMutation.objects.filter(
+            mutation_condition, alignments__sequence__samples=OuterRef("pk")
+        )
+
+        if exclude:
+            return Q(
+                pk__in=models.Sample.objects.exclude(
+                    pk__in=models.Sample.objects.filter(Exists(mutation_subquery))
+                )
+            )
+
+        return Q(Exists(mutation_subquery))
+
+    def filter_aa_mutations(
+        self,
+        mutation_condition,
+        exclude: bool = False,
+        replicon_accession: str = None,
+    ):
+        if replicon_accession:
+            mutation_condition &= Q(replicon__accession=replicon_accession)
+
+        # Use EXISTS subquery instead of JOIN
+        mutation_subquery = models.AminoAcidMutation.objects.filter(
+            mutation_condition, alignments__sequence__samples=OuterRef("pk")
+        )
+
+        if exclude:
+            return Q(
+                pk__in=models.Sample.objects.exclude(
+                    pk__in=models.Sample.objects.filter(Exists(mutation_subquery))
+                )
+            )
+
+        return Q(Exists(mutation_subquery))
+
     def filter_snp_profile_nt(
         self,
         # gene_symbol: str,
         ref_nuc: str,
         ref_pos: int,
         alt_nuc: str,
+        replicon_accession: str = None,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nuc (e.g. T28175C).
-        # Create Q() objects for each condition
         if alt_nuc == "N":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="nt", char=alt_nuc):
-                mutation_alt = mutation_alt | Q(mutations__alt=x)
-            # Unsupported lookup 'alt_in' for ForeignKey or join on the field not permitted.
-            # mutation_alt = Q(
-            #     mutations__alt_in=resolve_ambiguous_NT_AA(type="nt", char = alt_nuc)
-            # )
+                mutation_alt |= Q(alt=x)
         else:
-            if alt_nuc == "n":
-                alt_nuc = "N"
+            mutation_alt = Q(alt=alt_nuc if alt_nuc != "n" else "N")
 
-            mutation_alt = Q(nucleotide_mutations__alt=alt_nuc)
-        mutation_condition = (
-            Q(nucleotide_mutations__end=ref_pos)
-            & Q(nucleotide_mutations__ref=ref_nuc)
-            & (mutation_alt)
-        )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-        filters = {"sequence__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        mutation_condition = Q(end=ref_pos) & Q(ref=ref_nuc) & mutation_alt
+
+        return self.filter_nt_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_snp_profile_aa(
         self,
@@ -981,110 +1153,87 @@ class SampleViewSet(
         ref_aa: str,
         ref_pos: str,
         alt_aa: str,
+        replicon_accession: str = None,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aa (e.g. OPG098:E162K)
-        if protein_symbol not in get_distinct_gene_symbols():
+        if protein_symbol not in self.get_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
-                mutation_alt = mutation_alt | Q(amino_acid_mutations__alt=x)
+                mutation_alt | Q(alt=x)
         else:
-            if alt_aa == "x":
-                alt_aa = "X"
-            mutation_alt = Q(amino_acid_mutations__alt=alt_aa)
+            mutation_alt = Q(alt=alt_aa if alt_aa != "x" else "X")
 
         mutation_condition = (
-            Q(amino_acid_mutations__end=ref_pos)
-            & Q(amino_acid_mutations__ref=ref_aa)
+            Q(end=ref_pos)
+            & Q(ref=ref_aa)
             & (mutation_alt)
-            & Q(amino_acid_mutations__cds__gene__symbol=protein_symbol)
+            & Q(cds__gene__symbol=protein_symbol)
         )
-        alignment_qs = models.Alignment.objects.filter(mutation_condition)
-
-        filters = {"sequence__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        return self.filter_aa_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_del_profile_nt(
         self,
         first_deleted: str,
         last_deleted: str,
+        replicon_accession: str,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
-        """
-        add new field exact match or not
-        """
         # For NT: del:first_NT_deleted-last_NT_deleted (e.g. del:133177-133186).
         # in case only single deltion bp
         if last_deleted == "":
             last_deleted = first_deleted
 
-        alignment_qs = models.Alignment.objects.filter(
-            nucleotide_mutations__start=int(first_deleted) - 1,
-            nucleotide_mutations__end=last_deleted,
-            nucleotide_mutations__alt="",
+        mutation_condition = (
+            Q(start=int(first_deleted) - 1) & Q(end=int(last_deleted)) & Q(alt="")
         )
-        filters = {"sequence__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        return self.filter_nt_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_del_profile_aa(
         self,
         protein_symbol: str,
         first_deleted: str,
         last_deleted: str,
+        replicon_accession: str = None,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:del:first_AA_deleted-last_AA_deleted (e.g. OPG197:del:34-35)
-        if protein_symbol not in get_distinct_gene_symbols():
+        if protein_symbol not in self.get_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
         # in case only single deltion bp
         if last_deleted == "":
             last_deleted = first_deleted
 
-        alignment_qs = models.Alignment.objects.filter(
-            # search with case insensitive ORF1ab = orf1ab
-            amino_acid_mutations__cds__gene__symbol__iexact=protein_symbol,
-            amino_acid_mutations__start=int(first_deleted) - 1,
-            amino_acid_mutations__end=last_deleted,
-            amino_acid_mutations__alt="",
+        mutation_condition = (
+            Q(cds__gene__symbol__iexact=protein_symbol)
+            & Q(start=int(first_deleted) - 1)
+            & Q(end=int(last_deleted))
+            & Q(alt="")
         )
 
-        filters = {"sequence__alignments__in": alignment_qs}
-
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        return self.filter_aa_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_ins_profile_nt(
         self,
         ref_nuc: str,
         ref_pos: int,
         alt_nuc: str,
+        replicon_accession: str,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For NT: ref_nuc followed by ref_pos followed by alt_nucs (e.g. T133102TTT)
-        alignment_qs = models.Alignment.objects.filter(
-            nucleotide_mutations__end=ref_pos,
-            nucleotide_mutations__ref=ref_nuc,
-            nucleotide_mutations__alt=alt_nuc,
-        )
-        filters = {"sequence__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+        mutation_condition = Q(end=ref_pos) & Q(ref=ref_nuc) & Q(alt=alt_nuc)
+        return self.filter_nt_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_ins_profile_aa(
         self,
@@ -1092,23 +1241,22 @@ class SampleViewSet(
         ref_aa: str,
         ref_pos: int,
         alt_aa: str,
+        replicon_accession: str = None,
         exclude: bool = False,
         *args,
         **kwargs,
     ) -> Q:
         # For AA: protein_symbol:ref_aa followed by ref_pos followed by alt_aas (e.g. OPG197:A34AK)
-        if protein_symbol not in get_distinct_gene_symbols():
+        if protein_symbol not in self.get_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
-        alignment_qs = models.Alignment.objects.filter(
-            amino_acid_mutations__end=ref_pos,
-            amino_acid_mutations__ref=ref_aa,
-            amino_acid_mutations__alt=alt_aa,
-            amino_acid_mutations__cds__gene__symbol=protein_symbol,
+        mutation_condition = (
+            Q(end=ref_pos)
+            & Q(ref=ref_aa)
+            & Q(alt=alt_aa)
+            & Q(cds__gene__symbol=protein_symbol)
         )
-        filters = {"sequence__alignments__in": alignment_qs}
-        if exclude:
-            return ~Q(**filters)
-        return Q(**filters)
+
+        return self.filter_aa_mutations(mutation_condition, exclude, replicon_accession)
 
     def filter_sample(
         self,
@@ -1135,9 +1283,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__accession=accession)
+            return ~Q(sequences__alignments__replicon__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__accession=accession)
+            return Q(sequences__alignments__replicon__accession=accession)
 
     def filter_reference(
         self,
@@ -1147,9 +1295,9 @@ class SampleViewSet(
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequence__alignments__replicon__reference__accession=accession)
+            return ~Q(sequences__alignments__replicon__reference__accession=accession)
         else:
-            return Q(sequence__alignments__replicon__reference__accession=accession)
+            return Q(sequences__alignments__replicon__reference__accession=accession)
 
     def filter_sublineages(
         self,
@@ -1188,57 +1336,60 @@ class SampleViewSet(
         return file_path
 
     @action(detail=False, methods=["get"])
-    def get_sample_data(self, request: Request, *args, **kwargs):
-        sample_name = request.GET.get("sample_data")
-        if not sample_name:
+    def get_sequence_data(self, request: Request, *args, **kwargs):
+        sequence_name = request.GET.get("sample_data")
+        if not sequence_name:
             return Response(
                 {"detail": "Sample name is missing"}, status=status.HTTP_400_BAD_REQUEST
             )
-        sample_model = (
-            models.Sample.objects.filter(name=sample_name)
-            .extra(select={"sample_id": "sample.id"})
-            .values("sample_id", "name", "sequence__seqhash")
+        sequence = (
+            models.Sequence.objects.filter(name=sequence_name)
+            .annotate(
+                sequence_id=F("id"),
+                sequence_seqhash=F("seqhash"),
+            )
+            .values("sequence_id", "name", "sequence_seqhash")
         )
-        if sample_model:
-            sample_data = list(sample_model)[0]
-            if len(sample_model) > 1:
-                # Not sure ....---
-                print("more than one sample was using same name.")
+        if sequence:
+            sequence_data = list(sequence)[0]
         else:
-            print("Cannot find:", sample_name)
-            sample_data = {}
+            print("Cannot find:", sequence_name)
+            sequence_data = {}
 
-        return Response(data=sample_data)
+        return Response(data=sequence_data)
 
     @action(detail=False, methods=["post"])
-    def get_bulk_sample_data(self, request: Request, *args, **kwargs):
+    def get_bulk_sequence_data(self, request: Request, *args, **kwargs):
         try:
             # Parse the JSON data from the request body
             data = json.loads(request.body.decode("utf-8"))
-            # example to be parsed data: {"sample_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
-            sample_data_list = data.get("sample_data", [])
-            sample_model = (
-                models.Sample.objects.filter(name__in=sample_data_list)
-                .extra(select={"sample_id": "sample.id"})
-                .values("sample_id", "name", "sequence__seqhash")
+            # example to be parsed data: {"sequence_data": ["IMS-SEQ-01", "IMS-SEQ-04", "value3"]}
+            sequence_data_list = data.get("sequence_data", [])
+
+            sequence_model = (
+                models.Sequence.objects.filter(name__in=sequence_data_list)
+                .annotate(
+                    sequence_id=F("id"),
+                    sequence_seqhash=F("seqhash"),
+                )
+                .values("sequence_id", "name", "sequence_seqhash")
             )
             # Convert the QuerySet to a list of dictionaries
-            sample_data = list(sample_model)
+            sequence_data = list(sequence_model)
 
             # Check for missing samples and add them to the result
-            missing_samples = set(sample_data_list) - set(
-                item["name"] for item in sample_data
+            missing_samples = set(sequence_data_list) - set(
+                item["name"] for item in sequence_data
             )
             for missing_sample in missing_samples:
-                sample_data.append(
+                sequence_data.append(
                     {
-                        "sample_id": None,
+                        "sequence_id": None,
                         "name": missing_sample,
-                        "sequence__seqhash": None,
+                        "sequence_seqhash": None,
                     }
                 )
-
-            return Response(sample_data, status=status.HTTP_200_OK)
+            return Response(sequence_data, status=status.HTTP_200_OK)
         except json.JSONDecodeError:
             return Response(
                 {"detail": "Invalid JSON data / structure"},
@@ -1254,9 +1405,22 @@ class SampleViewSet(
             print("Reference Accession:", reference_accession)
             print("Sample List:", sample_list)
 
-        sample_data = delete_sample(sample_list=sample_list)
+        sample_data = delete_samples(sample_list=sample_list)
 
         return Response(data=sample_data)
+
+    @action(detail=False, methods=["post"])
+    def delete_sequence_data(self, request: Request, *args, **kwargs):
+        sequence_data = {}
+        reference_accession = request.data.get("reference_accession", "")
+        sequence_list = json.loads(request.data.get("sequence_list"))
+        if DEBUG:
+            print("Reference Accession:", reference_accession)
+            print("Sequence List:", sequence_list)
+
+        sequence_data = delete_sequences(sequence_list=sequence_list)
+
+        return Response(data=sequence_data)
 
 
 class SampleGenomeViewSet(viewsets.GenericViewSet, generics.mixins.ListModelMixin):

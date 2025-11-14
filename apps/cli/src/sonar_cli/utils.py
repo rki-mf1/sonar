@@ -146,6 +146,10 @@ class sonarUtils:
                 )
                 sys.exit(1)
             sample_id_column = properties["name"]
+            if "sequences" in properties:
+                sequences_id_column = properties["sequences"]
+            else:
+                sequences_id_column = properties["name"]
         else:
             # if prop_links is not provide but csv/tsv given....
             if csv_files or tsv_files:
@@ -217,6 +221,7 @@ class sonarUtils:
                 if not no_upload_sample:
                     sonarUtils._import_properties(
                         sample_id_column,
+                        sequences_id_column,
                         properties,
                         csv_files,
                         tsv_files,
@@ -288,7 +293,7 @@ class sonarUtils:
         )
         LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
         cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
-        LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
+        LOGGER.info(f"Total input sequences: {cache.sequenceinput_total}")
 
         # Map Nextclade JSON files and Fasta files (sequence names)
         start_align_time = get_current_time()
@@ -475,7 +480,7 @@ class sonarUtils:
         )
         LOGGER.info(f"[runtime] Sequence check: {prepare_seq_time}\n")
         cache.logfile_obj.write(f"[runtime] Sequence check: {prepare_seq_time}\n")
-        LOGGER.info(f"Total input samples: {cache.sampleinput_total}")
+        LOGGER.info(f"Total input sequences: {cache.sequenceinput_total}")
 
         # Align sequences and process
         aligner = sonarAligner(
@@ -484,8 +489,8 @@ class sonarUtils:
             allow_updates=cache.allow_updates,
             debug=cache.debug,
         )
-        l = cache._samplefiles_to_profile
-        LOGGER.info(f"Total samples that need to be processed: {l}")
+        l = cache._sequencefiles_to_profile
+        LOGGER.info(f"Total sequences that need to be processed: {l}")
         if l == 0:
             return
         start_align_time = get_current_time()
@@ -527,7 +532,7 @@ class sonarUtils:
         )
 
         start_paranoid_time = get_current_time()
-        passed_samples_list = cache.perform_paranoid_cached_samples(
+        passed_samples_list = cache.perform_paranoid_cached_sequences(
             passed_align_samples,
             must_pass_paranoid,
             chunk_size=PARANOID_CHUNK_SIZE,
@@ -540,7 +545,7 @@ class sonarUtils:
             f"Paranoid test usage time: {calculate_time_difference(start_paranoid_time, get_current_time())}\n"
         )
         n = ANNO_CHUNK_SIZE
-        passed_samples_chunk_list = [
+        passed_sequences_chunk_list = [
             tuple(
                 list(passed_samples_list[i : i + n]),
             )
@@ -560,7 +565,7 @@ class sonarUtils:
                     pool.set_shared_objects(cache)
                     raw_anno_result_list = pool.map_unordered(
                         sonarUtils.annotate_sample,
-                        passed_samples_chunk_list,
+                        passed_sequences_chunk_list,
                         progress_bar=True,
                         progress_bar_options={
                             "position": 0,
@@ -600,9 +605,9 @@ class sonarUtils:
             )
             cache_dict = {"job_id": job_id}
             for chunk_number, sample_chunk in tqdm(
-                enumerate(passed_samples_chunk_list, 1),
-                total=len(passed_samples_chunk_list),
-                desc="Uploading sample chunks",
+                enumerate(passed_sequences_chunk_list, 1),
+                total=len(passed_sequences_chunk_list),
+                desc="Uploading sequence chunks",
                 unit="chunk",
                 bar_format=bar_format,
             ):
@@ -611,7 +616,7 @@ class sonarUtils:
                     cache_dict, sample_chunk, chunk_number
                 )
             # Wait for all chunk to be processed
-            incomplete_chunks = set(range(1, len(passed_samples_chunk_list)))
+            incomplete_chunks = set(range(1, len(passed_sequences_chunk_list)))
             while len(incomplete_chunks) > 0:
                 chunks_tmp = incomplete_chunks.copy()
                 for chunk_number in chunks_tmp:
@@ -757,6 +762,7 @@ class sonarUtils:
     @staticmethod
     def _import_properties(  # noqa: C901
         sample_id_column: str,
+        sequences_id_column: str,
         properties: Dict[str, Dict[str, str] | str],
         csv_files: List[str],
         tsv_files: List[str],
@@ -766,7 +772,8 @@ class sonarUtils:
         Imports properties to the database in a single request by zipping all files in memory.
 
         Args:
-            sample_id_column: Column name for sample IDs.
+            sample_id_column: Column name for sample names.
+            sequences_id_column: Column for sequence ID linking
             properties: A dictionary of properties where the key is a sample name, and the value is another dictionary of properties for that sample.
             csv_files: List of CSV files to include.
             tsv_files: List of TSV files to include.
@@ -777,8 +784,12 @@ class sonarUtils:
         all_files = tsv_files + csv_files
         job_ids = []
 
-        filtered_properties = {k: v for k, v in properties.items() if k != "name"}
-        columns_to_use = list(filtered_properties.keys()) + [sample_id_column]
+        filtered_properties = {
+            k: v for k, v in properties.items() if k not in ["name", "sequences"]
+        }
+        columns_to_use = list(filtered_properties.keys()) + list(
+            set([sample_id_column, sequences_id_column])
+        )
         # Create an in-memory ZIP file
         for _file in all_files:
             LOGGER.info(f"Processing file: {_file}")
@@ -830,6 +841,7 @@ class sonarUtils:
                 file = {"zip_file": ("properties.zip", zip_buffer, "application/zip")}
                 data = {
                     "sample_id_column": sample_id_column,
+                    "sequences_id_column": sequences_id_column,
                     "column_mapping": json.dumps(filtered_properties),
                     "job_id": job_id,
                 }
@@ -903,7 +915,9 @@ class sonarUtils:
         - Dict[str, str]: Dictionary mapping column names to property details.
 
         Note:
-            "name" key is special case, we use this to link the sample ID.
+            "name" and "sequences" keys are special case
+            if name (without sequence) is geiven: we use the name column= sequence id as sample name and for linking
+            if sequence is given, we use name as unique sample name and sequences for linking sample to (multiple) sequences.
         """
         propnames = {}
 
@@ -941,6 +955,8 @@ class sonarUtils:
                 prop, col = link.split("=")
                 if prop.upper() == "NAME":
                     propnames["name"] = col
+                elif prop.upper() == "SEQUENCES":
+                    propnames["sequences"] = col
 
         else:
             LOGGER.info("Reading property names from user-provided '--cols'")
@@ -952,10 +968,12 @@ class sonarUtils:
                     sys.exit(1)
                 # Handle sample ID linking
                 prop, col = link.split("=")
-                if prop.upper() == "NAME":
+                if prop.upper() == "SEQUENCES":
+                    propnames["sequences"] = col
+                    continue
+                elif prop.upper() == "NAME":
                     propnames["name"] = col
                     continue
-
                 _row_df = prop_df[
                     prop_df["name"].str.fullmatch(prop, na=False, case=False)
                 ]
@@ -976,7 +994,7 @@ class sonarUtils:
         valid_propnames = {}
 
         for col, prop_info in propnames.items():
-            if col == "name":
+            if col in ["name", "sequences"]:
                 # Check if 'ID' exists in the provided CSV/TSV files
                 valid_propnames[col] = prop_info
                 id_column = prop_info
@@ -987,7 +1005,7 @@ class sonarUtils:
                 ]
                 if missing_in_files:
                     LOGGER.error(
-                        f"Mapping ID column '{id_column}' does not exist in the provided files: {', '.join(missing_in_files)}."
+                        f"Mapping {col} column '{id_column}' does not exist in the provided files: {', '.join(missing_in_files)}."
                     )
                     sys.exit(
                         1
@@ -1011,7 +1029,7 @@ class sonarUtils:
         LOGGER.info("(Input table column name -> Sonar database property name)")
 
         for prop, prop_info in propnames.items():
-            if prop == "name":
+            if prop in ["name", "sequences"]:
                 LOGGER.info(f"{prop_info} -> {prop}")
                 continue
             db_property_name = prop_info.get("db_property_name", "N/A")
@@ -1442,19 +1460,7 @@ class sonarUtils:
     @staticmethod
     def delete_reference(reference):
         LOGGER.info("Start to delete....the process is not reversible.")
-
-        # delete only reference will also delete the whole linked data.
-        # if samples_ids:
-        #    if debug:
-        #        logging.info(f"Delete: {samples_ids}")
-        #    for sample in samples_ids:
-        #        # dbm.delete_seqhash(sample["seqhash"])
-        #        dbm.delete_alignment(
-        #            seqhash=sample["seqhash"], element_id=_ref_element_id
-        #        )
-
         json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
-
         LOGGER.info(
             f"{json_response['samples_count']} alignments that are linked to the reference will also be deleted."
         )
@@ -1468,7 +1474,7 @@ class sonarUtils:
             db (str): The database to delete samples from.
             samples (list[str]): A list of samples to be deleted.  x
 
-        NOTE: if we delete a sample, then all alignment that related
+        NOTE: if we delete a sample, then all sequences that related
         to this sample will also deleted.
         """
         if len(samples) == 0:
@@ -1481,11 +1487,27 @@ class sonarUtils:
         deleted = json_response["deleted_samples_count"]
         LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
 
+    @staticmethod
+    def delete_sequence(reference: str = None, sequences: List[str] = []) -> None:
         """
+        Delete sequences from the database.
 
-        LOGGER.info(f"{deleted} of {len(samples)} samples found and deleted.")
-        LOGGER.info(f"{after_count} samples remain in the database.")
+        Args:
+            db (str): The database to delete samples from.
+            sequences (list[str]): A list of sequences to be deleted.  x
+
+        NOTE: if we delete a sequences, then all alignment that related
+        to this sequence will also deleted.
         """
+        if len(sequences) == 0:
+            LOGGER.info("Nothing to delete.")
+
+        json_response = APIClient(base_url=BASE_URL).post_delete_sequence(
+            reference, sequences=sequences
+        )
+
+        deleted = json_response["deleted_sequences_count"]
+        LOGGER.info(f"{deleted} of {len(sequences)} sequences found and deleted.")
 
     @staticmethod
     def add_property(

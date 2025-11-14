@@ -80,10 +80,12 @@
           <div v-else-if="column === 'proteomic_profiles'" class="cell-content">
             <div>
               <GenomicProfileLabel
-                v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                v-for="(variant, index) in Object.values(slotProps.data.proteomic_profiles).flat()"
                 :key="variant"
                 :variant-string="variant"
-                :is-last="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
+                :is-last="
+                  index === Object.values(slotProps.data.proteomic_profiles).flat().length - 1
+                "
               />
             </div>
           </div>
@@ -234,8 +236,8 @@ export default {
   },
   computed: {
     selectionKey(): string {
-      const { accession, dataset = [] } = this.$route.query
-      return JSON.stringify({ accession, dataset })
+      const { reference_accession, dataset = [] } = this.$route.query
+      return JSON.stringify({ reference_accession, dataset })
     },
   },
   watch: {
@@ -252,17 +254,17 @@ export default {
   methods: {
     // keep table in sync with route params
     applySelectionFromRoute() {
-      const accession =
-        typeof this.$route.query.accession === 'string'
-          ? safeDecodeURIComponent(this.$route.query.accession)
+      const reference_accession =
+        typeof this.$route.query.reference_accession === 'string'
+          ? safeDecodeURIComponent(this.$route.query.reference_accession)
           : null
-      if (!accession) {
-        console.log('Invalid URL: missing accession parameter.')
+      if (!reference_accession) {
+        console.log('Invalid URL: missing reference_accession parameter.')
         router.replace({ name: 'Home' })
         return
       }
       const datasets = decodeDatasetsParam(this.$route.query.dataset)
-      this.samplesStore.setDataset(this.samplesStore.organism, accession, datasets)
+      this.samplesStore.setDataset(this.samplesStore.organism, reference_accession, datasets)
       this.loadSamplesAndMetadata()
     },
     loadSamplesAndMetadata() {

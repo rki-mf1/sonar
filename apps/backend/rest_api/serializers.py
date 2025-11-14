@@ -124,8 +124,8 @@ class SequenceSerializer(serializers.ModelSerializer):
 
 class SampleSerializer(serializers.ModelSerializer):
     name = serializers.CharField(required=True)
-    sequence = serializers.PrimaryKeyRelatedField(
-        queryset=models.Sequence.objects.all()
+    sequences = serializers.PrimaryKeyRelatedField(
+        queryset=models.Sequence.objects.all(), many=True
     )
 
     class Meta:
@@ -205,13 +205,14 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
     genomic_profiles = serializers.SerializerMethodField()
     proteomic_profiles = serializers.SerializerMethodField()
+    sequences = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = models.Sample
         fields = [
             "id",
             "name",
-            "sequence_id",
+            "sequences",
             "datahash",
             "properties",
             "genomic_profiles",
@@ -224,7 +225,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         custom_properties = Sample2PropertySerializer(
             obj.properties, many=True, read_only=True
         ).data
-        filter_list = ["properties", "name", "sequence", "id", "datahash"]
+        filter_list = ["properties", "name", "sequences", "id", "datahash"]
         sample_properties = [
             field.name
             for field in models.Sample._meta.get_fields()
@@ -239,17 +240,24 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
     def get_genomic_profiles(self, obj: models.Sample):
         # genomic_profiles are prefetched for genomes endpoint
-        dict = {}
+        genomic_profiles = {}
 
-        for alignment in obj.sequence.alignments.all():
-            for mutation in alignment.genomic_profiles:
-                annotations = []
-                for nucleotide_mutation in alignment.nucleotide_mutations.all():
-                    if nucleotide_mutation == mutation:
-                        for annotation in nucleotide_mutation.alignment_annotations:
-                            annotations.append(str(annotation))
-                dict[self.create_NT_format(mutation)] = annotations
-        return dict
+        for sequence in obj.sequences.all():
+            for alignment in sequence.alignments.all():
+                replicon = alignment.replicon
+                replicon_acc = replicon.accession
+                if replicon_acc not in genomic_profiles:
+                    genomic_profiles[replicon_acc] = {}
+                for mutation in alignment.genomic_profiles:
+                    annotations = []
+                    for nucleotide_mutation in alignment.nucleotide_mutations.all():
+                        if nucleotide_mutation == mutation:
+                            for annotation in nucleotide_mutation.alignment_annotations:
+                                annotations.append(str(annotation))
+                    genomic_profiles[replicon_acc][
+                        self.create_NT_format(mutation)
+                    ] = annotations
+        return genomic_profiles
 
     def define_proteomic_label(
         self,
@@ -274,32 +282,47 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         return label
 
     def get_proteomic_profiles(self, obj: models.Sample):
-        # proteomic_profiles are prefetched
-        label_list = []
-        alignments = obj.sequence.alignments.prefetch_related(
-            "amino_acid_mutations__cds__gene",
-        )
-        for alignment in alignments:
-            for mutation in alignment.amino_acid_mutations.all():
-                try:
-                    gene_symbol = mutation.cds.gene.symbol
-                    mutation_start = mutation.start
-                    mutation_end = mutation.end
-                    label = self.define_proteomic_label(
-                        mutation, gene_symbol, mutation_start, mutation_end
-                    )
-                    label_list.append((gene_symbol, mutation_start, label))
+        """
+        Build proteomic profiles per CDS for all sequences in the sample.
+        """
 
-                except AttributeError as e:
-                    # most of the time this AttributeError outputs
-                    # 'NoneType' object has no attribute 'gene_symbol'
-                    print(e)
-                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")
-                    continue
-            sorted_label_list = [
-                item[2] for item in sorted(label_list, key=lambda x: (x[0], x[1]))
-            ]
-        return sorted_label_list
+        # Prefetch all needed relations:
+        sequences = obj.sequences.prefetch_related(
+            "alignments__replicon",
+            "alignments__replicon__gene_set__cds_set",
+            "alignments__amino_acid_mutations__cds__gene",
+        )
+
+        proteomic_profiles = {}
+
+        for sequence in sequences:
+            for alignment in sequence.alignments.all():
+
+                # Get all CDS objects of this replicon
+                cds_list = models.CDS.objects.filter(gene__replicon=alignment.replicon)
+
+                for cds in cds_list:
+                    labels = []
+
+                    # All AA mutations for this CDS & this alignment
+                    mutations = cds.aminoacidmutation_set.filter(alignments=alignment)
+
+                    for mutation in mutations:
+                        gene_symbol = mutation.cds.gene.symbol
+                        mutation_start = mutation.start
+                        mutation_end = mutation.end
+
+                        label = self.define_proteomic_label(
+                            mutation, gene_symbol, mutation_start, mutation_end
+                        )
+
+                        labels.append((gene_symbol, mutation_start, label))
+
+                    # sort by (gene, position)
+                    proteomic_profiles[cds.accession] = [
+                        item[2] for item in sorted(labels, key=lambda x: (x[0], x[1]))
+                    ]
+        return proteomic_profiles
 
     def create_NT_format(self, mutation: models.NucleotideMutation):
         label = ""
@@ -328,15 +351,16 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
 
     def get_genomic_profiles(self, obj: models.Sample):
         list = []
-        for alignment in obj.sequence.alignments.all():
-            for mutation in alignment.genomic_profiles:
-                variant = {}
-                variant["variant.id"] = mutation.id
-                variant["variant.ref"] = mutation.ref
-                variant["variant.alt"] = mutation.alt
-                variant["variant.start"] = mutation.start
-                variant["variant.end"] = mutation.end
-                list.append(variant)
+        for sequence in obj.sequences.all():
+            for alignment in sequence.alignments.all():
+                for mutation in alignment.genomic_profiles:
+                    variant = {}
+                    variant["variant.id"] = mutation.id
+                    variant["variant.ref"] = mutation.ref
+                    variant["variant.alt"] = mutation.alt
+                    variant["variant.start"] = mutation.start
+                    variant["variant.end"] = mutation.end
+                    list.append(variant)
         return list
 
 
