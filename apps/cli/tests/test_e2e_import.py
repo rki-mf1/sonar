@@ -100,7 +100,7 @@ def test_add_zika_ref(monkeypatch, capfd, api_url):
 def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
-    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
+    command = f"import --db {api_url} -r MN908947.3 --method 2 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/parasail -t 2 --no-upload --must-pass-paranoid"
     try:
         code = run_cli(command)
     except SystemExit as e:
@@ -113,7 +113,7 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
 def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using mafft method"""
     monkeypatch.chdir(Path(__file__).parent)
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload --must-pass-paranoid"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/mafft -t 2 --no-upload --must-pass-paranoid"
     try:
         code = run_cli(command)
     except SystemExit as e:
@@ -285,7 +285,7 @@ def test_wfa_anno_no_upload_covid(monkeypatch, api_url, tmpfile_name):
     #         func(**arg) for arg in args
     #     ),
     # )
-    command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta ../../../test-data/sars-cov-2/seqs.fasta.gz --cache {tmpfile_name}/wfa -t 1 --no-upload --auto-anno --must-pass-paranoid --skip-nx"
+    command = f"import --db {api_url} -r MN908947.3 --method 3 --fasta ../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cache {tmpfile_name}/wfa -t 1 --no-upload --auto-anno --must-pass-paranoid --skip-nx"
     code = run_cli(command)
 
     assert code == 0
@@ -300,7 +300,7 @@ def test_wfa_anno_no_upload_mpox(monkeypatch, api_url, tmpfile_name):
         "sonar_cli.config.FILTER_DELETE_SIZE", "200000"
     )  # we keep all sequences
 
-    command = f"import --db {api_url}  -r NC_063383.1 --method 3 --fasta ../../../test-data/mpox/mpox_20.fasta.xz --cache {tmpfile_name}/wfa -t 1  --auto-anno --must-pass-paranoid --skip-nx"
+    command = f"import --db {api_url}  -r NC_063383.1 --method 3 --fasta ../../../test-data/mpox/mpox_20.fasta.xz --cache {tmpfile_name}/wfa -t 1 --no-upload --auto-anno --must-pass-paranoid --skip-nx"
     code = run_cli(command)
 
     assert code == 0
@@ -324,7 +324,7 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
     monkeypatch.chdir(Path(__file__).parent)
 
-    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2 --tsv sars-cov-2/meta.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_TYPE sample_type=SAMPLE_TYPE"
+    command = f"import --db {api_url} -r MN908947.3 --method 1 --cache {tmpfile_name}/mafft -t 2 --tsv ../../../test-data/sars-cov-2/SARS-CoV-2_6.tsv --cols name=IMS_ID collection_date=DATE_DRAW sequencing_tech=SEQ_TYPE sample_type=SAMPLE_TYPE"
     code = run_cli(command)
 
     assert code == 0

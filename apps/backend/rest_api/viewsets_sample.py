@@ -1086,7 +1086,7 @@ class SampleViewSet(
 
         # Use EXISTS subquery instead of JOIN
         mutation_subquery = models.NucleotideMutation.objects.filter(
-            mutation_condition, alignments__sequences__samples=OuterRef("pk")
+            mutation_condition, alignments__sequence__samples=OuterRef("pk")
         )
 
         if exclude:
@@ -1109,7 +1109,7 @@ class SampleViewSet(
 
         # Use EXISTS subquery instead of JOIN
         mutation_subquery = models.AminoAcidMutation.objects.filter(
-            mutation_condition, alignments__sequences__samples=OuterRef("pk")
+            mutation_condition, alignments__sequence__samples=OuterRef("pk")
         )
 
         if exclude:

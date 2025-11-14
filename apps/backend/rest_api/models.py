@@ -144,8 +144,8 @@ class Gene(models.Model):
         start (BigIntegerField): Start position on the replicon (counting starts with 0).
         end (BigIntegerField): End position on the replicon.
         forward_strand (BooleanField): Indicates if the gene is on the forward strand.
-        symbol (CharField, optional): Gene symbol or abbreviation (max length 50).
-        accession (CharField): Accession id gene
+        symbol (CharField, optional): Gene symbol/name or abbreviation (max length 50).
+        accession (CharField): unique gene identifier, locus_tag or gene name (=symbol) per replicon
         sequence (TextField, optional): Nucleotide sequence of the gene.
         replicon (ForeignKey): Reference to the replicon where the gene is located.
         type (TextChoices, optional): Classification of the gene (e.g., CDS, rRNA, tRNA).
@@ -158,10 +158,9 @@ class Gene(models.Model):
     start = models.BigIntegerField()
     end = models.BigIntegerField()
     forward_strand = models.BooleanField()
-    symbol = models.CharField(max_length=50, blank=True, null=True)
-    accession = models.CharField(max_length=50, unique=False)
+    symbol = models.CharField(max_length=50, unique=False, blank=False, null=False)
+    accession = models.CharField(max_length=100, blank=False, null=False)
     sequence = models.TextField(blank=True, null=True)
-    locus_tag = models.CharField(max_length=100, blank=True, null=True)
     replicon = models.ForeignKey(Replicon, models.CASCADE)
 
     class GeneTypes(models.TextChoices):
@@ -177,6 +176,11 @@ class Gene(models.Model):
 
     class Meta:
         db_table = "gene"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["replicon", "accession"], name="unique_accession_per_replicon"
+            ),
+        ]
 
 
 class CDS(models.Model):

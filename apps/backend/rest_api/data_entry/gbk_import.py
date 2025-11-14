@@ -102,8 +102,9 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                 """
                 gene_feature = type: gene, location: [26244:26472](+), qualifiers: Key: gene, Value: ['E']
                 """
-                gene_symbol = gene_feature.qualifiers.get("gene", [None])[0]
-                if gene_symbol is None:
+                gene_symbol = _determine_symbol(gene_feature)
+                gene_accession = _determine_gene_accession(gene_feature)
+                if gene_accession is None:
                     raise ValueError(
                         f"No gene symbol found for feature at {gene_feature.location}."
                     )
@@ -111,9 +112,14 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                 gene_type = determine_gene_type(none_gene_features, gene_symbol)
                 # TODO : check if join/multiple orders
                 gene_obj = _put_gene_from_feature(
-                    gene_feature, record.seq, replicon, gene_type
+                    gene_feature,
+                    record.seq,
+                    replicon,
+                    gene_type,
+                    gene_accession,
+                    gene_symbol,
                 )
-                gene_id_to_gene_obj[gene_symbol] = gene_obj
+                gene_id_to_gene_obj[gene_accession] = gene_obj
                 _create_gene_segments(gene_feature, gene_obj)
 
             # features with CDS qualifier
@@ -125,19 +131,19 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
             ]
             for cds_feature in cds_features:
                 # TODO add note to cds table (e.g. ORF1)
-                gene_symbol = cds_feature.qualifiers.get("gene", [None])[0]
-                if gene_symbol is None:
-                    raise ValueError("No gene symbol found.")
-                gene = gene_id_to_gene_obj.get(gene_symbol, None)
+                gene_accession = _determine_gene_accession(cds_feature)
+                if gene_accession is None:
+                    raise ValueError("No gene accession found.")
+                gene = gene_id_to_gene_obj.get(gene_accession, None)
                 if gene is None:
                     raise ValueError("No gene object found for CDS.")
                 cds = _put_cds_from_feature(cds_feature, gene)
                 # different cds in one gene
-                if gene_symbol not in gene_id_to_cds_obj:
-                    gene_id_to_cds_obj[gene_symbol] = []
-                    gene_id_to_cds_obj[gene_symbol].append(cds)
+                if gene_accession not in gene_id_to_cds_obj:
+                    gene_id_to_cds_obj[gene_accession] = []
+                    gene_id_to_cds_obj[gene_accession].append(cds)
                 else:
-                    gene_id_to_cds_obj[gene_symbol].append(cds)
+                    gene_id_to_cds_obj[gene_accession].append(cds)
                 _create_cds_segments(cds_feature, cds)
 
             # features with peptide qualifier (e.g. HIV)
@@ -145,10 +151,10 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                 f for f in record.features if f.type in ["mat_peptide", "sig_peptide"]
             ]
             for peptide_feature in peptide_features:
-                gene_symbol = peptide_feature.qualifiers.get("gene", [None])[0]
-                if gene_symbol is None:
+                gene_accession = _determine_gene_accession(peptide_feature)
+                if gene_accession is None:
                     raise ValueError("No gene symbol found.")
-                cds_objects = gene_id_to_cds_obj.get(gene_symbol, None)
+                cds_objects = gene_id_to_cds_obj.get(gene_accession, None)
                 cds_segments = CDSSegment.objects.filter(
                     cds__in=[cds.pk for cds in cds_objects]
                 )
@@ -156,7 +162,7 @@ def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: 
                     raise ValueError("No gene found for peptide.")
                 elif len(cds_objects) > 1:
                     raise ValueError(
-                        f"Multiple CDS objects found for gene symbol {gene_symbol}. Can't assign mat_peptides to CDS."
+                        f"Multiple CDS objects found for gene symbol {gene_accession}. Can't assign mat_peptides to CDS."
                     )
                 elif len(cds_objects) == 1:
                     cds = cds_objects[0]
@@ -215,16 +221,26 @@ def _validate_segment_lengths(parts, accession):
         raise ValueError(f"The length of cds '{accession}' is not a multiple of 3.")
 
 
-def _determine_accession(feature: SeqFeature.SeqFeature) -> str | None:
+def _determine_gene_accession(feature: SeqFeature.SeqFeature) -> str | None:
     if feature.id != "<unknown id>":
         return feature.id
-    elif "gene" in feature.qualifiers and feature.type == "gene":
+    elif "locus_tag" in feature.qualifiers:
+        return feature.qualifiers["locus_tag"][0]
+    elif "gene" in feature.qualifiers:
         return feature.qualifiers["gene"][0]
-    elif "protein_id" in feature.qualifiers and feature.type == "CDS":
+    raise ValueError("No qualifier for gene accession found.")
+
+
+def _determine_cds_accession(feature: SeqFeature.SeqFeature) -> str | None:
+    if feature.id != "<unknown id>":
+        return feature.id
+    elif "protein_id" in feature.qualifiers:
         return feature.qualifiers["protein_id"][0]
     elif "locus_tag" in feature.qualifiers:
         return feature.qualifiers["locus_tag"][0]
-    raise ValueError("No qualifier for gene accession found.")
+    elif "gene" in feature.qualifiers:
+        return feature.qualifiers["gene"][0]
+    raise ValueError("No qualifier for cds accession found.")
 
 
 def _determine_symbol(feature: SeqFeature.SeqFeature) -> str | None:
@@ -240,6 +256,8 @@ def _put_gene_from_feature(
     replicon_seq: str,
     replicon: Replicon,
     gene_type: Gene.GeneTypes,
+    gene_accession: str,
+    gene_symbol: str,
 ) -> Gene:
     """
     Processes a gene feature from a gene bank file and updates or creates a corresponding Gene object.
@@ -253,10 +271,9 @@ def _put_gene_from_feature(
 
     Returns:
         Gene: The updated or newly created Gene object.
-        gene_accession: filled with first existing tag in this order [gene, protein_id, locus_tag]
+        gene_accession: filled with first existing tag in this order [locus_tag == systematic gene name, gene, protein_id]
         gene_symbol: filled with first existing tag in this order [gene, locus_tag]
         gene_sequence: complete sequence of gene
-        gene_locus_tag: locus_tag = systematic gene name
         gene_description: gene_synonym
 
     Raises:
@@ -270,17 +287,17 @@ def _put_gene_from_feature(
         "forward_strand": True if feature.location.strand == 1 else False,
         "replicon": replicon.pk,
         "type": gene_type,
+        "accession": gene_accession,
+        "symbol": gene_symbol,
     }
     gene_update_data = {}
-    gene_update_data["accession"] = _determine_accession(feature)
-    gene_update_data["symbol"] = _determine_symbol(feature)
     gene_update_data["sequence"] = str(feature.extract(replicon_seq))
-    gene_update_data["locus_tag"] = feature.qualifiers.get("locus_tag", [""])[0]
     gene_update_data["description"] = feature.qualifiers.get("gene_synonym", [""])[0]
 
     gene = find_or_create(gene_base_data, Gene, GeneSerializer)
     for attr_name, value in gene_update_data.items():
         setattr(gene, attr_name, value)
+
     return GeneSerializer(gene).update(gene, gene_update_data)
 
 
@@ -295,7 +312,7 @@ def _put_cds_from_feature(feature: SeqFeature.SeqFeature, gene: Gene) -> CDS:
 
     Returns:
         CDS: The updated or newly created CDS object.
-        cds_accession: filled with first existing tag in this order [gene, protein_id, locus_tag]
+        cds_accession: filled with first existing tag in this order [protein_id, locus_tag, gene]
         cds_sequence: complete aa-sequence of cds
         cds_descritption: product tag = protein name
 
@@ -305,7 +322,7 @@ def _put_cds_from_feature(feature: SeqFeature.SeqFeature, gene: Gene) -> CDS:
     if feature.location is None:
         raise ValueError("No location information found for CDS feature.")
     cds_update_data = {}
-    cds_update_data["accession"] = _determine_accession(feature)
+    cds_update_data["accession"] = _determine_cds_accession(feature)
     _validate_segment_lengths(feature.location.parts, cds_update_data["accession"])
     cds_update_data["sequence"] = feature.qualifiers.get("translation", [""])[0]
     cds_update_data["description"] = feature.qualifiers.get("product", [""])[0]
