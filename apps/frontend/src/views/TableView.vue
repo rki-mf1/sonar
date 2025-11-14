@@ -80,10 +80,12 @@
           <div v-else-if="column === 'proteomic_profiles'" class="cell-content">
             <div>
               <GenomicProfileLabel
-                v-for="(variant, index) in slotProps.data.proteomic_profiles"
+                v-for="(variant, index) in Object.values(slotProps.data.proteomic_profiles).flat()"
                 :key="variant"
                 :variant-string="variant"
-                :is-last="index === Object.keys(slotProps.data.proteomic_profiles).length - 1"
+                :is-last="
+                  index === Object.values(slotProps.data.proteomic_profiles).flat().length - 1
+                "
               />
             </div>
           </div>

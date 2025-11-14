@@ -282,34 +282,47 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         return label
 
     def get_proteomic_profiles(self, obj: models.Sample):
-        # proteomic_profiles are prefetched
-        label_list = []
-        alignments = []
-        for sequence in obj.sequences.all().prefetch_related(
-            "alignments__amino_acid_mutations__cds__gene"
-        ):
-            alignments.extend(sequence.alignments.all())
-        for alignment in alignments:
-            for mutation in alignment.amino_acid_mutations.all():
-                try:
-                    gene_symbol = mutation.cds.gene.symbol
-                    mutation_start = mutation.start
-                    mutation_end = mutation.end
-                    label = self.define_proteomic_label(
-                        mutation, gene_symbol, mutation_start, mutation_end
-                    )
-                    label_list.append((gene_symbol, mutation_start, label))
+        """
+        Build proteomic profiles per CDS for all sequences in the sample.
+        """
 
-                except AttributeError as e:
-                    # most of the time this AttributeError outputs
-                    # 'NoneType' object has no attribute 'gene_symbol'
-                    print(e)
-                    print(f"{mutation.ref}{mutation.end}{mutation.alt}")
-                    continue
-            sorted_label_list = [
-                item[2] for item in sorted(label_list, key=lambda x: (x[0], x[1]))
-            ]
-        return sorted_label_list
+        # Prefetch all needed relations:
+        sequences = obj.sequences.prefetch_related(
+            "alignments__replicon",
+            "alignments__replicon__gene_set__cds_set",
+            "alignments__amino_acid_mutations__cds__gene",
+        )
+
+        proteomic_profiles = {}
+
+        for sequence in sequences:
+            for alignment in sequence.alignments.all():
+
+                # Get all CDS objects of this replicon
+                cds_list = models.CDS.objects.filter(gene__replicon=alignment.replicon)
+
+                for cds in cds_list:
+                    labels = []
+
+                    # All AA mutations for this CDS & this alignment
+                    mutations = cds.aminoacidmutation_set.filter(alignments=alignment)
+
+                    for mutation in mutations:
+                        gene_symbol = mutation.cds.gene.symbol
+                        mutation_start = mutation.start
+                        mutation_end = mutation.end
+
+                        label = self.define_proteomic_label(
+                            mutation, gene_symbol, mutation_start, mutation_end
+                        )
+
+                        labels.append((gene_symbol, mutation_start, label))
+
+                    # sort by (gene, position)
+                    proteomic_profiles[cds.accession] = [
+                        item[2] for item in sorted(labels, key=lambda x: (x[0], x[1]))
+                    ]
+        return proteomic_profiles
 
     def create_NT_format(self, mutation: models.NucleotideMutation):
         label = ""

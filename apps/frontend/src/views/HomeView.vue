@@ -108,7 +108,11 @@ export default {
         this.loading = true
         setTimeout(() => {
           const datasets = [...(this.selectedDatasets ?? [])]
-          this.samplesStore.setDataset(this.selectedOrganism, this.selectedReferenceAccession, datasets)
+          this.samplesStore.setDataset(
+            this.selectedOrganism,
+            this.selectedReferenceAccession,
+            datasets,
+          )
 
           this.router.push({
             name: 'Table',

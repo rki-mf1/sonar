@@ -30,10 +30,12 @@
           style="margin-left: 10px; margin-top: 4px"
         >
           <!-- Replicon header -->
-          <div><strong>{{ repliconAcc }}</strong></div>
+          <div>
+            <strong>{{ repliconAcc }}</strong>
+          </div>
 
           <!-- Variants for this replicon -->
-          <div style="white-space: normal; word-wrap: break-word; margin-left: 14px;">
+          <div style="white-space: normal; word-wrap: break-word; margin-left: 14px">
             <GenomicProfileLabel
               v-for="(annotations, variant, idx) in repliconData"
               :key="variant"
@@ -47,13 +49,23 @@
 
       <template v-else-if="key === 'proteomic_profiles'">
         <strong>{{ key }}: </strong>
-        <div style="white-space: normal; word-wrap: break-word">
-          <GenomicProfileLabel
-            v-for="(variant, index) in value"
-            :key="variant"
-            :variant-string="variant"
-            :is-last="index === Object.keys(value).length - 1"
-          />
+        <div
+          v-for="(AA_mutations, CDSAcc) in value"
+          :key="CDSAcc"
+          style="margin-left: 10px; margin-top: 4px"
+        >
+          <!-- CDS accession header -->
+          <div>
+            <strong>{{ CDSAcc }}</strong>
+          </div>
+          <div style="white-space: normal; word-wrap: break-word">
+            <GenomicProfileLabel
+              v-for="(variant, index) in AA_mutations"
+              :key="variant"
+              :variant-string="variant"
+              :is-last="index === Object.keys(AA_mutations).length - 1"
+            />
+          </div>
         </div>
       </template>
     </p>

@@ -182,7 +182,11 @@ export const useSamplesStore = defineStore('samples', {
     }),
   }),
   actions: {
-    setDataset(organism: string | null, reference_accession: string | null, data_sets: (string | null)[]) {
+    setDataset(
+      organism: string | null,
+      reference_accession: string | null,
+      data_sets: (string | null)[],
+    ) {
       this.organism = organism
       this.reference_accession = reference_accession
       this.data_sets = data_sets
