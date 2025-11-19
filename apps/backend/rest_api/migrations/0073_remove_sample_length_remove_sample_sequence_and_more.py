@@ -43,8 +43,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="sequence",
             name="name",
-            field=models.CharField(default="sd", max_length=200, unique=True),
-            preserve_default=False,
+            field=models.CharField(max_length=200, unique=True),
         ),
         migrations.AddIndex(
             model_name="sequence",

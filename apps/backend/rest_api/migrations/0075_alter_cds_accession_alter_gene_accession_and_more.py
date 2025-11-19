@@ -18,25 +18,21 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="gene",
             name="accession",
-            field=models.CharField(default="acc", max_length=50),
-            preserve_default=False,
+            field=models.CharField( max_length=50),
         ),
         migrations.AlterField(
             model_name="reference",
             name="accession",
-            field=models.CharField(default="acc", max_length=50, unique=True),
-            preserve_default=False,
+            field=models.CharField(max_length=50, unique=True),
         ),
         migrations.AlterField(
             model_name="reference",
             name="organism",
-            field=models.CharField(default="sample_organism", max_length=50),
-            preserve_default=False,
+            field=models.CharField(max_length=50),
         ),
         migrations.AlterField(
             model_name="replicon",
             name="accession",
-            field=models.CharField(default="acc", max_length=50, unique=True),
-            preserve_default=False,
+            field=models.CharField(max_length=50, unique=True),
         ),
     ]

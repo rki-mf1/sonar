@@ -22,8 +22,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="gene",
             name="symbol",
-            field=models.CharField(default="symbol", max_length=50),
-            preserve_default=False,
+            field=models.CharField(max_length=50),
         ),
         migrations.AddConstraint(
             model_name="gene",
