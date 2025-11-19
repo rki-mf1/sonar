@@ -175,13 +175,13 @@ sonar-cli import -r MN908947.3 --fasta sars-cov-2.fasta --cache cache_folder/ -t
 Example command: Including properties during import
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta sars-cov-2.fasta --tsv sars-cov-2/meta.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_2.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
 ```
 
 Example command: Including annotation step(`--auto-anno`)
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta sars-cov-2.fasta --tsv sars-cov-2/meta.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_2.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
 ```
 
 To view all available options:

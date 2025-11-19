@@ -216,18 +216,23 @@ def flatten_json_output(result_data: list, exclude_annotation=False):
 
         if exclude_annotation:
             flattened_entry["genomic_profiles"] = " ".join(
-                result.get("genomic_profiles", [])
+                [
+                    f"{acc}({', '.join(muts.keys())})"
+                    for acc, muts in result.get("genomic_profiles", {}).items()
+                ]
             )
         else:
             flattened_entry["genomic_profiles"] = " ".join(
                 [
-                    f"{key}'({', '.join(value)})'" if value else f"{key}"
-                    for key, value in result["genomic_profiles"].items()
+                    f"{acc}({', '.join(inner.keys())})"
+                    for acc, inner in result.get("genomic_profiles", {}).items()
                 ]
             )
-
         flattened_entry["proteomic_profiles"] = " ".join(
-            result.get("proteomic_profiles", [])
+            [
+                f"{acc}({', '.join(muts)})"
+                for acc, muts in result.get("proteomic_profiles", {}).items()
+            ]
         )
         flattened_data.append(flattened_entry)
 

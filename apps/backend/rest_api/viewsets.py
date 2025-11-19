@@ -79,23 +79,37 @@ class AlignmentViewSet(
         url_path="get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)",
     )
     def get_alignment_data(self, request: Request, seqhash=None, replicon_id=None):
-        sample_data = {}
         queryset = self.queryset.filter(
-            sequence__seqhash=seqhash, replicon_id=replicon_id
+            sequence__seqhash=seqhash,
+            replicon_id=replicon_id,
+        ).select_related("sequence")
+
+        sequence_data = list(
+            queryset.annotate(
+                alignment_id=F("id"),
+                sequence_name=F("sequence__name"),
+            ).values(
+                "replicon_id",
+                "alignment_id",
+                "sequence_id",
+                "sequence_name",
+            )
         )
-        sample_data = queryset.values()
-        if sample_data:
-            sample_data = sample_data[0]
-        return Response(sample_data, status=status.HTTP_200_OK)
+
+        # Falls nur ein Datensatz zurückkommt, als einzelnes Dict liefern
+        if sequence_data:
+            return Response(sequence_data[0], status=status.HTTP_200_OK)
+        else:
+            return Response({}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=["post"])
     def get_bulk_alignment_data(self, request: Request, *args, **kwargs):
         data = json.loads(request.body.decode("utf-8"))
-        sample_data_list = data.get("sample_data", [])
+        sequence_data_list = data.get("sample_data", [])
 
         # Extract values from the list
-        seqhash_values = [item.get("seqhash") for item in sample_data_list]
-        replicon_id_values = [item.get("replicon_id") for item in sample_data_list]
+        seqhash_values = [item.get("seqhash") for item in sequence_data_list]
+        replicon_id_values = [item.get("replicon_id") for item in sequence_data_list]
 
         queryset = models.Alignment.objects.filter(
             reduce(
@@ -109,18 +123,20 @@ class AlignmentViewSet(
         queryset = queryset.select_related("sequence")
 
         # Convert the queryset to a list of dictionaries
-        # sample_data = list(queryset.values())
-        sample_data = list(
-            queryset.extra(
-                select={"alignement_id": "alignment.id", "sequence_id": "sequence.id"}
+        # sequence_data = list(queryset.values())
+        sequence_data = list(
+            queryset.annotate(
+                alignment_id=F("id"),
+                sequence_name=F("sequence__name"),
             ).values(
                 "replicon_id",
-                "alignement_id",
+                "alignment_id",
                 "sequence_id",
-                "sequence__sample__name",
+                "sequence_name",
             )
         )
-        return Response(data=sample_data, status=status.HTTP_200_OK)
+
+        return Response(data=sequence_data, status=status.HTTP_200_OK)
 
 
 class RepliconViewSet(viewsets.ModelViewSet):
@@ -319,8 +335,8 @@ class ReferenceViewSet(
         dataset values found in the Sample table.
         """
         queryset = models.Sample.objects.values(
-            accession=F("sequence__alignments__replicon__reference__accession"),
-            organism=F("sequence__alignments__replicon__reference__organism"),
+            accession=F("sequences__alignments__replicon__reference__accession"),
+            organism=F("sequences__alignments__replicon__reference__organism"),
             data_set_value=F("data_set"),
         ).distinct()
 
@@ -373,8 +389,8 @@ class ReferenceViewSet(
     @action(detail=False, methods=["get"])
     def get_all_references(self, request: Request, *args, **kwargs):
         queryset = models.Reference.objects.all()
-        sample_data = queryset.values()
-        return Response(data=sample_data, status=status.HTTP_200_OK)
+        reference_data = queryset.values()
+        return Response(data=reference_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def get_reference_file(self, request: Request, *args, **kwargs):
@@ -532,6 +548,7 @@ class PropertyViewSet(
 
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
+        # TODO lenght is now a sequence property, how to handle?
         """
         "value_integer",
         "value_float",
@@ -565,12 +582,6 @@ class PropertyViewSet(
                 "name": "collection_date",
                 "query_type": "value_date",
                 "description": "Date when the sample was collected (predefined prop.)",
-                "default": None,
-            },
-            {
-                "name": "length",
-                "query_type": "value_integer",
-                "description": "Length of the genetic sequence (predefined prop.)",
                 "default": None,
             },
             {
@@ -718,8 +729,9 @@ class FileUploadViewSet(viewsets.ViewSet):
 
         # Step 2: Check if this is a property upload (based on jobID)
         if "_prop" in jobID:
-            # Property upload: Check for sample_id_column and column_mapping
+            # Property upload: Check for sample_id_column, sequences_id_column and column_mapping
             sample_id_column = request.data.get("sample_id_column")
+            sequences_id_column = request.data.get("sequences_id_column")
             column_mapping_json = request.data.get("column_mapping")
 
             # Validate sample_id_column
@@ -728,22 +740,26 @@ class FileUploadViewSet(viewsets.ViewSet):
                     {"detail": "No sample_id_column is provided"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-
+            if not sequences_id_column:
+                LOGGER.info(
+                    "No sequences_id_column is provided, sample names are equal to sequence names"
+                )
             # Validate column_mapping
-            if not column_mapping_json:
-                return Response(
-                    {"detail": "No column_mapping is provided, nothing to import."},
-                    status=status.HTTP_400_BAD_REQUEST,
+            if column_mapping_json == "{}" or column_mapping_json is None:
+                LOGGER.info(
+                    "No column_mapping is provided, samples imported into samples table without meta data"
                 )
-            # Convert column_mapping from JSON to dict
-            column_mapping = self._convert_property_column_mapping(
-                json.loads(column_mapping_json)
-            )
-            if not column_mapping:
-                return Response(
-                    {"detail": "No column_mapping could be processed."},
-                    status=status.HTTP_400_BAD_REQUEST,
+                column_mapping = {}
+            else:
+                # Convert column_mapping from JSON to dict
+                column_mapping = self._convert_property_column_mapping(
+                    json.loads(column_mapping_json)
                 )
+                if not column_mapping:
+                    return Response(
+                        {"detail": "No column_mapping could be processed."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             filename = (
                 datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
@@ -756,6 +772,7 @@ class FileUploadViewSet(viewsets.ViewSet):
                 pickle.dump(
                     {
                         "sample_id_column": sample_id_column,
+                        "sequences_id_column": sequences_id_column,
                         "column_mapping": column_mapping,
                     },
                     pickle_file,

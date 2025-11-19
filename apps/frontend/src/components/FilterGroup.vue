@@ -155,7 +155,7 @@
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
           <PrimeDropdown
-            v-model="filter.accession"
+            v-model="filter.replicon_accession"
             :options="repliconAccessionOptions"
             style="flex: auto"
           />
@@ -326,7 +326,7 @@ export default {
       } as PropertyFilter,
       RepliconFilter: {
         label: 'Replicon',
-        accession: '',
+        replicon_accession: '',
         exclude: false,
       } as RepliconFilter,
       LineageFilter: {
