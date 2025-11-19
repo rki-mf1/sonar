@@ -350,8 +350,11 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
         fields = ["id", "name", "genomic_profiles"]
 
     def get_genomic_profiles(self, obj: models.Sample):
-        list = []
+        replicon_dict = {}
         for sequence in obj.sequences.all():
+            replicon_accession = sequence.alignments.first().replicon.accession
+            if replicon_accession not in replicon_dict:
+                replicon_dict[replicon_accession] = []
             for alignment in sequence.alignments.all():
                 for mutation in alignment.genomic_profiles:
                     variant = {}
@@ -360,8 +363,8 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
                     variant["variant.alt"] = mutation.alt
                     variant["variant.start"] = mutation.start
                     variant["variant.end"] = mutation.end
-                    list.append(variant)
-        return list
+                    replicon_dict[replicon_accession].append(variant)
+        return replicon_dict
 
 
 class SampleGenomesExportStreamSerializer(SampleGenomesSerializer):

@@ -106,6 +106,17 @@ def test_match_profile_exactN(capfd, api_url):
 
 
 @pytest.mark.xdist_group(name="group1")
+def test_match_profile_vcf_covid(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --sample IMS-10013-CVDP-7629957A-D507-442D-BD2A-18236F7DB38C IMS-10150-CVDP-6EC46FD8-1FBA-427D-A559-411BCF94B679  --format vcf"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert 125 == len(lines)
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group1")
 def test_match_profile_exactX(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --profile ORF7a:Q76x --count")
     out, err = capfd.readouterr()
@@ -698,4 +709,18 @@ def test_match_nt_del_influ(capfd, api_url):
     lines = out.splitlines()
 
     assert "16" == lines[-1]
+    assert code == 0
+
+
+@pytest.mark.xdist_group(name="group9")
+@pytest.mark.order(7)
+def test_match_profile_vcf_influenza(capfd, api_url):
+    code = run_cli(
+        f"match --db {api_url} -r NC_026438.1  --sample A/swine/Miyazaki/344/2018  --format vcf"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert "CY121680.1" in out
+    assert "NC_026431.1" in out
+    assert 333 == len(lines)
     assert code == 0

@@ -9,7 +9,6 @@ import time
 import traceback
 from typing import Any
 from typing import Dict
-from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Union
@@ -1293,7 +1292,7 @@ class sonarUtils:
 
     @staticmethod
     def export_csv(
-        data: Union[List[Dict[str, Any]], Iterator[Dict[str, Any]]],
+        data: List[str],
         default_columns: List[str],
         output_column: Optional[List[str]] = [],
         outfile: Optional[str] = None,
@@ -1304,7 +1303,7 @@ class sonarUtils:
         Export the results of a SQL query or a list of rows into a CSV file.
 
         Parameters:
-        data: An iterator over the rows of the query result, or a list of rows.
+        data: list of flattened JSON objects representing the rows to be exported.
         default_columns: List of default columns to use if output_column is not provided.
         output_column: List of specific columns to output. If None, default_columns are used.
         outfile: The path to the output file. If None, the output is printed to stdout.
@@ -1383,17 +1382,20 @@ class sonarUtils:
         if not cursor:
             LOGGER.info(na)
         else:
-            # TODO: if we want to connect this function with match function
-            # we have to put the condition to check the cursor type first.
-            _dict = cache.refmols[reference]
-            refernce_sequence = _dict["sequence"]
-
             if from_var_file:
+                _dict = cache.refmols[reference]
+                refernce_sequence = _dict["sequence"]
                 records, all_samples = _get_vcf_data_form_var_parquet_file(
                     cursor, refernce_sequence, showNX
                 )
             else:
-                records, all_samples = _get_vcf_data(cursor)
+                # reference sequence for pre_ref and deletion/insertion
+                _dict = APIClient(base_url=BASE_URL).get_molecule_data(
+                    reference_accession=reference,
+                )[reference]
+                reference_sequence = _dict["sequence"]
+                cursor["molecule.accession"] = reference
+                records, all_samples = _get_vcf_data(cursor, reference_sequence)
 
             if outfile is not None:
                 directory_path = os.path.dirname(outfile)
@@ -1591,47 +1593,67 @@ def _get_vcf_data_form_var_parquet_file(cursor: dict, selected_ref_seq, showNX) 
     return records, sorted(all_samples)
 
 
-def _get_vcf_data(cursor) -> Dict:
+def _get_vcf_data(cursor, reference_sequence: str) -> Dict:
     """
     Creates a data structure with records from a database cursor.
 
     Parameters:
-    cursor: The cursor object from which to fetch data.
+    cursor: The cursor object from which to fetch data (dict with 'results' array).
+    reference_sequence: The reference genome sequence string.
 
     Returns:
-    records: A dictionary storing the genomic record data.
+    records: A nested dictionary storing the genomic record data in format:
+             records[chrom][pos][ref][alt] = set(samples)
     all_samples: A sorted list of all unique samples in the records.
     """
-    # Initialize the nested dictionary for storing records
+    # Initialize the nested dictionary for storing records (same structure as _get_vcf_data_form_var_parquet_file)
     records = collections.defaultdict(
         lambda: collections.defaultdict(lambda: collections.defaultdict(dict))
     )
     all_samples = set()
 
-    for row in cursor:
-        # Split out the data from each row
-        chrom, pos, pre_ref, ref, alt, samples = (
-            row["molecule.accession"],
-            row["start"],
-            row["pre_ref"],
-            row["ref"],
-            row["alt"],
-            row["samples"],
-        )
+    # because in json_response, samples is under results key and can have multiple samples
+    if isinstance(cursor, dict) and "results" in cursor:
+        samples = cursor["results"]
+    else:
+        samples = cursor
 
-        # Convert the samples string into a set
-        sample_set = set(samples.split("\t"))
-        # POS position in VCF format: 1-based position
-        pos = pos + 1
-        # Skip the empty alternate values
+    for sample_data in samples:
+        sample_name = sample_data.get("name", "")
+        all_samples.add(sample_name)
 
-        records[chrom][pos][ref][alt] = sample_set
+        genomic_profiles = sample_data.get("genomic_profiles", [])
 
-        if "pre_ref" not in records[chrom][pos]:
-            records[chrom][pos]["pre_ref"] = pre_ref
-        # Update the list of all unique samples
-        all_samples.update(sample_set)
+        for replicon_accession, var_list in genomic_profiles.items():
+            chrom = replicon_accession
+            for profile in var_list:
+                ref = profile.get("variant.ref", "")
+                alt = profile.get("variant.alt", "")
+                start = profile.get("variant.start", 0)
+                # end is not needed for VCF output structure
 
+                #  pre_ref (base position before start position) for deletion
+                if start - 1 < 0:
+                    pre_ref = ""
+                else:
+                    try:
+                        pre_ref = reference_sequence[start - 1]
+                    except IndexError:
+                        LOGGER.warning(
+                            f"Position {start - 1} out of range for reference sequence"
+                        )
+                    pre_ref = ""
+
+                # POS position in VCF format: 1-based position
+                pos = start + 1
+
+                if alt not in records[chrom][pos][ref]:
+                    records[chrom][pos][ref][alt] = set()
+
+                records[chrom][pos][ref][alt].add(sample_name)
+
+                if "pre_ref" not in records[chrom][pos]:
+                    records[chrom][pos]["pre_ref"] = pre_ref
     return records, sorted(all_samples)
 
 
@@ -1709,7 +1731,9 @@ def _write_vcf_records(handle, records: Dict, all_samples: List[str]):  # noqa: 
                         ),  # -1 to the position for DEL, NOTE: be careful for 0-1=-1
                         ".",
                         (pre_ref + ref),
-                        (pre_ref) if alt == " " else alt,  # changed form '.'
+                        (
+                            (pre_ref) if alt == " " or alt == "" else alt
+                        ),  # changed form '.'
                         ".",
                         ".",
                         ".",
