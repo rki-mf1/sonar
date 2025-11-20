@@ -20,7 +20,6 @@ from django.db.models import CharField
 from django.db.models import Count
 from django.db.models import Exists
 from django.db.models import F
-from django.db.models import IntegerField
 from django.db.models import OuterRef
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -1337,10 +1336,11 @@ class SampleViewSet(
 
     @action(detail=False, methods=["get"])
     def get_sequence_data(self, request: Request, *args, **kwargs):
-        sequence_name = request.GET.get("sample_data")
+        sequence_name = request.GET.get("sequence_name", "")
         if not sequence_name:
             return Response(
-                {"detail": "Sample name is missing"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Sequence name is missing"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         sequence = (
             models.Sequence.objects.filter(name=sequence_name)

@@ -217,8 +217,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
             "properties",
             "genomic_profiles",
             "proteomic_profiles",
-            "init_upload_date",
-            "last_update_date",
         ]
 
     def get_properties(self, obj: models.Sample):

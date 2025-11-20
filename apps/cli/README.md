@@ -50,8 +50,8 @@ cp env.template .env
 ### 2.3 Create python environment
 
 ```sh
-conda env update -p ./env -f environment.yml --prune
-conda activate ./env
+conda env update -n sonar -f environment.yml --prune
+conda activate sonar
 ```
 
 The same `conda env update` command can be used any time if you change your environment.yml file and want to update your environment to reflect the changes.
@@ -130,8 +130,8 @@ positional arguments:
 We provide the test datasets under the `test-data` directory.
 | File              | Usage                                                                            |
 | ----------------- | -------------------------------------------------------------------------------- |
-| `sars-cov-2/180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
-| `sars-cov-2/MN908947.nextclade.gb`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
+| `test-data/sars-cov-2/180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
+| `test-data/sars-cov-2/MN908947.nextclade.gb`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
 
 # Usage 🚀
 
@@ -169,19 +169,19 @@ The `import` subcommand is used to import genome sequences and sample informatio
 Basic command:
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta sars-cov-2.fasta --cache cache_folder/ -t 2 --method 1
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method 1
 ```
 
 Example command: Including properties during import
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_2.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
 ```
 
 Example command: Including annotation step(`--auto-anno`)
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_2.tsv --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
 ```
 
 To view all available options:
