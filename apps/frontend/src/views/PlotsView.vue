@@ -331,7 +331,9 @@ export default {
     cleanDataAndAddNullSamples(data: { [key: string]: number }) {
       if (!data || typeof data !== 'object') return { labels: [], data: [] }
       const cleanedData = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => key !== 'null' && value !== 0),
+        Object.entries(data).filter(
+          ([key, value]) => key !== 'null' && key !== 'None' && key !== '' && value !== 0,
+        ),
       )
       const totalSamples = this.samplesStore.filteredStatistics?.filtered_total_count || 0
       const metadataSamples = Object.values(cleanedData).reduce((sum, count) => sum + count, 0)
@@ -776,9 +778,19 @@ export default {
       this.selectedBinSize = null
     },
     getHistogramPlotData(property: string, binSize: number): HistogramData {
-      const propertyData = this.samplesStore.propertyData[property] || {}
+      let propertyData = this.samplesStore.propertyData[property] || {}
       const minValue = Math.min(...Object.keys(propertyData).map(Number))
       const maxValue = Math.max(...Object.keys(propertyData).map(Number))
+      const cleanedData = this.cleanDataAndAddNullSamples(propertyData)
+      propertyData = cleanedData.labels.reduce(
+        (acc, label, index) => {
+          if (label !== 'Not Reported') {
+            acc[label] = cleanedData.data[index]
+          }
+          return acc
+        },
+        {} as { [key: string]: number },
+      )
       const bins = Array.from(
         { length: Math.ceil((maxValue - minValue) / binSize) },
         (_, i) => minValue + i * binSize,
@@ -792,15 +804,22 @@ export default {
         return count
       })
       const labels = bins.map((binStart) => `${binStart}-${binStart + binSize - 1}`)
-      const color = this.generateColorPalette(1)[0]
+      if (cleanedData.labels.includes('Not Reported')) {
+        labels.push('Not Reported')
+        histogramData.push(cleanedData.data[cleanedData.labels.indexOf('Not Reported')] || 0)
+      }
+      const baseColor = this.generateColorPalette(2)[0] // Single color for all bars/points
+      const colors = labels.map(
+        (label) => (label === 'Not Reported' ? '#cccccc' : baseColor), // Grey for "Not Reported", base color for others
+      )
       return {
         labels: labels,
         datasets: [
           {
             label: `samples`,
             data: histogramData,
-            backgroundColor: color,
-            borderColor: chroma(color).darken(1.0).hex(),
+            backgroundColor: colors,
+            borderColor: colors.map((c) => chroma(c).darken(1.0).hex()),
             borderWidth: 1.5,
           },
         ],

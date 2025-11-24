@@ -782,30 +782,39 @@ class SampleViewSet(
         result.sort(key=lambda x: x["week"])
         return result
 
-    def _get_custom_property_plot(self, queryset, property):
-        if property == "":
+    def _get_custom_property_plot(self, queryset, sample_property):
+        # Determine if x_property and y_property are flexible or fixed
+        flexible_properties = PropertyViewSet.get_custom_property_names()
+        is_flexible = sample_property in flexible_properties
+        if sample_property == "":
             result_dict = {}
-        elif property == "sequencing_reason":
-            queryset = queryset.filter(properties__property__name="sequencing_reason")
+        # not in sample table
+        elif is_flexible:
+            datatype = (
+                models.Property.objects.filter(name=sample_property)
+                .values_list("datatype", flat=True)
+                .first()
+            )
+            queryset = queryset.filter(properties__property__name=sample_property)
             # the value_char holds the sequencing reason values
             grouped_queryset = (
-                queryset.values("properties__value_varchar")
-                .annotate(total=Count("properties__value_varchar"))
-                .order_by()
+                queryset.values(f"properties__{datatype}")
+                .annotate(total=Count("id", distinct=True))
+                .order_by("properties__value_varchar")
             )
             result_dict = {
-                item["properties__value_varchar"]: item["total"]
+                item[f"properties__{datatype}"]: item["total"]
                 for item in grouped_queryset
             }
-
+        # fixed sample table prperty
         else:
             grouped_queryset = (
-                queryset.values(property)
-                .annotate(total=Count(property))
-                .order_by(property)
+                queryset.values(sample_property)
+                .annotate(total=Count("id", distinct=True))
+                .order_by(sample_property)
             )
             result_dict = {
-                str(item[property]): item["total"] for item in grouped_queryset
+                str(item[sample_property]): item["total"] for item in grouped_queryset
             }  # str required for properties in date format
 
         return result_dict
@@ -909,7 +918,7 @@ class SampleViewSet(
                         "properties__value_varchar",
                         f"properties__{y_datatype}",
                     )
-                    .annotate(total=Count(f"properties__{y_datatype}"))
+                    .annotate(total=Count("id", distinct=True))
                     .order_by("properties__value_varchar", f"properties__{y_datatype}")
                 )
                 for item in grouped_queryset:
@@ -929,7 +938,7 @@ class SampleViewSet(
                         **{f"properties__{y_datatype}__isnull": False},
                     )
                     .values(x_property, f"properties__{y_datatype}")
-                    .annotate(total=Count(f"properties__{y_datatype}"))
+                    .annotate(total=Count("id", distinct=True))
                     .order_by(x_property, f"properties__{y_datatype}")
                 )
                 for item in grouped_queryset:
@@ -951,7 +960,7 @@ class SampleViewSet(
                         properties__value_varchar__isnull=False,
                     )
                     .values("properties__value_varchar", y_property)
-                    .annotate(total=Count(y_property))
+                    .annotate(total=Count("id", distinct=True))
                     .order_by("properties__value_varchar", y_property)
                 )
                 for item in grouped_queryset:
@@ -970,7 +979,7 @@ class SampleViewSet(
                         **{f"{y_property}__isnull": False},
                     )
                     .values(x_property, y_property)
-                    .annotate(total=Count(y_property))
+                    .annotate(total=Count("id", distinct=True))
                     .order_by(x_property, y_property)
                 )
                 for item in grouped_queryset:
