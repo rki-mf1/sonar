@@ -443,14 +443,14 @@ def create_subparser_import(
     # help="Select alignment tools: mafft, parasail, wfa (default: %(default)s)",
     parser.add_argument(
         "--method",
-        help="Select alignment method: 'mafft', 'parasail' or 'wfa' (default: %(default)s)",
+        help="select alignment method (default: %(default)s)",
         choices=["mafft", "parasail", "wfa"],
         type=str,
         default="mafft",
     )
     parser.add_argument(
         "--nextclade-json",
-        help="outputfrom nextclade tool (e.g. nextclade.json)",
+        help="output from nextclade tool (e.g. nextclade.json)",
         type=str,
         nargs="+",
         default=None,
@@ -524,7 +524,7 @@ def create_subparser_import(
     )
     parser.add_argument(
         "--debug",
-        help="Save additional files to the cache dir that can be useful when debugging errors",
+        help="save additional files to the cache dir that can be useful when debugging errors",
         action="store_true",
     )
     parser.add_argument(
