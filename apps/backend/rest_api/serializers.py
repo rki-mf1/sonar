@@ -237,25 +237,28 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         return custom_properties
 
     def get_genomic_profiles(self, obj: models.Sample):
+        showNX = self.context.get("showNX", False)
         # genomic_profiles are prefetched for genomes endpoint
-        genomic_profiles = {}
+        genomic_profiles_dict = {}
 
         for sequence in obj.sequences.all():
             for alignment in sequence.alignments.all():
                 replicon = alignment.replicon
                 replicon_acc = replicon.accession
-                if replicon_acc not in genomic_profiles:
-                    genomic_profiles[replicon_acc] = {}
+                if replicon_acc not in genomic_profiles_dict:
+                    genomic_profiles_dict[replicon_acc] = {}
                 for mutation in alignment.genomic_profiles:
+                    if not showNX and ("N" in mutation.alt):
+                        continue
                     annotations = []
                     for nucleotide_mutation in alignment.nucleotide_mutations.all():
                         if nucleotide_mutation == mutation:
                             for annotation in nucleotide_mutation.alignment_annotations:
                                 annotations.append(str(annotation))
-                    genomic_profiles[replicon_acc][
+                    genomic_profiles_dict[replicon_acc][
                         self.create_NT_format(mutation)
                     ] = annotations
-        return genomic_profiles
+        return genomic_profiles_dict
 
     def define_proteomic_label(
         self,
@@ -283,7 +286,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         """
         Build proteomic profiles per CDS for all sequences in the sample.
         """
-
+        showNX = self.context.get("showNX", False)
         # Prefetch all needed relations:
         sequences = obj.sequences.prefetch_related(
             "alignments__replicon",
@@ -297,15 +300,22 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
             for alignment in sequence.alignments.all():
 
                 # Get all CDS objects of this replicon
-                cds_list = models.CDS.objects.filter(gene__replicon=alignment.replicon)
+                cds_list = [
+                    (cds.gene.replicon.accession, cds)
+                    for cds in models.CDS.objects.filter(
+                        gene__replicon=alignment.replicon
+                    )
+                ]
 
-                for cds in cds_list:
+                for replicon, cds in cds_list:
                     labels = []
 
                     # All AA mutations for this CDS & this alignment
                     mutations = cds.aminoacidmutation_set.filter(alignments=alignment)
 
                     for mutation in mutations:
+                        if not showNX and ("X" in mutation.alt):
+                            continue
                         gene_symbol = mutation.cds.gene.symbol
                         mutation_start = mutation.start
                         mutation_end = mutation.end
@@ -317,7 +327,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                         labels.append((gene_symbol, mutation_start, label))
 
                     # sort by (gene, position)
-                    proteomic_profiles[cds.accession] = [
+                    proteomic_profiles[f"{replicon}: {cds.accession}"] = [
                         item[2] for item in sorted(labels, key=lambda x: (x[0], x[1]))
                     ]
         return proteomic_profiles
@@ -341,6 +351,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
 
 class SampleGenomesSerializerVCF(serializers.ModelSerializer):
+
     genomic_profiles = serializers.SerializerMethodField()
 
     class Meta:
@@ -348,6 +359,7 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
         fields = ["id", "name", "genomic_profiles"]
 
     def get_genomic_profiles(self, obj: models.Sample):
+        showNX = self.context.get("showNX", False)
         replicon_dict = {}
         for sequence in obj.sequences.all():
             replicon_accession = sequence.alignments.first().replicon.accession
@@ -355,6 +367,8 @@ class SampleGenomesSerializerVCF(serializers.ModelSerializer):
                 replicon_dict[replicon_accession] = []
             for alignment in sequence.alignments.all():
                 for mutation in alignment.genomic_profiles:
+                    if not showNX and ("N" in mutation.alt):
+                        continue
                     variant = {}
                     variant["variant.id"] = mutation.id
                     variant["variant.ref"] = mutation.ref

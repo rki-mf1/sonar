@@ -1196,7 +1196,6 @@ class sonarUtils:
 
         params["filters"] = json.dumps(
             construct_query(
-                reference=reference,
                 profiles=profiles,
                 properties=properties,
                 defined_props=defined_props,
@@ -1208,6 +1207,7 @@ class sonarUtils:
         )
 
         params["showNX"] = showNX
+        params["reference_accession"] = reference
         params["vcf_format"] = True if format == "vcf" else False
 
         if format == "count":

@@ -69,11 +69,27 @@
           <div v-if="column === 'genomic_profiles'" class="cell-content">
             <div>
               <GenomicProfileLabel
-                v-for="(variant, index) in Object.keys(slotProps.data.genomic_profiles)"
+                v-for="(variant, index) in Object.values(slotProps.data.genomic_profiles).flatMap(
+                  (rep) => Object.keys(rep as Record<string, unknown>),
+                )"
                 :key="variant"
                 :variant-string="variant"
-                :annotations="slotProps.data.genomic_profiles[variant]"
-                :is-last="index === Object.keys(slotProps.data.genomic_profiles).length - 1"
+                :annotations="
+                  (() => {
+                    for (const r of Object.values(slotProps.data.genomic_profiles)) {
+                      const rec = r as Record<string, unknown>
+                      if (variant in rec) return rec[variant]
+                    }
+                    return []
+                  })()
+                "
+                :is-last="
+                  index ===
+                  Object.values(slotProps.data.genomic_profiles).flatMap((rep) =>
+                    Object.keys(rep as Record<string, unknown>),
+                  ).length -
+                    1
+                "
               />
             </div>
           </div>
@@ -90,11 +106,11 @@
             </div>
           </div>
           <div v-else-if="column === 'init_upload_date'" class="cell-content">
-            {{ formatDate(slotProps.data.init_upload_date) }}
+            {{ formatDate(findProperty(slotProps.data.properties, 'init_upload_date')) }}
           </div>
 
           <div v-else-if="column === 'last_update_date'" class="cell-content">
-            {{ formatDate(slotProps.data.last_update_date) }}
+            {{ formatDate(findProperty(slotProps.data.properties, 'last_update_date')) }}
           </div>
           <span v-else class="cell-content">
             {{ findProperty(slotProps.data.properties, column) }}

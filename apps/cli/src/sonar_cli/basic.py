@@ -209,7 +209,6 @@ def create_annotaiton_query(
 
 
 def construct_query(  # noqa: C901
-    reference: str,
     properties: Optional[Dict[str, List[str]]] = None,
     profiles: Optional[Dict[str, List[str]]] = None,
     defined_props: Optional[List[Dict[str, str]]] = [],
@@ -232,7 +231,7 @@ def construct_query(  # noqa: C901
     float_pattern_range = re.compile(
         r"^(\^*)(-?[1-9]+[0-9]*(?:.[0-9]+)*):(-?[1-9]+[0-9]*(?:.[0-9]+)*)$"
     )
-    final_query = {"reference_accession": reference, "andFilter": [], "orFilter": []}
+    final_query = {"andFilter": [], "orFilter": []}
     LOGGER.debug(f"Input Samples:{samples}")
     LOGGER.debug(f"Input Profiles:{profiles}")
     LOGGER.debug(f"Input Properties:{properties}")

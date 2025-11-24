@@ -345,25 +345,39 @@ class SampleViewSet(
                 queryset = queryset.filter(name=name_filter)
 
             # fetch genomic and proteomic profiles
-            genomic_profiles_qs = models.NucleotideMutation.objects.only(
-                "ref", "alt", "start", "end", "is_frameshift"
-            ).order_by("start")
-            proteomic_profiles_qs = (
-                models.AminoAcidMutation.objects.only(
-                    "ref", "alt", "start", "end", "cds"
+            # filter out ambiguous nucleotides or unspecified amino acids. better but too slow: alt__icontains="N", filter by string later
+            if not showNX:
+                genomic_profiles_qs = (
+                    models.NucleotideMutation.objects.only(
+                        "ref", "alt", "start", "end", "is_frameshift"
+                    )
+                    .exclude(alt="N")
+                    .order_by("start")
                 )
-                .prefetch_related("cds__cds_segments")
-                .order_by("cds", "start")
-            )
+                proteomic_profiles_qs = (
+                    models.AminoAcidMutation.objects.only(
+                        "ref", "alt", "start", "end", "cds"
+                    )
+                    .prefetch_related("cds__cds_segments")
+                    .exclude(alt="X")
+                    .order_by("cds", "start")
+                )
+            else:
+                genomic_profiles_qs = models.NucleotideMutation.objects.only(
+                    "ref", "alt", "start", "end", "is_frameshift"
+                ).order_by("start")
+                proteomic_profiles_qs = (
+                    models.AminoAcidMutation.objects.only(
+                        "ref", "alt", "start", "end", "cds"
+                    )
+                    .prefetch_related("cds__cds_segments")
+                    .order_by("cds", "start")
+                )
+
             annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")
 
             if DEBUG:
                 LOGGER.info(queryset.query)
-
-            # filter out ambiguous nucleotides or unspecified amino acids
-            if not showNX:
-                genomic_profiles_qs = genomic_profiles_qs.exclude(alt="N")
-                proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
 
             # optimize queryset by prefetching and storing profiles as attributes
             queryset = queryset.prefetch_related(
@@ -397,14 +411,16 @@ class SampleViewSet(
 
             # return vcf format if specified
             if vcf_format:
-                return self._return_vcf_format(queryset)
+                return self._return_vcf_format(queryset, showNX)
 
             # default response
             queryset = self.paginate_queryset(queryset)
             LOGGER.info(
                 f"Query time done in {datetime.now() - timer},Start to Format result"
             )
-            serializer = SampleGenomesSerializer(queryset, many=True)
+            serializer = SampleGenomesSerializer(
+                queryset, many=True, context={"request": request, "showNX": showNX}
+            )
             timer = datetime.now()
             LOGGER.info(
                 f"Serializer done in {datetime.now() - timer},Start to Format result"
@@ -465,12 +481,14 @@ class SampleViewSet(
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
-    def _return_vcf_format(self, queryset):
+    def _return_vcf_format(self, queryset, showNX=False):
         """
         return queryset data in vcf format
         """
         queryset = self.paginate_queryset(queryset)
-        serializer = SampleGenomesSerializerVCF(queryset, many=True)
+        serializer = SampleGenomesSerializerVCF(
+            queryset, many=True, context={"request": self.request, "showNX": showNX}
+        )
         return self.get_paginated_response(serializer.data)
 
     def _stream_serialized_data(
@@ -1276,15 +1294,15 @@ class SampleViewSet(
 
     def filter_replicon(
         self,
-        accession,
+        replicon_accession,
         exclude: bool = False,
         *args,
         **kwargs,
     ):
         if exclude:
-            return ~Q(sequences__alignments__replicon__accession=accession)
+            return ~Q(sequences__alignments__replicon__accession=replicon_accession)
         else:
-            return Q(sequences__alignments__replicon__accession=accession)
+            return Q(sequences__alignments__replicon__accession=replicon_accession)
 
     def filter_reference(
         self,
