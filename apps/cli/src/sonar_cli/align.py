@@ -27,7 +27,9 @@ LOGGER = LoggingConfigurator.get_logger()
 
 
 class sonarAligner:
-    def __init__(self, cache_outdir=None, method=1, allow_updates=False, debug=False):
+    def __init__(
+        self, cache_outdir=None, method="mafft", allow_updates=False, debug=False
+    ):
         self.nuc_profile = []
         self.nuc_n_profile = []
         self.aa_profile = []
@@ -49,11 +51,11 @@ class sonarAligner:
             and os.path.isfile(sample_data["var_parquet_file"])
         ):
             return sample_data
-        if self.method == 1:
+        if self.method == "mafft":
             # For alignment methods that return the reference and query
             # sequence strings as they would align to each other
             nuc_vars = self.process_cached_alignment(sample_data)
-        elif self.method == 2 or self.method == 3:
+        elif self.method == "parasail" or self.method == "wfa":
             # For alignment methods that return a cigar string
             nuc_vars = self.process_cached_cigar(sample_data, self.method)
 
@@ -96,7 +98,7 @@ class sonarAligner:
         nuc_vars = self.extract_nuc_vars_from_alignment(*alignment, elem_acc=source_acc)
         return nuc_vars
 
-    def process_cached_cigar(self, data: dict, method: int):
+    def process_cached_cigar(self, data: dict, method: str):
         """
         Work with: Cigar format
         This function takes a sample file and processes it.
@@ -105,12 +107,9 @@ class sonarAligner:
         source_acc = str(data["source_acc"])
         qryseq = read_seqcache(data["seq_file"])
         refseq = read_seqcache(data["ref_file"])
-        if method == 2:
+        if method == "parasail":
             _, __, cigar = align_Parasail(qryseq, refseq)
-        # TODO: WFA is disabled for now. It has problems with crashing and also
-        # needs to be updated now that qryseq and refseq are fasta files
-        # (previously they were pure sequences)
-        elif method == 3:
+        elif method == "wfa":
             _, __, cigar = align_WFA(qryseq, refseq)
         else:
             LOGGER.error(f"Alignment method not recognized (method = {method})")
