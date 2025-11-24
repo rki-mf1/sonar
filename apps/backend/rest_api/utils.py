@@ -318,10 +318,24 @@ def get_distinct_replicon_accessions(reference=None):
     """
     Helper method to get distinct replicon accessions.
     """
-    queryset = models.Replicon.objects.distinct("accession").values("accession")
+    queryset = models.Replicon.objects.all()
     if reference:
         queryset = queryset.filter(reference__accession=reference)
-    return [item["accession"] for item in queryset if item["accession"]]
+    qs = queryset.values_list("accession", flat=True).distinct()
+    return [acc for acc in qs if acc]
+
+
+def get_distinct_cds_accessions(reference=None, replicon=None):
+    """
+    Helper method to get distinct CDS accessions.
+    """
+    queryset = models.CDS.objects.all()
+    if replicon:
+        queryset = queryset.filter(gene__replicon__accession=replicon)
+    if reference:
+        queryset = queryset.filter(gene__replicon__reference__accession=reference)
+    qs = queryset.values_list("accession", flat=True).distinct()
+    return [acc for acc in qs if acc]
 
 
 def get_distinct_peptide_descriptions(reference=None):

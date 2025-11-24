@@ -157,8 +157,6 @@ export default class API {
     }
     const chunks = []
 
-    chunks.push(exportColumns.join(';') + '\n') // add column names for csv export
-
     const outStream = new WritableStream({
       write(chunk) {
         chunks.push(chunk)

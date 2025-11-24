@@ -46,6 +46,7 @@ from rest_api.data_entry.sample_job import delete_sequences
 from rest_api.serializers import SampleGenomesExportStreamSerializer
 from rest_api.serializers import SampleSerializer
 from rest_api.utils import define_profile
+from rest_api.utils import get_distinct_cds_accessions
 from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import get_distinct_replicon_accessions
 from rest_api.utils import resolve_ambiguous_NT_AA
@@ -106,7 +107,7 @@ class SampleViewSet(
         return cls._cached_gene_symbols
 
     @classmethod
-    def get_replicons(cls, force_refresh=False):
+    def get_replicons(cls, reference_accession=None, force_refresh=True):
         """
         update cached replicon accession set if cache older than CACHE_TTL
         """
@@ -118,11 +119,14 @@ class SampleViewSet(
             or (now - cls._cache_timestamp) > cls.CACHE_TTL
         ):
 
-            replicons_list = get_distinct_replicon_accessions()
+            replicons_list = get_distinct_replicon_accessions(reference_accession)
             cls._cached_replicons = set(replicons_list)
             cls._cache_timestamp = now
 
         return cls._cached_replicons
+
+    def get_cds_accessions(self, replicon=None):
+        return get_distinct_cds_accessions(replicon=replicon)
 
     @property
     def filter_label_to_methods(self):
@@ -458,25 +462,51 @@ class SampleViewSet(
 
         return queryset
 
-    def _return_csv_stream(self, queryset, request):
+    def _get_genomic_and_proteomic_profile_columns(self, columns, reference_accession):
+        """
+        Expand genomic_profiles and proteomic_profiles columns into individual columns
+        based on existing gene symbols and replicon accessions.
+        """
+        expanded_columns = []
+        for column in columns:
+            if column == "genomic_profiles":
+                replicons = self.get_replicons(reference_accession)
+                for replicon in sorted(list(replicons)):
+                    expanded_columns.append(f"genomic_profile: {replicon}")
+            elif column == "proteomic_profiles":
+                replicons = self.get_replicons(reference_accession)
+                for replicon in sorted(list(replicons)):
+                    for cds_acc in sorted(list(self.get_cds_accessions(replicon))):
+                        expanded_columns.append(
+                            f"proteomic_profile: {replicon}: {cds_acc}"
+                        )
+            else:
+                expanded_columns.append(column)
+        return expanded_columns
+
+    def _return_csv_stream(self, queryset, request, showNX=False):
         """
         stream queryset data as a csv file
         """
         pseudo_buffer = Echo()
         writer = csv.writer(pseudo_buffer, delimiter=";")
         columns = request.query_params.get("columns")
+        reference_accession = request.query_params.get("reference_accession")
+        reference_accession = (
+            reference_accession.strip('"').strip("'") if reference_accession else None
+        )
 
-        if columns:
-            columns = columns.split(",")
-        else:
+        if not columns:
             raise Exception("No columns provided")
 
-        filename = request.query_params.get(
-            "filename", "sample_genomes.csv"
-        )  # default: "sample_genomes.csv"
+        columns = columns.split(",")
+        columns = self._get_genomic_and_proteomic_profile_columns(
+            columns, reference_accession
+        )
+        filename = request.query_params.get("filename", "sample_genomes.csv")
 
         return StreamingHttpResponse(
-            self._stream_serialized_data(queryset, columns, writer),
+            self._stream_serialized_data(queryset, columns, writer, showNX),
             content_type="text/csv",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
@@ -492,15 +522,22 @@ class SampleViewSet(
         return self.get_paginated_response(serializer.data)
 
     def _stream_serialized_data(
-        self, queryset: QuerySet, columns: list[str], writer: "_csv._writer"
+        self,
+        queryset: QuerySet,
+        columns: list[str],
+        writer: "_csv._writer",
+        showNX: bool = False,
     ) -> Generator:
         serializer = SampleGenomesExportStreamSerializer
+
         serializer.columns = columns
-        # yield writer.writerow(columns)
+        yield writer.writerow(columns)
         paginator = Paginator(queryset, 100)
         for page in paginator.page_range:
             for serialized in serializer(
-                paginator.page(page).object_list, many=True
+                paginator.page(page).object_list,
+                many=True,
+                context={"showNX": showNX, "columns": columns},
             ).data:
                 yield writer.writerow(serialized["row"])
 

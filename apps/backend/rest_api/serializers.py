@@ -258,7 +258,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     genomic_profiles_dict[replicon_acc][
                         self.create_NT_format(mutation)
                     ] = annotations
-        return genomic_profiles_dict
+        return OrderedDict(sorted(genomic_profiles_dict.items()))
 
     def define_proteomic_label(
         self,
@@ -330,7 +330,7 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     proteomic_profiles[f"{replicon}: {cds.accession}"] = [
                         item[2] for item in sorted(labels, key=lambda x: (x[0], x[1]))
                     ]
-        return proteomic_profiles
+        return OrderedDict(sorted(proteomic_profiles.items()))
 
     def create_NT_format(self, mutation: models.NucleotideMutation):
         label = ""
@@ -384,25 +384,51 @@ class SampleGenomesExportStreamSerializer(SampleGenomesSerializer):
     columns = ["name"]
 
     def get_row(self, obj: models.Sample):
-        custom_properties = Sample2PropertySerializer(
-            obj.properties, many=True, read_only=True
-        ).data
+        showNX = self.context.get("showNX", False)
+        ctx = self.context
+
+        if "custom_prop_cache" not in ctx:
+            ctx["custom_prop_cache"] = {}
+
+        if "genomic_cache" not in ctx:
+            ctx["genomic_cache"] = {}
+
+        if "proteomic_cache" not in ctx:
+            ctx["proteomic_cache"] = {}
+            # Cache custom properties
+        if obj.id not in ctx["custom_prop_cache"]:
+            props = Sample2PropertySerializer(
+                obj.properties, many=True, read_only=True
+            ).data
+            ctx["custom_prop_cache"][obj.id] = {p["name"]: p["value"] for p in props}
+
+        custom_properties = ctx["custom_prop_cache"][obj.id]
+
+        # Cache genomic profiles
+        if obj.id not in ctx["genomic_cache"]:
+            ctx["genomic_cache"][obj.id] = self.get_genomic_profiles(obj)
+
+        genomic_dict = ctx["genomic_cache"][obj.id]
+
+        # Cache proteomic profiles
+        if obj.id not in ctx["proteomic_cache"]:
+            ctx["proteomic_cache"][obj.id] = self.get_proteomic_profiles(obj)
+
+        proteomic_dict = ctx["proteomic_cache"][obj.id]
+
         row = []
         for column in self.columns:
-            if column == "proteomic_profiles":
-                row.append(", ".join(self.get_proteomic_profiles(obj)))
-            elif column == "genomic_profiles":
-                row.append(", ".join(list(self.get_genomic_profiles(obj).keys())))
-            elif value := next(
-                (item["value"] for item in custom_properties if item["name"] == column),
-                None,
-            ):
-                row.append(value)
+            if column.startswith("proteomic_profile"):
+                gene_acc = column.split(": ", 1)[1]
+                row.append("; ".join(proteomic_dict.get(gene_acc, [])))
+            elif column.startswith("genomic_profile"):
+                replicon_acc = column.split(": ", 1)[1]
+                muts = genomic_dict.get(replicon_acc)
+                row.append("; ".join(list(muts.keys())) if muts else "")
+            elif column in custom_properties:
+                row.append(custom_properties[column])
             else:
-                try:
-                    row.append(getattr(obj, column))
-                except:
-                    row.append("")
+                row.append(getattr(obj, column, ""))
         return row
 
     class Meta:
