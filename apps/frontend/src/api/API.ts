@@ -152,7 +152,7 @@ export default class API {
       const reader: ReadableStreamDefaultReader<string> = stream
         .pipeThrough(new TextDecoderStream())
         .getReader()
-      this.saveAsXLSX(reader, exportColumns)
+      this.saveAsXLSX(reader)
       return
     }
     const chunks = []
@@ -171,30 +171,45 @@ export default class API {
     saveAs(blob, 'export.csv')
   }
 
-  async saveAsXLSX(reader: ReadableStreamDefaultReader<string>, columns: string[]) {
+  async saveAsXLSX(reader: ReadableStreamDefaultReader<string>) {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Sheet 1')
-    worksheet.columns = columns.map((c) => ({ header: c, key: c, width: 20 }))
     let data = '' as string
+    let columns: string[] = []
+    let headerProcessed = false
+
     while (true) {
       const { done, value } = await reader.read()
       if (done) {
         break
       }
       data += value
+
       if (data && data.includes('\n')) {
         const lines = data.split('\n')
+
+        if (!headerProcessed) {
+          columns = lines.shift()?.split(';') || []
+          worksheet.columns = columns.map((c) => ({ header: c, key: c, width: 20 }))
+          headerProcessed = true
+        }
+
         data = lines.pop() || ''
+
         for (const line of lines) {
-          const values = line.split(';')
-          const rowValues: { [key: string]: string | undefined } = {}
-          columns.forEach((c, i) => {
-            rowValues[c] = values[i]
-          })
-          worksheet.addRow(rowValues)
+          if (line.trim()) {
+            // skip empty lines
+            const values = line.split(';')
+            const rowValues: { [key: string]: string | undefined } = {}
+            columns.forEach((c, i) => {
+              rowValues[c] = values[i]
+            })
+            worksheet.addRow(rowValues)
+          }
         }
       }
     }
+
     const buffer = await workbook.xlsx.writeBuffer()
     saveAs(
       new Blob([buffer], {

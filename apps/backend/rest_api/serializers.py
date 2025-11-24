@@ -420,11 +420,11 @@ class SampleGenomesExportStreamSerializer(SampleGenomesSerializer):
         for column in self.columns:
             if column.startswith("proteomic_profile"):
                 gene_acc = column.split(": ", 1)[1]
-                row.append("; ".join(proteomic_dict.get(gene_acc, [])))
+                row.append(", ".join(proteomic_dict.get(gene_acc, [])))
             elif column.startswith("genomic_profile"):
                 replicon_acc = column.split(": ", 1)[1]
                 muts = genomic_dict.get(replicon_acc)
-                row.append("; ".join(list(muts.keys())) if muts else "")
+                row.append(", ".join(list(muts.keys())) if muts else "")
             elif column in custom_properties:
                 row.append(custom_properties[column])
             else:
