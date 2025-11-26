@@ -125,7 +125,7 @@ class SampleViewSetTest(
                 },
                 10,
             ),
-            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 10),
+            ("Replicon", {"label": "Replicon", "replicon_accession": "MN908947.3"}, 10),
         ]
     )
     def test_genome_filters(self, _, filter, expected_count):

@@ -558,7 +558,7 @@ export const useSamplesStore = defineStore('samples', {
       }
       // Set reference accession at root level
       if (this.reference_accession) {
-        filters.reference_accession = this.reference_accession
+        filters.reference = this.reference_accession
       }
 
       // insert dataset selection as a fixed filter at the beginning

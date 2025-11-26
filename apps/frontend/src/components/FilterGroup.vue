@@ -122,7 +122,7 @@
         </div>
         <!-- Dropdown for properties with less then samplesStore dropdownThreshold unique values -->
         <div v-else-if="shouldUseDropdown(filter.propertyName)">
-          <MultiSelect
+          <PrimeDropdown
             v-model="filter.value"
             :options="propertyValueOptions[filter.propertyName]?.options"
             :loading="propertyValueOptions[filter.propertyName]?.loading"
@@ -348,7 +348,7 @@ export default {
         },
       })
       menuItems.push({
-        label: 'RepliconFilter',
+        label: 'Replicon Filter',
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
@@ -365,19 +365,16 @@ export default {
           },
         })
       }
-      this.propertyMenuOptions.forEach((propertyName) => {
-        menuItems.push({
-          label: propertyName,
-          icon: 'pi pi-plus',
-          command: async () => {
-            const newFilter = {
-              ...this.PropertyFilter,
-              propertyName: propertyName,
-            }
-            this.filterGroup.filters.propertyFilters.push(newFilter)
-            await this.updatePropertyValueOptions(newFilter)
-          },
-        })
+      menuItems.push({
+        label: 'Property Filter',
+        icon: 'pi pi-plus',
+        command: () => {
+          const newFilter = {
+            ...this.PropertyFilter,
+            propertyName: 'name',
+          }
+          this.filterGroup.filters.propertyFilters.push(newFilter)
+        },
       })
       return menuItems
     },

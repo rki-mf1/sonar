@@ -155,19 +155,18 @@ export default class API {
       this.saveAsXLSX(reader)
       return
     }
-    const chunks = []
-
+    const chunks: Uint8Array[] = []
     const outStream = new WritableStream({
-      write(chunk) {
+      write(chunk: Uint8Array) {
         chunks.push(chunk)
       },
       close() {
         // console.log('Stream closed')
       },
     })
+
     await stream.pipeThrough(new TextDecoderStream()).pipeTo(outStream)
-    const arrayBuffer = await new Blob(chunks).arrayBuffer()
-    const blob = new Blob([arrayBuffer])
+    const blob = new Blob(chunks as BlobPart[], { type: 'text/csv' })
     saveAs(blob, 'export.csv')
   }
 

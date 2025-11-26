@@ -88,7 +88,7 @@ export type FilterGroupFilters = {
 }
 
 export type FilterGroupRoot = {
-  reference_accession?: string
+  reference?: string
   limit?: number
   offset?: number
   filters: FilterGroupFilters

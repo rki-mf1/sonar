@@ -106,11 +106,11 @@
             </div>
           </div>
           <div v-else-if="column === 'init_upload_date'" class="cell-content">
-            {{ formatDate(findProperty(slotProps.data.properties, 'init_upload_date')) }}
+            {{ formatDate(findProperty(slotProps.data.properties, 'init_upload_date') || '') }}
           </div>
 
           <div v-else-if="column === 'last_update_date'" class="cell-content">
-            {{ formatDate(findProperty(slotProps.data.properties, 'last_update_date')) }}
+            {{ formatDate(findProperty(slotProps.data.properties, 'last_update_date') || '') }}
           </div>
           <span v-else class="cell-content">
             {{ findProperty(slotProps.data.properties, column) }}
