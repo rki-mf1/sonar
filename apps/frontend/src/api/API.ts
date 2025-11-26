@@ -223,8 +223,8 @@ export default class API {
     return this.getRequest(`properties/distinct_property_names/`, {}, false)
   }
 
-  getSampleGenomePropertyOptionsAndTypes() {
-    return this.getRequest(`properties/get_all_properties/`, {}, false)
+  getSampleGenomePropertyOptionsAndTypes(ref: string | null = null) {
+    return this.getRequest(`properties/get_all_properties/?reference=${ref}`, {}, false)
   }
 
   getSampleStatistics(reference?: string | null) {

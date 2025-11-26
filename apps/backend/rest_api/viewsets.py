@@ -10,15 +10,14 @@ import uuid
 import zipfile
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db.models import Count
+from django.db.models import CharField
 from django.db.models import F
 from django.db.models import Q
-from django.db.models import Sum
+from django.db.models.functions import Cast
 from django.db.utils import IntegrityError
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
-from rest_framework import serializers
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -40,11 +39,9 @@ from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
 from . import models
 from .serializers import AlignmentSerializer
-from .serializers import AminoAcidMutationSerializer
 from .serializers import GeneSerializer
 from .serializers import ImportLogSerializer
 from .serializers import LineagesSerializer
-from .serializers import NucleotideMutationSerializer
 from .serializers import ProcessingJobSerializer
 from .serializers import PropertySerializer
 from .serializers import ReferenceSerializer
@@ -163,7 +160,7 @@ class RepliconViewSet(viewsets.ModelViewSet):
 
         if replicon_id := request.query_params.get("replicon_id"):
             queryset_obj = self.queryset.filter(id=replicon_id)
-        elif ref := request.query_params.get("reference_accession"):
+        elif ref := request.query_params.get("reference"):
             queryset_obj = self.queryset.filter(reference__accession=ref)
         else:
             return Response(
@@ -469,24 +466,27 @@ class PropertyViewSet(
             queryset = models.Sample.objects.all()
             if ref := request.query_params.get("reference"):
                 queryset = queryset.filter(
-                    sequence__alignments__replicon__reference__accession=ref
+                    sequences__alignments__replicon__reference__accession=ref
                 )
             queryset = queryset.distinct(property_name)
             return Response(
                 {"values": [getattr(item, property_name) for item in queryset]},
                 status=status.HTTP_200_OK,
             )
-        queryset = models.Sample2Property.objects.filter(property__name=property_name)
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=ref
+        else:
+            queryset = models.Sample2Property.objects.filter(
+                property__name=property_name
             )
-        datatype = queryset[0].property.datatype
-        queryset = queryset.distinct(datatype)
-        return Response(
-            {"values": [getattr(item, datatype) for item in queryset]},
-            status=status.HTTP_200_OK,
-        )
+            if ref := request.query_params.get("reference"):
+                queryset = queryset.filter(
+                    sample__sequences__alignments__replicon__reference__accession=ref
+                )
+            datatype = queryset[0].property.datatype
+            queryset = queryset.distinct(datatype)
+            return Response(
+                {"values": [getattr(item, datatype) for item in queryset]},
+                status=status.HTTP_200_OK,
+            )
 
     @action(detail=False, methods=["get"])
     def distinct_property_names(self, request: Request, *args, **kwargs):
@@ -559,23 +559,26 @@ class PropertyViewSet(
         "value_zip",
         """
         # fixed datatype accroding to the Sample Table.
+        ref = request.query_params.get("reference")
+        default_properties = [
+            "name",
+            "collection_date",
+            "lineage",
+            "zip_code",
+            "lab",
+            "sequencing_tech",
+            "host",
+            "genome_completeness",
+            "country",
+            "init_upload_date",
+            "last_update_date",
+        ]
+
         data_list = [
             {
                 "name": "name",
                 "query_type": "value_varchar",
                 "description": "sample name or ID (fixed prop.)",
-                "default": None,
-            },
-            {
-                "name": "genomic_profiles",
-                "query_type": "value_varchar",
-                "description": "list of neuclotide mutation (fixed prop.)",
-                "default": None,
-            },
-            {
-                "name": "proteomic_profiles",
-                "query_type": "value_varchar",
-                "description": "list of amino acid mutation (fixed prop.)",
                 "default": None,
             },
             {
@@ -651,6 +654,7 @@ class PropertyViewSet(
             "query_type",
             "description",
             "default",
+            "unique_values_count",
         ]
 
         for _property_queryset in models.Property.objects.all():
@@ -662,6 +666,49 @@ class PropertyViewSet(
                     "default": _property_queryset.default,
                 }
             )
+        for property_data in data_list:
+            property_name = property_data["name"]
+            if property_name in default_properties:
+                try:
+                    # get count of unique values from Sample table
+                    count = (
+                        models.Sample.objects.annotate(
+                            raw_value=Cast(property_name, output_field=CharField())
+                        )
+                        .filter(
+                            sequences__alignments__replicon__reference__accession=ref
+                        )
+                        .values_list("raw_value", flat=True)
+                        .exclude(raw_value__isnull=True)
+                        .exclude(raw_value__exact="")
+                        .distinct()
+                        .count()
+                    )
+                except Exception as e:
+                    print(f"Error counting {property_name}: {e}")
+                    count = 0
+            else:
+                query_type = property_data["query_type"]
+                # get count of unique values from Property table
+                try:
+                    count = (
+                        models.Sample2Property.objects.filter(
+                            property__name=property_name
+                        )
+                        .filter(
+                            sample__sequences__alignments__replicon__reference__accession=ref
+                        )
+                        .annotate(raw_value=Cast(query_type, output_field=CharField()))
+                        .values_list("raw_value", flat=True)
+                        .exclude(raw_value__isnull=True)
+                        .exclude(raw_value__exact="")
+                        .distinct()
+                        .count()
+                    )
+                except Exception as e:
+                    print(f"Error counting {property_name}: {e}")
+                    count = 0
+            property_data["unique_values_count"] = count
         data = {"keys": cols, "values": data_list}
         return Response(data=data, status=status.HTTP_200_OK)
 

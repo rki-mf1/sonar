@@ -6,7 +6,7 @@ from .conftest import run_cli
 
 
 # test gene bank import different viruses
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(1)
 def test_add_cov19_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -17,7 +17,7 @@ def test_add_cov19_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group2")
+@pytest.mark.xdist_group(name="mpox_group")
 @pytest.mark.order(1)
 def test_add_mpox_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -28,7 +28,7 @@ def test_add_mpox_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group3")
+@pytest.mark.xdist_group(name="rsv_group")
 @pytest.mark.order(1)
 def test_add_rsv_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -39,7 +39,7 @@ def test_add_rsv_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group4")
+@pytest.mark.xdist_group(name="measels_group")
 @pytest.mark.order(1)
 def test_add_measels_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -50,7 +50,7 @@ def test_add_measels_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group5")
+@pytest.mark.xdist_group(name="hiv_group")
 @pytest.mark.order(1)
 def test_add_hiv_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -61,7 +61,7 @@ def test_add_hiv_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group6")
+@pytest.mark.xdist_group(name="dengue_group")
 @pytest.mark.order(1)
 def test_add_dengue_type2_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -72,7 +72,7 @@ def test_add_dengue_type2_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group7")
+@pytest.mark.xdist_group(name="ebola_group")
 @pytest.mark.order(1)
 def test_add_ebola_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -83,7 +83,7 @@ def test_add_ebola_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group8")
+@pytest.mark.xdist_group(name="zika_group")
 @pytest.mark.order(1)
 def test_add_zika_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
@@ -94,7 +94,7 @@ def test_add_zika_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group9")
+@pytest.mark.xdist_group(name="influ_group")
 @pytest.mark.order(1)
 def test_add_influ_gbk(monkeypatch, capfd, api_url):
     """Test import command using parasail method"""
@@ -116,7 +116,7 @@ def test_add_influ_gbk(monkeypatch, capfd, api_url):
 
 
 # test data import
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(2)
 def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
@@ -129,7 +129,7 @@ def test_parasail_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(3)
 def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     """Test import command using mafft method"""
@@ -142,7 +142,7 @@ def test_mafft_no_anno_no_upload(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(4)
 def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using mafft method"""
@@ -159,7 +159,7 @@ def test_add_sequence_mafft_anno_prop(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(5)
 def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
@@ -170,7 +170,7 @@ def test_add_sequence_mafft_no_skip(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(6)
 def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
@@ -181,7 +181,7 @@ def test_add_sequence_mafft_skip(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group3")
+@pytest.mark.xdist_group(name="rsv_group")
 @pytest.mark.order(2)
 def test_mafft_anno_upload_rsv(monkeypatch, api_url, tmpfile_name):
     """Test rsv sequence import command using mafft method"""
@@ -192,7 +192,7 @@ def test_mafft_anno_upload_rsv(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group3")
+@pytest.mark.xdist_group(name="rsv_group")
 @pytest.mark.order(3)
 def test_add_rsv_samples(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
@@ -202,7 +202,7 @@ def test_add_rsv_samples(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group2")
+@pytest.mark.xdist_group(name="mpox_group")
 @pytest.mark.order(2)
 def test_mafft_anno_upload_mpox(monkeypatch, api_url, tmpfile_name):
     """Test mpox sequence import command using mafft method"""
@@ -215,7 +215,7 @@ def test_mafft_anno_upload_mpox(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group7")
+@pytest.mark.xdist_group(name="ebola_group")
 @pytest.mark.order(2)
 def test_mafft_anno_upload_ebola(monkeypatch, api_url, tmpfile_name):
     """Test ebola sample import command using mafft method"""
@@ -228,7 +228,7 @@ def test_mafft_anno_upload_ebola(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group6")
+@pytest.mark.xdist_group(name="dengue_group")
 @pytest.mark.order(2)
 def test_mafft_anno_upload_dengue_type2(monkeypatch, api_url, tmpfile_name):
     """Test dengue sample import command using mafft method"""
@@ -241,7 +241,7 @@ def test_mafft_anno_upload_dengue_type2(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group5")
+@pytest.mark.xdist_group(name="hiv_group")
 @pytest.mark.order(2)
 def test_mafft_upload_hiv(monkeypatch, api_url, tmpfile_name):
     """Test hiv sample import command using mafft method"""
@@ -295,7 +295,7 @@ def test_mafft_upload_hiv(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(7)
 def test_wfa_anno_no_upload_covid(monkeypatch, api_url, tmpfile_name):
     """Test import command using wfa method"""
@@ -312,7 +312,7 @@ def test_wfa_anno_no_upload_covid(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group2")
+@pytest.mark.xdist_group(name="mpox_group")
 @pytest.mark.order(3)
 def test_wfa_anno_no_upload_mpox(monkeypatch, api_url, tmpfile_name):
     """Test import command using wfa method"""
@@ -327,7 +327,7 @@ def test_wfa_anno_no_upload_mpox(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(8)
 def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
     """Test import command using autolink"""
@@ -339,7 +339,7 @@ def test_add_prop_autolink(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group1")
+@pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(9)
 def test_add_prop(monkeypatch, api_url, tmpfile_name):
     """Test import command using parasail method"""
@@ -351,7 +351,7 @@ def test_add_prop(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group9")
+@pytest.mark.xdist_group(name="influ_group")
 @pytest.mark.order(2)
 def test_add_influenza_sequences(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)
@@ -361,7 +361,7 @@ def test_add_influenza_sequences(monkeypatch, api_url, tmpfile_name):
     assert code == 0
 
 
-@pytest.mark.xdist_group(name="group9")
+@pytest.mark.xdist_group(name="influ_group")
 @pytest.mark.order(3)
 def test_add_influenza_samples(monkeypatch, api_url, tmpfile_name):
     monkeypatch.chdir(Path(__file__).parent)

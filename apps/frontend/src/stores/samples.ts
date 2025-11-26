@@ -14,7 +14,6 @@ import {
   type PlotCustom,
   DjangoFilterType,
   StringDjangoFilterType,
-  DateDjangoFilterType,
   type PropertyFilter,
 } from '@/util/types'
 import { reactive } from 'vue'
@@ -126,7 +125,7 @@ export const useSamplesStore = defineStore('samples', {
     filtersChanged: false,
     ordering: '-collection_date' as string,
     timeRange: [] as (Date | null)[],
-    propertiesDict: {} as { [key: string]: string[] },
+    propertiesDict: {} as { [key: string]: string },
     propertyTableOptions: [] as string[],
     propertyMenuOptions: [] as string[],
     metaCoverageOptions: [] as string[],
@@ -145,11 +144,12 @@ export const useSamplesStore = defineStore('samples', {
       filters: {
         propertyFilters: [
           {
+            // pre selected filter
             fetchOptions: false,
             label: 'Property',
-            propertyName: 'collection_date',
-            filterType: DateDjangoFilterType.RANGE,
-            value: [] as (Date | null)[],
+            propertyName: 'name',
+            filterType: StringDjangoFilterType.CONTAINS,
+            value: [] as (string | null)[],
           },
         ],
         profileFilters: [{ label: 'DNA/AA Profile', value: '', exclude: false }],
@@ -180,6 +180,8 @@ export const useSamplesStore = defineStore('samples', {
         },
       },
     }),
+    propertyUniqueValueCounts: {} as { [key: string]: number },
+    dropdownThreshold: 10,
   }),
   actions: {
     setDataset(
@@ -467,49 +469,43 @@ export const useSamplesStore = defineStore('samples', {
 
     async updatePropertyOptions() {
       try {
-        const response = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+        const response = await API.getInstance().getSampleGenomePropertyOptionsAndTypes(
+          this.reference_accession,
+        )
         if (!response) {
           console.error('API request failed')
           return
         }
-        const metadata = this.statistics?.populated_metadata_fields ?? []
         this.propertiesDict = {}
+        this.propertyUniqueValueCounts = {}
         response.values.forEach(
-          (property: { name: string; query_type: string; description: string }) => {
-            if (property.query_type === 'value_varchar') {
-              this.propertiesDict[property.name] = Object.values(StringDjangoFilterType)
-            } else if (property.query_type === 'value_date') {
-              this.propertiesDict[property.name] = Object.values(DateDjangoFilterType)
-            } else {
-              this.propertiesDict[property.name] = Object.values(DjangoFilterType)
+          (property: {
+            name: string
+            query_type: string
+            description: string
+            unique_values_count?: number
+            default?: string
+          }) => {
+            this.propertiesDict[property.name] = property.query_type
+
+            if (property.unique_values_count !== undefined) {
+              this.propertyUniqueValueCounts[property.name] = Number(property.unique_values_count)
             }
           },
         )
-        // keep only those properties that have a coverage, i.e. that are not entirly empty
-        // & drop the 'name' column because the ID column is fixed
+        // properties with values, excluding name, including lineage
         this.propertyTableOptions = Object.keys(this.propertiesDict)
-          .filter(
-            (key) =>
-              key !== 'name' &&
-              (metadata.includes(key) || ['genomic_profiles', 'proteomic_profiles'].includes(key)),
-          )
+          .filter((key) => key !== 'name' && this.propertyUniqueValueCounts[key] > 0)
           .sort()
+        // Properties for filter menu with name but without lineage, including all other fields with values from sample and property table
         this.propertyMenuOptions = [
           'name',
-          ...this.propertyTableOptions.filter(
-            (prop) => !['genomic_profiles', 'proteomic_profiles', 'lineage'].includes(prop),
-          ),
+          ...this.propertyTableOptions.filter((prop) => !['lineage'].includes(prop)),
         ]
+        // Properties for metadata coverage plot, excluding init and last upload dates and name
         this.metaCoverageOptions = [
           ...this.propertyTableOptions.filter(
-            (prop) =>
-              ![
-                'name',
-                'init_upload_date',
-                'last_update_date',
-                'genomic_profiles',
-                'proteomic_profiles',
-              ].includes(prop),
+            (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
           ),
         ]
       } catch (error) {
@@ -529,7 +525,11 @@ export const useSamplesStore = defineStore('samples', {
       this.symbolOptions = res.gene_symbols
     },
     isDateArray(value: unknown): value is Date[] {
-      return Array.isArray(value) && value.every((item) => item instanceof Date)
+      return (
+        Array.isArray(value) &&
+        value.length > 0 && // without this line, empty arrays are considered Date[]
+        value.every((item) => item instanceof Date)
+      )
     },
 
     initializeWatchers() {
@@ -572,6 +572,12 @@ export const useSamplesStore = defineStore('samples', {
         })
       }
       return filters
+    },
+    shouldShowDropdown(): (propertyName: string) => boolean {
+      return (propertyName: string) => {
+        const uniqueCount = this.propertyUniqueValueCounts[propertyName] ?? Infinity
+        return uniqueCount <= this.dropdownThreshold
+      }
     },
   },
 })

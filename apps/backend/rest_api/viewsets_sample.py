@@ -205,7 +205,9 @@ class SampleViewSet(
 
         # case 2: no replicon accession in parsed mutation
         replicon_count = self._get_reference_replicon_count(reference_accession)
-        print("replicon_count", replicon_count)
+        LOGGER.debug(
+            f"replicon_count in resolve replicon fore reference {reference_accession}: {replicon_count}"
+        )
 
         if replicon_count is None or replicon_count == 0:
             raise ValueError(f"No replicons found for reference {reference_accession}.")
@@ -230,6 +232,7 @@ class SampleViewSet(
         indent = "  " * depth
         LOGGER.debug(f"{indent}resolve_genome_filter called, depth={depth}")
         LOGGER.debug(f"{indent}filters: {filters}")
+        LOGGER.debug(f"{indent}reference_accession: {reference_accession}")
         q_obj = Q()
         # Process single filter at current level
         if "label" in filters:
@@ -252,7 +255,7 @@ class SampleViewSet(
             )
         return q_obj
 
-    def eval_basic_filter(self, filter_dict, reference_accession=None) -> Q:
+    def eval_basic_filter(self, filter_dict, reference_accession) -> Q:
         """
         Evaluate a single basic filter.
         """
@@ -272,12 +275,12 @@ class SampleViewSet(
         if not (filter_params := request.query_params.get("filters")):
             return models.Sample.objects.all()
         filters = json.loads(filter_params)
-        if "reference_accession" in request.query_params:
+        if "reference" in request.query_params:
             reference_accession = (
-                request.query_params.get("reference_accession").strip('"').strip()
+                request.query_params.get("reference").strip('"').strip()
             )
         else:
-            reference_accession = filters.get("reference_accession")
+            reference_accession = filters.get("reference")
 
         LOGGER.info(
             f"Genomes Query, conditions: {filters}, reference: {reference_accession}"
@@ -491,7 +494,7 @@ class SampleViewSet(
         pseudo_buffer = Echo()
         writer = csv.writer(pseudo_buffer, delimiter=";")
         columns = request.query_params.get("columns")
-        reference_accession = request.query_params.get("reference_accession")
+        reference_accession = request.query_params.get("reference")
         reference_accession = (
             reference_accession.strip('"').strip("'") if reference_accession else None
         )
@@ -1463,7 +1466,7 @@ class SampleViewSet(
     @action(detail=False, methods=["post"])
     def delete_sample_data(self, request: Request, *args, **kwargs):
         sample_data = {}
-        reference_accession = request.data.get("reference_accession", "")
+        reference_accession = request.data.get("reference", "")
         sample_list = json.loads(request.data.get("sample_list"))
         if DEBUG:
             print("Reference Accession:", reference_accession)
@@ -1476,7 +1479,7 @@ class SampleViewSet(
     @action(detail=False, methods=["post"])
     def delete_sequence_data(self, request: Request, *args, **kwargs):
         sequence_data = {}
-        reference_accession = request.data.get("reference_accession", "")
+        reference_accession = request.data.get("reference", "")
         sequence_list = json.loads(request.data.get("sequence_list"))
         if DEBUG:
             print("Reference Accession:", reference_accession)

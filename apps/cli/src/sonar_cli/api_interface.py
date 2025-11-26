@@ -248,7 +248,7 @@ class APIClient:
             }
         """
         params = {}
-        params["reference_accession"] = reference_accession
+        params["reference"] = reference_accession
         json_response = self._make_request(
             "GET", endpoint=self.get_replicon_endpoint, params=params
         )
@@ -389,7 +389,7 @@ class APIClient:
 
     def post_delete_sample(self, reference_accession, samples: List[str] = []):
         data = {
-            "reference_accession": reference_accession,
+            "reference": reference_accession,
             "sample_list": json.dumps(samples),
         }
 
@@ -402,7 +402,7 @@ class APIClient:
 
     def post_delete_sequence(self, reference_accession, sequences: List[str] = []):
         data = {
-            "reference_accession": reference_accession,
+            "reference": reference_accession,
             "sequence_list": json.dumps(sequences),
         }
 

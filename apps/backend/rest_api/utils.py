@@ -5,6 +5,7 @@ import uuid
 
 from dateutil import parser
 from django.core.files.uploadedfile import InMemoryUploadedFile
+import pandas as pd
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -290,8 +291,8 @@ def parse_date(value):
     # Generalized function to parse any date format
     # exp. 2021-11-30T00:00:00, 2021-02-16 19:00:03 +0100
     # 2/2/2021
-    if not value or str(value).strip() == "":
-        return None
+    if pd.isna(value) or not value or str(value).strip() == "":
+        return pd.NA
     try:
         parsed_date = parser.parse(value)
         return parsed_date.strftime("%Y-%m-%d")

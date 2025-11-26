@@ -651,9 +651,7 @@ def import_property(
             sep=sep,
             dtype="string",
             keep_default_na=False,
-            # chunksize=batch_size,
-        )
-
+        ).replace("", pd.NA)
         timer = datetime.now()
 
         # Use Celery if parallel processing is enabled
@@ -688,11 +686,9 @@ def import_property(
             print(f"{column_name} :pairs with: {col_info}")
 
             if default_value is not None:
-                properties_df[column_name] = (
-                    properties_df[column_name]
-                    .replace("", default_value)  # Replace empty strings
-                    .fillna(default_value)  # Replace NaN values
-                )
+                properties_df[column_name] = properties_df[column_name].fillna(
+                    default_value
+                )  # Replace NaN values
 
             # # Explicitly convert the column to string to avoid .0 issues
             # if (

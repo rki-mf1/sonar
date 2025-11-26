@@ -133,7 +133,7 @@ class SampleViewSetTest(
         request = self.factory.get(
             "/api/samples/genomes/",
             data={
-                "reference_accession": "MN908947.3",
+                "reference": "MN908947.3",
                 "filters": json.dumps({"andFilter": [filter]}),
             },
         )
