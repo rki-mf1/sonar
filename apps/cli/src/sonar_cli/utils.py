@@ -91,7 +91,7 @@ class sonarUtils:
         threads: int = 1,
         quiet: bool = False,
         reference: str = None,
-        method: int = 1,
+        method: str = "mafft",
         no_upload_sample: bool = False,
         include_nx: bool = True,
         debug: bool = False,
@@ -449,7 +449,7 @@ class sonarUtils:
         cache: sonarCache,
         threads: int = 1,
         progress: bool = False,
-        method: int = 1,
+        method: str = "mafft",
         no_upload_sample: bool = False,
         must_pass_paranoid: bool = False,
     ) -> None:
@@ -462,7 +462,7 @@ class sonarUtils:
             cache: Instance of sonarCache.
             threads: Number of threads to use for processing.
             progress: Whether to show progress bar.
-            method: Alignment method 1 MAFFT, 2 Parasail, 3 WFA2-lib
+            method: Alignment method (can be "mafft", "parasail" or "wfa")
         """
         if not no_upload_sample:
             json_resp = APIClient(base_url=BASE_URL).get_jobID()

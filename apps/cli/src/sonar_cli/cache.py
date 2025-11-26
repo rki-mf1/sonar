@@ -319,7 +319,7 @@ class sonarCache:
         return sequence_data
 
     def add_fasta_v2(
-        self, *fnames, method=1, chunk_size=1000, max_workers=8
+        self, *fnames, method="mafft", chunk_size=1000, max_workers=8
     ):  # noqa: C901
         """ """
         sequence_data: List[Dict[str, Union[str, int]]] = []
@@ -643,7 +643,6 @@ class sonarCache:
             data (dict): The data for the sequence.
             seqhash (str): The sequence hash, optional.
             refseq_acc (str): accession from reference table.
-            method (int): alignment method
         """
 
         # NOTE: It seems the current version didnt update variants if there is the new one (data["seqhash"] != seqhash)

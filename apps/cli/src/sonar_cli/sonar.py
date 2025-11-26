@@ -499,17 +499,17 @@ def create_subparser_import(
         parents=parent_parsers,
     )
 
-    # help="Select alignment tools: 1=MAFFT 2=Parasail 3=WFA2-lib (default: %(default)s)",
+    # help="Select alignment tools: mafft, parasail, wfa (default: %(default)s)",
     parser.add_argument(
         "--method",
-        help="Select alignment tools: 1=MAFFT (default: %(default)s)",
-        choices=[1, 2, 3],
-        type=int,
-        default=1,
+        help="select alignment method (default: %(default)s)",
+        choices=["mafft", "parasail", "wfa"],
+        type=str,
+        default="mafft",
     )
     parser.add_argument(
         "--nextclade-json",
-        help="outputfrom nextclade tool (e.g. nextclade.json)",
+        help="output from nextclade tool (e.g. nextclade.json)",
         type=str,
         nargs="+",
         default=None,
@@ -583,7 +583,7 @@ def create_subparser_import(
     )
     parser.add_argument(
         "--debug",
-        help="Save additional files to the cache dir that can be useful when debugging errors",
+        help="save additional files to the cache dir that can be useful when debugging errors",
         action="store_true",
     )
     parser.add_argument(
@@ -806,11 +806,11 @@ def handle_import(args: argparse.Namespace):
         args (argparse.Namespace): Parsed command line arguments.
     """
 
-    if args.method == 1:
+    if args.method == "mafft":
         LOGGER.info("Alignment Tool: MAFFT")
-    elif args.method == 2:
+    elif args.method == "parasail":
         LOGGER.info("Alignment Tool: Parasail")
-    elif args.method == 3:
+    elif args.method == "wfa":
         LOGGER.info("Alignment Tool: WFA2-lib")
     else:
         LOGGER.warning(
