@@ -1,10 +1,8 @@
 import _csv
 import ast
-from collections import OrderedDict
 import csv
 from dataclasses import dataclass
 from datetime import datetime
-from datetime import timedelta
 import json
 import os
 import re
@@ -14,10 +12,6 @@ from typing import Generator
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
-from django.db.models import BooleanField
-from django.db.models import Case
-from django.db.models import CharField
-from django.db.models import Count
 from django.db.models import Exists
 from django.db.models import F
 from django.db.models import OuterRef
@@ -25,9 +19,6 @@ from django.db.models import Prefetch
 from django.db.models import Q
 from django.db.models import QuerySet
 from django.db.models import Subquery
-from django.db.models import Value
-from django.db.models import When
-from django.db.models.functions import TruncWeek
 from django.http import StreamingHttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -50,7 +41,6 @@ from rest_api.utils import get_distinct_cds_accessions
 from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import get_distinct_replicon_accessions
 from rest_api.utils import resolve_ambiguous_NT_AA
-from rest_api.utils import Response
 from rest_api.utils import strtobool
 from rest_api.viewsets import PropertyViewSet
 from . import models
@@ -73,61 +63,7 @@ class Echo:
         return value
 
 
-class SampleViewSet(
-    viewsets.GenericViewSet,
-    generics.mixins.ListModelMixin,
-    generics.mixins.RetrieveModelMixin,
-):
-    queryset = models.Sample.objects.all().order_by("id")
-    serializer_class = SampleSerializer
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    lookup_field = "name"
-    filter_fields = ["name"]
-    _cached_gene_symbols = None
-    _cached_replicons = None
-    _cache_timestamp = None
-    CACHE_TTL = 3600 * 24  # 1 day
-
-    @classmethod
-    def get_gene_symbols(cls, force_refresh=False):
-        """
-        update cached gene symbol set if cache older than CACHE_TTL
-        """
-        now = time.time()
-        if (
-            force_refresh
-            or cls._cached_gene_symbols is None
-            or cls._cache_timestamp is None
-            or (now - cls._cache_timestamp) > cls.CACHE_TTL
-        ):
-
-            symbols = get_distinct_gene_symbols()
-            cls._cached_gene_symbols = set(symbols)
-
-        return cls._cached_gene_symbols
-
-    @classmethod
-    def get_replicons(cls, reference_accession=None, force_refresh=True):
-        """
-        update cached replicon accession set if cache older than CACHE_TTL
-        """
-        now = time.time()
-        if (
-            force_refresh
-            or cls._cached_replicons is None
-            or cls._cache_timestamp is None
-            or (now - cls._cache_timestamp) > cls.CACHE_TTL
-        ):
-
-            replicons_list = get_distinct_replicon_accessions(reference_accession)
-            cls._cached_replicons = set(replicons_list)
-            cls._cache_timestamp = now
-
-        return cls._cached_replicons
-
-    def get_cds_accessions(self, replicon=None):
-        return get_distinct_cds_accessions(replicon=replicon)
-
+class SampleFilterMixin:
     @property
     def filter_label_to_methods(self):
         return {
@@ -145,39 +81,6 @@ class SampleViewSet(
             "Annotation": self.filter_annotation,
             "DNA/AA Profile": self.filter_label,
         }
-
-    @staticmethod
-    def get_statistics(reference=None):
-        response_dict = {}
-        queryset = models.Sample.objects.all()
-        if reference:
-            queryset = queryset.filter(
-                sequences__alignments__replicon__reference__accession=reference
-            ).distinct()
-        response_dict["samples_total"] = queryset.count()
-
-        first_sample = (
-            queryset.filter(collection_date__isnull=False)
-            .order_by("collection_date")
-            .first()
-        )
-        response_dict["first_sample_date"] = (
-            first_sample.collection_date if first_sample else None
-        )
-
-        latest_sample = (
-            queryset.filter(collection_date__isnull=False)
-            .order_by("-collection_date")
-            .first()
-        )
-        response_dict["latest_sample_date"] = (
-            latest_sample.collection_date if latest_sample else None
-        )
-        response_dict["populated_metadata_fields"] = (
-            SampleViewSet.get_populated_metadata_fields(queryset=queryset)
-        )
-
-        return response_dict
 
     def _get_reference_replicon_count(self, reference_accession):
         """
@@ -268,732 +171,42 @@ class SampleViewSet(
 
         return method(**filter_kwargs)
 
-    def _get_filtered_queryset(self, request: Request):
+    def get_filtered_queryset(self, request: Request):
         """
         retrieve filtered queryset Sample based on request parameters
         """
         if not (filter_params := request.query_params.get("filters")):
-            return models.Sample.objects.all()
-        filters = json.loads(filter_params)
-        if "reference" in request.query_params:
-            reference_accession = (
-                request.query_params.get("reference").strip('"').strip()
-            )
+            queryset = models.Sample.objects.all()
         else:
-            reference_accession = filters.get("reference")
+            filters = json.loads(filter_params)
+            if "reference" in request.query_params:
+                reference_accession = (
+                    request.query_params.get("reference").strip('"').strip()
+                )
+            else:
+                reference_accession = filters.get("reference")
+            if not reference_accession:
+                raise ValueError("Reference accession is required in filters.")
 
-        LOGGER.info(
-            f"Genomes Query, conditions: {filters}, reference: {reference_accession}"
-        )
+            LOGGER.info(
+                f"Genomes Query, conditions: {filters}, reference: {reference_accession}"
+            )
 
-        if not reference_accession:
-            raise ValueError("Reference accession is required in filters.")
+            q_filter = self.resolve_recursive_genome_filter(
+                filters, reference_accession
+            )
 
-        q_filter = self.resolve_recursive_genome_filter(filters, reference_accession)
-        queryset = (
-            models.Sample.objects.filter(
+            queryset = models.Sample.objects.filter(
                 q_filter,
                 sequences__alignments__replicon__reference__accession=reference_accession,
-            )
-            .prefetch_related(
-                "sequences",
-                "sequences__alignments",
-                "sequences__alignments__replicon",
-                "sequences__alignments__replicon__reference",
-            )
-            .distinct()
+            ).distinct()
+
+        queryset = queryset.select_related().prefetch_related(
+            "sequences",
+            "properties__property",
         )
-        return queryset
-
-    # actions
-    @action(detail=False, methods=["get"])
-    def statistics(self, request: Request, *args, **kwargs):
-        response_dict = SampleViewSet.get_statistics(
-            reference=request.query_params.get("reference")
-        )
-        return Response(data=response_dict, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=["get"])
-    def filtered_statistics(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
-
-        result_dict = {}
-        result_dict["filtered_total_count"] = queryset.count()
-
-        return Response(data=result_dict)
-
-    @action(detail=False, methods=["get"])
-    def genomes(self, request: Request, *args, **kwargs):
-        """
-        fetch proteomic and genomic profiles based on provided filters and optional parameters
-
-        TODO:
-        1. Optimize the query (reduce the database hit)
-        2. add accession of reference at the output
-        """
-        try:
-            timer = datetime.now()
-            # optional query parameters
-            # we try to use bool(), but it is not working as expected.
-            showNX = strtobool(request.query_params.get("showNX", "False"))
-            csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
-            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
-
-            LOGGER.info(
-                f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}"
-            )
-
-            self.has_property_filter = False
-
-            queryset = self._get_filtered_queryset(request)
-
-            # apply ID ('name') filter if provided
-            if name_filter := request.query_params.get("name"):
-                queryset = queryset.filter(name=name_filter)
-
-            # fetch genomic and proteomic profiles
-            # filter out ambiguous nucleotides or unspecified amino acids. better but too slow: alt__icontains="N", filter by string later
-            if not showNX:
-                genomic_profiles_qs = (
-                    models.NucleotideMutation.objects.only(
-                        "ref", "alt", "start", "end", "is_frameshift"
-                    )
-                    .exclude(alt="N")
-                    .order_by("start")
-                )
-                proteomic_profiles_qs = (
-                    models.AminoAcidMutation.objects.only(
-                        "ref", "alt", "start", "end", "cds"
-                    )
-                    .prefetch_related("cds__cds_segments")
-                    .exclude(alt="X")
-                    .order_by("cds", "start")
-                )
-            else:
-                genomic_profiles_qs = models.NucleotideMutation.objects.only(
-                    "ref", "alt", "start", "end", "is_frameshift"
-                ).order_by("start")
-                proteomic_profiles_qs = (
-                    models.AminoAcidMutation.objects.only(
-                        "ref", "alt", "start", "end", "cds"
-                    )
-                    .prefetch_related("cds__cds_segments")
-                    .order_by("cds", "start")
-                )
-
-            annotation_qs = models.AnnotationType.objects.prefetch_related("mutations")
-
-            if DEBUG:
-                LOGGER.info(queryset.query)
-
-            # optimize queryset by prefetching and storing profiles as attributes
-            queryset = queryset.prefetch_related(
-                "sequences",
-                "properties__property",
-                Prefetch(
-                    "sequences__alignments__nucleotide_mutations",
-                    queryset=genomic_profiles_qs,
-                    to_attr="genomic_profiles",
-                ),
-                Prefetch(
-                    "sequences__alignments__amino_acid_mutations",
-                    queryset=proteomic_profiles_qs,
-                    to_attr="proteomic_profiles",
-                ),
-                Prefetch(
-                    "sequences__alignments__nucleotide_mutations__annotations",
-                    queryset=annotation_qs,
-                    to_attr="alignment_annotations",
-                ),
-            )
-            # apply ordering if specified
-            ordering = request.query_params.get("ordering")
-            if ordering:
-                queryset = self._apply_ordering(queryset, ordering)
-            # return csv stream if specified
-            if csv_stream:
-                if not ordering:
-                    queryset.order_by("-collection_date")
-                return self._return_csv_stream(queryset, request)
-
-            # return vcf format if specified
-            if vcf_format:
-                return self._return_vcf_format(queryset, showNX)
-
-            # default response
-            queryset = self.paginate_queryset(queryset)
-            LOGGER.info(
-                f"Query time done in {datetime.now() - timer},Start to Format result"
-            )
-            serializer = SampleGenomesSerializer(
-                queryset, many=True, context={"request": request, "showNX": showNX}
-            )
-            timer = datetime.now()
-            LOGGER.info(
-                f"Serializer done in {datetime.now() - timer},Start to Format result"
-            )
-            return self.get_paginated_response(serializer.data)
-        except ValueError as e:
-            return Response(data={"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            traceback.print_exc()
-            return Response(
-                data={"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-    def _apply_ordering(self, queryset, ordering):
-        """
-        apply given ordering to queryset
-        """
-        property_names = PropertyViewSet.get_custom_property_names()
-        ordering_col_name = ordering.lstrip("-")
-        reverse_order = ordering.startswith("-")
-
-        if ordering_col_name in property_names:
-            datatype = models.Property.objects.get(name=ordering_col_name).datatype
-            queryset = queryset.order_by(
-                Subquery(
-                    models.Sample2Property.objects.filter(
-                        property__name=ordering_col_name, sample=OuterRef("id")
-                    ).values(datatype)
-                )
-            )
-            if reverse_order:
-                queryset = queryset.reverse()
-        else:
-            queryset = queryset.order_by(ordering)
 
         return queryset
-
-    def _get_genomic_and_proteomic_profile_columns(self, columns, reference_accession):
-        """
-        Expand genomic_profiles and proteomic_profiles columns into individual columns
-        based on existing gene symbols and replicon accessions.
-        """
-        expanded_columns = []
-        for column in columns:
-            if column == "genomic_profiles":
-                replicons = self.get_replicons(reference_accession)
-                for replicon in sorted(list(replicons)):
-                    expanded_columns.append(f"genomic_profile: {replicon}")
-            elif column == "proteomic_profiles":
-                replicons = self.get_replicons(reference_accession)
-                for replicon in sorted(list(replicons)):
-                    for cds_acc in sorted(list(self.get_cds_accessions(replicon))):
-                        expanded_columns.append(
-                            f"proteomic_profile: {replicon}: {cds_acc}"
-                        )
-            else:
-                expanded_columns.append(column)
-        return expanded_columns
-
-    def _return_csv_stream(self, queryset, request, showNX=False):
-        """
-        stream queryset data as a csv file
-        """
-        pseudo_buffer = Echo()
-        writer = csv.writer(pseudo_buffer, delimiter=";")
-        columns = request.query_params.get("columns")
-        reference_accession = request.query_params.get("reference")
-        reference_accession = (
-            reference_accession.strip('"').strip("'") if reference_accession else None
-        )
-
-        if not columns:
-            raise Exception("No columns provided")
-
-        columns = columns.split(",")
-        columns = self._get_genomic_and_proteomic_profile_columns(
-            columns, reference_accession
-        )
-        filename = request.query_params.get("filename", "sample_genomes.csv")
-
-        return StreamingHttpResponse(
-            self._stream_serialized_data(queryset, columns, writer, showNX),
-            content_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-        )
-
-    def _return_vcf_format(self, queryset, showNX=False):
-        """
-        return queryset data in vcf format
-        """
-        queryset = self.paginate_queryset(queryset)
-        serializer = SampleGenomesSerializerVCF(
-            queryset, many=True, context={"request": self.request, "showNX": showNX}
-        )
-        return self.get_paginated_response(serializer.data)
-
-    def _stream_serialized_data(
-        self,
-        queryset: QuerySet,
-        columns: list[str],
-        writer: "_csv._writer",
-        showNX: bool = False,
-    ) -> Generator:
-        serializer = SampleGenomesExportStreamSerializer
-
-        serializer.columns = columns
-        yield writer.writerow(columns)
-        paginator = Paginator(queryset, 100)
-        for page in paginator.page_range:
-            for serialized in serializer(
-                paginator.page(page).object_list,
-                many=True,
-                context={"showNX": showNX, "columns": columns},
-            ).data:
-                yield writer.writerow(serialized["row"])
-
-    @staticmethod
-    def get_populated_metadata_fields(queryset):
-        queryset = queryset.prefetch_related("properties__property")
-        annotations = {}
-
-        # check profiles
-        # Note: This was removed becasue it is slow and because these fields
-        # are basically always populated
-
-        # check sample fields
-        for field in models.Sample._meta.get_fields():
-            if field.concrete and not field.is_relation:
-                field_name = field.name
-                if field.get_internal_type() == "CharField":
-                    condition = Q(**{f"{field_name}__isnull": False}) & ~Q(
-                        **{field_name: ""}
-                    )
-                else:
-                    condition = Q(**{f"{field_name}__isnull": False})
-
-                annotations[f"has_{field_name}"] = Case(
-                    When(condition, then=True),
-                    default=False,
-                    output_field=BooleanField(),
-                )
-
-        # check properties
-        property_to_datatype = dict(
-            models.Property.objects.values_list("name", "datatype")
-        )
-        for property_name in PropertyViewSet.get_custom_property_names():
-            datatype = property_to_datatype.get(property_name)
-            if not datatype:
-                LOGGER.warning(f"Property {property_name} not found")
-                continue
-
-            try:
-                annotations[f"has_{property_name}"] = Exists(
-                    models.Sample.objects.filter(
-                        id=OuterRef("id"),
-                        properties__property__name=property_name,
-                        **{f"properties__{datatype}__isnull": False},
-                    )
-                )
-            except Exception as e:
-                LOGGER.error(
-                    f"Error processing property {property_name} (datatype: {datatype}): {e}"
-                )
-
-        # apply annotations and check existence (True/False)
-        result = queryset.annotate(**annotations).values(*annotations.keys()).first()
-
-        return (
-            [k.replace("has_", "") for k in filter(result.get, result)]
-            if result
-            else []
-        )
-
-    @staticmethod
-    def get_metadata_coverage(queryset):
-        queryset = queryset.prefetch_related("properties__property")
-        annotations = {}
-
-        queryset_nt = queryset.annotate(
-            mutation_count=Count(
-                "sequences__alignments__nucleotide_mutations", distinct=True
-            )
-        )
-        queryset_aa = queryset.annotate(
-            mutation_count=Count(
-                "sequences__alignments__amino_acid_mutations", distinct=True
-            )
-        )
-        samples_with_nt_mutations = queryset_nt.filter(mutation_count__gt=0)
-        samples_with_aa_mutations = queryset_aa.filter(mutation_count__gt=0)
-
-        for field in models.Sample._meta.get_fields():
-            if field.concrete and not field.is_relation:
-                field_name = field.name
-
-                if field.get_internal_type() == "CharField":
-                    # Count non-empty strings
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        "id",
-                        filter=Q(**{f"{field_name}__isnull": False})
-                        & ~Q(**{f"{field_name}": ""}),
-                        distinct=True,
-                    )
-                else:
-                    # Count non-null values
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        "id",
-                        filter=Q(**{f"{field_name}__isnull": False}),
-                        distinct=True,
-                    )
-
-        property_to_datatype = dict(
-            models.Property.objects.values_list("name", "datatype")
-        )
-        property_names = PropertyViewSet.get_custom_property_names()
-
-        for property_name in property_names:
-            datatype = property_to_datatype.get(property_name)
-            if not datatype:
-                LOGGER.warning(f"Property {property_name} not found")
-                continue
-
-            try:
-                annotations[f"not_null_count_{property_name}"] = Count(
-                    "properties",
-                    filter=(
-                        Q(properties__property__name=property_name)
-                        & Q(**{f"properties__{datatype}__isnull": False})
-                    ),
-                    distinct=True,
-                )
-            except Exception as e:
-                LOGGER.error(
-                    f"Error with property {property_name} (datatype: {datatype}): {e}"
-                )
-
-        # Apply aggregations
-        result = queryset.aggregate(**annotations)
-        result["not_null_count_genomic_profiles"] = (
-            samples_with_nt_mutations.count()
-        )  # len(queryset)
-        result["not_null_count_proteomic_profiles"] = (
-            samples_with_aa_mutations.count()
-        )  # len(queryset)
-
-        return {
-            key.replace("not_null_count_", ""): value
-            for key, value in result.items()
-            if key.startswith("not_null_count_")
-        }
-
-    @action(detail=False, methods=["get"])
-    def distinct_lineages(self, request: Request, *args, **kwargs):
-        """
-        API action to return all distinct lineage entries from the Sample table.
-        """
-        queryset = models.Sample.objects.values_list("lineage", flat=True)
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(
-                sequences__alignments__replicon__reference__accession=ref
-            )
-        distinct_lineages = queryset.distinct()
-
-        return Response(
-            {"lineages": distinct_lineages},
-            status=status.HTTP_200_OK,
-        )
-
-    @action(detail=False, methods=["get"])
-    def full_lineages(self, request: Request, *args, **kwargs):
-        """
-        API action to return all lineages from the Lineage table.
-        """
-        lineages = models.Lineage.objects.order_by("name").values_list(
-            "name", flat=True
-        )
-        return Response(data={"lineages": list(lineages)}, status=status.HTTP_200_OK)
-
-    def _get_samples_per_week(self, queryset):
-        """
-        Return a dict mapping calendar week to count, for each week between
-        the earliest and latest collection_date.
-        Weeks with zero records will be present with value 0.
-        """
-        weekly_qs = (
-            queryset.annotate(week=TruncWeek("collection_date"))
-            .values("week")
-            .annotate(count=Count("id", distinct=True))
-            .order_by("week")
-        )
-
-        result = {}
-        for item in weekly_qs:
-            year, week, _ = item["week"].isocalendar()
-            result[f"{year}-W{week:02}"] = item["count"]
-
-        return result
-
-    def _get_grouped_lineages_per_week(self, queryset):
-        """
-        Return a LIST of dicts, contianing counts and percentages per calendar week for
-        lineage groups (lineages truncated to two first segments),
-        covering every week between the earliest and latest record.
-        Weeks with zero records will be present with values 0.
-        """
-        present_lineages = set(
-            queryset.exclude(lineage__isnull=True).values_list("lineage", flat=True)
-        )
-        lineage_to_group = {
-            lineage: ".".join(lineage.split(".")[:2]) for lineage in present_lineages
-        }
-        valid_groups = set(
-            models.Lineage.objects.filter(name__isnull=False).values_list(
-                "name", flat=True
-            )
-        )
-        lineage_cases = [
-            When(lineage=lineage, then=Value(group))
-            for lineage, group in lineage_to_group.items()
-            if group in valid_groups
-        ]
-        annotated_qs = queryset.annotate(
-            lineage_group=Case(
-                *lineage_cases,
-                default=Value("Unknown"),
-                output_field=CharField(),
-            ),
-            week=TruncWeek("collection_date"),
-        )
-
-        weekly_qs = annotated_qs.values("week", "lineage_group").annotate(
-            count=Count("id")
-        )
-
-        total_qs = annotated_qs.values("week").annotate(total_count=Count("id"))
-
-        # lookup for total counts
-        week_to_total = {entry["week"]: entry["total_count"] for entry in total_qs}
-
-        result = []
-        for item in weekly_qs:
-            year, week, _ = item["week"].isocalendar()
-            week_str = f"{year}-W{week:02}"
-            total = week_to_total.get(item["week"])
-            result.append(
-                {
-                    "week": week_str,
-                    "lineage_group": item["lineage_group"],
-                    "count": item["count"],
-                    "percentage": round(item["count"] / total * 100, 2),
-                }
-            )
-
-        result.sort(key=lambda x: x["week"])
-        return result
-
-    def _get_custom_property_plot(self, queryset, sample_property):
-        # Determine if x_property and y_property are flexible or fixed
-        flexible_properties = PropertyViewSet.get_custom_property_names()
-        is_flexible = sample_property in flexible_properties
-        if sample_property == "":
-            result_dict = {}
-        # not in sample table
-        elif is_flexible:
-            datatype = (
-                models.Property.objects.filter(name=sample_property)
-                .values_list("datatype", flat=True)
-                .first()
-            )
-            queryset = queryset.filter(properties__property__name=sample_property)
-            # the value_char holds the sequencing reason values
-            grouped_queryset = (
-                queryset.values(f"properties__{datatype}")
-                .annotate(total=Count("id", distinct=True))
-                .order_by("properties__value_varchar")
-            )
-            result_dict = {
-                item[f"properties__{datatype}"]: item["total"]
-                for item in grouped_queryset
-            }
-        # fixed sample table prperty
-        else:
-            grouped_queryset = (
-                queryset.values(sample_property)
-                .annotate(total=Count("id", distinct=True))
-                .order_by(sample_property)
-            )
-            result_dict = {
-                str(item[sample_property]): item["total"] for item in grouped_queryset
-            }  # str required for properties in date format
-
-        return result_dict
-
-    @action(detail=False, methods=["get"])
-    def plot_samples_per_week(self, request: Request, *args, **kwargs):
-        print(request)
-        queryset = self._get_filtered_queryset(request).filter(
-            collection_date__isnull=False
-        )
-
-        if not queryset.exists():
-            return Response(data=[])
-        else:
-            samples_per_week = self._get_samples_per_week(queryset)
-            return Response(data=list(samples_per_week.items()))
-
-    @action(detail=False, methods=["get"])
-    def plot_grouped_lineages_per_week(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request).filter(
-            collection_date__isnull=False
-        )
-
-        result_dict = {}
-        if not queryset.exists():
-            result_dict["grouped_lineages_per_week"] = {}
-        else:
-            result_dict["grouped_lineages_per_week"] = (
-                self._get_grouped_lineages_per_week(queryset)
-            )
-
-        return Response(data=result_dict)
-
-    @action(detail=False, methods=["get"])
-    def plot_metadata_coverage(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
-        result_dict = {}
-        result_dict["metadata_coverage"] = SampleViewSet.get_metadata_coverage(queryset)
-        return Response(data=result_dict)
-
-    @action(detail=False, methods=["get"])
-    def plot_custom(self, request: Request, *args, **kwargs):
-        queryset = self._get_filtered_queryset(request)
-        sample_property = request.query_params["property"]
-
-        result_dict = {}
-        result_dict[sample_property] = self._get_custom_property_plot(
-            queryset, sample_property
-        )
-        return Response(data=result_dict)
-
-    @action(detail=False, methods=["get"])
-    def plot_custom_xy(self, request: Request, *args, **kwargs):
-        """
-        API call to plot data based on two properties: x and y categories.
-        Handles both flexible properties (sample2property table) and fixed sample table properties.
-        Returns:
-            - For string-type y property: dict with x categories as keys and lists of y categories with counts.
-            - For number-type y property: dict with x categories as keys and lists of y numbers.
-        """
-        queryset = self._get_filtered_queryset(request)
-        x_property = request.query_params.get("x_property")
-        y_property = request.query_params.get("y_property")
-
-        if not x_property or not y_property:
-            return Response(
-                {"detail": "Both x_property and y_property must be provided."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Determine if x_property and y_property are flexible or fixed
-        flexible_properties = PropertyViewSet.get_custom_property_names()
-        x_is_flexible = x_property in flexible_properties
-        y_is_flexible = y_property in flexible_properties
-
-        result_dict = {}
-
-        if y_is_flexible:
-            # Handle flexible y_property
-            y_datatype = (
-                models.Property.objects.filter(name=y_property)
-                .values_list("datatype", flat=True)
-                .first()
-            )
-
-            if not y_datatype:
-                return Response(
-                    {"detail": f"Property {y_property} not found."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            if x_is_flexible:
-                # Both x_property and y_property are flexible
-                grouped_queryset = (
-                    queryset.filter(
-                        properties__property__name__in=[x_property, y_property],
-                        properties__value_varchar__isnull=False,
-                        **{f"properties__{y_datatype}__isnull": False},
-                    )
-                    .values(
-                        "properties__value_varchar",
-                        f"properties__{y_datatype}",
-                    )
-                    .annotate(total=Count("id", distinct=True))
-                    .order_by("properties__value_varchar", f"properties__{y_datatype}")
-                )
-                for item in grouped_queryset:
-                    x_cat = str(item["properties__value_varchar"])
-                    y_cat = str(item[f"properties__{y_datatype}"])
-                    count = item["total"]
-                    if x_cat not in result_dict:
-                        result_dict[x_cat] = []
-                    result_dict[x_cat].append({y_cat: count})
-
-            else:
-                # x_property is fixed, y_property is flexible
-                grouped_queryset = (
-                    queryset.filter(
-                        **{f"{x_property}__isnull": False},
-                        properties__property__name=y_property,
-                        **{f"properties__{y_datatype}__isnull": False},
-                    )
-                    .values(x_property, f"properties__{y_datatype}")
-                    .annotate(total=Count("id", distinct=True))
-                    .order_by(x_property, f"properties__{y_datatype}")
-                )
-                for item in grouped_queryset:
-                    x_cat = str(item[x_property])
-                    y_cat = str(item[f"properties__{y_datatype}"])
-                    count = item["total"]
-                    if x_cat not in result_dict:
-                        result_dict[x_cat] = []
-                    result_dict[x_cat].append({y_cat: count})
-
-        else:
-            # Handle fixed y_property
-            if x_is_flexible:
-                # x_property is flexible, y_property is fixed
-                grouped_queryset = (
-                    queryset.filter(
-                        properties__property__name=x_property,
-                        **{f"{y_property}__isnull": False},
-                        properties__value_varchar__isnull=False,
-                    )
-                    .values("properties__value_varchar", y_property)
-                    .annotate(total=Count("id", distinct=True))
-                    .order_by("properties__value_varchar", y_property)
-                )
-                for item in grouped_queryset:
-                    x_cat = str(item["properties__value_varchar"])
-                    y_cat = str(item[y_property])
-                    count = item["total"]
-                    if x_cat not in result_dict:
-                        result_dict[x_cat] = []
-                    result_dict[x_cat].append({y_cat: count})
-
-            else:
-                # Both x_property and y_property are fixed
-                grouped_queryset = (
-                    queryset.filter(
-                        **{f"{x_property}__isnull": False},
-                        **{f"{y_property}__isnull": False},
-                    )
-                    .values(x_property, y_property)
-                    .annotate(total=Count("id", distinct=True))
-                    .order_by(x_property, y_property)
-                )
-                for item in grouped_queryset:
-                    x_cat = str(item[x_property])
-                    y_cat = str(item[y_property])
-                    count = item["total"]
-                    if x_cat not in result_dict:
-                        result_dict[x_cat] = []
-                    result_dict[x_cat].append({y_cat: count})
-
-        return Response(data=result_dict)
 
     def filter_label(
         self,
@@ -1394,6 +607,298 @@ class SampleViewSet(
             sublineages,
             exclude,
         )
+
+
+class SampleViewSet(
+    SampleFilterMixin,
+    viewsets.GenericViewSet,
+    generics.mixins.ListModelMixin,
+    generics.mixins.RetrieveModelMixin,
+):
+    queryset = models.Sample.objects.all().order_by("id")
+    serializer_class = SampleSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    lookup_field = "name"
+    filter_fields = ["name"]
+    _cached_gene_symbols = None
+    _cached_replicons = None
+    _cache_timestamp = None
+    _cached_cds_accs = None
+    CACHE_TTL = 3600 * 24  # 1 day
+
+    @classmethod
+    def get_gene_symbols(cls, force_refresh=False):
+        """
+        update cached gene symbol set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_gene_symbols is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            symbols = get_distinct_gene_symbols()
+            cls._cached_gene_symbols = set(symbols)
+
+        return cls._cached_gene_symbols
+
+    @classmethod
+    def get_replicons(cls, reference_accession=None, force_refresh=True):
+        """
+        update cached replicon accession set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_replicons is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            replicons_list = get_distinct_replicon_accessions(reference_accession)
+            cls._cached_replicons = set(replicons_list)
+            cls._cache_timestamp = now
+
+        return cls._cached_replicons
+
+    @classmethod
+    def get_cds_accessions(cls, replicon=None, force_refresh=True):
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_replicons is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+            cds_acc = get_distinct_cds_accessions(replicon=replicon)
+            cls._cached_cds_accs = set(cds_acc)
+        return cls._cached_cds_accs
+
+    def _get_genomic_and_proteomic_profiles_queryset(
+        self, queryset, reference_accession, showNX=False
+    ):
+        """
+        Optimized prefetching for genomic and protemoic profiles
+        """
+
+        genomic_profiles_qs = models.NucleotideMutation.objects.only(
+            "ref", "alt", "start", "end", "is_frameshift", "replicon_id"
+        ).prefetch_related(
+            "annotations"
+        )  # Prefetch annotations direkt
+        if not showNX:
+            genomic_profiles_qs = genomic_profiles_qs.exclude(alt="N")
+        genomic_profiles_qs = genomic_profiles_qs.order_by("start")
+
+        proteomic_profiles_qs = models.AminoAcidMutation.objects.only(
+            "ref", "alt", "start", "end", "cds_id"
+        ).prefetch_related(
+            "cds__gene", "cds__gene__replicon"  # Auch replicon prefetchen
+        )
+        if not showNX:
+            proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
+        proteomic_profiles_qs = proteomic_profiles_qs.order_by("cds", "start")
+
+        queryset = queryset.prefetch_related(
+            "sequences__alignments__replicon__reference",
+            Prefetch(
+                "sequences__alignments__nucleotide_mutations",
+                queryset=genomic_profiles_qs,
+                to_attr="genomic_profiles",
+            ),
+            Prefetch(
+                "sequences__alignments__amino_acid_mutations",
+                queryset=proteomic_profiles_qs,
+                to_attr="proteomic_profiles",
+            ),
+        )
+
+        return queryset
+
+    # actions
+    @action(detail=False, methods=["get"])
+    def genomes(self, request: Request, *args, **kwargs):
+        """
+        fetch proteomic and genomic profiles based on provided filters and optional parameters
+        """
+        try:
+            timer = datetime.now()
+            showNX = strtobool(request.query_params.get("showNX", "False"))
+            csv_stream = strtobool(request.query_params.get("csv_stream", "False"))
+            vcf_format = strtobool(request.query_params.get("vcf_format", "False"))
+
+            LOGGER.info(
+                f"Genomes Query, optional parameters: showNX:{showNX} csv_stream:{csv_stream}"
+            )
+
+            self.has_property_filter = False
+
+            queryset = self.get_filtered_queryset(request)
+
+            # apply ID ('name') filter if provided
+            if name_filter := request.query_params.get("name"):
+                queryset = queryset.filter(name=name_filter)
+
+            # Get reference_accession für profil-prefetching
+            filter_params = request.query_params.get("filters")
+            if filter_params:
+                filters = json.loads(filter_params)
+                reference_accession = filters.get("reference")
+            else:
+                reference_accession = (
+                    request.query_params.get("reference", "").strip('"').strip()
+                )
+
+            # Optimized prefetching
+            queryset = self._get_genomic_and_proteomic_profiles_queryset(
+                queryset, reference_accession, showNX
+            )
+
+            if DEBUG:
+                LOGGER.info(f"Query: {queryset.query}")
+
+            # apply ordering if specified
+            ordering = request.query_params.get("ordering")
+            if ordering:
+                queryset = self._apply_ordering(queryset, ordering)
+            else:
+                queryset = queryset.order_by("-collection_date")
+
+            # return csv stream if specified
+            if csv_stream:
+                return self._return_csv_stream(queryset, request, showNX)
+
+            # return vcf format if specified
+            if vcf_format:
+                return self._return_vcf_format(queryset, showNX)
+
+            # default response - paginate after prefetching
+            queryset = self.paginate_queryset(queryset)
+            LOGGER.info(
+                f"Query time done in {datetime.now() - timer}, Start to Format result"
+            )
+
+            serializer = SampleGenomesSerializer(
+                queryset, many=True, context={"request": request, "showNX": showNX}
+            )
+            timer = datetime.now()
+            LOGGER.info(
+                f"Serializer done in {datetime.now() - timer}, Start to Format result"
+            )
+            return self.get_paginated_response(serializer.data)
+
+        except ValueError as e:
+            return Response(data={"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            traceback.print_exc()
+            return Response(
+                data={"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _apply_ordering(self, queryset, ordering):
+        """
+        apply given ordering to queryset
+        """
+        property_names = PropertyViewSet.get_custom_property_names()
+        ordering_col_name = ordering.lstrip("-")
+        reverse_order = ordering.startswith("-")
+
+        if ordering_col_name in property_names:
+            datatype = models.Property.objects.get(name=ordering_col_name).datatype
+            queryset = queryset.order_by(
+                Subquery(
+                    models.Sample2Property.objects.filter(
+                        property__name=ordering_col_name, sample=OuterRef("id")
+                    ).values(datatype)
+                )
+            )
+            if reverse_order:
+                queryset = queryset.reverse()
+        else:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
+
+    def _get_genomic_and_proteomic_profile_columns(self, columns, reference_accession):
+        """
+        Expand genomic_profiles and proteomic_profiles columns into individual columns
+        based on existing gene symbols and replicon accessions.
+        """
+        expanded_columns = []
+        for column in columns:
+            if column == "genomic_profiles":
+                replicons = self.get_replicons(reference_accession)
+                for replicon in sorted(list(replicons)):
+                    expanded_columns.append(f"genomic_profile: {replicon}")
+            elif column == "proteomic_profiles":
+                replicons = self.get_replicons(reference_accession)
+                for replicon in sorted(list(replicons)):
+                    for cds_acc in sorted(list(self.get_cds_accessions(replicon))):
+                        expanded_columns.append(
+                            f"proteomic_profile: {replicon}: {cds_acc}"
+                        )
+            else:
+                expanded_columns.append(column)
+        return expanded_columns
+
+    def _return_csv_stream(self, queryset, request, showNX=False):
+        """
+        stream queryset data as a csv file
+        """
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer, delimiter=";")
+        columns = request.query_params.get("columns")
+        reference_accession = request.query_params.get("reference")
+        reference_accession = (
+            reference_accession.strip('"').strip("'") if reference_accession else None
+        )
+
+        if not columns:
+            raise Exception("No columns provided")
+
+        columns = columns.split(",")
+        columns = self._get_genomic_and_proteomic_profile_columns(
+            columns, reference_accession
+        )
+        filename = request.query_params.get("filename", "sample_genomes.csv")
+
+        return StreamingHttpResponse(
+            self._stream_serialized_data(queryset, columns, writer, showNX),
+            content_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    def _return_vcf_format(self, queryset, showNX=False):
+        """
+        return queryset data in vcf format
+        """
+        queryset = self.paginate_queryset(queryset)
+        serializer = SampleGenomesSerializerVCF(
+            queryset, many=True, context={"request": self.request, "showNX": showNX}
+        )
+        return self.get_paginated_response(serializer.data)
+
+    def _stream_serialized_data(
+        self,
+        queryset: QuerySet,
+        columns: list[str],
+        writer: "_csv._writer",
+        showNX: bool = False,
+    ) -> Generator:
+        serializer = SampleGenomesExportStreamSerializer
+
+        serializer.columns = columns
+        yield writer.writerow(columns)
+        paginator = Paginator(queryset, 100)
+        for page in paginator.page_range:
+            for serialized in serializer(
+                paginator.page(page).object_list,
+                many=True,
+                context={"showNX": showNX, "columns": columns},
+            ).data:
+                yield writer.writerow(serialized["row"])
 
     def _temp_save_file(self, uploaded_file: InMemoryUploadedFile):
         file_path = os.path.join(SONAR_DATA_ENTRY_FOLDER, uploaded_file.name)

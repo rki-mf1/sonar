@@ -220,49 +220,120 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
         ]
 
     def get_properties(self, obj: models.Sample):
-        custom_properties = Sample2PropertySerializer(
-            obj.properties, many=True, read_only=True
-        ).data
-        filter_list = ["properties", "name", "sequences", "id", "datahash"]
-        sample_properties = [
-            field.name
-            for field in models.Sample._meta.get_fields()
-            if field.name not in filter_list
+        """
+        Use prefetched_related properties
+        """
+        custom_properties = []
+
+        # Get custom properties from prefetched relations
+        if hasattr(obj, "properties"):
+            for prop in obj.properties.all():
+                value = (
+                    prop.value_integer
+                    or prop.value_float
+                    or prop.value_text
+                    or prop.value_varchar
+                    or prop.value_blob
+                    or prop.value_date
+                    or prop.value_zip
+                )
+                custom_properties.append({"name": prop.property.name, "value": value})
+
+        # Get sample fields
+        important_fields = [
+            "collection_date",
+            "country",
+            "host",
+            "lab",
+            "lineage",
+            "sequencing_tech",
+            "zip_code",
+            "genome_completeness",
+            "init_upload_date",
+            "last_update_date",
+            "data_set",
         ]
-        for prop in sample_properties:
-            if value := getattr(obj, prop):
-                if type(value) == datetime.datetime:
-                    value = value.strftime("%Y-%m-%d")
-                custom_properties.append({"name": prop, "value": value})
+
+        for field_name in important_fields:
+            if hasattr(obj, field_name):
+                value = getattr(obj, field_name)
+                if value:
+                    if isinstance(value, datetime.datetime):
+                        value = value.strftime("%Y-%m-%d")
+                    elif isinstance(value, datetime.date):
+                        value = value.strftime("%Y-%m-%d")
+                    custom_properties.append({"name": field_name, "value": value})
+
         return custom_properties
 
     def get_genomic_profiles(self, obj: models.Sample):
         showNX = self.context.get("showNX", False)
-        # genomic_profiles are prefetched for genomes endpoint
         genomic_profiles_dict = {}
 
         for sequence in obj.sequences.all():
             for alignment in sequence.alignments.all():
                 replicon = alignment.replicon
                 replicon_acc = replicon.accession
+
                 if replicon_acc not in genomic_profiles_dict:
                     genomic_profiles_dict[replicon_acc] = {}
-                for mutation in alignment.genomic_profiles:
+
+                for mutation in getattr(alignment, "genomic_profiles", []):
                     if not showNX and ("N" in mutation.alt):
                         continue
+
                     annotations = []
-                    for nucleotide_mutation in alignment.nucleotide_mutations.all():
-                        if nucleotide_mutation == mutation:
-                            for annotation in nucleotide_mutation.alignment_annotations:
-                                annotations.append(str(annotation))
+                    for annotation in mutation.annotations.all():
+                        annotations.append(str(annotation))
+
                     genomic_profiles_dict[replicon_acc][
                         self.create_NT_format(mutation)
                     ] = annotations
+
         return OrderedDict(sorted(genomic_profiles_dict.items()))
+
+    def get_proteomic_profiles(self, obj: models.Sample):
+        """
+        Use prefetched proteomic_profiles
+        """
+        showNX = self.context.get("showNX", False)
+        proteomic_profiles = {}
+
+        for sequence in obj.sequences.all():
+            for alignment in sequence.alignments.all():
+                cds_mutations = {}
+
+                for mutation in getattr(alignment, "proteomic_profiles", []):
+                    if not showNX and ("X" in mutation.alt):
+                        continue
+
+                    cds = mutation.cds
+                    replicon_acc = cds.gene.replicon.accession
+                    key = f"{replicon_acc}: {cds.accession}"
+
+                    if key not in cds_mutations:
+                        cds_mutations[key] = []
+
+                    gene_symbol = cds.gene.symbol
+                    label = self.define_proteomic_label(
+                        mutation, gene_symbol, mutation.start, mutation.end
+                    )
+
+                    cds_mutations[key].append((gene_symbol, mutation.start, label))
+
+                for key, labels in cds_mutations.items():
+                    if key not in proteomic_profiles:
+                        proteomic_profiles[key] = []
+                    sorted_labels = [
+                        item[2] for item in sorted(labels, key=lambda x: (x[0], x[1]))
+                    ]
+                    proteomic_profiles[key].extend(sorted_labels)
+
+        return OrderedDict(sorted(proteomic_profiles.items()))
 
     def define_proteomic_label(
         self,
-        mutation: models.NucleotideMutation,
+        mutation: models.AminoAcidMutation,
         gene_symbol: str,
         mutation_start: int,
         mutation_end: int,
@@ -281,56 +352,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                     + str(mutation_end)
                 )
         return label
-
-    def get_proteomic_profiles(self, obj: models.Sample):
-        """
-        Build proteomic profiles per CDS for all sequences in the sample.
-        """
-        showNX = self.context.get("showNX", False)
-        # Prefetch all needed relations:
-        sequences = obj.sequences.prefetch_related(
-            "alignments__replicon",
-            "alignments__replicon__gene_set__cds_set",
-            "alignments__amino_acid_mutations__cds__gene",
-        )
-
-        proteomic_profiles = {}
-
-        for sequence in sequences:
-            for alignment in sequence.alignments.all():
-
-                # Get all CDS objects of this replicon
-                cds_list = [
-                    (cds.gene.replicon.accession, cds)
-                    for cds in models.CDS.objects.filter(
-                        gene__replicon=alignment.replicon
-                    )
-                ]
-
-                for replicon, cds in cds_list:
-                    labels = []
-
-                    # All AA mutations for this CDS & this alignment
-                    mutations = cds.aminoacidmutation_set.filter(alignments=alignment)
-
-                    for mutation in mutations:
-                        if not showNX and ("X" in mutation.alt):
-                            continue
-                        gene_symbol = mutation.cds.gene.symbol
-                        mutation_start = mutation.start
-                        mutation_end = mutation.end
-
-                        label = self.define_proteomic_label(
-                            mutation, gene_symbol, mutation_start, mutation_end
-                        )
-
-                        labels.append((gene_symbol, mutation_start, label))
-
-                    # sort by (gene, position)
-                    proteomic_profiles[f"{replicon}: {cds.accession}"] = [
-                        item[2] for item in sorted(labels, key=lambda x: (x[0], x[1]))
-                    ]
-        return OrderedDict(sorted(proteomic_profiles.items()))
 
     def create_NT_format(self, mutation: models.NucleotideMutation):
         label = ""
@@ -387,19 +408,29 @@ class SampleGenomesExportStreamSerializer(SampleGenomesSerializer):
         showNX = self.context.get("showNX", False)
         ctx = self.context
 
+        # Initialize caches once
         if "custom_prop_cache" not in ctx:
             ctx["custom_prop_cache"] = {}
-
         if "genomic_cache" not in ctx:
             ctx["genomic_cache"] = {}
-
         if "proteomic_cache" not in ctx:
             ctx["proteomic_cache"] = {}
-            # Cache custom properties
+
+        # Cache custom properties
         if obj.id not in ctx["custom_prop_cache"]:
-            props = Sample2PropertySerializer(
-                obj.properties, many=True, read_only=True
-            ).data
+            props = []
+            if hasattr(obj, "properties"):
+                for prop in obj.properties.all():
+                    value = (
+                        prop.value_integer
+                        or prop.value_float
+                        or prop.value_text
+                        or prop.value_varchar
+                        or prop.value_blob
+                        or prop.value_date
+                        or prop.value_zip
+                    )
+                    props.append({"name": prop.property.name, "value": value})
             ctx["custom_prop_cache"][obj.id] = {p["name"]: p["value"] for p in props}
 
         custom_properties = ctx["custom_prop_cache"][obj.id]

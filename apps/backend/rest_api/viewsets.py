@@ -890,6 +890,33 @@ class LineageViewSet(
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["name", "parent"]
 
+    @action(detail=False, methods=["get"])
+    def distinct_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all distinct lineage entries from the Sample table.
+        """
+        queryset = models.Sample.objects.values_list("lineage", flat=True)
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(
+                sequences__alignments__replicon__reference__accession=ref
+            )
+        distinct_lineages = queryset.distinct()
+
+        return Response(
+            {"lineages": distinct_lineages},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"])
+    def full_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all lineages from the Lineage table.
+        """
+        lineages = models.Lineage.objects.order_by("name").values_list(
+            "name", flat=True
+        )
+        return Response(data={"lineages": list(lineages)}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):
         lineage = self.get_object()

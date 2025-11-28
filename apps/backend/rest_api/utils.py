@@ -6,8 +6,6 @@ import uuid
 from dateutil import parser
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import pandas as pd
-from rest_framework import status
-from rest_framework.response import Response
 
 from . import models
 
@@ -185,8 +183,8 @@ def define_profile(mutation: str, protein_symbols: set, replicons: set):
                     raise ValueError(
                         f"Unknown identifier: '{first_id}'. "
                         f"Not a valid replicon or gene name.\n"
-                        f"Valid genes: {', '.join(sorted(list(protein_symbols))[:5])}...\n"
-                        f"Valid replicons: {', '.join(sorted(list(replicons))[:5])}..."
+                        f"Valid genes: {', '.join(sorted(list(protein_symbols)))}\n"
+                        f"Valid replicons: {', '.join(sorted(list(replicons)))}"
                     )
             # case 3: no group, e.g A435G, → gene_name and replicon_accession == None
             if mutation_type == "snv":

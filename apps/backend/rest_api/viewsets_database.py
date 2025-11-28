@@ -3,14 +3,17 @@ from django.db import connection
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
 
-from rest_api.utils import Response
 from . import models
-from .viewsets_sample import SampleViewSet
+from .viewsets_sample import SampleFilterMixin
+from .viewsets_statistics_and_plots import SampleViewSetPlots
+from .viewsets_statistics_and_plots import SampleViewSetStatistics
 
 
 class DatabaseInfoView(
     viewsets.GenericViewSet,
+    SampleFilterMixin,
 ):
     @action(detail=False, methods=["get"])
     def get_database_tables_status(self, request, *args, **kwargs):
@@ -55,10 +58,10 @@ class DatabaseInfoView(
     @action(detail=False, methods=["get"])  # detail=False means it's a list action
     def get_database_info(self, request, *args, **kwargs):
         result = {}
-        queryset = SampleViewSet()._get_filtered_queryset(request)
-        statistics = SampleViewSet.get_statistics()
+        queryset = self.get_filtered_queryset(request)
+        statistics = SampleViewSetStatistics().get_statistics()
         total_samples = statistics["samples_total"]
-        metadata_coverage = SampleViewSet().get_metadata_coverage(queryset)
+        metadata_coverage = SampleViewSetPlots().get_metadata_coverage(queryset)
         # Add percentages
         for key, count in metadata_coverage.items():
             percentage = (count / total_samples) * 100 if total_samples > 0 else 0

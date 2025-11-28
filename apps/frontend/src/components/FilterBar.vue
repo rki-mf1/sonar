@@ -301,12 +301,9 @@ export default {
       },
     },
   },
-  async mounted() {
+  mounted() {
     const samplesStore = useSamplesStore()
     samplesStore.initializeWatchers()
-    if (Object.keys(samplesStore.propertiesDict).length === 0) {
-      await samplesStore.updatePropertyOptions()
-    }
   },
   methods: {
     removeTimeRange() {

@@ -266,24 +266,7 @@ GET /api/samples/statistics/
 }
 ```
 
-### 1.4 Get Filtered Statistics
-```
-GET /api/samples/filtered_statistics/
-GET /api/samples/filtered_statistics/?filters={"andFilter":[],"orFilter":[]}&reference_accession="NC_026438.1"
-```
-
-**Parameters:**
-- `filters`: JSON with filter conditions
-- `reference_accession`: Reference accession
-
-**Response:**
-```json
-{
-  "filtered_total_count": 342
-}
-```
-
-### 1.5 Get Genomes (Genomic/Proteomic Profiles)
+### 1.4 Get Genomes (Genomic/Proteomic Profiles)
 ```
 GET /api/samples/genomes/
 GET /api/samples/genomes/?limit=10&offset=0&ordering=-collection_date&filters={"andFilter":[{"label":"DNA/AA '
@@ -346,14 +329,14 @@ GET /api/samples/genomes/?limit=10&offset=0&ordering=-collection_date&filters={"
 }
 ```
 
-### 1.6 Export Genomes as CSV Stream
+### 1.5 Export Genomes as CSV Stream
 ```
 GET /api/samples/genomes/?csv_stream=true&columns=name,country,collection_date,genomic_profiles
 ```
 
 **Response:** CSV file for download
 
-### 1.7 Export Genomes in VCF Format
+### 1.6 Export Genomes in VCF Format
 ```
 GET /api/samples/genomes/?vcf_format=true
 ```
@@ -380,149 +363,7 @@ GET /api/samples/genomes/?vcf_format=true
   ]
 }
 ```
-
-### 1.8 Get Distinct Lineages
-```
-GET /api/samples/distinct_lineages/
-```
-
-**Parameters:**
-- `reference` (optional): Reference accession
-
-**Response:**
-All lineages of samples (selected organism = reference_accession)
-```json
-{
-  "lineages": ["BA.2.86", "XEC", "JN.1", "XEC.1.1", null]
-}
-```
-
-### 1.9 Get All Lineages
-```
-GET /api/samples/full_lineages/
-```
-**Parameters:**
-- `reference` (optional): Reference accession
-
-**Response:**
-All lineages of the selected organism.
-```json
-{
-  "lineages": ["A", "B", "BA", "BA.1", "BA.2", "BA.2.86", ...]
-}
-```
-
-### 1.10 Get Metadata Coverage
-```
-GET /api/samples/plot_metadata_coverage/
-```
-
-**Parameters:**
-- `filters`: JSON with filter conditions
-
-**Response:**
-```json
-{
-  "metadata_coverage": {
-    "country": 1200,
-    "age": 850,
-    "collection_date": 1500,
-    "sequencing_reason": 320,
-    "lineage": 0,
-  }
-}
-```
-
-### 1.11 Samples Per Week (Chart Data)
-```
-GET /api/samples/plot_samples_per_week/
-```
-
-**Parameters:**
-- `filters`: JSON with filter conditions
-
-**Response:**
-```json
-[
-  ["2024-W01", 45],
-  ["2024-W02", 62],
-  ["2024-W03", 58]
-]
-```
-
-### 1.12 Lineages Per Week (Chart Data)
-```
-GET /api/samples/plot_grouped_lineages_per_week/
-```
-
-**Parameters:**
-- `filters`: JSON with filter conditions
-
-**Response:**
-```json
-{
-  "grouped_lineages_per_week": [
-    {
-      "week": "2024-W01",
-      "lineage_group": "BA.2",
-      "count": 28,
-      "percentage": 62.22
-    },
-    {
-      "week": "2024-W01",
-      "lineage_group": "XEC",
-      "count": 17,
-      "percentage": 37.78
-    }
-  ]
-}
-```
-
-### 1.13 Get Custom Property Plot
-```
-GET /api/samples/plot_custom/?property={property_name}
-```
-
-**Parameters:**
-- `filters`: JSON with filter conditions
-- `property`: Property name (e.g., `sequencing_reason`)
-
-**Response:**
-```json
-{
-  "sequencing_reason": {
-    "Surveillance": 850,
-    "Clinical": 420,
-    "Research": 230
-  }
-}
-```
-
-### 1.14 Get XY-Axis Plot (Two Properties)
-```
-GET /api/samples/plot_custom_xy/?x_property=country&y_property=sequencing_reason
-```
-
-**Parameters:**
-- `filters`: JSON with filter conditions
-- `x_property`: X-axis property name
-- `y_property`: Y-axis property name
-
-**Response:**
-```json
-{
-  "Germany": [
-    {"Surveillance": 420},
-    {"Clinical": 180}
-  ],
-  "France": [
-    {"Surveillance": 320},
-    {"Clinical": 140}
-  ]
-}
-```
-
-### 1.15 Get Sequence Data
+### 1.7 Get Sequence Data
 ```
 GET /api/samples/get_sequence_data/?sequence_name={sequence_name}
 ```
@@ -569,7 +410,7 @@ POST /api/samples/get_bulk_sequence_data/
 ]
 ```
 
-### 1.17 Delete Samples
+### 1.8 Delete Samples
 ```
 POST /api/samples/delete_sample_data/
 ```
@@ -590,7 +431,7 @@ POST /api/samples/delete_sample_data/
 }
 ```
 
-### 1.18 Delete Sequences
+### 1.9 Delete Sequences
 ```
 POST /api/samples/delete_sequence_data/
 ```
@@ -608,6 +449,169 @@ POST /api/samples/delete_sequence_data/
 {
   "status": "success",
   "deleted_count": 2
+}
+```
+
+
+# 2. Statistics
+### 2.1 Get Filtered Statistics
+```
+GET /api/statistics/filtered_statistics/
+GET /api/GET /api/statistics/filtered_statistics/
+/filtered_statistics/?filters={"andFilter":[],"orFilter":[]}&reference_accession="NC_026438.1"
+```
+
+**Parameters:**
+- `filters`: JSON with filter conditions
+- `reference_accession`: Reference accession
+
+**Response:**
+```json
+{
+  "filtered_total_count": 342
+}
+```
+
+# 3. Lineages
+### 3.1 Get Distinct Lineages
+```
+GET /api/lineages/distinct_lineages/
+```
+
+**Parameters:**
+- `reference` (optional): Reference accession
+
+**Response:**
+All lineages of samples (selected organism = reference_accession)
+```json
+{
+  "lineages": ["BA.2.86", "XEC", "JN.1", "XEC.1.1", null]
+}
+```
+
+### 3.2 Get All Lineages
+```
+GET /api/lineages/full_lineages/
+```
+**Parameters:**
+- `reference` (optional): Reference accession
+
+**Response:**
+All lineages of the selected organism.
+```json
+{
+  "lineages": ["A", "B", "BA", "BA.1", "BA.2", "BA.2.86", ...]
+}
+```
+
+# 4. Plots
+### 4.1 Get Metadata Coverage
+```
+GET /api/plots/plot_metadata_coverage/
+```
+
+**Parameters:**
+- `filters`: JSON with filter conditions
+
+**Response:**
+```json
+{
+  "metadata_coverage": {
+    "country": 1200,
+    "age": 850,
+    "collection_date": 1500,
+    "sequencing_reason": 320,
+    "lineage": 0,
+  }
+}
+```
+
+### 4.2 Samples Per Week (Chart Data)
+```
+GET /api/plots/plot_samples_per_week/
+```
+
+**Parameters:**
+- `filters`: JSON with filter conditions
+
+**Response:**
+```json
+[
+  ["2024-W01", 45],
+  ["2024-W02", 62],
+  ["2024-W03", 58]
+]
+```
+
+### 4.3 Lineages Per Week (Chart Data)
+```
+GET /api/plots/plot_grouped_lineages_per_week/
+```
+
+**Parameters:**
+- `filters`: JSON with filter conditions
+
+**Response:**
+```json
+{
+  "grouped_lineages_per_week": [
+    {
+      "week": "2024-W01",
+      "lineage_group": "BA.2",
+      "count": 28,
+      "percentage": 62.22
+    },
+    {
+      "week": "2024-W01",
+      "lineage_group": "XEC",
+      "count": 17,
+      "percentage": 37.78
+    }
+  ]
+}
+```
+
+### 4.4 Get Custom Property Plot
+```
+GET /api/plots/plot_custom/?property={property_name}
+```
+
+**Parameters:**
+- `filters`: JSON with filter conditions
+- `property`: Property name (e.g., `sequencing_reason`)
+
+**Response:**
+```json
+{
+  "sequencing_reason": {
+    "Surveillance": 850,
+    "Clinical": 420,
+    "Research": 230
+  }
+}
+```
+
+### 4.5 Get XY-Axis Plot (Two Properties)
+```
+GET /api/plots/plot_custom_xy/?x_property=country&y_property=sequencing_reason
+```
+
+**Parameters:**
+- `filters`: JSON with filter conditions
+- `x_property`: X-axis property name
+- `y_property`: Y-axis property name
+
+**Response:**
+```json
+{
+  "Germany": [
+    {"Surveillance": 420},
+    {"Clinical": 180}
+  ],
+  "France": [
+    {"Surveillance": 320},
+    {"Clinical": 140}
+  ]
 }
 ```
 
@@ -716,11 +720,6 @@ GET /api/properties/
 ### 4.5 Genes
 ```
 GET /api/genes/
-```
-
-### 4.6 Lineages
-```
-GET /api/lineages/
 ```
 
 ---
