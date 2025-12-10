@@ -301,7 +301,10 @@ export default {
       },
     },
   },
-  mounted() {},
+  mounted() {
+    const samplesStore = useSamplesStore()
+    samplesStore.initializeWatchers()
+  },
   methods: {
     removeTimeRange() {
       if (this.collectionDateFilter) {

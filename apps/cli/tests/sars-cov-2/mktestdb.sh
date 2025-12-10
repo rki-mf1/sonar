@@ -32,5 +32,5 @@ sonar add-prop --db test.db --name DESH_REJECTION_REASON --dtype text --descr de
 sonar add-prop --db test.db --name DUPLICATE_ID --dtype text --descr descr
 sonar add-prop --db test.db --name LINEAGE --dtype text --descr descr
 cp test.db test-with-seqs.db
-sonar import --db test-with-seqs.db --tsv meta.tsv --fasta seqs.fasta.gz --cols sample=IMS_ID --cache cache --threads 1
+sonar import --db test-with-seqs.db --tsv ../../../../test-data/sars-cov-2/SARS-CoV-2_6.tsv --fasta ../../../../test-data/sars-cov-2/SARS-CoV-2_6.fasta.gz --cols sample=IMS_ID --cache cache --threads 1
 rm -rf cache import.log
