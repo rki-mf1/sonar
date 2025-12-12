@@ -43,9 +43,9 @@ def delete_samples(sample_list: list):
         return {"deleted_samples_count": 0}
 
     sample_ids = list(samples_qs.values_list("id", flat=True))
-    sequence_ids = list(samples_qs.values_list("sequence_id", flat=True))
     LOGGER.info(f"Deleting samples with IDs: {sample_ids}")
     if DEBUG:
+        sequence_ids = list(samples_qs.values_list("sequences__id", flat=True))
         print("\nAssociated sequence IDs", sequence_ids)
 
     deleted_info = samples_qs.delete()  # returns (num_deleted, dict_of_models)
@@ -55,3 +55,4 @@ def delete_samples(sample_list: list):
     clean_unused_sequences()
 
     data["deleted_samples_count"] = deleted_info[1].get("rest_api.Sample", 0)
+    return data
