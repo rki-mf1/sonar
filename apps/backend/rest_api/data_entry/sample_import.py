@@ -106,24 +106,24 @@ class SonarImport:
 
     def get_sequence_obj(self):
         """
-        Fetch or create a Sequence object based on the seqhash value in SampleRaw.
-        Updates or sets the name, length, and last_update_date fields.
+        Prepare a Sequence object WITHOUT persisting to DB.
+        Bulk operations will handle persistence later.
         """
-        self.sequence, created = Sequence.objects.get_or_create(
-            name=self.sample_raw.name,
-            defaults={
-                "seqhash": self.sample_raw.seqhash,
-                "length": self.sample_raw.sequence_length,
-                "last_update_date": timezone.now(),
-            },
-        )
-
-        # If the sequence already exists, update its fields
-        if not created:
+        # Try to get existing sequence
+        try:
+            self.sequence = Sequence.objects.get(name=self.sample_raw.name)
+            # Update fields for existing sequence
             self.sequence.seqhash = self.sample_raw.seqhash
             self.sequence.length = self.sample_raw.sequence_length
             self.sequence.last_update_date = timezone.now()
-            self.sequence.save()
+        except Sequence.DoesNotExist:
+            # Create new sequence object (not persisted yet)
+            self.sequence = Sequence(
+                name=self.sample_raw.name,
+                seqhash=self.sample_raw.seqhash,
+                length=self.sample_raw.sequence_length,
+                last_update_date=timezone.now(),
+            )
 
         return self.sequence
 

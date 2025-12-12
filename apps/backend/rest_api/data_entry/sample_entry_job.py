@@ -381,13 +381,25 @@ def process_batch_run(
         sonar_import_objs = [
             SonarImport(pathlib.Path(file), import_folder=temp_dir) for file in batch
         ]
-        # These steps must be done sequentially because:
-        # - get_sequence_obj() sets self.sequence (needed for create_alignment)
-        # - update_replicon_obj() sets self.replicon (needed for create_alignment)
-        # - create_alignment() needs both self.sequence and self.replicon
+        sequences = [
+            sample_import_obj.get_sequence_obj()
+            for sample_import_obj in sonar_import_objs
+        ]
+
+        # Separate new and existing sequences
+        sequences_to_create = [s for s in sequences if not s.pk]
+        sequences_to_update = [s for s in sequences if s.pk]
+
+        with cache.lock("sequence"):
+            if sequences_to_create:
+                Sequence.objects.bulk_create(sequences_to_create)
+            if sequences_to_update:
+                Sequence.objects.bulk_update(
+                    sequences_to_update,
+                    fields=["seqhash", "length", "last_update_date"],
+                )
         alignments: list[Alignment] = []
         for sample_import_obj in sonar_import_objs:
-            sample_import_obj.get_sequence_obj()  # Persists sequence to DB
             sample_import_obj.update_replicon_obj(replicon_cache)
             sample_import_obj.create_alignment(alignments)
 
