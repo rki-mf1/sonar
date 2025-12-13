@@ -106,25 +106,16 @@ class SonarImport:
 
     def get_sequence_obj(self):
         """
-        Fetch or create a Sequence object based on the seqhash value in SampleRaw.
-        Updates or sets the name, length, and last_update_date fields.
+        Create a Sequence object WITHOUT querying or persisting to DB.
+        Bulk upsert will handle create/update efficiently in a single query.
         """
-        self.sequence, created = Sequence.objects.get_or_create(
+        # Always create new object - bulk_create with update_conflicts will handle upsert
+        self.sequence = Sequence(
             name=self.sample_raw.name,
-            defaults={
-                "seqhash": self.sample_raw.seqhash,
-                "length": self.sample_raw.sequence_length,
-                "last_update_date": timezone.now(),
-            },
+            seqhash=self.sample_raw.seqhash,
+            length=self.sample_raw.sequence_length,
+            last_update_date=timezone.now(),
         )
-
-        # If the sequence already exists, update its fields
-        if not created:
-            self.sequence.seqhash = self.sample_raw.seqhash
-            self.sequence.length = self.sample_raw.sequence_length
-            self.sequence.last_update_date = timezone.now()
-            self.sequence.save()
-
         return self.sequence
 
     def update_replicon_obj(self, replicon_cache: dict[str, Replicon]):
