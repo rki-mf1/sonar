@@ -386,18 +386,15 @@ def process_batch_run(
             for sample_import_obj in sonar_import_objs
         ]
 
-        # Separate new and existing sequences
-        sequences_to_create = [s for s in sequences if not s.pk]
-        sequences_to_update = [s for s in sequences if s.pk]
-
+        # Use bulk upsert
+        # performs INSERT ... ON CONFLICT DO UPDATE
         with cache.lock("sequence"):
-            if sequences_to_create:
-                Sequence.objects.bulk_create(sequences_to_create)
-            if sequences_to_update:
-                Sequence.objects.bulk_update(
-                    sequences_to_update,
-                    fields=["seqhash", "length", "last_update_date"],
-                )
+            Sequence.objects.bulk_create(
+                sequences,
+                update_conflicts=True,
+                unique_fields=["name"],
+                update_fields=["seqhash", "length", "last_update_date"],
+            )
         alignments: list[Alignment] = []
         for sample_import_obj in sonar_import_objs:
             sample_import_obj.update_replicon_obj(replicon_cache)
