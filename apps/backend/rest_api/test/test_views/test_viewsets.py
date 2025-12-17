@@ -54,6 +54,7 @@ class SampleViewSetTest(
                     "ref_nuc": "T",
                     "ref_pos": 670,
                     "alt_nuc": "G",
+                    "replicon_accession": "MN908947.3",
                     "exclude": False,
                 },
                 10,
@@ -86,6 +87,7 @@ class SampleViewSetTest(
                     "label": "Del Nt",
                     "first_deleted": 11287,
                     "last_deleted": 1129,
+                    "replicon_accession": "MN908947.3",
                     "exclude": False,
                 },
                 0,
@@ -96,6 +98,7 @@ class SampleViewSetTest(
                     "label": "Del Nt",
                     "first_deleted": 29734,
                     "last_deleted": 29759,
+                    "replicon_accession": "MN908947.3",
                     "exclude": False,
                 },
                 10,
@@ -118,16 +121,21 @@ class SampleViewSetTest(
                     "ref_nuc": "G",
                     "ref_pos": 21608,
                     "alt_nuc": "GTCATGCCGCTGT",
+                    "replicon_accession": "MN908947.3",
                 },
                 10,
             ),
-            ("Replicon", {"label": "Replicon", "accession": "MN908947.3"}, 10),
+            ("Replicon", {"label": "Replicon", "replicon_accession": "MN908947.3"}, 10),
         ]
     )
     def test_genome_filters(self, _, filter, expected_count):
         view = self.viewset.as_view({"get": "genomes"})
         request = self.factory.get(
-            "/api/samples/genomes/", {"filters": json.dumps({"andFilter": [filter]})}
+            "/api/samples/genomes/",
+            data={
+                "reference": "MN908947.3",
+                "filters": json.dumps({"andFilter": [filter]}),
+            },
         )
         user = self.get_request_user()
         force_authenticate(request, user=user)

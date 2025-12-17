@@ -26,11 +26,11 @@
               placeholder="Select a Organism"
               filter
             />
-            <h4 class="text-primary mt-0 mb-0">Accession</h4>
+            <h4 class="text-primary mt-0 mb-0">Reference Accession</h4>
             <PrimeDropdown
-              v-model="selectedAccession"
-              :options="accessions"
-              placeholder="Select an Accession"
+              v-model="selectedReferenceAccession"
+              :options="reference_accessions"
+              placeholder="Select a Reference Accession"
               filter
             />
             <h4 class="text-primary mt-0 mb-0">Datasets</h4>
@@ -73,14 +73,14 @@ export default {
       >,
       organisms: [] as string[],
       selectedOrganism: '',
-      selectedAccession: '' as string | null,
+      selectedReferenceAccession: '' as string | null,
       selectedDatasets: [] as (string | null)[],
       loading: false,
     }
   },
   computed: {
     // dynamically based on selectedOrganism
-    accessions() {
+    reference_accessions() {
       return this.datasetOptions[this.selectedOrganism]?.accessions || []
     },
     data_sets() {
@@ -90,7 +90,7 @@ export default {
   watch: {
     // when ever selectedOrganism is changed, choose first available option
     selectedOrganism() {
-      this.selectedAccession = this.accessions[0] || null
+      this.selectedReferenceAccession = this.reference_accessions[0] || null
       this.selectedDatasets = this.data_sets
     },
   },
@@ -104,20 +104,24 @@ export default {
       this.selectedOrganism = this.organisms[0]
     },
     proceed() {
-      if (this.selectedOrganism && this.selectedAccession) {
+      if (this.selectedOrganism && this.selectedReferenceAccession) {
         this.loading = true
         setTimeout(() => {
           const datasets = [...(this.selectedDatasets ?? [])]
-          this.samplesStore.setDataset(this.selectedOrganism, this.selectedAccession, datasets)
+          this.samplesStore.setDataset(
+            this.selectedOrganism,
+            this.selectedReferenceAccession,
+            datasets,
+          )
 
           this.router.push({
             name: 'Table',
-            query: buildSelectionQuery(this.selectedAccession, datasets),
+            query: buildSelectionQuery(this.selectedReferenceAccession, datasets),
           })
           this.loading = false
         }, 50) // delay to trigger loading animation -> there has to be a better solution!
       } else {
-        alert('Please select at least an organism and an accession.')
+        alert('Please select at least an organism and an reference accession.')
       }
     },
   },

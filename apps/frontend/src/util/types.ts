@@ -68,7 +68,7 @@ export type ProfileFilter = {
 
 export type RepliconFilter = {
   label: string
-  accession: string
+  replicon_accession: string
   exclude: boolean
 }
 
@@ -88,6 +88,7 @@ export type FilterGroupFilters = {
 }
 
 export type FilterGroupRoot = {
+  reference?: string
   limit?: number
   offset?: number
   filters: FilterGroupFilters
@@ -172,8 +173,8 @@ export type PlotDataSets =
   | {
       label: string
       data: number[]
-      backgroundColor: string
-      borderColor: string
+      backgroundColor: string[]
+      borderColor: string[]
       borderWidth: number
     }
   | {

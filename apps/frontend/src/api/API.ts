@@ -95,37 +95,37 @@ export default class API {
 
   getFilteredStatistics(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/filtered_statistics/${queryString}`
+    const url = `statistics/filtered_statistics/${queryString}`
     return this.getRequest(url, {}, false)
   }
 
   getPlotSamplesPerWeek(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/plot_samples_per_week/${queryString}`
+    const url = `plots/plot_samples_per_week/${queryString}`
     return this.getRequest(url, {}, false)
   }
 
   getPlotGroupedLineagesPerWeek(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/plot_grouped_lineages_per_week/${queryString}`
+    const url = `plots/plot_grouped_lineages_per_week/${queryString}`
     return this.getRequest(url, {}, false)
   }
 
   getPlotMetadataCoverage(params: FilterGroupRoot) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/plot_metadata_coverage/${queryString}`
+    const url = `plots/plot_metadata_coverage/${queryString}`
     return this.getRequest(url, {}, false)
   }
 
   getPlotCustom(params: FilterGroupRoot, property: string) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/plot_custom/${queryString}`
+    const url = `plots/plot_custom/${queryString}`
     return this.getRequest(url, { property: property }, false)
   }
 
   get2Properties(params: FilterGroupRoot, x_property: string, y_property: string) {
     const queryString = this.parseQueryString(params)
-    const url = `samples/plot_custom_xy/${queryString}`
+    const url = `plots/plot_custom_xy/${queryString}`
     return this.getRequest(url, { x_property: x_property, y_property: y_property }, false)
   }
 
@@ -152,51 +152,63 @@ export default class API {
       const reader: ReadableStreamDefaultReader<string> = stream
         .pipeThrough(new TextDecoderStream())
         .getReader()
-      this.saveAsXLSX(reader, exportColumns)
+      this.saveAsXLSX(reader)
       return
     }
-    const chunks = []
-
-    chunks.push(exportColumns.join(';') + '\n') // add column names for csv export
-
+    const chunks: Uint8Array[] = []
     const outStream = new WritableStream({
-      write(chunk) {
+      write(chunk: Uint8Array) {
         chunks.push(chunk)
       },
       close() {
         // console.log('Stream closed')
       },
     })
+
     await stream.pipeThrough(new TextDecoderStream()).pipeTo(outStream)
-    const arrayBuffer = await new Blob(chunks).arrayBuffer()
-    const blob = new Blob([arrayBuffer])
+    const blob = new Blob(chunks as BlobPart[], { type: 'text/csv' })
     saveAs(blob, 'export.csv')
   }
 
-  async saveAsXLSX(reader: ReadableStreamDefaultReader<string>, columns: string[]) {
+  async saveAsXLSX(reader: ReadableStreamDefaultReader<string>) {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Sheet 1')
-    worksheet.columns = columns.map((c) => ({ header: c, key: c, width: 20 }))
     let data = '' as string
+    let columns: string[] = []
+    let headerProcessed = false
+
     while (true) {
       const { done, value } = await reader.read()
       if (done) {
         break
       }
       data += value
+
       if (data && data.includes('\n')) {
         const lines = data.split('\n')
+
+        if (!headerProcessed) {
+          columns = lines.shift()?.split(';') || []
+          worksheet.columns = columns.map((c) => ({ header: c, key: c, width: 20 }))
+          headerProcessed = true
+        }
+
         data = lines.pop() || ''
+
         for (const line of lines) {
-          const values = line.split(';')
-          const rowValues: { [key: string]: string | undefined } = {}
-          columns.forEach((c, i) => {
-            rowValues[c] = values[i]
-          })
-          worksheet.addRow(rowValues)
+          if (line.trim()) {
+            // skip empty lines
+            const values = line.split(';')
+            const rowValues: { [key: string]: string | undefined } = {}
+            columns.forEach((c, i) => {
+              rowValues[c] = values[i]
+            })
+            worksheet.addRow(rowValues)
+          }
         }
       }
     }
+
     const buffer = await workbook.xlsx.writeBuffer()
     saveAs(
       new Blob([buffer], {
@@ -210,13 +222,13 @@ export default class API {
     return this.getRequest(`properties/distinct_property_names/`, {}, false)
   }
 
-  getSampleGenomePropertyOptionsAndTypes() {
-    return this.getRequest(`properties/get_all_properties/`, {}, false)
+  getSampleGenomePropertyOptionsAndTypes(ref: string | null = null) {
+    return this.getRequest(`properties/get_all_properties/?reference=${ref}`, {}, false)
   }
 
   getSampleStatistics(reference?: string | null) {
     const params = reference ? { reference } : {}
-    return this.getRequest(`samples/statistics/`, params, false)
+    return this.getRequest(`statistics/statistics/`, params, false)
   }
 
   getSampleGenomePropertyValueOptions(propertyName: string, reference?: string | null) {
@@ -234,10 +246,10 @@ export default class API {
   }
   getLineageOptions(reference?: string | null) {
     const params = reference ? { reference } : {}
-    return this.getRequest(`samples/distinct_lineages/`, params, false)
+    return this.getRequest(`lineages/distinct_lineages/`, params, false)
   }
   getFullLineageOptions() {
-    return this.getRequest(`samples/full_lineages/`, {}, false)
+    return this.getRequest(`lineages/full_lineages/`, {}, false)
   }
   getGeneSymbolOptions(reference?: string | null) {
     const params = reference ? { reference } : {}

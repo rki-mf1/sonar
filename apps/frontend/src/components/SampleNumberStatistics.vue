@@ -18,7 +18,7 @@
           {{ filteredCount }} / {{ samplesStore.statistics.samples_total }}
         </div>
         <div style="color: var(--text-color); font-size: 12px; font-weight: 500">
-          Sequences selected from database
+          Samples selected from database
         </div>
       </template>
     </PrimeCard>
