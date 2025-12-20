@@ -17,7 +17,7 @@ def test_match_no_ref(capfd, api_url):
 
 
 @pytest.mark.xdist_group(name="hiv_group")
-@pytest.mark.order(3)
+@pytest.mark.order(8)
 def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     """
     Test case to add a duplicated reference.
@@ -94,10 +94,12 @@ def test_delete_sequence(monkeypatch, capfd, api_url):
 
 # delete non existing reference
 def test_delete_noref(capfd, api_url):
-    code = run_cli(f"delete-ref --db {api_url} -r fakeREFID --force")
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        run_cli(f"delete-ref --db {api_url} -r fakeREFID --force")
     out, err = capfd.readouterr()
     assert "The reference fakeREFID does not exist." in err
-    assert code == 0
+    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.value.code == 1
 
 
 # file not found
