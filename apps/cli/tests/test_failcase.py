@@ -7,7 +7,6 @@ from .conftest import run_cli
 
 
 def test_match_no_ref(capfd, api_url):
-
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run_cli(f"match --db {api_url} -r NOREF")
     out, err = capfd.readouterr()
@@ -17,6 +16,8 @@ def test_match_no_ref(capfd, api_url):
     assert pytest_wrapped_e.value.code == 1
 
 
+@pytest.mark.xdist_group(name="hiv_group")
+@pytest.mark.order(3)
 def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     """
     Test case to add a duplicated reference.
@@ -40,7 +41,7 @@ def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
     # Cleanup: delete the reference
-    code = run_cli(f"delete-ref --db {api_url} -r NC_026429.1 --force")
+    code = run_cli(f"delete-ref --db {api_url} -r NC_001802.1 --force")
     out, err = capfd.readouterr()
     assert "Reference deleted." in err
     assert code == 0
@@ -95,7 +96,7 @@ def test_delete_sequence(monkeypatch, capfd, api_url):
 def test_delete_noref(capfd, api_url):
     code = run_cli(f"delete-ref --db {api_url} -r fakeREFID --force")
     out, err = capfd.readouterr()
-    assert "Reference deleted." in err
+    assert "The reference fakeREFID does not exist." in err
     assert code == 0
 
 
