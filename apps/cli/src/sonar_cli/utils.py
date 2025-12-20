@@ -1461,6 +1461,9 @@ class sonarUtils:
 
     @staticmethod
     def delete_reference(reference):
+        # Convert reference ID to accession if needed
+        reference = _check_reference(db=BASE_URL, reference=reference)
+
         LOGGER.info("Start to delete....the process is not reversible.")
         json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
         LOGGER.info(
