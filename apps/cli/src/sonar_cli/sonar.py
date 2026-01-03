@@ -95,6 +95,12 @@ def parse_args(args=None):
     subparsers, _ = create_subparser_lineage_import(
         subparsers, lineage_parser, output_parser, general_parser
     )
+
+    # import-dataset
+    subparsers, _ = create_subparser_import_dataset(
+        subparsers, database_parser, thread_parser, reference_parser, general_parser
+    )
+
     # match
     subparsers, subparser_match = create_subparser_match(
         subparsers,
@@ -480,6 +486,121 @@ def create_subparser_lineage_import(
     return subparsers, parser
 
 
+def create_subparser_import_dataset(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    """
+    Creates an 'import-dataset' subparser for downloading and importing public datasets.
+
+    Args:
+        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the subparser to.
+        parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments.
+
+    Returns:
+        argparse.ArgumentParser: The created 'import-dataset' subparser.
+    """
+    parser = subparsers.add_parser(
+        "import-dataset",
+        parents=parent_parsers,
+        help="Download and import public pathogen genomics datasets",
+        description=(
+            "Download and import public pathogen genomics datasets from various sources. "
+            "Supported sources: rki (RKI SARS-CoV-2 from Germany), pathoplexus (various pathogens)."
+        ),
+    )
+
+    parser.add_argument(
+        "-s",
+        "--source",
+        metavar="STR",
+        help="Data source (choices: %(choices)s)",
+        type=str,
+        choices=["rki", "pathoplexus"],
+        required=True,
+    )
+    parser.add_argument(
+        "-p",
+        "--pathogen",
+        metavar="STR",
+        help=(
+            "Pathogen name. For RKI: sars-cov-2. "
+            "For Pathoplexus: sars-cov-2, rsv-a, rsv-b, mpox, hmpv, marburg, measles, "
+            "ebola-zaire, ebola-sudan, west-nile"
+        ),
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "--sample-size",
+        metavar="INT",
+        help="Number of samples to import. If not specified, imports all samples.",
+        type=int,
+        default=None,
+    )
+    parser.add_argument(
+        "--method",
+        help="Select alignment method (default: %(default)s)",
+        choices=["mafft", "parasail", "wfa"],
+        type=str,
+        default="mafft",
+    )
+    parser.add_argument(
+        "--cache",
+        metavar="DIR",
+        help="Directory for caching downloaded data (default: a temporary directory is created)",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "--no-progress",
+        help="Don't show progress bars while downloading/importing",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--download-only",
+        help="Only download and preprocess data, do not import into database",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--auto-link",
+        help="Automatically link TSV columns with database fields based on identical names",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--skip-nx",
+        help="Exclude mutations containing N or X from being imported",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--cols",
+        help="assign column names used in the provided TSV/CSV file to the matching property names provided by the database in the form PROP=COL (e.g. name=GenomeID)",
+        type=str,
+        nargs="+",
+        default=[],
+    )
+    parser.add_argument(
+        "--auto-anno",
+        help="automatically annotate sample with SnpEff tool.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--debug",
+        help="save additional files to the cache dir that can be useful when debugging errors",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--must-pass-paranoid",
+        help="abort import if any sequence fails the 'paranoid' test",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-skip",
+        help="use '--no-skip' to not skip samples already existing in the database (default: (skip))",
+        action="store_true",
+    )
+    return subparsers, parser
+
+
 def create_subparser_import(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
@@ -843,6 +964,77 @@ def handle_import(args: argparse.Namespace):
     )
 
 
+def handle_import_dataset(args: argparse.Namespace):
+    """
+    Handle downloading and importing public datasets.
+
+    This function downloads data from public sources (RKI, Pathoplexus),
+    preprocesses it, and optionally imports it into the sonar database.
+
+    Args:
+        args (argparse.Namespace): Parsed command line arguments.
+    """
+    from sonar_cli.dataset_import import get_importer, SUPPORTED_PATHOGENS
+
+    source = args.source.lower()
+    pathogen = args.pathogen.lower()
+
+    # Validate pathogen for the source
+    if pathogen not in SUPPORTED_PATHOGENS.get(source, []):
+        LOGGER.error(
+            f"Pathogen '{pathogen}' is not supported for source '{source}'. "
+            f"Supported pathogens: {SUPPORTED_PATHOGENS[source]}"
+        )
+        exit(1)
+
+    try:
+        # Create importer
+        importer = get_importer(
+            source=source,
+            pathogen=pathogen,
+            cache_dir=args.cache,
+            sample_size=args.sample_size,
+        )
+
+        # Download and preprocess
+        fasta_path, tsv_path = importer.run()
+
+        if args.download_only:
+            LOGGER.info("Download-only mode: skipping database import")
+            LOGGER.info(f"Files are ready at: {importer.cache_dir}")
+            return
+
+        # Import into database
+        LOGGER.info("Importing data into database...")
+        sonarUtils.import_data(
+            db=args.db,
+            nextclade_json=None,
+            fasta=[str(fasta_path)],
+            csv_files=[],
+            tsv_files=[str(tsv_path)],
+            prop_links=args.cols,
+            cachedir=args.cache,
+            autolink=args.auto_link,
+            auto_anno=args.auto_anno,
+            progress=not args.no_progress,
+            update=args.no_skip,
+            threads=args.threads,
+            quiet=not args.verbose,
+            reference=args.reference,
+            method=args.method,
+            no_upload_sample=False,
+            include_nx=not args.skip_nx,
+            debug=args.debug,
+            must_pass_paranoid=args.must_pass_paranoid,
+        )
+
+        LOGGER.info("Dataset import completed successfully!")
+
+    except Exception as e:
+        LOGGER.error(f"Dataset import failed: {e}")
+        raise
+
+
 def handle_match(args: argparse.Namespace):
     """
     Handle profile and property matching.
@@ -1182,6 +1374,11 @@ def execute_commands(args):  # noqa: C901
         handle_tasks(args)
     elif args.command == "import-lineage":
         handle_lineage(args)
+    elif args.command == "import-dataset":
+        if len(sys.argv[1:]) == 1:
+            parse_args(["import-dataset", "-h"])
+        else:
+            handle_import_dataset(args)
     elif args.command == "info":
         handle_info(args)
 
