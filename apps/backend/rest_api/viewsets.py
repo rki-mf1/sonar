@@ -548,7 +548,6 @@ class PropertyViewSet(
 
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
-        # TODO lenght is now a sequence property, how to handle?
         """
         "value_integer",
         "value_float",
@@ -573,6 +572,8 @@ class PropertyViewSet(
             "init_upload_date",
             "last_update_date",
         ]
+        # length is stored in Sequence table but treated as a property
+        sequence_properties = ["length"]
 
         data_list = [
             {
@@ -647,7 +648,13 @@ class PropertyViewSet(
                 "description": "Name of the data set",
                 "default": None,
             },
-        ]  # from SAMPLE TABLE
+            {
+                "name": "length",
+                "query_type": "value_integer",
+                "description": "Sequence length in base pairs",
+                "default": None,
+            },
+        ]  # from SEQUENCE TABLE
 
         cols = [
             "name",
@@ -677,6 +684,25 @@ class PropertyViewSet(
                         )
                         .filter(
                             sequences__alignments__replicon__reference__accession=ref
+                        )
+                        .values_list("raw_value", flat=True)
+                        .exclude(raw_value__isnull=True)
+                        .exclude(raw_value__exact="")
+                        .distinct()
+                        .count()
+                    )
+                except Exception as e:
+                    print(f"Error counting {property_name}: {e}")
+                    count = 0
+            elif property_name in sequence_properties:
+                # Special handling for properties stored in Sequence table
+                try:
+                    count = (
+                        models.Sequence.objects.filter(
+                            alignments__replicon__reference__accession=ref
+                        )
+                        .annotate(
+                            raw_value=Cast(property_name, output_field=CharField())
                         )
                         .values_list("raw_value", flat=True)
                         .exclude(raw_value__isnull=True)
@@ -751,7 +777,6 @@ class ResourceViewSet(viewsets.ViewSet):
 
 
 class FileUploadViewSet(viewsets.ViewSet):
-
     def _convert_property_column_mapping(
         self, column_mapping: dict[str, str]
     ) -> dict[str, PropertyColumnMapping]:

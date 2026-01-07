@@ -219,6 +219,50 @@ def test_match_prop_int_lt(capfd, api_url):
 
 
 @pytest.mark.xdist_group(name="covid_group")
+def test_match_length_exact(capfd, api_url):
+    """Test exact length match"""
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --length 29676 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    # Exact match should return samples with exactly 29676 bp length
+    assert code == 0
+    assert int(lines[-1]) >= 1
+
+
+@pytest.mark.xdist_group(name="covid_group")
+def test_match_length_range(capfd, api_url):
+    """Test length range filter using colon separator (28000:29900)"""
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --length 28000:29900 --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert code == 0
+    assert int(lines[-1]) == 17
+
+
+@pytest.mark.xdist_group(name="covid_group")
+def test_match_length_lt(capfd, api_url):
+    """Test length less than comparison"""
+    code = run_cli(f"match --db {api_url} -r MN908947.3 --length '<30000' --count")
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert code == 0
+    assert int(lines[-1]) == 18
+
+
+@pytest.mark.xdist_group(name="covid_group")
+def test_match_length_with_profile(capfd, api_url):
+    """Test combining length filter with mutation profile"""
+    code = run_cli(
+        f"match --db {api_url} -r MN908947.3 --length 29000:29900 --profile G22992A --count"
+    )
+    out, err = capfd.readouterr()
+    lines = out.splitlines()
+    assert code == 0
+    # Should return samples that have both the length range and the mutation
+    assert int(lines[-1]) == 8
+
+
+@pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_float(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r MN908947.3 --euro 66.11 --count")
     out, err = capfd.readouterr()

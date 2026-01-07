@@ -346,7 +346,14 @@ class SampleFilterMixin:
                 value = value.split(",")
 
         self.has_property_filter = True
-        if property_name in [field.name for field in models.Sample._meta.get_fields()]:
+
+        # Special handling for 'length' - stored in Sequence table
+        if property_name == "length":
+            query = {}
+            query[f"sequences__{property_name}__{filter_type}"] = value
+        elif property_name in [
+            field.name for field in models.Sample._meta.get_fields()
+        ]:
             query = {}
             query[f"{property_name}__{filter_type}"] = value
         else:
