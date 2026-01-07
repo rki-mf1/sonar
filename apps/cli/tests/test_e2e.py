@@ -27,6 +27,15 @@ def test_get_list_prop(capfd, api_url):
     assert code == 0
 
 
+def test_get_list_prop_has_length(capfd, api_url):
+    """Test that length property is visible in list-prop output"""
+    code = run_cli(f" list-prop --db {api_url} ")
+    out, err = capfd.readouterr()
+    assert "length" in out
+    assert "Sequence length in base pairs" in out
+    assert code == 0
+
+
 def test_get_list_ref(capfd, api_url):
     code = run_cli(f" list-ref --db {api_url} ")
     out, err = capfd.readouterr()
