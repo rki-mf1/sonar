@@ -25,9 +25,9 @@ def test_info(capfd, api_url):
     code = run_cli(f" info --db {api_url} ")
     out, err = capfd.readouterr()
     # Check that basic statistics are present
-    assert "Samples Total:" in out
-    assert "Database Size:" in out
-    assert "Reference Genome:" in out
+    assert "Samples Total:" in err
+    assert "Database Size:" in err
+    assert "Reference Genome:" in err
     # Ensure no KeyError occurred
     assert "KeyError" not in out
     assert "KeyError" not in err

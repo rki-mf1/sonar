@@ -33,8 +33,9 @@ class sonarUtils1:
 
         json_response = APIClient(base_url=API_URL).get_database_info()
         log_message = "No information available"
-        if len(json_response["detail"]) != 0:
-            data = json_response["detail"]
+        data = json_response.get("detail", {})
+
+        if data:
             log_message = "\n".join(
                 [
                     "Meta Data Coverage:",
@@ -55,7 +56,7 @@ class sonarUtils1:
         LOGGER.info(log_message)
 
         # Display reference genomes information for all organisms
-        if "reference_genomes" in data and data["reference_genomes"]:
+        if data and "reference_genomes" in data and data["reference_genomes"]:
             for organism, ref_info in data["reference_genomes"].items():
                 LOGGER.info(f"\nReference Genome: {organism}")
                 LOGGER.info(f"  Replicons: {', '.join(ref_info['replicons'])}")
