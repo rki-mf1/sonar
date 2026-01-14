@@ -21,29 +21,51 @@
           </div>
         </div>
       </template>
-
       <template v-if="key === 'genomic_profiles'">
-        <strong>{{ key }}: </strong>
-        <div style="white-space: normal; word-wrap: break-word">
-          <GenomicProfileLabel
-            v-for="(variant, index) in Object.keys(value as GenomicProfile)"
-            :key="variant"
-            :variant-string="variant"
-            :annotations="genomicProfileValue(value)[variant]"
-            :is-last="index === Object.keys(value).length - 1"
-          />
+        <strong>{{ key }}:</strong>
+
+        <div
+          v-for="(repliconData, repliconAcc) in value"
+          :key="repliconAcc"
+          style="margin-left: 10px; margin-top: 4px"
+        >
+          <!-- Replicon header -->
+          <div>
+            <strong>{{ repliconAcc }}</strong>
+          </div>
+
+          <!-- Variants for this replicon -->
+          <div style="white-space: normal; word-wrap: break-word; margin-left: 14px">
+            <GenomicProfileLabel
+              v-for="(variantKey, idx) in Object.keys(repliconData as Record<string, any>)"
+              :key="variantKey"
+              :variant-string="variantKey"
+              :annotations="(repliconData as Record<string, any>)[variantKey]"
+              :is-last="idx === Object.keys(repliconData as Record<string, any>).length - 1"
+            />
+          </div>
         </div>
       </template>
 
       <template v-else-if="key === 'proteomic_profiles'">
         <strong>{{ key }}: </strong>
-        <div style="white-space: normal; word-wrap: break-word">
-          <GenomicProfileLabel
-            v-for="(variant, index) in value"
-            :key="variant"
-            :variant-string="variant"
-            :is-last="index === Object.keys(value).length - 1"
-          />
+        <div
+          v-for="(AA_mutations, CDSAcc) in value"
+          :key="CDSAcc"
+          style="margin-left: 10px; margin-top: 4px"
+        >
+          <!-- CDS accession header -->
+          <div>
+            <strong>{{ CDSAcc }}</strong>
+          </div>
+          <div style="white-space: normal; word-wrap: break-word">
+            <GenomicProfileLabel
+              v-for="(mut, idx) in AA_mutations as string[]"
+              :key="mut"
+              :variant-string="mut"
+              :is-last="idx === (AA_mutations as string[]).length - 1"
+            />
+          </div>
         </div>
       </template>
     </p>

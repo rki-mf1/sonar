@@ -10,15 +10,14 @@ import uuid
 import zipfile
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db.models import Count
+from django.db.models import CharField
 from django.db.models import F
 from django.db.models import Q
-from django.db.models import Sum
+from django.db.models.functions import Cast
 from django.db.utils import IntegrityError
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
-from rest_framework import serializers
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -40,11 +39,9 @@ from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
 from . import models
 from .serializers import AlignmentSerializer
-from .serializers import AminoAcidMutationSerializer
 from .serializers import GeneSerializer
 from .serializers import ImportLogSerializer
 from .serializers import LineagesSerializer
-from .serializers import NucleotideMutationSerializer
 from .serializers import ProcessingJobSerializer
 from .serializers import PropertySerializer
 from .serializers import ReferenceSerializer
@@ -79,23 +76,37 @@ class AlignmentViewSet(
         url_path="get_alignment_data/(?P<seqhash>[a-zA-Z0-9]+)/(?P<replicon_id>[0-9]+)",
     )
     def get_alignment_data(self, request: Request, seqhash=None, replicon_id=None):
-        sample_data = {}
         queryset = self.queryset.filter(
-            sequence__seqhash=seqhash, replicon_id=replicon_id
+            sequence__seqhash=seqhash,
+            replicon_id=replicon_id,
+        ).select_related("sequence")
+
+        sequence_data = list(
+            queryset.annotate(
+                alignment_id=F("id"),
+                sequence_name=F("sequence__name"),
+            ).values(
+                "replicon_id",
+                "alignment_id",
+                "sequence_id",
+                "sequence_name",
+            )
         )
-        sample_data = queryset.values()
-        if sample_data:
-            sample_data = sample_data[0]
-        return Response(sample_data, status=status.HTTP_200_OK)
+
+        # Falls nur ein Datensatz zurückkommt, als einzelnes Dict liefern
+        if sequence_data:
+            return Response(sequence_data[0], status=status.HTTP_200_OK)
+        else:
+            return Response({}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=["post"])
     def get_bulk_alignment_data(self, request: Request, *args, **kwargs):
         data = json.loads(request.body.decode("utf-8"))
-        sample_data_list = data.get("sample_data", [])
+        sequence_data_list = data.get("sample_data", [])
 
         # Extract values from the list
-        seqhash_values = [item.get("seqhash") for item in sample_data_list]
-        replicon_id_values = [item.get("replicon_id") for item in sample_data_list]
+        seqhash_values = [item.get("seqhash") for item in sequence_data_list]
+        replicon_id_values = [item.get("replicon_id") for item in sequence_data_list]
 
         queryset = models.Alignment.objects.filter(
             reduce(
@@ -109,18 +120,20 @@ class AlignmentViewSet(
         queryset = queryset.select_related("sequence")
 
         # Convert the queryset to a list of dictionaries
-        # sample_data = list(queryset.values())
-        sample_data = list(
-            queryset.extra(
-                select={"alignement_id": "alignment.id", "sequence_id": "sequence.id"}
+        # sequence_data = list(queryset.values())
+        sequence_data = list(
+            queryset.annotate(
+                alignment_id=F("id"),
+                sequence_name=F("sequence__name"),
             ).values(
                 "replicon_id",
-                "alignement_id",
+                "alignment_id",
                 "sequence_id",
-                "sequence__sample__name",
+                "sequence_name",
             )
         )
-        return Response(data=sample_data, status=status.HTTP_200_OK)
+
+        return Response(data=sequence_data, status=status.HTTP_200_OK)
 
 
 class RepliconViewSet(viewsets.ModelViewSet):
@@ -147,7 +160,7 @@ class RepliconViewSet(viewsets.ModelViewSet):
 
         if replicon_id := request.query_params.get("replicon_id"):
             queryset_obj = self.queryset.filter(id=replicon_id)
-        elif ref := request.query_params.get("reference_accession"):
+        elif ref := request.query_params.get("reference"):
             queryset_obj = self.queryset.filter(reference__accession=ref)
         else:
             return Response(
@@ -319,8 +332,8 @@ class ReferenceViewSet(
         dataset values found in the Sample table.
         """
         queryset = models.Sample.objects.values(
-            accession=F("sequence__alignments__replicon__reference__accession"),
-            organism=F("sequence__alignments__replicon__reference__organism"),
+            accession=F("sequences__alignments__replicon__reference__accession"),
+            organism=F("sequences__alignments__replicon__reference__organism"),
             data_set_value=F("data_set"),
         ).distinct()
 
@@ -373,8 +386,8 @@ class ReferenceViewSet(
     @action(detail=False, methods=["get"])
     def get_all_references(self, request: Request, *args, **kwargs):
         queryset = models.Reference.objects.all()
-        sample_data = queryset.values()
-        return Response(data=sample_data, status=status.HTTP_200_OK)
+        reference_data = queryset.values()
+        return Response(data=reference_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def get_reference_file(self, request: Request, *args, **kwargs):
@@ -453,24 +466,27 @@ class PropertyViewSet(
             queryset = models.Sample.objects.all()
             if ref := request.query_params.get("reference"):
                 queryset = queryset.filter(
-                    sequence__alignments__replicon__reference__accession=ref
+                    sequences__alignments__replicon__reference__accession=ref
                 )
             queryset = queryset.distinct(property_name)
             return Response(
                 {"values": [getattr(item, property_name) for item in queryset]},
                 status=status.HTTP_200_OK,
             )
-        queryset = models.Sample2Property.objects.filter(property__name=property_name)
-        if ref := request.query_params.get("reference"):
-            queryset = queryset.filter(
-                sequence__alignments__replicon__reference__accession=ref
+        else:
+            queryset = models.Sample2Property.objects.filter(
+                property__name=property_name
             )
-        datatype = queryset[0].property.datatype
-        queryset = queryset.distinct(datatype)
-        return Response(
-            {"values": [getattr(item, datatype) for item in queryset]},
-            status=status.HTTP_200_OK,
-        )
+            if ref := request.query_params.get("reference"):
+                queryset = queryset.filter(
+                    sample__sequences__alignments__replicon__reference__accession=ref
+                )
+            datatype = queryset[0].property.datatype
+            queryset = queryset.distinct(datatype)
+            return Response(
+                {"values": [getattr(item, datatype) for item in queryset]},
+                status=status.HTTP_200_OK,
+            )
 
     @action(detail=False, methods=["get"])
     def distinct_property_names(self, request: Request, *args, **kwargs):
@@ -532,6 +548,7 @@ class PropertyViewSet(
 
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
+        # TODO lenght is now a sequence property, how to handle?
         """
         "value_integer",
         "value_float",
@@ -542,6 +559,21 @@ class PropertyViewSet(
         "value_zip",
         """
         # fixed datatype accroding to the Sample Table.
+        ref = request.query_params.get("reference")
+        default_properties = [
+            "name",
+            "collection_date",
+            "lineage",
+            "zip_code",
+            "lab",
+            "sequencing_tech",
+            "host",
+            "genome_completeness",
+            "country",
+            "init_upload_date",
+            "last_update_date",
+        ]
+
         data_list = [
             {
                 "name": "name",
@@ -550,27 +582,9 @@ class PropertyViewSet(
                 "default": None,
             },
             {
-                "name": "genomic_profiles",
-                "query_type": "value_varchar",
-                "description": "list of neuclotide mutation (fixed prop.)",
-                "default": None,
-            },
-            {
-                "name": "proteomic_profiles",
-                "query_type": "value_varchar",
-                "description": "list of amino acid mutation (fixed prop.)",
-                "default": None,
-            },
-            {
                 "name": "collection_date",
                 "query_type": "value_date",
                 "description": "Date when the sample was collected (predefined prop.)",
-                "default": None,
-            },
-            {
-                "name": "length",
-                "query_type": "value_integer",
-                "description": "Length of the genetic sequence (predefined prop.)",
                 "default": None,
             },
             {
@@ -640,6 +654,7 @@ class PropertyViewSet(
             "query_type",
             "description",
             "default",
+            "unique_values_count",
         ]
 
         for _property_queryset in models.Property.objects.all():
@@ -651,6 +666,49 @@ class PropertyViewSet(
                     "default": _property_queryset.default,
                 }
             )
+        for property_data in data_list:
+            property_name = property_data["name"]
+            if property_name in default_properties:
+                try:
+                    # get count of unique values from Sample table
+                    count = (
+                        models.Sample.objects.annotate(
+                            raw_value=Cast(property_name, output_field=CharField())
+                        )
+                        .filter(
+                            sequences__alignments__replicon__reference__accession=ref
+                        )
+                        .values_list("raw_value", flat=True)
+                        .exclude(raw_value__isnull=True)
+                        .exclude(raw_value__exact="")
+                        .distinct()
+                        .count()
+                    )
+                except Exception as e:
+                    print(f"Error counting {property_name}: {e}")
+                    count = 0
+            else:
+                query_type = property_data["query_type"]
+                # get count of unique values from Property table
+                try:
+                    count = (
+                        models.Sample2Property.objects.filter(
+                            property__name=property_name
+                        )
+                        .filter(
+                            sample__sequences__alignments__replicon__reference__accession=ref
+                        )
+                        .annotate(raw_value=Cast(query_type, output_field=CharField()))
+                        .values_list("raw_value", flat=True)
+                        .exclude(raw_value__isnull=True)
+                        .exclude(raw_value__exact="")
+                        .distinct()
+                        .count()
+                    )
+                except Exception as e:
+                    print(f"Error counting {property_name}: {e}")
+                    count = 0
+            property_data["unique_values_count"] = count
         data = {"keys": cols, "values": data_list}
         return Response(data=data, status=status.HTTP_200_OK)
 
@@ -718,8 +776,9 @@ class FileUploadViewSet(viewsets.ViewSet):
 
         # Step 2: Check if this is a property upload (based on jobID)
         if "_prop" in jobID:
-            # Property upload: Check for sample_id_column and column_mapping
+            # Property upload: Check for sample_id_column, sequences_id_column and column_mapping
             sample_id_column = request.data.get("sample_id_column")
+            sequences_id_column = request.data.get("sequences_id_column")
             column_mapping_json = request.data.get("column_mapping")
 
             # Validate sample_id_column
@@ -728,22 +787,26 @@ class FileUploadViewSet(viewsets.ViewSet):
                     {"detail": "No sample_id_column is provided"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-
+            if not sequences_id_column:
+                LOGGER.info(
+                    "No sequences_id_column is provided, sample names are equal to sequence names"
+                )
             # Validate column_mapping
-            if not column_mapping_json:
-                return Response(
-                    {"detail": "No column_mapping is provided, nothing to import."},
-                    status=status.HTTP_400_BAD_REQUEST,
+            if column_mapping_json == "{}" or column_mapping_json is None:
+                LOGGER.info(
+                    "No column_mapping is provided, samples imported into samples table without meta data"
                 )
-            # Convert column_mapping from JSON to dict
-            column_mapping = self._convert_property_column_mapping(
-                json.loads(column_mapping_json)
-            )
-            if not column_mapping:
-                return Response(
-                    {"detail": "No column_mapping could be processed."},
-                    status=status.HTTP_400_BAD_REQUEST,
+                column_mapping = {}
+            else:
+                # Convert column_mapping from JSON to dict
+                column_mapping = self._convert_property_column_mapping(
+                    json.loads(column_mapping_json)
                 )
+                if not column_mapping:
+                    return Response(
+                        {"detail": "No column_mapping could be processed."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             filename = (
                 datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
@@ -756,6 +819,7 @@ class FileUploadViewSet(viewsets.ViewSet):
                 pickle.dump(
                     {
                         "sample_id_column": sample_id_column,
+                        "sequences_id_column": sequences_id_column,
                         "column_mapping": column_mapping,
                     },
                     pickle_file,
@@ -825,6 +889,33 @@ class LineageViewSet(
     serializer_class = LineagesSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["name", "parent"]
+
+    @action(detail=False, methods=["get"])
+    def distinct_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all distinct lineage entries from the Sample table.
+        """
+        queryset = models.Sample.objects.values_list("lineage", flat=True)
+        if ref := request.query_params.get("reference"):
+            queryset = queryset.filter(
+                sequences__alignments__replicon__reference__accession=ref
+            )
+        distinct_lineages = queryset.distinct()
+
+        return Response(
+            {"lineages": distinct_lineages},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"])
+    def full_lineages(self, request: Request, *args, **kwargs):
+        """
+        API action to return all lineages from the Lineage table.
+        """
+        lineages = models.Lineage.objects.order_by("name").values_list(
+            "name", flat=True
+        )
+        return Response(data={"lineages": list(lineages)}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"])
     def get_sublineages(self, request: Request, *args, **kwargs):

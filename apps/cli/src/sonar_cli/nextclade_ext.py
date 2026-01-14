@@ -573,7 +573,7 @@ def process_aa_mutations(  # noqa: C901
     return final_combined_mutations
 
 
-def process_single_sample(  # noqa: C901
+def process_single_sequence(  # noqa: C901
     sample_data: Dict,
     reference_acc: str,
     gene_to_cds: Dict[str, Any],
@@ -680,7 +680,7 @@ def create_var_files_from_json_parallel(
     # Define worker function
     def working_job(*args):
         sample, ref_acc, ref_seq, out_dir = args
-        return process_single_sample(sample, ref_acc, ref_seq, out_dir)
+        return process_single_sequence(sample, ref_acc, ref_seq, out_dir)
 
     # Initialize MPIRE worker pool
     with WorkerPool(n_jobs=n_workers) as pool:

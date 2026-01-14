@@ -14,7 +14,6 @@ import {
   type PlotCustom,
   DjangoFilterType,
   StringDjangoFilterType,
-  DateDjangoFilterType,
   type PropertyFilter,
 } from '@/util/types'
 import { reactive } from 'vue'
@@ -65,10 +64,10 @@ function getFilterGroupFilters(filterGroup: FilterGroup): FilterGroupFilters {
     }
   }
   for (const filter of filterGroup.filters.repliconFilters) {
-    if (filter.accession) {
+    if (filter.replicon_accession) {
       summary.andFilter.push({
         label: filter.label,
-        accession: filter.accession,
+        replicon_accession: filter.replicon_accession,
         exclude: filter.exclude,
       })
     }
@@ -108,7 +107,7 @@ function parseDateToDateRangeFilter(data: Date[]) {
 export const useSamplesStore = defineStore('samples', {
   state: () => ({
     organism: null as string | null,
-    accession: null as string | null,
+    reference_accession: null as string | null,
     data_sets: [] as (string | null)[],
     samples: [],
     statistics: {} as Statistics,
@@ -126,7 +125,7 @@ export const useSamplesStore = defineStore('samples', {
     filtersChanged: false,
     ordering: '-collection_date' as string,
     timeRange: [] as (Date | null)[],
-    propertiesDict: {} as { [key: string]: string[] },
+    propertiesDict: {} as { [key: string]: string },
     propertyTableOptions: [] as string[],
     propertyMenuOptions: [] as string[],
     metaCoverageOptions: [] as string[],
@@ -145,11 +144,12 @@ export const useSamplesStore = defineStore('samples', {
       filters: {
         propertyFilters: [
           {
+            // pre selected filter
             fetchOptions: false,
             label: 'Property',
-            propertyName: 'collection_date',
-            filterType: DateDjangoFilterType.RANGE,
-            value: [] as (Date | null)[],
+            propertyName: 'name',
+            filterType: StringDjangoFilterType.CONTAINS,
+            value: [] as (string | null)[],
           },
         ],
         profileFilters: [{ label: 'DNA/AA Profile', value: '', exclude: false }],
@@ -180,11 +180,17 @@ export const useSamplesStore = defineStore('samples', {
         },
       },
     }),
+    propertyUniqueValueCounts: {} as { [key: string]: number },
+    dropdownThreshold: 10,
   }),
   actions: {
-    setDataset(organism: string | null, accession: string | null, data_sets: (string | null)[]) {
+    setDataset(
+      organism: string | null,
+      reference_accession: string | null,
+      data_sets: (string | null)[],
+    ) {
       this.organism = organism
-      this.accession = accession
+      this.reference_accession = reference_accession
       this.data_sets = data_sets
     },
     async updateStatistics() {
@@ -195,7 +201,7 @@ export const useSamplesStore = defineStore('samples', {
         populated_metadata_fields: [],
       }
       try {
-        const statistics = await API.getInstance().getSampleStatistics(this.accession)
+        const statistics = await API.getInstance().getSampleStatistics(this.reference_accession)
         if (!statistics) {
           this.statistics = emptyStatistics
         } else {
@@ -433,7 +439,7 @@ export const useSamplesStore = defineStore('samples', {
       if (this.propertyValueOptions[propertyName]) return
       this.propertyValueOptions[propertyName] = { loading: true, options: [] }
       API.getInstance()
-        .getSampleGenomePropertyValueOptions(propertyName, this.accession)
+        .getSampleGenomePropertyValueOptions(propertyName, this.reference_accession)
         .then((res) => {
           this.propertyValueOptions[propertyName].options = res.values
           this.propertyValueOptions[propertyName].loading = false
@@ -463,49 +469,43 @@ export const useSamplesStore = defineStore('samples', {
 
     async updatePropertyOptions() {
       try {
-        const response = await API.getInstance().getSampleGenomePropertyOptionsAndTypes()
+        const response = await API.getInstance().getSampleGenomePropertyOptionsAndTypes(
+          this.reference_accession,
+        )
         if (!response) {
           console.error('API request failed')
           return
         }
-        const metadata = this.statistics?.populated_metadata_fields ?? []
         this.propertiesDict = {}
+        this.propertyUniqueValueCounts = {}
         response.values.forEach(
-          (property: { name: string; query_type: string; description: string }) => {
-            if (property.query_type === 'value_varchar') {
-              this.propertiesDict[property.name] = Object.values(StringDjangoFilterType)
-            } else if (property.query_type === 'value_date') {
-              this.propertiesDict[property.name] = Object.values(DateDjangoFilterType)
-            } else {
-              this.propertiesDict[property.name] = Object.values(DjangoFilterType)
+          (property: {
+            name: string
+            query_type: string
+            description: string
+            unique_values_count?: number
+            default?: string
+          }) => {
+            this.propertiesDict[property.name] = property.query_type
+
+            if (property.unique_values_count !== undefined) {
+              this.propertyUniqueValueCounts[property.name] = Number(property.unique_values_count)
             }
           },
         )
-        // keep only those properties that have a coverage, i.e. that are not entirly empty
-        // & drop the 'name' column because the ID column is fixed
+        // properties with values, excluding name, including lineage
         this.propertyTableOptions = Object.keys(this.propertiesDict)
-          .filter(
-            (key) =>
-              key !== 'name' &&
-              (metadata.includes(key) || ['genomic_profiles', 'proteomic_profiles'].includes(key)),
-          )
+          .filter((key) => key !== 'name' && this.propertyUniqueValueCounts[key] > 0)
           .sort()
+        // Properties for filter menu with name but without lineage, including all other fields with values from sample and property table
         this.propertyMenuOptions = [
           'name',
-          ...this.propertyTableOptions.filter(
-            (prop) => !['genomic_profiles', 'proteomic_profiles', 'lineage'].includes(prop),
-          ),
+          ...this.propertyTableOptions.filter((prop) => !['lineage'].includes(prop)),
         ]
+        // Properties for metadata coverage plot, excluding init and last upload dates and name
         this.metaCoverageOptions = [
           ...this.propertyTableOptions.filter(
-            (prop) =>
-              ![
-                'name',
-                'init_upload_date',
-                'last_update_date',
-                'genomic_profiles',
-                'proteomic_profiles',
-              ].includes(prop),
+            (prop) => !['name', 'init_upload_date', 'last_update_date'].includes(prop),
           ),
         ]
       } catch (error) {
@@ -513,7 +513,7 @@ export const useSamplesStore = defineStore('samples', {
       }
     },
     async updateRepliconAccessionOptions() {
-      const res = await API.getInstance().getRepliconAccessionOptions(this.accession)
+      const res = await API.getInstance().getRepliconAccessionOptions(this.reference_accession)
       this.repliconAccessionOptions = res.accessions
     },
     async updateLineageOptions() {
@@ -521,11 +521,15 @@ export const useSamplesStore = defineStore('samples', {
       this.lineageOptions = res.lineages
     },
     async updateSymbolOptions() {
-      const res = await API.getInstance().getGeneSymbolOptions(this.accession)
+      const res = await API.getInstance().getGeneSymbolOptions(this.reference_accession)
       this.symbolOptions = res.gene_symbols
     },
     isDateArray(value: unknown): value is Date[] {
-      return Array.isArray(value) && value.every((item) => item instanceof Date)
+      return (
+        Array.isArray(value) &&
+        value.length > 0 && // without this line, empty arrays are considered Date[]
+        value.every((item) => item instanceof Date)
+      )
     },
 
     initializeWatchers() {
@@ -552,6 +556,10 @@ export const useSamplesStore = defineStore('samples', {
       if (!filters.filters?.andFilter) {
         filters.filters.andFilter = []
       }
+      // Set reference accession at root level
+      if (this.reference_accession) {
+        filters.reference = this.reference_accession
+      }
 
       // insert dataset selection as a fixed filter at the beginning
       if (this.data_sets?.length > 0) {
@@ -563,15 +571,13 @@ export const useSamplesStore = defineStore('samples', {
           value: this.data_sets,
         })
       }
-      if (this.accession) {
-        filters.filters.andFilter.unshift({
-          label: 'Reference',
-          exclude: false,
-          accession: this.accession,
-        })
-      }
-
       return filters
+    },
+    shouldShowDropdown(): (propertyName: string) => boolean {
+      return (propertyName: string) => {
+        const uniqueCount = this.propertyUniqueValueCounts[propertyName] ?? Infinity
+        return uniqueCount <= this.dropdownThreshold
+      }
     },
   },
 })

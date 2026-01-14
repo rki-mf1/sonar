@@ -27,7 +27,7 @@ from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 from rest_api import models
 from rest_api.data_entry.annotation_import import AnnotationImport
-from rest_api.data_entry.sample_import import SampleImport
+from rest_api.data_entry.sample_import import SonarImport
 from rest_api.models import Alignment
 from rest_api.models import AminoAcidMutation
 from rest_api.models import AnnotationType
@@ -358,8 +358,8 @@ def process_batch(
         lp = LineProfiler()
         # Add a few of the slowest functions based on profiling the
         # process_batch_run() function
-        lp.add_function(SampleImport.get_mutation_objs_cds_and_parent_relations)
-        lp.add_function(SampleImport.get_mutation_objs_nt)
+        lp.add_function(SonarImport.get_mutation_objs_cds_and_parent_relations)
+        lp.add_function(SonarImport.get_mutation_objs_nt)
         lp.add_function(process_batch_run)
         lp.add_function(process_annotation)
         process_batch_profiled = lp(process_batch_run)
@@ -378,29 +378,28 @@ def process_batch_run(
     temp_dir,
 ):
     try:
-        sample_import_objs = [
-            SampleImport(pathlib.Path(file), import_folder=temp_dir) for file in batch
+        sonar_import_objs = [
+            SonarImport(pathlib.Path(file), import_folder=temp_dir) for file in batch
         ]
         sequences = [
             sample_import_obj.get_sequence_obj()
-            for sample_import_obj in sample_import_objs
+            for sample_import_obj in sonar_import_objs
         ]
+
         with cache.lock("sequence"):
-            Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
-        samples = [
-            sample_import_obj.get_sample_obj()
-            for sample_import_obj in sample_import_objs
-        ]
-        with cache.lock("sample"):
-            Sample.objects.bulk_create(
-                samples,
+            Sequence.objects.bulk_create(
+                sequences,
                 update_conflicts=True,
-                unique_fields=["name"],
-                update_fields=["length", "sequence", "last_update_date"],
+                unique_fields=["name"],  # Use name as the unique identifier
+                update_fields=[
+                    "seqhash",
+                    "length",
+                    "last_update_date",
+                ],  # Update these fields
             )
-        [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
+        [x.update_replicon_obj(replicon_cache) for x in sonar_import_objs]
         alignments: list[Alignment] = []
-        for sample_import_obj in sample_import_objs:
+        for sample_import_obj in sonar_import_objs:
             sample_import_obj.create_alignment(alignments)
         with cache.lock("alignment"):
             Alignment.objects.bulk_create(
@@ -417,7 +416,7 @@ def process_batch_run(
             []
         )
         aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = []
-        for sample_import_obj in sample_import_objs:
+        for sample_import_obj in sonar_import_objs:
             id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
                 nt_mutation_set,
                 replicon_cache,
@@ -518,24 +517,22 @@ def process_batch_single_thread(
 ):
     try:
         sample_import_objs = [
-            SampleImport(file, import_folder=temp_dir) for file in batch
+            SonarImport(file, import_folder=temp_dir) for file in batch
         ]
         with transaction.atomic():
             sequences = [
                 sample_import_obj.get_sequence_obj()
                 for sample_import_obj in sample_import_objs
             ]
-
-            Sequence.objects.bulk_create(sequences, ignore_conflicts=True)
-            samples = [
-                sample_import_obj.get_sample_obj()
-                for sample_import_obj in sample_import_objs
-            ]
-            Sample.objects.bulk_create(
-                samples,
+            Sequence.objects.bulk_create(
+                sequences,
                 update_conflicts=True,
-                unique_fields=["name"],
-                update_fields=["length", "sequence", "last_update_date"],
+                unique_fields=["name"],  # Use name as the unique identifier
+                update_fields=[
+                    "seqhash",
+                    "length",
+                    "last_update_date",
+                ],  # Update these fields
             )
             [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
             alignments: list[Alignment] = []
@@ -654,9 +651,7 @@ def import_property(
             sep=sep,
             dtype="string",
             keep_default_na=False,
-            # chunksize=batch_size,
-        )
-
+        ).replace("", pd.NA)
         timer = datetime.now()
 
         # Use Celery if parallel processing is enabled
@@ -671,10 +666,12 @@ def import_property(
                 }
                 for k, v in column_mapping["column_mapping"].items()
             }
-            sample_id_column = column_mapping["sample_id_column"]
+            sample_name_column = column_mapping["sample_id_column"]
+            related_sequences_column = column_mapping["sequences_id_column"]
         else:
             serializable_column_mapping = None
-            sample_id_column = "ID"
+            sample_name_column = "ID"
+            related_sequences_column = "ID"
 
         # Data preprocessing
 
@@ -689,11 +686,9 @@ def import_property(
             print(f"{column_name} :pairs with: {col_info}")
 
             if default_value is not None:
-                properties_df[column_name] = (
-                    properties_df[column_name]
-                    .replace("", default_value)  # Replace empty strings
-                    .fillna(default_value)  # Replace NaN values
-                )
+                properties_df[column_name] = properties_df[column_name].fillna(
+                    default_value
+                )  # Replace NaN values
 
             # # Explicitly convert the column to string to avoid .0 issues
             # if (
@@ -716,10 +711,17 @@ def import_property(
             property_jobs = []
             for i in range(0, len(properties_df), batch_size):
                 batch = properties_df.iloc[i : i + batch_size]
+                if isinstance(batch, pd.Series):
+                    batch = (
+                        batch.to_frame().T
+                    )  # Ensure it's a DataFrame if it's a Series
                 batch_as_dict = batch.to_dict(orient="records")
                 property_jobs.append(
                     process_property_batch.s(
-                        batch_as_dict, sample_id_column, serializable_column_mapping
+                        batch_as_dict,
+                        sample_name_column,
+                        serializable_column_mapping,
+                        related_sequences_column,
                     )  # Pass column_mapping
                 )
 
@@ -734,10 +736,15 @@ def import_property(
             print("Processing properties in single-threaded mode...")
 
             # Process the CSV file in a single-threaded manner
+            if isinstance(properties_df, pd.Series):
+                properties_df = properties_df.to_frame().T
             batch_as_dict = properties_df.to_dict(orient="records")
             # column_mapping does not need to be JSON-serializable format, because we use only single thread
             _process_property_file(
-                batch_as_dict, sample_id_column, column_mapping["column_mapping"]
+                batch_as_dict,
+                sample_name_column,
+                column_mapping["column_mapping"],
+                related_sequences_column,
             )
 
         print(f"Property import usage time: {datetime.now() - timer}")
@@ -749,7 +756,12 @@ def import_property(
 
 
 @shared_task
-def process_property_batch(batch_as_dict, sample_id_column, serialized_column_mapping):
+def process_property_batch(
+    batch_as_dict,
+    sample_name_column,
+    serialized_column_mapping,
+    related_sequences_column,
+):
     # Reconstruct column_mapping from the serialized format
     if serialized_column_mapping is not None:
         column_mapping = {
@@ -764,7 +776,9 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
         column_mapping = None
 
     try:
-        _process_property_file(batch_as_dict, sample_id_column, column_mapping)
+        _process_property_file(
+            batch_as_dict, sample_name_column, column_mapping, related_sequences_column
+        )
     except Exception as e:
         print("Error in process_property_batch func.:", e)
         print(f"Error in process_property_batch line#: {e.__traceback__.tb_lineno}")
@@ -772,15 +786,23 @@ def process_property_batch(batch_as_dict, sample_id_column, serialized_column_ma
     return True, "Batch processed successfully"
 
 
-def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
+def _process_property_file(
+    batch_as_dict, sample_name_column, column_mapping, related_sequences_column
+):
     """
     Logic for processing a batch of the property file
     """
-
     properties_df = pd.DataFrame.from_dict(batch_as_dict, dtype=object)
+    if sample_name_column == related_sequences_column:
+        properties_df[f"{sample_name_column}_name"] = properties_df[sample_name_column]
+        sample_name_column = f"{sample_name_column}_name"
+    properties_df[related_sequences_column] = properties_df[
+        related_sequences_column
+    ].apply(lambda x: x.split() if x else [])
     sample_property_names = []
     custom_property_names = []
 
+    # Separate sample properties and custom properties
     for property_name in properties_df.columns:
         if property_name in column_mapping.keys():
             db_property_name = column_mapping[property_name].db_property_name
@@ -789,24 +811,29 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
                 sample_property_names.append(db_property_name)
             except FieldDoesNotExist:
                 custom_property_names.append(property_name)
+    sample_name_set = set(properties_df[sample_name_column])
+    properties_df.convert_dtypes()
+    properties_df.set_index(sample_name_column, inplace=True)
 
-    sample_id_set = set(properties_df[sample_id_column])
-    samples = models.Sample.objects.filter(name__in=sample_id_set).iterator()
-
+    # Update existing samples
+    # Fetch existing samples from the database (empty before first property import)
+    samples = models.Sample.objects.filter(name__in=sample_name_set).iterator()
     sample_updates = []
     property_updates = []
-    properties_df.convert_dtypes()
-    properties_df.set_index(sample_id_column, inplace=True)
+    existing_sample_names = set()
     try:
         for sample in samples:
-            row = properties_df[properties_df.index == sample.name]
-
+            existing_sample_names.add(sample.name)
+            row = properties_df.loc[sample.name]
             sample.last_update_date = timezone.now()
             for name, value in row.items():
                 if name in column_mapping.keys():
                     db_name = column_mapping[name].db_property_name
                     if db_name in sample_property_names:
-                        setattr(sample, db_name, value.values[0])
+                        setattr(sample, db_name, value)
+            sequence_ids = row[related_sequences_column]
+            sequences = models.Sequence.objects.filter(name__in=sequence_ids)
+            sample.sequences.set(sequences)  # Update the ManyToMany relationship
             sample_updates.append(sample)
 
             # Update custom properties
@@ -815,8 +842,8 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
                 {
                     column_mapping[name].db_property_name: {
                         "value": (
-                            value.values[0]
-                            if value.values[0]
+                            value
+                            if value
                             else column_mapping[name].default
                             # Fallback value if default is also None (NULL in database)
                         ),
@@ -828,9 +855,44 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
                 use_property_cache=True,
                 property_cache=property_cache,  # global variable
             )
+
+        # Create new samples for names not in the database
+        new_sample_name_set = sample_name_set - existing_sample_names
+        for sample_name in new_sample_name_set:
+            row = properties_df.loc[sample_name]
+            new_sample = models.Sample(
+                name=sample_name,
+                last_update_date=timezone.now(),
+            )
+            new_sample.save()  # Save to generate an ID for the new sample
+            for name, value in row.items():
+                if name in column_mapping.keys():
+                    db_name = column_mapping[name].db_property_name
+                    if db_name in sample_property_names:
+                        print("setattr: ", new_sample, db_name, value)
+                        setattr(new_sample, db_name, value)
+
+            sequence_ids = row[related_sequences_column]
+            sequences_qs = models.Sequence.objects.filter(name__in=sequence_ids)
+            new_sample.sequences.set(sequences_qs)
+            sample_updates.append(new_sample)
+            # Create custom properties for the new sample
+            property_updates += _create_property_updates(
+                new_sample,
+                {
+                    column_mapping[name].db_property_name: {
+                        "value": (value if value else column_mapping[name].default),
+                        "datatype": column_mapping[name].data_type,
+                    }
+                    for name, value in row.items()
+                    if name in custom_property_names
+                },
+                use_property_cache=True,
+                property_cache=property_cache,  # global variable
+            )
     except Exception as e:
         print(f"Error :{e}")
-        print(f"Error processing sample data: {row.to_dict(orient='records')}")
+        print(f"Error processing sample data: {row.to_dict()}")
         print(f"error in _process_property_file line#: {e.__traceback__.tb_lineno}")
         raise  # Or raise the exception
 
@@ -841,7 +903,6 @@ def _process_property_file(batch_as_dict, sample_id_column, column_mapping):
             models.Sample.objects.bulk_update(
                 sample_updates, sample_property_names + ["last_update_date"]
             )
-
         # update custom prop. for Sample
         serializer = Sample2PropertyBulkCreateOrUpdateSerializer(
             data=property_updates, many=True

@@ -87,12 +87,9 @@
           style="flex: 1; min-width: 150px"
           @change="updatePropertyValueOptions(filter)"
         />
-
+        <!-- Text oder Number Input Properties -->
         <div
-          v-if="
-            ['name', 'length', 'lab'].includes(filter.propertyName) &&
-            (typeof filter.value === 'string' || filter.value === null)
-          "
+          v-if="!isDateArray(filter.value) && !shouldUseDropdown(filter.propertyName)"
           class="mr-2"
         >
           <span class="filter-label">Operator</span>
@@ -102,9 +99,9 @@
             style="flex: 1; min-width: 150px"
           />
           <span class="filter-label">Value</span>
-          <InputText v-model="filter.value" style="flex: auto" />
+          <InputText v-model="filter.value as string | null" style="flex: auto" />
         </div>
-
+        <!-- Date Properties -->
         <div v-if="isDateArray(filter.value)">
           <div class="filter-container">
             <PrimeCalendar
@@ -123,12 +120,15 @@
             </PrimeCalendar>
           </div>
         </div>
-        <div v-else-if="fetchOptionsProperties.includes(filter.propertyName)">
+        <!-- Dropdown for properties with less then samplesStore dropdownThreshold unique values -->
+        <div v-else-if="shouldUseDropdown(filter.propertyName)">
           <PrimeDropdown
             v-model="filter.value"
             :options="propertyValueOptions[filter.propertyName]?.options"
             :loading="propertyValueOptions[filter.propertyName]?.loading"
             :virtual-scroller-options="{ itemSize: 30 }"
+            display="chip"
+            placeholder="Select values"
             style="flex: auto"
             filter
           />
@@ -143,6 +143,7 @@
           @click="removePropertyFilter(filterGroup.filters.propertyFilters, index, isSubGroup)"
         />
       </div>
+      <!-- Number Properties -->
     </div>
 
     <!-- Replicon Filters -->
@@ -155,7 +156,7 @@
         <div class="flex align-items-center">
           <label class="filter-label">Replicon</label>
           <PrimeDropdown
-            v-model="filter.accession"
+            v-model="filter.replicon_accession"
             :options="repliconAccessionOptions"
             style="flex: auto"
           />
@@ -258,6 +259,7 @@ import {
 } from '@/util/types'
 
 import type { MenuItem } from 'primevue/menuitem'
+import { useSamplesStore } from '@/stores/samples'
 
 export default {
   name: 'FilterGroup',
@@ -301,18 +303,12 @@ export default {
   },
   emits: ['update-property-value-options'],
   data() {
+    const samplesStore = useSamplesStore()
     return {
       localOperators: [...this.operators],
-      fetchOptionsProperties: [
-        'genome_completeness',
-        'sequencing_tech',
-        'sequencing_reason',
-        'zip_code',
-        'country',
-        'host',
-        'isolation_source',
-        'data_set',
-      ],
+      fetchOptionsProperties: samplesStore.propertyMenuOptions.filter((prop) =>
+        samplesStore.shouldShowDropdown(prop),
+      ),
       ProfileFilter: {
         label: 'DNA/AA Profile',
         value: '',
@@ -326,7 +322,7 @@ export default {
       } as PropertyFilter,
       RepliconFilter: {
         label: 'Replicon',
-        accession: '',
+        replicon_accession: '',
         exclude: false,
       } as RepliconFilter,
       LineageFilter: {
@@ -338,6 +334,7 @@ export default {
       } as LineageFilter,
       // to store the earliest and latest dates for each property.
       dateRanges: {} as { [key: string]: { earliest: string; latest: string } },
+      samplesStore,
     }
   },
   computed: {
@@ -351,7 +348,7 @@ export default {
         },
       })
       menuItems.push({
-        label: 'RepliconFilter',
+        label: 'Replicon Filter',
         icon: 'pi pi-plus',
         command: () => {
           this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
@@ -368,19 +365,16 @@ export default {
           },
         })
       }
-      this.propertyMenuOptions.forEach((propertyName) => {
-        menuItems.push({
-          label: propertyName,
-          icon: 'pi pi-plus',
-          command: async () => {
-            const newFilter = {
-              ...this.PropertyFilter,
-              propertyName: propertyName,
-            }
-            this.filterGroup.filters.propertyFilters.push(newFilter)
-            await this.updatePropertyValueOptions(newFilter)
-          },
-        })
+      menuItems.push({
+        label: 'Property Filter',
+        icon: 'pi pi-plus',
+        command: () => {
+          const newFilter = {
+            ...this.PropertyFilter,
+            propertyName: 'name',
+          }
+          this.filterGroup.filters.propertyFilters.push(newFilter)
+        },
       })
       return menuItems
     },
@@ -407,10 +401,10 @@ export default {
   },
   watch: {},
   mounted() {
-    // Initialize the operators array when the component is mounted
-    // also use when the set filter dialog open again to prevent lost of filter type
     this.filterGroup.filters.propertyFilters.forEach((filter) => {
-      this.initializeOperators(filter)
+      if (filter.propertyName) {
+        this.initializeOperators(filter)
+      }
     })
   },
   methods: {
@@ -421,8 +415,13 @@ export default {
       }
 
       // Fetch the date range if not already cached
-      const response = await API.getInstance().getSampleGenomePropertyValueOptions(propertyName)
-      const dateArray = response.values
+      const response = await API.getInstance().getSampleGenomePropertyValueOptions(
+        propertyName,
+        this.samplesStore.reference_accession,
+      )
+      const dateArray = response.values.filter(
+        (v: string | null | undefined) => v !== null && v !== undefined && v !== '' && v !== 'none',
+      ) as string[]
 
       // Sort dates and store the earliest and latest dates in the dictionary
       if (dateArray) {
@@ -536,7 +535,7 @@ export default {
       let newOperators = []
       if (propertyType === 'value_varchar') {
         newOperators = Object.values(StringDjangoFilterType)
-      } else if (propertyType === 'value_integer') {
+      } else if (propertyType === 'value_integer' || propertyType === 'value_float') {
         newOperators = Object.values(IntegerDjangoFilterType)
       } else if (propertyType === 'value_date') {
         newOperators = Object.values(DateDjangoFilterType)
@@ -547,10 +546,17 @@ export default {
       filter.filterType = newOperators[0]
     },
     isDateArray(value: unknown): value is Date[] {
-      return Array.isArray(value) && value.every((item) => item instanceof Date)
+      return (
+        Array.isArray(value) &&
+        value.length > 0 && // without this line, empty arrays are considered Date[]
+        value.every((item) => item instanceof Date)
+      )
     },
     isStringOrNull(value: unknown): boolean {
       return typeof value === 'string' || value === null
+    },
+    shouldUseDropdown(propertyName: string): boolean {
+      return this.samplesStore.shouldShowDropdown(propertyName)
     },
   },
 }
