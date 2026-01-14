@@ -33,8 +33,9 @@ class sonarUtils1:
 
         json_response = APIClient(base_url=API_URL).get_database_info()
         log_message = "No information available"
-        if len(json_response["detail"]) != 0:
-            data = json_response["detail"]
+        data = json_response.get("detail", {})
+
+        if data:
             log_message = "\n".join(
                 [
                     "Meta Data Coverage:",
@@ -49,14 +50,22 @@ class sonarUtils1:
                     f"Database Version: {data['database_version']}",
                     f"Earliest Genome Import: {data['earliest_genome_import']}",
                     f"Latest Genome Import: {data['latest_genome_import']}",
-                    f"Unique Sequences: {data['unique_sequences']}",
-                    f"Genomes: {data['genomes']}",
-                    f"Reference Genome: {data['reference_genome']}",
-                    f"Reference Length: {data['reference_length']} bp",
-                    f"Annotated Proteins: {data['annotated_proteins']}",
                 ]
             )
+
         LOGGER.info(log_message)
+
+        # Display reference genomes information for all organisms
+        if data and "reference_genomes" in data and data["reference_genomes"]:
+            for organism, ref_info in data["reference_genomes"].items():
+                LOGGER.info(f"\nReference Genome: {organism}")
+                LOGGER.info(f"  Replicons: {', '.join(ref_info['replicons'])}")
+                LOGGER.info(
+                    f"  Reference Length: {', '.join(map(str, ref_info['reference_length']))} bp"
+                )
+                LOGGER.info(f"  Annotated Proteins: {ref_info['annotated_proteins']}")
+                LOGGER.info(f"  Unique Sequences: {ref_info['unique_sequences']}")
+                LOGGER.info(f"  Genomes: {ref_info['genomes']}")
 
     @staticmethod
     def get_all_jobs(db: str = None):
@@ -137,7 +146,6 @@ class sonarUtils1:
 
     @staticmethod
     def upload_lineage(pathogen: str, lineage_file: str, output_file: str):
-
         LOGGER.info("Using Pathogen: %s", pathogen)
 
         if not lineage_file:

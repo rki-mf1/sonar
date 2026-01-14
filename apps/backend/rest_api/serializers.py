@@ -264,6 +264,24 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                         value = value.strftime("%Y-%m-%d")
                     custom_properties.append({"name": field_name, "value": value})
 
+        # Get length from sequence (sequence-level property)
+        # NOTE: A sample can have multiple sequences, so we'll include all lenghts? or
+        # unique lengths, right now we include unique lengths
+        if hasattr(obj, "sequences"):
+            lengths = set()
+            for sequence in obj.sequences.all():
+                if sequence.length is not None:
+                    lengths.add(sequence.length)
+            if lengths:
+                # If all sequences have the same length, show single value
+                # Otherwise, show comma-separated list
+                length_value = (
+                    str(list(lengths)[0])
+                    if len(lengths) == 1
+                    else ",".join(map(str, sorted(lengths)))
+                )
+                custom_properties.append({"name": "length", "value": length_value})
+
         return custom_properties
 
     def get_genomic_profiles(self, obj: models.Sample):
@@ -372,7 +390,6 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
 
 
 class SampleGenomesSerializerVCF(serializers.ModelSerializer):
-
     genomic_profiles = serializers.SerializerMethodField()
 
     class Meta:
