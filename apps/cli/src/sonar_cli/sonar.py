@@ -206,7 +206,7 @@ def create_subparser_info(
     parser = subparsers.add_parser(
         "info",
         parents=parent_parsers,
-        help="Deletes a reference from the database.",
+        help="Display database information and statistics.",
     )
 
     return subparsers, parser
@@ -911,7 +911,7 @@ def handle_delete_ref(args: argparse.Namespace):
         exit(1)
 
     LOGGER.warning(
-        f"When the {args.reference} is removed, all samples with this reference will also be removed."
+        "When the reference is removed, all samples with this reference will also be removed."
     )
     LOGGER.warning(
         "If you need to import data again, you might have to rebuild a new cache directory."
