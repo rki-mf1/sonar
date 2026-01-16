@@ -10,7 +10,7 @@ repository = "https://github.com/rki-mf1/sonar-cli"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-biopython = "~1.79"
+biopython = "~1.86"
 tqdm = "~4.66.3"
 more-itertools = "~8.7.0"
 pyaml = "~20.4.0"
