@@ -664,7 +664,7 @@ class PropertyViewSet(
             "unique_values_count",
         ]
 
-        for _property_queryset in models.Property.objects.all():
+        for _property_queryset in models.Property.objects.order_by("name"):
             data_list.append(
                 {
                     "name": _property_queryset.name,
