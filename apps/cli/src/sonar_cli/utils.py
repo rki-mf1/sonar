@@ -392,6 +392,7 @@ class sonarUtils:
                     job_with_chunk = f"{job_id}_chunk{chunk_number}"
                     resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
                     job_status = resp["status"]
+                    LOGGER.debug(f"Chunk {chunk_number} status: {job_status}")
                     if job_status in ["Q", "IP"]:
                         next
                     if job_status == "F":
@@ -424,13 +425,39 @@ class sonarUtils:
                         cache_dict, each_file, chunk_number
                     )
 
+                # Wait for all annotation chunks to be processed
+                incomplete_anno_chunks = set(range(len(anno_result_list)))
+                while len(incomplete_anno_chunks) > 0:
+                    chunks_tmp = incomplete_anno_chunks.copy()
+                    for chunk_number in chunks_tmp:
+                        job_with_chunk = f"{job_id}_chunk{chunk_number}"
+                        resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                        job_status = resp["status"]
+                        if job_status in ["Q", "IP"]:
+                            next
+                        if job_status == "F":
+                            LOGGER.error(
+                                f"Annotation job {job_with_chunk} failed (status={job_status}). Aborting."
+                            )
+                            sys.exit(1)
+                        if job_status == "C":
+                            incomplete_anno_chunks.remove(chunk_number)
+                    if len(incomplete_anno_chunks) > 0:
+                        LOGGER.debug(
+                            f"Waiting for {len(incomplete_anno_chunks)} annotation chunks to finish being processed."
+                        )
+                        sleep_time = 3
+                        time.sleep(sleep_time)
+
+            LOGGER.info(
+                f"Job ID: {job_id}",
+            )
             LOGGER.info(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
             )
             cache.logfile_obj.write(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}\n"
             )
-            LOGGER.debug("Job ID: %s", job_id)
         else:
             LOGGER.info("Disable sending samples.")
         start_clean_time = get_current_time()
@@ -622,6 +649,7 @@ class sonarUtils:
                     job_with_chunk = f"{job_id}_chunk{chunk_number}"
                     resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
                     job_status = resp["status"]
+                    LOGGER.debug(f"Chunk {chunk_number} status: {job_status}")
                     if job_status in ["Q", "IP"]:
                         next
                     if job_status == "F":
@@ -652,6 +680,30 @@ class sonarUtils:
                     sonarUtils.zip_import_upload_annotation_singlethread(
                         cache_dict, each_file, chunk_number
                     )
+
+                # Wait for all annotation chunks to be processed
+                incomplete_anno_chunks = set(range(len(anno_result_list)))
+                while len(incomplete_anno_chunks) > 0:
+                    chunks_tmp = incomplete_anno_chunks.copy()
+                    for chunk_number in chunks_tmp:
+                        job_with_chunk = f"{job_id}_chunk{chunk_number}"
+                        resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                        job_status = resp["status"]
+                        if job_status in ["Q", "IP"]:
+                            next
+                        if job_status == "F":
+                            LOGGER.error(
+                                f"Annotation job {job_with_chunk} failed (status={job_status}). Aborting."
+                            )
+                            sys.exit(1)
+                        if job_status == "C":
+                            incomplete_anno_chunks.remove(chunk_number)
+                    if len(incomplete_anno_chunks) > 0:
+                        LOGGER.debug(
+                            f"Waiting for {len(incomplete_anno_chunks)} annotation chunks to finish being processed."
+                        )
+                        sleep_time = 3
+                        time.sleep(sleep_time)
 
             LOGGER.info(
                 f"[runtime] Upload and import: {calculate_time_difference(start_upload_time, get_current_time())}"
