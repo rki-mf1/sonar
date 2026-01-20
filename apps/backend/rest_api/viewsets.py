@@ -1,6 +1,7 @@
 from datetime import datetime
 from datetime import timezone
 from functools import reduce
+import hashlib
 import io
 import json
 import operator
@@ -9,6 +10,7 @@ import pickle
 import uuid
 import zipfile
 
+from django.core.cache import cache
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models import CharField
 from django.db.models import F
@@ -24,6 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from covsonar_backend.settings import CACHE_OBJECT_TTL
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.gbk_import import import_gbk_file
@@ -344,6 +347,10 @@ class ReferenceViewSet(
             accession = reference["accession"]
             data_set_value = reference["data_set_value"]
 
+            # Skip entries where organism is None
+            if organism is None:
+                continue
+
             if organism not in result:
                 result[organism] = {"accessions": set(), "data_sets": set()}
             if accession is not None:
@@ -549,16 +556,30 @@ class PropertyViewSet(
     @action(detail=False, methods=["get"])
     def get_all_properties(self, request: Request, *args, **kwargs):
         """
-        "value_integer",
-        "value_float",
-        "value_text",
-        "value_varchar",
-        "value_blob",
-        "value_date",
-        "value_zip",
+        get all properties with their unique value counts.
+
+        Returns:
+            Response with format:
+            {
+                "keys": ["name", "query_type", "description", "default", "unique_values_count"],
+                "values": [
+                    {"name": "lineage", "query_type": "value_varchar", "unique_values_count": 850},
+                    ...
+                ]
+            }
         """
-        # fixed datatype accroding to the Sample Table.
         ref = request.query_params.get("reference")
+
+        # STEP 1: Check cache first (instant return if cached)
+        cache_key = (
+            f"all_properties:{hashlib.md5(ref.encode() if ref else b'').hexdigest()}"
+        )
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return Response(data=cached_result, status=status.HTTP_200_OK)
+
+        # STEP 2: Define property categories
+        # Properties stored directly in Sample table
         default_properties = [
             "name",
             "collection_date",
@@ -572,9 +593,11 @@ class PropertyViewSet(
             "init_upload_date",
             "last_update_date",
         ]
-        # length is stored in Sequence table but treated as a property
+
+        # Properties stored in Sequence table
         sequence_properties = ["length"]
 
+        # STEP 3: Build initial property metadata list
         data_list = [
             {
                 "name": "name",
@@ -654,16 +677,9 @@ class PropertyViewSet(
                 "description": "Sequence length in base pairs",
                 "default": None,
             },
-        ]  # from SEQUENCE TABLE
-
-        cols = [
-            "name",
-            "query_type",
-            "description",
-            "default",
-            "unique_values_count",
         ]
 
+        # STEP 4: Add custom properties from Property table
         for _property_queryset in models.Property.objects.all():
             data_list.append(
                 {
@@ -673,17 +689,22 @@ class PropertyViewSet(
                     "default": _property_queryset.default,
                 }
             )
+        # STEP 6: Count unique values for each property
+        # For each property, get count of unique values
+        # Problems:
+        # 1. repeats JOIN chain for each property (data_list )
+        # sequences__alignments__replicon__reference__accession 4 JOINs * n properties
+        # - if using IN clause instead of JOIN chains (~700-1000ms vs ~300-500ms)
+        # (no improvment, Django JOIN do the optimization and magic ~300ms)
         for property_data in data_list:
             property_name = property_data["name"]
+            # CASE 1: Default properties from Sample table
             if property_name in default_properties:
                 try:
                     # get count of unique values from Sample table
                     count = (
                         models.Sample.objects.annotate(
                             raw_value=Cast(property_name, output_field=CharField())
-                        )
-                        .filter(
-                            sequences__alignments__replicon__reference__accession=ref
                         )
                         .values_list("raw_value", flat=True)
                         .exclude(raw_value__isnull=True)
@@ -692,8 +713,9 @@ class PropertyViewSet(
                         .count()
                     )
                 except Exception as e:
-                    print(f"Error counting {property_name}: {e}")
+                    LOGGER.error(f"Error counting {property_name}: {e}")
                     count = 0
+            # CASE 2: Sequence properties from Sequence table
             elif property_name in sequence_properties:
                 # Special handling for properties stored in Sequence table
                 try:
@@ -711,8 +733,9 @@ class PropertyViewSet(
                         .count()
                     )
                 except Exception as e:
-                    print(f"Error counting {property_name}: {e}")
+                    LOGGER.error(f"Error counting {property_name}: {e}")
                     count = 0
+            # CASE 3: Custom properties from Sample2Property table
             else:
                 query_type = property_data["query_type"]
                 # get count of unique values from Property table
@@ -732,10 +755,23 @@ class PropertyViewSet(
                         .count()
                     )
                 except Exception as e:
-                    print(f"Error counting {property_name}: {e}")
+                    LOGGER.error(f"Error counting {property_name}: {e}")
                     count = 0
+
             property_data["unique_values_count"] = count
+
+        cols = [
+            "name",
+            "query_type",
+            "description",
+            "default",
+            "unique_values_count",
+        ]
         data = {"keys": cols, "values": data_list}
+
+        # Cache for xx minutes
+        cache.set(cache_key, data, CACHE_OBJECT_TTL)
+
         return Response(data=data, status=status.HTTP_200_OK)
 
     @staticmethod
