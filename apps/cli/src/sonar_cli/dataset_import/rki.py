@@ -9,6 +9,7 @@ Zenodo: https://doi.org/10.5281/zenodo.5139363
 """
 
 import csv
+import json
 from pathlib import Path
 from typing import Dict
 from typing import Optional
@@ -43,7 +44,14 @@ RKI_COLUMN_MAPPING = {
     "SEQUENCING_METHOD": "sequencing_tech",  # Sequencing technology
     "DL.POSTAL_CODE": "zip_code",  # ZIP code (Diagnostic Lab postal code)
     "LINEAGE_LATEST": "lineage",  # Pangolin lineage (latest)
+    "igs_id": "name",  # IGS identifier
+    "date_of_sampling": "collection_date",
+    "sequencing_platform": "sequencing_tech",
+    "diagnostic_lab.postal_code": "zip_code",
+    "sequencing_lab.postal_code": "sequencing_lab_pc",  # Sequencing lab postal code
+    "genome.gtrs": "lineage",
 }
+
 
 # Additional fields that will be added with fixed values
 RKI_FIXED_FIELDS = {
@@ -54,7 +62,7 @@ RKI_FIXED_FIELDS = {
 
 # Optional fields that may exist in RKI data but are not in standard properties
 RKI_OPTIONAL_FIELDS = {
-    "POSTAL_CODE": "sequencing_lab_pc",  # Sequencing lab postal code
+    "POSTAL_CODE": "postal_code",  # Generic postal code (if any)
     "SEQUENCE.SEQUENCING_REASON": "seq_reason",  # Sequencing reason
     "SEQUENCE.SAMPLE_TYPE": "sample_type",  # Sample type
     "SEQUENCE.SEQUENCING_LAB_SAMPLE_ID": "lab_sample_id",  # Lab sample ID
@@ -158,7 +166,7 @@ class RKIDatasetImporter(DatasetImporter):
 
         return fasta_path, tsv_path
 
-    def _transform_metadata(
+    def _transform_metadata(  # noqa: C901
         self,
         input_path: Path,
         output_path: Path,
@@ -177,17 +185,20 @@ class RKIDatasetImporter(DatasetImporter):
         """
         count = 0
         processed_sample_ids = []
+        parse_errors = []  # Track parsing errors for report
 
-        # Determine output columns (standard + fixed fields)
-        output_columns = list(RKI_COLUMN_MAPPING.values())
+        # Determine output columns (deduplicate values from mapping)
+        # Use dict.fromkeys() to maintain order while removing duplicates
+        unique_sonar_columns = list(dict.fromkeys(RKI_COLUMN_MAPPING.values()))
+        output_columns = unique_sonar_columns.copy()
         output_columns.extend(RKI_FIXED_FIELDS.keys())
-
-        # Add optional fields if they exist in the input
         output_columns.extend(RKI_OPTIONAL_FIELDS.values())
 
         with open(input_path, "r", newline="", encoding="utf-8") as f_in:
             reader = csv.DictReader(f_in, delimiter="\t")
-
+            input_columns = reader.fieldnames  # Get actual columns from input file
+            # show all columns from original files
+            LOGGER.debug(f"Input TSV columns: {input_columns}")
             with open(output_path, "w", newline="", encoding="utf-8") as f_out:
                 writer = csv.DictWriter(
                     f_out,
@@ -197,23 +208,113 @@ class RKIDatasetImporter(DatasetImporter):
                 )
                 writer.writeheader()
 
-                for row in reader:
-                    # Get sample ID (ID column in RKI data)
-                    sample_id = row.get("ID", "")
+                for row_num, row in enumerate(
+                    reader, start=2
+                ):  # start=2 because row 1 is header
+                    # Get sample ID - prioritize igs_id, fallback to ID
+                    sample_id = row.get("igs_id", "") or row.get("ID", "")
 
                     # Filter by sample_ids if provided
                     if sample_ids is not None and sample_id not in sample_ids:
                         continue
 
                     # Transform row with standard mappings
+                    # Strategy: Check which columns exist in input and use new format priority
                     transformed = {}
-                    for rki_col, sonar_col in RKI_COLUMN_MAPPING.items():
+
+                    # Define priority order for columns (new format columns first)
+                    column_priority = [
+                        ("igs_id", "name"),
+                        ("ID", "name"),
+                        ("date_of_sampling", "collection_date"),
+                        ("DATE_OF_SAMPLING", "collection_date"),
+                        ("sequencing_platform", "sequencing_tech"),
+                        ("SEQUENCING_METHOD", "sequencing_tech"),
+                        ("diagnostic_lab.postal_code", "zip_code"),
+                        ("DL.POSTAL_CODE", "zip_code"),
+                        ("sequencing_lab.postal_code", "sequencing_lab_pc"),
+                        ("POSTAL_CODE", "sequencing_lab_pc"),  # Fallback for old format
+                        ("genome.gtrs", "lineage"),
+                        ("LINEAGE_LATEST", "lineage"),
+                    ]
+
+                    # Process columns with priority (only set if not already set)
+                    for rki_col, sonar_col in column_priority:
+                        # Skip if this sonar column already has a value
+                        if sonar_col in transformed:
+                            continue
+
                         value = row.get(rki_col, "")
-                        # Clean up the value
-                        if value and value.strip():
-                            transformed[sonar_col] = value.strip()
+
+                        # Special handling for genome.gtrs (JSON format)
+                        if rki_col == "genome.gtrs" and value and value.strip():
+                            try:
+                                # Parse JSON array
+                                gtrs_data = json.loads(value)
+                                if isinstance(gtrs_data, list) and len(gtrs_data) > 0:
+                                    # Get first object and extract genomic_typing_result
+                                    first_entry = gtrs_data[0]
+                                    if isinstance(first_entry, dict):
+                                        lineage_value = first_entry.get(
+                                            "genomic_typing_result", ""
+                                        )
+                                        transformed[sonar_col] = (
+                                            lineage_value.strip()
+                                            if lineage_value
+                                            else ""
+                                        )
+                                    else:
+                                        transformed[sonar_col] = ""
+                                        parse_errors.append(
+                                            {
+                                                "row": row_num,
+                                                "sample_id": sample_id,
+                                                "column": rki_col,
+                                                "error": "First array element is not a dictionary",
+                                                "value": str(value)[
+                                                    :100
+                                                ],  # Truncate for readability
+                                            }
+                                        )
+                                else:
+                                    transformed[sonar_col] = ""
+                                    parse_errors.append(
+                                        {
+                                            "row": row_num,
+                                            "sample_id": sample_id,
+                                            "column": rki_col,
+                                            "error": "Empty array or not a list",
+                                            "value": str(value)[:100],
+                                        }
+                                    )
+                            except json.JSONDecodeError as e:
+                                transformed[sonar_col] = ""
+                                parse_errors.append(
+                                    {
+                                        "row": row_num,
+                                        "sample_id": sample_id,
+                                        "column": rki_col,
+                                        "error": f"JSON parse error: {str(e)}",
+                                        "value": str(value)[:100],
+                                    }
+                                )
+                            except Exception as e:
+                                transformed[sonar_col] = ""
+                                parse_errors.append(
+                                    {
+                                        "row": row_num,
+                                        "sample_id": sample_id,
+                                        "column": rki_col,
+                                        "error": f"Unexpected error: {str(e)}",
+                                        "value": str(value)[:100],
+                                    }
+                                )
                         else:
-                            transformed[sonar_col] = ""
+                            # Normal handling for non-JSON fields
+                            if value and value.strip():
+                                transformed[sonar_col] = value.strip()
+                            else:
+                                transformed[sonar_col] = ""
 
                     # Add fixed fields
                     for field, value in RKI_FIXED_FIELDS.items():
@@ -240,6 +341,21 @@ class RKIDatasetImporter(DatasetImporter):
         with open(sample_id_file, "w", encoding="utf-8") as f:
             for sid in processed_sample_ids:
                 f.write(f"{sid}\n")
+
+        # Write parsing error report if there are any errors
+        if parse_errors:
+            report_file = output_path.parent / f"{self.dataset_name}_parse_errors.tsv"
+            with open(report_file, "w", newline="", encoding="utf-8") as f:
+                report_writer = csv.DictWriter(
+                    f,
+                    fieldnames=["row", "sample_id", "column", "error", "value"],
+                    delimiter="\t",
+                )
+                report_writer.writeheader()
+                report_writer.writerows(parse_errors)
+            LOGGER.warning(
+                f"Found {len(parse_errors)} parsing errors. See report: {report_file}"
+            )
 
         LOGGER.info(f"Transformed {count} metadata rows to {output_path}")
         return count

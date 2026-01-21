@@ -309,7 +309,7 @@ def get_zenodo_record_files(record_id: str) -> Dict[str, str]:
     """
     api_url = f"https://zenodo.org/api/records/{record_id}"
 
-    LOGGER.info(f"Fetching Zenodo record {record_id}")
+    LOGGER.info(f"Fetching Zenodo record ID {record_id}")
     response = requests.get(api_url)
     response.raise_for_status()
 
