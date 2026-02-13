@@ -394,7 +394,7 @@ class sonarUtils:
                     job_status = resp["status"]
                     LOGGER.debug(f"Chunk {chunk_number} status: {job_status}")
                     if job_status in ["Q", "IP"]:
-                        next
+                        continue
                     if job_status == "F":
                         LOGGER.error(
                             f"Job {job_with_chunk} failed (status={job_status}). Aborting."
@@ -434,7 +434,7 @@ class sonarUtils:
                         resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
                         job_status = resp["status"]
                         if job_status in ["Q", "IP"]:
-                            next
+                            continue
                         if job_status == "F":
                             LOGGER.error(
                                 f"Annotation job {job_with_chunk} failed (status={job_status}). Aborting."
