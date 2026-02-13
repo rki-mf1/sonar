@@ -244,7 +244,7 @@ LOGGING = {
             "level": LOG_LEVEL,
             "class": "logging.FileHandler",
             "filename": os.path.join(
-                LOG_PATH, f'{datetime.today().strftime("%Y_%m_%d")}.log.json'
+                LOG_PATH, f"{datetime.today().strftime('%Y_%m_%d')}.log.json"
             ),
             "formatter": "json",
         },
@@ -268,6 +268,9 @@ CACHES = {
         },
     }
 }
+CACHE_OBJECT_TTL = env.int(
+    "CACHE_OBJECT_TTL", default=3600
+)  # (default: Time to Live 60 minutes)
 
 # If true, keep the data files that were sent from the CLI in an archive
 # folder, even after that data has been imported into the database.
