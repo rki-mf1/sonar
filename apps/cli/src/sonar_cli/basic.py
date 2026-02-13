@@ -496,12 +496,11 @@ def _check_property(db=None, prop_name_list: list[str] = []):
     json_response = APIClient(base_url=BASE_URL).get_all_properties()
     # Use list to preserve order from API response
     available_names_list = [item["name"] for item in json_response["values"]]
-    available_names_set = set(available_names_list)
 
     for k in prop_name_list:
         if k == "name":
             continue
-        if k not in available_names_set:
+        if k not in available_names_list:
             LOGGER.error(
                 f"Key '{k}' not found in database, please check the typo or add it (add-prop) or list all properties (list-prop)."
             )
