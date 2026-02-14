@@ -1,27 +1,15 @@
 <template>
   <div class="filter-and-statistic-panel my-2">
     <div class="filter-left">
-      <div style="max-width: 91%">
+      <div class="filter-content">
         <div class="filter-container">
           <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
-          <PrimeCalendar
-            v-model="startDate"
-            style="flex: auto; min-width: 10rem"
-            show-icon
-            date-format="yy-mm-dd"
-          ></PrimeCalendar>
-          <PrimeCalendar
-            v-model="endDate"
-            style="flex: auto; min-width: 10rem"
-            show-icon
-            date-format="yy-mm-dd"
-          ></PrimeCalendar>
-          <PrimeButton
-            icon="pi pi-arrow-circle-left"
-            label="&nbsp;Default"
-            class="default-calendar-button"
-            @click="setDefaultTimeRange"
-          >
+          <PrimeCalendar v-model="startDate" style="flex: auto; min-width: 10rem" show-icon date-format="yy-mm-dd">
+          </PrimeCalendar>
+          <PrimeCalendar v-model="endDate" style="flex: auto; min-width: 10rem" show-icon date-format="yy-mm-dd">
+          </PrimeCalendar>
+          <PrimeButton icon="pi pi-arrow-circle-left" label="&nbsp;Default" class="default-calendar-button"
+            @click="setDefaultTimeRange">
           </PrimeButton>
           <PrimeButton v-if="startDate" class="ml-2 p-button-sm" @click="removeTimeRange">
             <i class="pi pi-trash" style="font-size: medium" />
@@ -30,64 +18,32 @@
 
         <div class="filter-container">
           <span style="font-weight: 500">Lineage</span>
-          <MultiSelect
-            v-model="lineageFilter.lineageList"
-            display="chip"
-            :options="samplesStore.lineageOptions"
-            filter
-            placeholder="Select Lineages"
-            style="width: 68%"
-            :virtual-scroller-options="{ itemSize: 30 }"
-          />
+          <MultiSelect v-model="lineageFilter.lineageList" display="chip" :options="samplesStore.lineageOptions" filter
+            placeholder="Select Lineages" style="width: 68%" :virtual-scroller-options="{ itemSize: 30 }" />
 
           <div class="switch">
             Include Sublineages?
             <InputSwitch v-model="lineageFilter.includeSublineages" />
           </div>
-          <PrimeButton
-            v-if="lineageFilter.lineageList.length > 0"
-            icon="pi pi-trash"
-            class="ml-2 p-button-sm"
-            @click="removeLineageFilter"
-          />
+          <PrimeButton v-if="lineageFilter.lineageList.length > 0" icon="pi pi-trash" class="ml-2 p-button-sm"
+            @click="removeLineageFilter" />
         </div>
 
         <div class="filter-container">
           <span style="font-weight: 500">DNA/AA Profile</span>
-          <InputText
-            v-model="profileFilter.value"
-            style="flex: auto"
-            :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
-            class="mr-1"
-            @keyup.enter="updateSamplesInTableAndFilteredStatistics()"
-          />
-          <PrimeButton
-            v-if="profileFilter.value"
-            icon="pi pi-trash"
-            class="ml-2 p-button-sm"
-            @click="removeProfileFilter"
-          />
+          <InputText v-model="profileFilter.value" style="flex: auto"
+            :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'" class="mr-1"
+            @keyup.enter="updateSamplesInTableAndFilteredStatistics()" />
+          <PrimeButton v-if="profileFilter.value" icon="pi pi-trash" class="ml-2 p-button-sm"
+            @click="removeProfileFilter" />
         </div>
 
         <div class="button-1">
-          <PrimeButton
-            icon="pi pi-filter"
-            label="&nbsp;Set Advanced Filters"
-            severity="warning"
-            raised
-            :style="{
-              border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
-            }"
-            @click="displayDialogFilter = true"
-          />
-          <PrimeButton
-            icon="pi pi-database"
-            label="&nbsp;Update sample selection"
-            severity="warning"
-            raised
-            :disabled="samplesStore.filtersChanged ? false : true"
-            @click="updateSamplesInTableAndFilteredStatistics()"
-          >
+          <PrimeButton icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised :style="{
+            border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
+          }" @click="displayDialogFilter = true" />
+          <PrimeButton icon="pi pi-database" label="&nbsp;Update sample selection" severity="warning" raised
+            :disabled="samplesStore.filtersChanged ? false : true" @click="updateSamplesInTableAndFilteredStatistics()">
           </PrimeButton>
         </div>
       </div>
@@ -95,32 +51,21 @@
       <PrimeDialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
-            <FilterGroup
-              style="width: fit-content; margin: auto"
-              :filter-group="samplesStore.filterGroup"
+            <FilterGroup style="width: fit-content; margin: auto" :filter-group="samplesStore.filterGroup"
               :property-menu-options="samplesStore.propertyMenuOptions"
               :replicon-accession-options="samplesStore.repliconAccessionOptions"
-              :lineage-options="samplesStore.lineageOptions"
-              :symbol-options="samplesStore.symbolOptions"
-              :operators="Object.values(DjangoFilterType)"
-              :property-value-options="samplesStore.propertyValueOptions"
+              :lineage-options="samplesStore.lineageOptions" :symbol-options="samplesStore.symbolOptions"
+              :operators="Object.values(DjangoFilterType)" :property-value-options="samplesStore.propertyValueOptions"
               :properties-dict="samplesStore.propertiesDict"
-              @update-property-value-options="samplesStore.updatePropertyValueOptions"
-            />
+              @update-property-value-options="samplesStore.updatePropertyValueOptions" />
           </div>
         </div>
         <div v-if="samplesStore.errorMessage" style="margin-top: 20px">
           <PrimeMessage severity="error">{{ samplesStore.errorMessage }}</PrimeMessage>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <PrimeButton
-            icon="pi pi-database"
-            label="&nbsp;Update sample selection"
-            severity="warning"
-            raised
-            :disabled="samplesStore.filtersChanged ? false : true"
-            @click="closeAdvancedFilterDialogAndUpdate"
-          >
+          <PrimeButton icon="pi pi-database" label="&nbsp;Update sample selection" severity="warning" raised
+            :disabled="samplesStore.filtersChanged ? false : true" @click="closeAdvancedFilterDialogAndUpdate">
           </PrimeButton>
         </div>
         <PrimeButton type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
@@ -382,11 +327,13 @@ export default {
 .filter-and-statistic-panel {
   width: 98%;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   background-color: var(--text-color);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow);
+  gap: 1rem;
 }
 
 .filter-left {
@@ -394,8 +341,17 @@ export default {
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  width: 50%;
+  flex: 1 1 auto;
+  min-width: 300px;
+  max-width: 100%;
   margin: 10px;
+}
+
+.filter-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .statistics-right {
@@ -404,19 +360,23 @@ export default {
   gap: 10px;
   margin-left: auto;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .filter-container {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 5px;
+  width: 100%;
 }
 
 .button-1 {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
   margin-bottom: 0px;
 }
 
@@ -428,6 +388,7 @@ export default {
   text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
+  white-space: nowrap;
 }
 
 .default-calendar-button {
@@ -440,6 +401,114 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  white-space: nowrap;
+}
+
+/* Responsive Design - Tablet */
+@media screen and (max-width: 1200px) {
+  .filter-and-statistic-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-left {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .statistics-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+    padding: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .button-1 {
+    justify-content: flex-start;
+  }
+}
+
+/* Responsive Design - Mobile */
+@media screen and (max-width: 768px) {
+  .filter-and-statistic-panel {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .filter-left {
+    margin: 8px;
+  }
+
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .filter-container span {
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .filter-container :deep(.p-calendar),
+  .filter-container :deep(.p-inputtext),
+  .filter-container :deep(.p-multiselect) {
+    width: 100% !important;
+    min-width: 100%;
+  }
+
+  .button-1 {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .button-1 :deep(.p-button) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .switch {
+    flex-direction: row;
+    justify-content: space-between;
+    font-size: 0.8em;
+    width: 100%;
+    padding: 8px;
+  }
+
+  .default-calendar-button {
+    width: 100%;
+    padding: 8px;
+  }
+}
+
+/* Responsive Design - Very Small Mobile */
+@media screen and (max-width: 480px) {
+  .filter-and-statistic-panel {
+    border-radius: 8px;
+    gap: 0.5rem;
+  }
+
+  .filter-left {
+    margin: 5px;
+  }
+
+  .filter-container {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .button-1 {
+    gap: 6px;
+  }
+
+  .default-calendar-button,
+  .button-1 :deep(.p-button) {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
 }
 
 :deep(.p-button) {
