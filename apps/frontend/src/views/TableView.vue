@@ -52,7 +52,7 @@
         </template>
         <template #body="slotProps">
           <div class="cell-content-sample-id" :title="slotProps.data.name">
-            {{ slotProps.data.name }}
+            {{ formatSampleName(slotProps.data.name) }}
           </div>
         </template>
       </PrimeColumn>
@@ -229,6 +229,7 @@
 import API from '@/api/API'
 import router from '@/router'
 import { decodeDatasetsParam, safeDecodeURIComponent } from '@/util/routeParams'
+import { formatMiddleEllipsis } from '@/util/textUtils'
 import { useSamplesStore } from '@/stores/samples'
 import { type Property, type RowSelectEvent, type SelectedRowData } from '@/util/types'
 import type { DataTableSortEvent } from 'primevue/datatable'
@@ -297,6 +298,10 @@ export default {
     findProperty(properties: Array<Property>, propertyName: string) {
       const property = properties.find((property) => property.name === propertyName)
       return property ? property.value : undefined
+    },
+    formatSampleName(name: string): string {
+      // Apply dynamic percentage-based middle ellipsis
+      return formatMiddleEllipsis(name)
     },
     exportFile(type: string) {
       // Show the progress bar in the toast
@@ -406,14 +411,13 @@ export default {
   height: 2em;
   flex: 1;
   min-width: 5rem;
-  max-width: 20rem;
-  overflow-x: auto;
+
+  overflow: hidden;
   white-space: nowrap;
   padding: 0;
   margin: 0;
-  text-align: right;
+  text-align: left;
   text-overflow: ellipsis;
-  direction: rtl;
 }
 
 .cell-content {
