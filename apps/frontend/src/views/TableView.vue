@@ -1,18 +1,42 @@
 <template>
   <div class="table-content">
-    <DataTable v-model:selection="selectedRow" :value="samplesStore.samples" style="max-width: 95vw" size="large"
-      data-key="name" striped-rows :reorderable-columns="true" scrollable scroll-height="flex" sortable
-      selection-mode="single" @column-reorder="onColReorder" @sort="sortingChanged($event)" @row-select="onRowSelect"
-      @row-unselect="onRowUnselect">
+    <DataTable
+      v-model:selection="selectedRow"
+      :value="samplesStore.samples"
+      style="max-width: 95vw"
+      size="large"
+      data-key="name"
+      striped-rows
+      :reorderable-columns="true"
+      scrollable
+      scroll-height="flex"
+      sortable
+      selection-mode="single"
+      @column-reorder="onColReorder"
+      @sort="sortingChanged($event)"
+      @row-select="onRowSelect"
+      @row-unselect="onRowUnselect"
+    >
       <template #empty> No Results </template>
       <template #header>
         <div style="display: flex; justify-content: space-between">
-          <PrimeButton icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised
-            @click="displayDialogExport = true" />
+          <PrimeButton
+            icon="pi pi-external-link"
+            label="&nbsp;Export"
+            severity="warning"
+            raised
+            @click="displayDialogExport = true"
+          />
           <div style="display: flex; justify-content: flex-end">
-            <MultiSelect v-model="samplesStore.selectedColumns" display="chip"
-              :options="samplesStore.propertyTableOptions" filter placeholder="Select Columns" class="w-full md:w-20rem"
-              @update:model-value="columnSelection">
+            <MultiSelect
+              v-model="samplesStore.selectedColumns"
+              display="chip"
+              :options="samplesStore.propertyTableOptions"
+              filter
+              placeholder="Select Columns"
+              class="w-full md:w-20rem"
+              @update:model-value="columnSelection"
+            >
               <template #value>
                 <div style="margin-top: 5px; margin-left: 5px">
                   {{ samplesStore.selectedColumns.length + 1 }} columns selected
@@ -32,36 +56,53 @@
           </div>
         </template>
       </PrimeColumn>
-      <PrimeColumn v-for="column in samplesStore.selectedColumns" :key="column"
-        :sortable="!notSortable.includes(column)" :field="column">
+      <PrimeColumn
+        v-for="column in samplesStore.selectedColumns"
+        :key="column"
+        :sortable="!notSortable.includes(column)"
+        :field="column"
+      >
         <template #header>
           <span>{{ column }}</span>
         </template>
         <template #body="slotProps">
           <div v-if="column === 'genomic_profiles'" class="cell-content">
             <div>
-              <GenomicProfileLabel v-for="(variant, index) in Object.values(slotProps.data.genomic_profiles).flatMap(
-                (rep) => Object.keys(rep as Record<string, unknown>),
-              )" :key="variant" :variant-string="variant" :annotations="(() => {
-                for (const r of Object.values(slotProps.data.genomic_profiles)) {
-                  const rec = r as Record<string, unknown>
-                  if (variant in rec) return rec[variant]
-                }
-                return []
-              })()
-                " :is-last="index ===
+              <GenomicProfileLabel
+                v-for="(variant, index) in Object.values(slotProps.data.genomic_profiles).flatMap(
+                  (rep) => Object.keys(rep as Record<string, unknown>),
+                )"
+                :key="variant"
+                :variant-string="variant"
+                :annotations="
+                  (() => {
+                    for (const r of Object.values(slotProps.data.genomic_profiles)) {
+                      const rec = r as Record<string, unknown>
+                      if (variant in rec) return rec[variant]
+                    }
+                    return []
+                  })()
+                "
+                :is-last="
+                  index ===
                   Object.values(slotProps.data.genomic_profiles).flatMap((rep) =>
                     Object.keys(rep as Record<string, unknown>),
                   ).length -
-                  1
-                  " />
+                    1
+                "
+              />
             </div>
           </div>
           <div v-else-if="column === 'proteomic_profiles'" class="cell-content">
             <div>
-              <GenomicProfileLabel v-for="(variant, index) in Object.values(slotProps.data.proteomic_profiles).flat()"
-                :key="variant" :variant-string="variant" :is-last="index === Object.values(slotProps.data.proteomic_profiles).flat().length - 1
-                  " />
+              <GenomicProfileLabel
+                v-for="(variant, index) in Object.values(slotProps.data.proteomic_profiles).flat()"
+                :key="variant"
+                :variant-string="variant"
+                :is-last="
+                  index === Object.values(slotProps.data.proteomic_profiles).flat().length - 1
+                "
+              />
             </div>
           </div>
           <div v-else-if="column === 'init_upload_date'" class="cell-content">
@@ -80,17 +121,37 @@
         <div style="display: flex; justify-content: space-between">
           Total: {{ samplesStore.filteredCount }} Samples
         </div>
-        <PrimePaginator v-model:rows="samplesStore.perPage" v-model:first="samplesStore.firstRow"
-          :total-records="samplesStore.filteredCount" :rows-per-page-options="[10, 25, 50, 100, 1000, 10000, 100000]"
-          @update:rows="samplesStore.updateSamples()" />
+        <PrimePaginator
+          v-model:rows="samplesStore.perPage"
+          v-model:first="samplesStore.firstRow"
+          :total-records="samplesStore.filteredCount"
+          :rows-per-page-options="[10, 25, 50, 100, 1000, 10000, 100000]"
+          @update:rows="samplesStore.updateSamples()"
+        />
       </template>
     </DataTable>
 
-    <PrimeDialog v-model:visible="samplesStore.loading" class="flex" modal :closable="false" header="Loading...">
-      <ProgressSpinner v-if="samplesStore.loading" class="flex-1 p-3" size="small" style="color: whitesmoke" />
+    <PrimeDialog
+      v-model:visible="samplesStore.loading"
+      class="flex"
+      modal
+      :closable="false"
+      header="Loading..."
+    >
+      <ProgressSpinner
+        v-if="samplesStore.loading"
+        class="flex-1 p-3"
+        size="small"
+        style="color: whitesmoke"
+      />
     </PrimeDialog>
 
-    <PrimeDialog v-model:visible="displayDialogRow" modal dismissable-mask :style="{ width: '60vw' }">
+    <PrimeDialog
+      v-model:visible="displayDialogRow"
+      modal
+      dismissable-mask
+      :style="{ width: '60vw' }"
+    >
       <template #header>
         <div style="display: flex; align-items: center">
           <strong>Sample Details</strong>
@@ -103,11 +164,19 @@
           </div>
         </div>
       </template>
-      <SampleDetails :selected-row="selectedRow" :all-columns="samplesStore.propertyTableOptions"></SampleDetails>
+      <SampleDetails
+        :selected-row="selectedRow"
+        :all-columns="samplesStore.propertyTableOptions"
+      ></SampleDetails>
     </PrimeDialog>
 
-    <PrimeDialog v-model:visible="displayDialogExport" header="Export Settings" modal dismissable-mask
-      :style="{ width: '25vw' }">
+    <PrimeDialog
+      v-model:visible="displayDialogExport"
+      header="Export Settings"
+      modal
+      dismissable-mask
+      :style="{ width: '25vw' }"
+    >
       <div>
         <RadioButton v-model="exportFormat" input-id="exportFormat1" value="csv" />
         <label for="exportFormat1" class="ml-2"> CSV (.csv)</label>
@@ -120,8 +189,14 @@
       <span><strong>Note: </strong>There is an export limit of maximum XXX samples!</span>
 
       <div style="display: flex; justify-content: end; gap: 10px; margin-top: 10px">
-        <PrimeButton icon="pi pi-external-link" label="&nbsp;Export" severity="warning" raised
-          :loading="samplesStore.loading" @click="exportFile(exportFormat)" />
+        <PrimeButton
+          icon="pi pi-external-link"
+          label="&nbsp;Export"
+          severity="warning"
+          raised
+          :loading="samplesStore.loading"
+          @click="exportFile(exportFormat)"
+        />
       </div>
     </PrimeDialog>
   </div>
@@ -138,8 +213,11 @@
           </div>
         </div>
         <!-- Close Icon (X button) -->
-        <PrimeButton class="p-toast-close p-link" style="position: absolute; top: 5px; right: 5px"
-          @click="closeCallback">
+        <PrimeButton
+          class="p-toast-close p-link"
+          style="position: absolute; top: 5px; right: 5px"
+          @click="closeCallback"
+        >
           <i class="pi pi-times"></i>
         </PrimeButton>
       </section>
