@@ -50,29 +50,49 @@ class LineageImport:
         """
         Process the lineage data.
         """
-        with open(self.lineage_file) as f:
-            tsv_data = pd.read_csv(self.lineage_file, sep="\t")
-        parents: dict[str, Lineage] = {}
-        children: list[Lineage] = []
+        tsv_data = pd.read_csv(self.lineage_file, sep="\t")
+
+        # Use a single dictionary to track all lineage objects
+        all_lineages: dict[str, Lineage] = {}
+
+        # First pass: Create all lineage objects
         for lineage, sublineages in tsv_data.itertuples(index=False):
             # Ensure the lineage is added even if it has no children
-            if lineage not in parents:
-                parents[lineage] = Lineage(name=lineage)
+            if lineage not in all_lineages:
+                all_lineages[lineage] = Lineage(name=lineage)
 
-            # Process sublineages if they exist
+            # Process sublineages if they exist and create them if needed
             if sublineages != "none":
-                values = sublineages.split(",")
-                for val in values:
-                    children.append(Lineage(name=val, parent=parents[lineage]))
+                if sublineages not in all_lineages:
+                    all_lineages[sublineages] = Lineage(name=sublineages)
+
+        # Second pass: Set parent relationships
+        for lineage, sublineages in tsv_data.itertuples(index=False):
+            if sublineages != "none":
+
+                if all_lineages[sublineages].parent is None:
+                    all_lineages[sublineages].parent = all_lineages[lineage]
 
         # Save all lineages to the database
+        # Separate into parents (no parent set) and children (parent set)
+        parents_to_save = [
+            lineage_obj
+            for lineage_obj in all_lineages.values()
+            if lineage_obj.parent is None
+        ]
+        children_to_save = [
+            lineage_obj
+            for lineage_obj in all_lineages.values()
+            if lineage_obj.parent is not None
+        ]
+
         with transaction.atomic():
-            for parent in parents.values():
+            # Save parents first so they have IDs
+            for parent in parents_to_save:
                 parent.save()
-            Lineage.objects.bulk_create(
-                objs=children,
-                ignore_conflicts=True,
-            )
+            # Then save children
+            for child in children_to_save:
+                child.save()
 
     def update_lineage_data(self, lineages: str) -> List[Lineage]:
         """
