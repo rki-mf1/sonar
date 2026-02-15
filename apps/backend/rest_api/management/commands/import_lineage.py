@@ -57,21 +57,39 @@ class LineageImport:
 
         # First pass: Create all lineage objects
         for lineage, sublineages in tsv_data.itertuples(index=False):
+            # Clean and validate lineage name
+            lineage = str(lineage).strip()
+            if len(lineage) > 50:
+                raise ValueError(
+                    f"Lineage name too long ({len(lineage)} chars): {lineage}"
+                )
+
             # Ensure the lineage is added even if it has no children
             if lineage not in all_lineages:
                 all_lineages[lineage] = Lineage(name=lineage)
 
             # Process sublineages if they exist and create them if needed
             if sublineages != "none":
-                if sublineages not in all_lineages:
-                    all_lineages[sublineages] = Lineage(name=sublineages)
+                values = sublineages.split(",")
+                for val in values:
+                    val = val.strip()  # Remove whitespace
+                    if len(val) > 50:
+                        raise ValueError(
+                            f"Sublineage name too long " f"({len(val)} chars): {val}"
+                        )
+                    if val not in all_lineages:
+                        all_lineages[val] = Lineage(name=val)
 
         # Second pass: Set parent relationships
         for lineage, sublineages in tsv_data.itertuples(index=False):
+            lineage = str(lineage).strip()
             if sublineages != "none":
-
-                if all_lineages[sublineages].parent is None:
-                    all_lineages[sublineages].parent = all_lineages[lineage]
+                values = sublineages.split(",")
+                for val in values:
+                    val = val.strip()
+                    # Set parent only if not set (first occurrence wins)
+                    if all_lineages[val].parent is None:
+                        all_lineages[val].parent = all_lineages[lineage]
 
         # Save all lineages to the database
         # Separate into parents (no parent set) and children (parent set)
