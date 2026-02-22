@@ -1,3 +1,6 @@
+import hashlib
+
+from django.core.cache import cache
 from django.db.models import BooleanField
 from django.db.models import Case
 from django.db.models import CharField
@@ -15,6 +18,7 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from covsonar_backend.settings import CACHE_OBJECT_TTL
 from covsonar_backend.settings import LOGGER
 from rest_api.viewsets import PropertyViewSet
 from rest_api.viewsets_sample import SampleFilterMixin
@@ -142,41 +146,76 @@ class SampleViewSetPlots(
 ):
     @staticmethod
     def get_metadata_coverage(queryset):
-        queryset = queryset.prefetch_related("properties__property")
-        annotations = {}
+        """
+        Return a dict with counts of non-null values for each metadata field.
 
-        queryset_nt = queryset.annotate(
-            mutation_count=Count(
-                "sequences__alignments__nucleotide_mutations", distinct=True
-            )
+        Performance optimized:
+        - Separate queries instead of massive aggregate()
+        - Leverages Django's query optimization and JOIN handling
+        - Caching of results for repeated queries
+
+        Example output:{
+            "metadata_coverage": {
+                "id": 17942,
+                "name": 17942,
+                "lineage": 17942,
+                "genome_completeness": 0,
+                "collection_date": 17942,
+                .....
+                "last_update_date": 17942,
+                "genomic_profiles": 17942,
+                "proteomic_profiles": 17941
+            }
+        }
+        """
+        # STEP 1: Cache check - return immediately if cached
+        queryset_sql = str(queryset.query)
+        cache_key = (
+            f"metadata_coverage:{hashlib.md5(queryset_sql.encode()).hexdigest()}"
         )
-        queryset_aa = queryset.annotate(
-            mutation_count=Count(
-                "sequences__alignments__amino_acid_mutations", distinct=True
-            )
-        )
-        samples_with_nt_mutations = queryset_nt.filter(mutation_count__gt=0)
-        samples_with_aa_mutations = queryset_aa.filter(mutation_count__gt=0)
+
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
+        # Initialize result dictionary
+        final_result = {}
+
+        # STEP 2: Count Sample table fields separately
+        # Instead of building 12+ annotations, query each field individually
+        # Django optimizes each query better than one massive aggregate()
 
         for field in models.Sample._meta.get_fields():
             if field.concrete and not field.is_relation:
                 field_name = field.name
 
-                if field.get_internal_type() == "CharField":
-                    # Count non-empty strings
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        "id",
-                        filter=Q(**{f"{field_name}__isnull": False})
-                        & ~Q(**{f"{field_name}": ""}),
-                        distinct=True,
-                    )
-                else:
-                    # Count non-null values
-                    annotations[f"not_null_count_{field_name}"] = Count(
-                        "id",
-                        filter=Q(**{f"{field_name}__isnull": False}),
-                        distinct=True,
-                    )
+                try:
+                    if field.get_internal_type() == "CharField":
+                        # Count non-null AND non-empty strings
+                        # Django will use the existing queryset filter + add this condition
+                        count = (
+                            queryset.filter(**{f"{field_name}__isnull": False})
+                            .exclude(**{field_name: ""})
+                            .values("id")
+                            .distinct()
+                            .count()
+                        )
+                    else:
+                        # Count non-null values only
+                        count = (
+                            queryset.filter(**{f"{field_name}__isnull": False})
+                            .values("id")
+                            .distinct()
+                            .count()
+                        )
+
+                    final_result[field_name] = count
+                except Exception as e:
+                    LOGGER.error(f"Error counting field {field_name}: {e}")
+                    final_result[field_name] = 0
+
+        # STEP 3: Count custom properties from Sample2Property table
+        # Query separately for each property using JOIN optimization
 
         property_to_datatype = dict(
             models.Property.objects.values_list("name", "datatype")
@@ -190,33 +229,61 @@ class SampleViewSetPlots(
                 continue
 
             try:
-                annotations[f"not_null_count_{property_name}"] = Count(
-                    "properties",
-                    filter=(
-                        Q(properties__property__name=property_name)
-                        & Q(**{f"properties__{datatype}__isnull": False})
-                    ),
-                    distinct=True,
+                # Django JOIN optimization: Sample -> Sample2Property -> Property
+                # Uses index on property__name and datatype column
+                count = (
+                    queryset.filter(
+                        properties__property__name=property_name,
+                        **{f"properties__{datatype}__isnull": False},
+                    )
+                    .values("id")
+                    .distinct()
+                    .count()
                 )
+
+                final_result[property_name] = count
             except Exception as e:
                 LOGGER.error(
-                    f"Error with property {property_name} (datatype: {datatype}): {e}"
+                    f"Error counting property {property_name} (datatype: {datatype}): {e}"
                 )
+                final_result[property_name] = 0
 
-        # Apply aggregations
-        result = queryset.aggregate(**annotations)
-        result["not_null_count_genomic_profiles"] = (
-            samples_with_nt_mutations.count()
-        )  # len(queryset)
-        result["not_null_count_proteomic_profiles"] = (
-            samples_with_aa_mutations.count()
-        )  # len(queryset)
+        # STEP 4: Count mutation profiles (genomic and proteomic)
+        # These queries are already optimized - keep as is
+        try:
+            # Count samples with nucleotide mutations
+            genomic_count = (
+                queryset.filter(
+                    sequences__alignments__nucleotide_mutations__isnull=False
+                )
+                .values("id")
+                .distinct()
+                .count()
+            )
+            final_result["genomic_profiles"] = genomic_count
+        except Exception as e:
+            LOGGER.error(f"Error counting genomic profiles: {e}")
+            final_result["genomic_profiles"] = 0
 
-        return {
-            key.replace("not_null_count_", ""): value
-            for key, value in result.items()
-            if key.startswith("not_null_count_")
-        }
+        try:
+            # Count samples with amino acid mutations
+            proteomic_count = (
+                queryset.filter(
+                    sequences__alignments__amino_acid_mutations__isnull=False
+                )
+                .values("id")
+                .distinct()
+                .count()
+            )
+            final_result["proteomic_profiles"] = proteomic_count
+        except Exception as e:
+            LOGGER.error(f"Error counting proteomic profiles: {e}")
+            final_result["proteomic_profiles"] = 0
+
+        # STEP 5: Cache result for xx minutes and return
+        cache.set(cache_key, final_result, CACHE_OBJECT_TTL)
+
+        return final_result
 
     def _get_samples_per_week(self, queryset):
         """
@@ -245,6 +312,15 @@ class SampleViewSetPlots(
         covering every week between the earliest and latest record.
         Weeks with zero records will be present with values 0.
         """
+        # Generate cache key
+        queryset_sql = str(queryset.query)
+        cache_key = f"grouped_lineages_per_week:{hashlib.md5(queryset_sql.encode()).hexdigest()}"
+
+        # Try cache first
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
         present_lineages = set(
             queryset.exclude(lineage__isnull=True).values_list("lineage", flat=True)
         )
@@ -294,6 +370,10 @@ class SampleViewSetPlots(
             )
 
         result.sort(key=lambda x: x["week"])
+
+        # Cache for xx minutes
+        cache.set(cache_key, result, 60)
+
         return result
 
     def _get_custom_property_plot(self, queryset, sample_property):
