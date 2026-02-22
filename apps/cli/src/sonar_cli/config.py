@@ -17,6 +17,12 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 10000)
 ANNO_CHUNK_SIZE = int(os.getenv("ANNO_CHUNK_SIZE") or 500)
 PROP_CHUNK_SIZE = int(os.getenv("PROP_CHUNK_SIZE") or 10000)
 
+# Parallel processing defaults
+PARANOID_CHUNK_SIZE = int(os.getenv("PARANOID_CHUNK_SIZE") or 50)
+PARANOID_N_JOBS = int(os.getenv("PARANOID_N_JOBS") or 8)
+CACHE_CLEAR_CHUNK_SIZE = int(os.getenv("CACHE_CLEAR_CHUNK_SIZE") or 250)
+CACHE_CLEAR_N_JOBS = int(os.getenv("CACHE_CLEAR_N_JOBS") or 4)
+
 FILTER_DELETE_SIZE = int(os.getenv("FILTER_DELETE_SIZE") or 2000)
 
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))

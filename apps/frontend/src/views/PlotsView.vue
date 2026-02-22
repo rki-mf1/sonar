@@ -48,6 +48,10 @@
         </div>
         <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
+            v-if="
+              samplesStore.plotGroupedLineagesPerWeek &&
+              samplesStore.plotGroupedLineagesPerWeek.length
+            "
             ref="lineageChart"
             :key="isBarChart"
             :type="isBarChart ? 'bar' : 'line'"
@@ -55,6 +59,7 @@
             :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
             style="width: 100%; height: 50vh"
           />
+          <div v-else>No lineage data available.</div>
         </div>
       </PrimePanel>
     </div>
@@ -155,13 +160,13 @@
           <PrimeDropdown
             v-model="selectedXProperty"
             :options="samplesStore.metaCoverageOptions"
-            placeholder="Select X-Axis Property"
+            placeholder="Select X-Axis Property (Date or Numeric or Categorical)"
             class="w-full"
           />
           <PrimeDropdown
             v-model="selectedYProperty"
             :options="samplesStore.metaCoverageOptions"
-            placeholder="Select Y-Axis Property"
+            placeholder="Select Y-Axis Property (Categorical)"
             class="w-full"
           />
         </div>
@@ -169,7 +174,7 @@
           <PrimeDropdown
             v-model="selectedProperty"
             :options="samplesStore.metaCoverageOptions"
-            placeholder="Select Property"
+            placeholder="Select a Numeric Property"
             class="w-full"
           />
           <PrimeInputNumber
@@ -191,7 +196,9 @@
 </template>
 
 <script lang="ts">
+import router from '@/router'
 import { useSamplesStore } from '@/stores/samples'
+import { decodeDatasetsParam, safeDecodeURIComponent } from '@/util/routeParams'
 import chroma from 'chroma-js'
 import type { ChartOptions, TooltipItem } from 'chart.js'
 import PrimeToggleButton from 'primevue/togglebutton'
@@ -226,6 +233,10 @@ export default {
     }
   },
   computed: {
+    selectionKey(): string {
+      const { accession, dataset = [] } = this.$route.query
+      return JSON.stringify({ accession, dataset })
+    },
     isFeatureSelectionValid(): boolean {
       if (
         this.selectedPlotType === 'bar' ||
@@ -243,12 +254,46 @@ export default {
       return false
     },
   },
-  mounted() {
-    this.samplesStore.updatePlotSamplesPerWeek()
-    this.samplesStore.updatePlotGroupedLineagesPerWeek()
-    this.samplesStore.updatePlotMetadataCoverage()
+  watch: {
+    selectionKey: {
+      immediate: true,
+      handler() {
+        this.applySelectionFromRoute()
+      },
+    },
   },
+  mounted() {},
   methods: {
+    // keep plots in sync with route params
+    applySelectionFromRoute() {
+      const accession =
+        typeof this.$route.query.accession === 'string'
+          ? safeDecodeURIComponent(this.$route.query.accession)
+          : null
+      if (!accession) {
+        console.log('Invalid URL: missing accession parameter.')
+        router.replace({ name: 'Home' })
+        return
+      }
+      const datasets = decodeDatasetsParam(this.$route.query.dataset)
+      this.samplesStore.setDataset(this.samplesStore.organism ?? null, accession, datasets)
+      this.loadPlotsData()
+    },
+    loadPlotsData() {
+      this.samplesStore.updateSamples()
+      this.samplesStore
+        .updateStatistics()
+        .then(() => this.samplesStore.updatePropertyOptions())
+        .then(() => this.samplesStore.updateSelectedColumns())
+      this.samplesStore.updateFilteredStatistics()
+      this.samplesStore.updateLineageOptions()
+      this.samplesStore.updateSymbolOptions()
+      this.samplesStore.updateRepliconAccessionOptions()
+
+      this.samplesStore.updatePlotSamplesPerWeek()
+      this.samplesStore.updatePlotGroupedLineagesPerWeek()
+      this.samplesStore.updatePlotMetadataCoverage()
+    },
     isDataEmpty(
       data: { [key: string]: unknown | null } | Array<{ [key: string]: unknown | null }>,
     ): boolean {
@@ -382,13 +427,18 @@ export default {
         .filter((l) => l !== null)
         .sort(new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare) // natural sort: ensure e.g. MC.2 < MC.10
 
+      let colors
       if (lineages.includes('Unknown')) {
         lineages = lineages.filter((l) => l !== 'Unknown')
-        lineages.push('Unknown')
+        lineages.unshift('Unknown')
+        colors = this.generateColorPalette(lineages.length - 1)
+        colors.unshift('#cccccc') // Add grey color for "Unknown"
+      } else {
+        colors = this.generateColorPalette(lineages.length)
       }
+
       const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
-      const colors = this.generateColorPalette(lineages.length - 1)
-      colors.push('#cccccc') // Add grey color for "Unknown"
+
       return { lineages_per_week, lineages, colors, weeks }
     },
 
@@ -577,8 +627,11 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) =>
-                `${context.parsed.y} ${context.dataset.label}`,
+              label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) => {
+                const value = context.raw
+                // const label = context.label || 'Unknown Category';
+                return `${value} samples`
+              },
             },
           },
           zoom: {
@@ -644,7 +697,7 @@ export default {
           tooltip: {
             callbacks: {
               title: (context: TooltipItem<'scatter'>[]) => {
-                // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur mltiple times in x-values
+                // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur multiple times in x-values
                 const raw = context[0].raw as { x: string; y: number; category: string }
                 return `Date: ${raw.x}`
               },
@@ -751,6 +804,9 @@ export default {
     },
     getScatterPlotData(xProperty: string, yProperty: string) {
       // scatterData data structure e.g {"2024-09-01": Array[{ILLUMIA:1}, {Nanopore:7}] ... }
+      if (this.samplesStore.propertyScatterData[`${xProperty}_${yProperty}`] === undefined) {
+        this.samplesStore.updatePlotScatter(xProperty, yProperty)
+      }
       const scatterData = this.samplesStore.propertyScatterData[`${xProperty}_${yProperty}`] || {}
       const labels = Object.keys(scatterData)
       // Determine if x-axis data is a date or categorical

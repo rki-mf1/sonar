@@ -1,7 +1,7 @@
 <template>
   <body>
     <main>
-      <header v-if="$route.name !== 'Landing'">
+      <header v-if="$route.name !== 'Home'">
         <div class="flex flex-wrap justify-content-between">
           <div class="flex align-items-center justify-content-center">
             <div style="font-size: 2rem; color: var(--text-color)">{{ appTitle }}</div>
@@ -32,8 +32,11 @@
       </header>
 
       <div class="content">
-        <Filters v-if="showFilters" />
-        <RouterView />
+        <Filters v-if="showFilters && !showInvalidURLMessage" />
+        <div v-if="showInvalidURLMessage">
+          <PrimeMessage severity="error">Invalid URL</PrimeMessage>
+        </div>
+        <RouterView v-else />
       </div>
     </main>
     <PrimeToast ref="toast" />
@@ -41,10 +44,16 @@
 </template>
 
 <script lang="ts">
-import { RouterView } from 'vue-router'
+import router from '@/router'
+import { RouterView, type RouteLocationNormalized } from 'vue-router'
 import 'primeicons/primeicons.css'
 import Filters from './components/FilterBar.vue'
 import { useSamplesStore } from '@/stores/samples'
+import {
+  buildSelectionQuery,
+  decodeDatasetsParam,
+  safeDecodeURIComponent,
+} from '@/util/routeParams'
 
 export default {
   name: 'App',
@@ -55,37 +64,63 @@ export default {
   data() {
     return {
       samplesStore: useSamplesStore(),
-      menuItems: [
-        {
-          label: 'Home',
-          icon: 'pi pi-home',
-          route: '/home',
-        },
-        {
-          label: 'Plots',
-          icon: 'pi pi-chart-bar',
-          route: '/plots',
-        },
-        {
-          label: 'About',
-          icon: 'pi pi-star',
-          route: '/about',
-        },
-      ],
     }
   },
   computed: {
+    menuItems() {
+      const { accession, data_sets } = this.samplesStore
+      const selectionQuery = buildSelectionQuery(accession, data_sets)
+
+      const items = [{ label: 'Home', icon: 'pi pi-home', route: '/' }]
+      // dont show menu items 'Table'/'Plots' for 'Sample' view
+      if (this.$route.name !== 'Sample') {
+        const tableRoute = router.resolve({
+          name: 'Table',
+          query: selectionQuery,
+        }).href
+        const plotsRoute = router.resolve({
+          name: 'Plots',
+          query: selectionQuery,
+        }).href
+        items.push(
+          { label: 'Table', icon: 'pi pi-table', route: tableRoute },
+          { label: 'Plots', icon: 'pi pi-chart-bar', route: plotsRoute },
+        )
+      }
+      items.push({ label: 'About', icon: 'pi pi-star', route: '/about' })
+
+      return items
+    },
     showFilters() {
-      return this.$route.name === 'Home' || this.$route.name === 'Plots'
+      return this.$route.name === 'Table' || this.$route.name === 'Plots'
     },
     appTitle() {
-      const { organism, accession, data_sets } = this.samplesStore
-      return organism && accession
-        ? `Sonar: ${organism} (${accession})${data_sets ? ' - ' + data_sets : ''}`
-        : 'Sonar'
+      const organism = this.samplesStore.organism
+      return organism ? `Sonar - ${organism}` : 'Sonar'
+    },
+    showInvalidURLMessage() {
+      const routeName = this.$route.name as string | undefined
+      if (!['Table', 'Plots'].includes(routeName ?? '')) {
+        return false
+      }
+      if (this.samplesStore.loading) {
+        return false
+      }
+      if (!this.samplesStore.accession) {
+        return false
+      }
+      const total = this.samplesStore.statistics?.samples_total
+      return typeof total === 'number' && total === 0
     },
   },
   watch: {
+    // whenver navigating to Table or Plots, sync the selection from route with store
+    $route: {
+      immediate: true,
+      handler(route: RouteLocationNormalized) {
+        this.syncSelectionFromRoute(route)
+      },
+    },
     'samplesStore.errorMessage'(newValue) {
       if (newValue) {
         this.showToastError(newValue)
@@ -95,6 +130,23 @@ export default {
     },
   },
   mounted() {},
+  methods: {
+    syncSelectionFromRoute(route: RouteLocationNormalized) {
+      if ((route.name as string) === 'Home') {
+        this.samplesStore.$reset()
+        return
+      }
+      if (!['Table', 'Plots'].includes((route.name as string) ?? '')) {
+        return
+      }
+      const accession =
+        typeof route.query?.accession === 'string'
+          ? safeDecodeURIComponent(route.query.accession)
+          : null
+      const datasets = decodeDatasetsParam(route.query?.dataset)
+      this.samplesStore.setDataset(this.samplesStore.organism, accession, datasets)
+    },
+  },
 }
 </script>
 

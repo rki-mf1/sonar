@@ -10,7 +10,6 @@ def test_match(api_url):
 
 
 def test_match_pipe(capfd, api_url):
-
     result = run_cli_cmd(f"sonar-cli match --db {api_url} -r MN908947.3 ")
     assert result.returncode == 0, f"Expected exit code 0 but got {result}"
 
@@ -481,23 +480,25 @@ def test_match_aa_mut_rsv(capfd, api_url):
 
 
 # match mpox
-@pytest.mark.xdist_group(name="group1")
-@pytest.mark.order(15)
+@pytest.mark.xdist_group(name="group4")
+@pytest.mark.order(3)
 def test_match_profile_count_mpox(capfd, api_url):
     code = run_cli(f"match --db {api_url} -r NC_063383.1  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "2" == lines[-1]
+    assert "20" == lines[-1]
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group4")
+@pytest.mark.order(4)
 def test_match_aa_mut_mpox(capfd, api_url):
     code = run_cli(
         f"match --db {api_url}  -r NC_063383.1 --profile OPG136:D98L --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
-    assert "2" == lines[-1]
+    assert "20" == lines[-1]
     assert code == 0
 
 
@@ -553,6 +554,8 @@ def test_match_profile_count_hiv(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(16)
 def test_match_aa_mut_hiv(capfd, api_url):
     code = run_cli(
         f"match --db {api_url}  -r NC_001802.1 --profile env:Q344R nef:R29E --count"
@@ -563,6 +566,8 @@ def test_match_aa_mut_hiv(capfd, api_url):
     assert code == 0
 
 
+@pytest.mark.xdist_group(name="group1")
+@pytest.mark.order(17)
 def test_match_multiple_genes_in_same_region_hiv(capfd, api_url):
     # test mutations within 2 genes in same region: gene gag-pol (336..1637,1637..4642), gene gag: 336..1838,
     code = run_cli(
