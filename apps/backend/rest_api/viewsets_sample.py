@@ -35,7 +35,6 @@ from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.sample_job import delete_samples
 from rest_api.data_entry.sample_job import delete_sequences
 from rest_api.serializers import SampleGenomesExportStreamSerializer
-from rest_api.serializers import SampleSerializer
 from rest_api.utils import define_profile
 from rest_api.utils import get_distinct_cds_accessions
 from rest_api.utils import get_distinct_gene_symbols
@@ -64,6 +63,13 @@ class Echo:
 
 
 class SampleFilterMixin:
+    # Cache for gene symbols, replicons and CDS accessions
+    _cached_gene_symbols = None
+    _cached_replicons = None
+    _cache_timestamp = None
+    _cached_cds_accs = None
+    CACHE_TTL = 3600 * 24  # 1 day
+
     @property
     def filter_label_to_methods(self):
         return {
@@ -81,6 +87,56 @@ class SampleFilterMixin:
             "Annotation": self.filter_annotation,
             "DNA/AA Profile": self.filter_label,
         }
+
+    @classmethod
+    def get_gene_symbols(cls, force_refresh=False):
+        """
+        update cached gene symbol set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_gene_symbols is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            symbols = get_distinct_gene_symbols()
+            cls._cached_gene_symbols = set(symbols)
+
+        return cls._cached_gene_symbols
+
+    @classmethod
+    def get_replicons(cls, reference_accession=None, force_refresh=True):
+        """
+        update cached replicon accession set if cache older than CACHE_TTL
+        """
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_replicons is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+
+            replicons_list = get_distinct_replicon_accessions(reference_accession)
+            cls._cached_replicons = set(replicons_list)
+            cls._cache_timestamp = now
+
+        return cls._cached_replicons
+
+    @classmethod
+    def get_cds_accessions(cls, replicon=None, force_refresh=True):
+        now = time.time()
+        if (
+            force_refresh
+            or cls._cached_replicons is None
+            or cls._cache_timestamp is None
+            or (now - cls._cache_timestamp) > cls.CACHE_TTL
+        ):
+            cds_acc = get_distinct_cds_accessions(replicon=replicon)
+            cls._cached_cds_accs = set(cds_acc)
+        return cls._cached_cds_accs
 
     def _get_reference_replicon_count(self, reference_accession):
         """
@@ -627,61 +683,6 @@ class SampleViewSet(
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
     filter_fields = ["name"]
-    _cached_gene_symbols = None
-    _cached_replicons = None
-    _cache_timestamp = None
-    _cached_cds_accs = None
-    CACHE_TTL = 3600 * 24  # 1 day
-
-    @classmethod
-    def get_gene_symbols(cls, force_refresh=False):
-        """
-        update cached gene symbol set if cache older than CACHE_TTL
-        """
-        now = time.time()
-        if (
-            force_refresh
-            or cls._cached_gene_symbols is None
-            or cls._cache_timestamp is None
-            or (now - cls._cache_timestamp) > cls.CACHE_TTL
-        ):
-
-            symbols = get_distinct_gene_symbols()
-            cls._cached_gene_symbols = set(symbols)
-
-        return cls._cached_gene_symbols
-
-    @classmethod
-    def get_replicons(cls, reference_accession=None, force_refresh=True):
-        """
-        update cached replicon accession set if cache older than CACHE_TTL
-        """
-        now = time.time()
-        if (
-            force_refresh
-            or cls._cached_replicons is None
-            or cls._cache_timestamp is None
-            or (now - cls._cache_timestamp) > cls.CACHE_TTL
-        ):
-
-            replicons_list = get_distinct_replicon_accessions(reference_accession)
-            cls._cached_replicons = set(replicons_list)
-            cls._cache_timestamp = now
-
-        return cls._cached_replicons
-
-    @classmethod
-    def get_cds_accessions(cls, replicon=None, force_refresh=True):
-        now = time.time()
-        if (
-            force_refresh
-            or cls._cached_replicons is None
-            or cls._cache_timestamp is None
-            or (now - cls._cache_timestamp) > cls.CACHE_TTL
-        ):
-            cds_acc = get_distinct_cds_accessions(replicon=replicon)
-            cls._cached_cds_accs = set(cds_acc)
-        return cls._cached_cds_accs
 
     def _get_genomic_and_proteomic_profiles_queryset(
         self, queryset, reference_accession, showNX=False

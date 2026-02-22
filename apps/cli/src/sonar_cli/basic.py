@@ -494,16 +494,17 @@ def remove_empty_lists(d):
 
 def _check_property(db=None, prop_name_list: list[str] = []):
     json_response = APIClient(base_url=BASE_URL).get_all_properties()
-    available_names = {item["name"] for item in json_response["values"]}
+    # Use list to preserve order from API response
+    available_names_list = [item["name"] for item in json_response["values"]]
+
     for k in prop_name_list:
         if k == "name":
             continue
-        if k not in available_names:
+        if k not in available_names_list:
             LOGGER.error(
                 f"Key '{k}' not found in database, please check the typo or add it (add-prop) or list all properties (list-prop)."
             )
             sys.exit(1)
-    rearranged_names = list(available_names)
     first = "name"
     special_last = [
         "genomic_profiles",
@@ -511,13 +512,14 @@ def _check_property(db=None, prop_name_list: list[str] = []):
         "init_upload_date",
         "last_update_date",
     ]
-    # Remove these keys from their current positions
+    # Remove these keys from their current positions while preserving order
     remaining_names = [
-        name for name in rearranged_names if name not in special_last and name != first
+        name
+        for name in available_names_list
+        if name not in special_last and name != first
     ]
     # Build the final list
     final_order = [first] + remaining_names + special_last
-
     return final_order
 
 
