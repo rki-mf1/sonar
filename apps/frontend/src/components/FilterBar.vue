@@ -1,7 +1,7 @@
 <template>
   <div class="filter-and-statistic-panel my-2">
     <div class="filter-left">
-      <div style="max-width: 91%">
+      <div class="filter-content">
         <div class="filter-container">
           <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
           <PrimeCalendar
@@ -9,13 +9,15 @@
             style="flex: auto; min-width: 10rem"
             show-icon
             date-format="yy-mm-dd"
-          ></PrimeCalendar>
+          >
+          </PrimeCalendar>
           <PrimeCalendar
             v-model="endDate"
             style="flex: auto; min-width: 10rem"
             show-icon
             date-format="yy-mm-dd"
-          ></PrimeCalendar>
+          >
+          </PrimeCalendar>
           <PrimeButton
             icon="pi pi-arrow-circle-left"
             label="&nbsp;Default"
@@ -301,7 +303,10 @@ export default {
       },
     },
   },
-  mounted() {},
+  mounted() {
+    const samplesStore = useSamplesStore()
+    samplesStore.initializeWatchers()
+  },
   methods: {
     removeTimeRange() {
       if (this.collectionDateFilter) {
@@ -379,11 +384,13 @@ export default {
 .filter-and-statistic-panel {
   width: 98%;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   background-color: var(--text-color);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow);
+  gap: 1rem;
 }
 
 .filter-left {
@@ -391,8 +398,17 @@ export default {
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  width: 50%;
+  flex: 1 1 auto;
+  min-width: 300px;
+  max-width: 100%;
   margin: 10px;
+}
+
+.filter-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .statistics-right {
@@ -401,19 +417,23 @@ export default {
   gap: 10px;
   margin-left: auto;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .filter-container {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 5px;
+  width: 100%;
 }
 
 .button-1 {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
   margin-bottom: 0px;
 }
 
@@ -425,6 +445,7 @@ export default {
   text-align: center;
   font-size: 0.7em;
   margin: 2.5px;
+  white-space: nowrap;
 }
 
 .default-calendar-button {
@@ -437,6 +458,114 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  white-space: nowrap;
+}
+
+/* Responsive Design - Tablet */
+@media screen and (max-width: 1200px) {
+  .filter-and-statistic-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-left {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .statistics-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+    padding: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .button-1 {
+    justify-content: flex-start;
+  }
+}
+
+/* Responsive Design - Mobile */
+@media screen and (max-width: 768px) {
+  .filter-and-statistic-panel {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .filter-left {
+    margin: 8px;
+  }
+
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .filter-container span {
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .filter-container :deep(.p-calendar),
+  .filter-container :deep(.p-inputtext),
+  .filter-container :deep(.p-multiselect) {
+    width: 100% !important;
+    min-width: 100%;
+  }
+
+  .button-1 {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .button-1 :deep(.p-button) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .switch {
+    flex-direction: row;
+    justify-content: space-between;
+    font-size: 0.8em;
+    width: 100%;
+    padding: 8px;
+  }
+
+  .default-calendar-button {
+    width: 100%;
+    padding: 8px;
+  }
+}
+
+/* Responsive Design - Very Small Mobile */
+@media screen and (max-width: 480px) {
+  .filter-and-statistic-panel {
+    border-radius: 8px;
+    gap: 0.5rem;
+  }
+
+  .filter-left {
+    margin: 5px;
+  }
+
+  .filter-container {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .button-1 {
+    gap: 6px;
+  }
+
+  .default-calendar-button,
+  .button-1 :deep(.p-button) {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
 }
 
 :deep(.p-button) {

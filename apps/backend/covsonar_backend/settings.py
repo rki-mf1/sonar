@@ -269,6 +269,9 @@ CACHES = {
         },
     }
 }
+CACHE_OBJECT_TTL = env.int(
+    "CACHE_OBJECT_TTL", default=3600
+)  # (default: Time to Live 60 minutes)
 
 # If true, keep the data files that were sent from the CLI in an archive
 # folder, even after that data has been imported into the database.

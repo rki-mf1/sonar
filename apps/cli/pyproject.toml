@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sonar-cli"
-version = "1.0.2"
+version = "1.0.3"
 description = "Sonar command line tool to interface with the sonar-backend and PostgreSQL version."
 authors = ["Stephan Fuchs <FuchsS@rki.de>", "Kunaphas Kongkitimanon <KongkitimanonK@hpi.de>", "Juliane Schmachtenberg <anna-juliane.schmachtenberg@hpi.de>", "Simeon Schmachtenberg", "Matthew Huska <HuskaM@rki.de>"]
 license = "AGPL-3.0-only"
@@ -10,7 +10,7 @@ repository = "https://github.com/rki-mf1/sonar-cli"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-biopython = "~1.79"
+biopython = "~1.86"
 tqdm = "~4.66.3"
 more-itertools = "~8.7.0"
 pyaml = "~20.4.0"

@@ -3,9 +3,18 @@ from rest_framework import routers
 from rest_api import viewsets
 from rest_api import viewsets_database
 from rest_api import viewsets_sample
+from rest_api import viewsets_statistics_and_plots
 
 router = routers.SimpleRouter()
 router.register(r"samples", viewsets_sample.SampleViewSet, basename="sample")
+router.register(
+    r"plots", viewsets_statistics_and_plots.SampleViewSetPlots, basename="plots"
+)
+router.register(
+    r"statistics",
+    viewsets_statistics_and_plots.SampleViewSetStatistics,
+    basename="statistics",
+)
 router.register(
     r"sample_genomes", viewsets_sample.SampleGenomeViewSet, basename="sample_genome"
 )

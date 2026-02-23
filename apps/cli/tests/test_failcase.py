@@ -7,7 +7,6 @@ from .conftest import run_cli
 
 
 def test_match_no_ref(capfd, api_url):
-
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         run_cli(f"match --db {api_url} -r NOREF")
     out, err = capfd.readouterr()
@@ -17,6 +16,8 @@ def test_match_no_ref(capfd, api_url):
     assert pytest_wrapped_e.value.code == 1
 
 
+@pytest.mark.xdist_group(name="hiv_group")
+@pytest.mark.order(8)
 def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     """
     Test case to add a duplicated reference.
@@ -40,7 +41,7 @@ def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     assert code == 0
 
     # Cleanup: delete the reference
-    code = run_cli(f"delete-ref --db {api_url} -r NC_026429.1 --force")
+    code = run_cli(f"delete-ref --db {api_url} -r NC_001802.1 --force")
     out, err = capfd.readouterr()
     assert "Reference deleted." in err
     assert code == 0
@@ -75,7 +76,6 @@ def test_delete_fakeprop(capfd, api_url):
     assert code == 0
 
 
-# delete non existing sample
 def test_delete_sample(monkeypatch, capfd, api_url):
     code = run_cli(f"delete-sample --db {api_url} --sample fake-id --force")
     out, err = capfd.readouterr()
@@ -83,12 +83,23 @@ def test_delete_sample(monkeypatch, capfd, api_url):
     assert code == 0
 
 
+# delete non existing sequence
+def test_delete_sequence(monkeypatch, capfd, api_url):
+    code = run_cli(f"delete-sequence --db {api_url} --sequence fake-id --force")
+    out, err = capfd.readouterr()
+    print(out, err, code)
+    assert "0 of 1 sequences found and deleted." in err
+    assert code == 0
+
+
 # delete non existing reference
 def test_delete_noref(capfd, api_url):
-    code = run_cli(f"delete-ref --db {api_url} -r fakeREFID --force")
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        run_cli(f"delete-ref --db {api_url} -r fakeREFID --force")
     out, err = capfd.readouterr()
-    assert "Reference deleted." in err
-    assert code == 0
+    assert "The reference fakeREFID does not exist." in err
+    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.value.code == 1
 
 
 # file not found

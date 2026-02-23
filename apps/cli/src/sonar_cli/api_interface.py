@@ -15,8 +15,8 @@ LOGGER = LoggingConfigurator.get_logger()
 class APIClient:
     get_all_references_endpoint = "references/get_all_references"
     get_distinct_accession_endpoint = "references/distinct_accessions"
-    get_sample_data_endpoint = "samples/get_sample_data"
-    get_bulk_sample_data_endpoint = "samples/get_bulk_sample_data/"
+    get_sequence_data_endpoint = "samples/get_sequence_data"
+    get_bulk_sequence_data_endpoint = "samples/get_bulk_sequence_data/"
     get_alignment_endpoint = "alignments/get_alignment_data"
     get_bulk_alignment_endpoint = "alignments/get_bulk_alignment_data/"
     get_gene_endpoint = "genes/get_gene_data"
@@ -35,6 +35,7 @@ class APIClient:
     post_add_reference_endpoint = "references/import_gbk/"
     post_delete_reference_endpoint = "references/delete_reference/"
     post_delete_sample_endpoint = "samples/delete_sample_data/"
+    post_delete_sequence_endpoint = "samples/delete_sequence_data/"
     post_import_property_upload_endpoint = "samples/import_properties_tsv/"
     post_import_upload_endpoint = "file_uploads/import_upload/"
     post_add_property_endpoint = "properties/add_property/"
@@ -154,16 +155,16 @@ class APIClient:
         )
         return json_response
 
-    def get_bulk_sample_data(self, sample_name_list: List[str]):
-        data = {"sample_data": sample_name_list}
+    def get_bulk_sequence_data(self, sequence_name_list: List[str]):
+        data = {"sequence_data": sequence_name_list}
         json_response = self._make_request(
-            "POST", endpoint=self.get_bulk_sample_data_endpoint, json=data
+            "POST", endpoint=self.get_bulk_sequence_data_endpoint, json=data
         )
         return json_response
 
-    def get_sample_data(self, sample_name: str):
+    def get_sequence_data(self, sequence_name: str):
         """
-        Returns a tuple of rowid and seqhash of a sample based on its name if it exists,
+        Returns a tuple of rowid and seqhash of a sequence based on its name if it exists,
         else a tuple of Nones is returned.
 
         Args:
@@ -171,9 +172,9 @@ class APIClient:
 
         Json response example:
             "data": {
-                "sample_id": 316,
+                "sequence_id": 316,
                 "name": "IMS-10186-CVDP-95BECAEB-031A-46D1-ACF1-1730927B1F6F",
-                "sequence__seqhash": "69621864a082dcddfca3fbe04cf3cd9c9c14e7fc8adc28b302259acfc9d43b63"
+                "sequence_seqhash": "69621864a082dcddfca3fbe04cf3cd9c9c14e7fc8adc28b302259acfc9d43b63"
             }
 
         Returns:
@@ -181,12 +182,12 @@ class APIClient:
             if exists, else a Tuple of None, None.
         """
         params = {}
-        params["sample_data"] = sample_name
+        params["sequence_data"] = sequence_name
         json_response = self._make_request(
-            "GET", endpoint=self.get_sample_data_endpoint, params=params
+            "GET", endpoint=self.get_sequence_data_endpoint, params=params
         )
         if len(json_response) > 0:
-            return (json_response["sample_id"], json_response["sequence__seqhash"])
+            return (json_response["sequence_id"], json_response["sequence_seqhash"])
         else:
             return (None, None)
 
@@ -247,7 +248,7 @@ class APIClient:
             }
         """
         params = {}
-        params["reference_accession"] = reference_accession
+        params["reference"] = reference_accession
         json_response = self._make_request(
             "GET", endpoint=self.get_replicon_endpoint, params=params
         )
@@ -388,13 +389,26 @@ class APIClient:
 
     def post_delete_sample(self, reference_accession, samples: List[str] = []):
         data = {
-            "reference_accession": reference_accession,
+            "reference": reference_accession,
             "sample_list": json.dumps(samples),
         }
 
         json_response = self._make_request(
             "POST",
             endpoint=self.post_delete_sample_endpoint,
+            data=data,
+        )
+        return json_response
+
+    def post_delete_sequence(self, reference_accession, sequences: List[str] = []):
+        data = {
+            "reference": reference_accession,
+            "sequence_list": json.dumps(sequences),
+        }
+
+        json_response = self._make_request(
+            "POST",
+            endpoint=self.post_delete_sequence_endpoint,
             data=data,
         )
         return json_response

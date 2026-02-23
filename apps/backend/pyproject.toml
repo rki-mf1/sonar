@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "covsonar-backend"
-version = "1.0.2"
+version = "1.0.3"
 description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
@@ -8,7 +8,7 @@ packages = [{include = "covsonar_backend"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-django = "^5.1.14"
+django = "^5.1.4"
 numpy = "^1.26.1"
 pandas = "^2.1.2"
 django-redis = "^5.4.0"
@@ -17,7 +17,7 @@ djangorestframework = "^3.14.0"
 django-filter = "^23.3"
 django-apscheduler = "^0.6.2"
 psycopg2-binary = "^2.9.9"
-biopython = "^1.81"
+biopython = "^1.86"
 django-debug-toolbar = "^4.2.0"
 whitenoise = "^6.6.0"
 django-environ = "^0.11.2"

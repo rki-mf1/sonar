@@ -31,14 +31,14 @@ class SampleRaw:
     refmolid: int
     seq_file: str
     seqhash: str
-    sample_sequence_length: int
+    sequence_length: int
     sourceid: int
     translationid: int
     include_nx: bool
     var_parquet_file: Optional[str] = None
     vcffile: Optional[str] = None
     algnid: Optional[int] = None
-    sampleid: Optional[int] = None
+    sequenceid: Optional[int] = None
     refseq_id: Optional[int] = None
     source_acc: Optional[str] = None
     algn_file: Optional[str] = None
@@ -76,7 +76,7 @@ class VCFInfoNMDRaw:
     percent_of_transcripts_affected: str
 
 
-class SampleImport:
+class SonarImport:
     def __init__(
         self,
         path: pathlib.Path,
@@ -105,21 +105,18 @@ class SampleImport:
         return self.sample_raw.name
 
     def get_sequence_obj(self):
-        self.sequence = Sequence(seqhash=self.sample_raw.seqhash)
-        return self.sequence
-
-    def get_sample_obj(self):
-        if not self.sequence:
-            raise Exception("Sequence object not created yet")
-        self.sequence = Sequence.objects.get(seqhash=self.sequence.seqhash)
-        self.sample = Sample(
+        """
+        Create a Sequence object WITHOUT querying or persisting to DB.
+        Bulk upsert will handle create/update efficiently in a single query.
+        """
+        # Always create new object - bulk_create with update_conflicts will handle upsert
+        self.sequence = Sequence(
             name=self.sample_raw.name,
-            sequence=self.sequence,
-            length=self.sample_raw.sample_sequence_length,
+            seqhash=self.sample_raw.seqhash,
+            length=self.sample_raw.sequence_length,
             last_update_date=timezone.now(),
-            # properties=self.sample_raw.properties,
         )
-        return self.sample
+        return self.sequence
 
     def update_replicon_obj(self, replicon_cache: dict[str, Replicon]):
         if self.sample_raw.source_acc not in replicon_cache:
