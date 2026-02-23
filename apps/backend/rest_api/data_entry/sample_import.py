@@ -125,25 +125,25 @@ class SonarImport:
             )
         self.replicon = replicon_cache[self.sample_raw.source_acc]
 
-    def create_alignment(self, alignments_list: list[Alignment]):
-        self.alignment = next(
-            filter(
-                lambda x: x.sequence == self.sequence and x.replicon == self.replicon,
-                alignments_list,
-            ),
-            None,
-        )
-        if not self.alignment:
+    def create_alignment(self, alignments_dict: dict[tuple, "Alignment"]):
+        """Look up or create an Alignment using an dict keyed by (sequence, replicon)."""
+        key = (id(self.sequence), id(self.replicon))
+        existing = alignments_dict.get(key)
+        if existing:
+            self.alignment = existing
+        else:
             self.alignment = Alignment(sequence=self.sequence, replicon=self.replicon)
-            alignments_list.append(self.alignment)
+            alignments_dict[key] = self.alignment
 
     def get_mutation_objs_nt(
         self,
-        nt_mutation_set: list[NucleotideMutation],
+        nt_mutation_dict: dict[tuple, NucleotideMutation],
         replicon_cache: dict[str, Replicon | None],
         gene_cache_by_var_pos: dict[Replicon | None, dict[int, dict[int, Gene | None]]],
         nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through],
     ) -> dict[int, NucleotideMutation]:
+        """Collect nucleotide mutations using an dict keyed by
+        (ref, alt, start, end, replicon_id)."""
         import_id_to_sample_mutations: dict[int, NucleotideMutation] = {}
         for var_raw in self.vars_raw:
             replicon = None
@@ -167,29 +167,26 @@ class SonarImport:
                             end__lte=var_raw.end,
                         ).first()
                     )
-                gene = gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end]
+                # gene = gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end]
                 # in DEL, we dont keep REF in the database.
                 if var_raw.alt is None:
                     var_raw.ref = ""
 
-                mutation_data = {
-                    "ref": var_raw.ref if var_raw.ref else "",
-                    "alt": var_raw.alt if var_raw.alt else "",
-                    "start": var_raw.start,
-                    "end": var_raw.end,
-                    "replicon": self.replicon,
-                    "is_frameshift": var_raw.frameshift,
-                }
-                mutation = next(
-                    filter(
-                        lambda x: self.is_same_mutation(mutation_data, x),
-                        nt_mutation_set,
-                    ),
-                    None,
-                )
+                ref = var_raw.ref if var_raw.ref else ""
+                alt = var_raw.alt if var_raw.alt else ""
+                # dict lookup
+                dedup_key = (ref, alt, var_raw.start, var_raw.end, id(self.replicon))
+                mutation = nt_mutation_dict.get(dedup_key)
                 if not mutation:
-                    mutation = NucleotideMutation(**mutation_data)
-                    nt_mutation_set.append(mutation)
+                    mutation = NucleotideMutation(
+                        ref=ref,
+                        alt=alt,
+                        start=var_raw.start,
+                        end=var_raw.end,
+                        replicon=self.replicon,
+                        is_frameshift=var_raw.frameshift,
+                    )
+                    nt_mutation_dict[dedup_key] = mutation
                 nt_mutation_alignment_relations.append(
                     NucleotideMutation.alignments.through(
                         nucleotidemutation=mutation, alignment=self.alignment
@@ -198,19 +195,15 @@ class SonarImport:
                 import_id_to_sample_mutations[var_raw.id] = mutation
         return import_id_to_sample_mutations
 
-    def is_same_mutation(
-        self, mutation_data: dict, mutation: NucleotideMutation | AminoAcidMutation
-    ) -> bool:
-        return all(getattr(mutation, k) == v for k, v in mutation_data.items())
-
     def get_mutation_objs_cds_and_parent_relations(
         self,
-        cds_mutation_set: list[AminoAcidMutation],
+        cds_mutation_dict: dict[tuple, AminoAcidMutation],
         gene_cache_by_accession: dict[str, CDS | None],
         parent_id_mapping: dict[int, NucleotideMutation],
         aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through],
     ) -> list[AminoAcidMutation.parent.through]:
-        sample_cds_mutations: list[AminoAcidMutation] = []
+        """Collect amino acid mutations using a dict keyed by
+        (ref, alt, start, end, cds_id)"""
         mutation_parent_relations = []
         for var_raw in self.vars_raw:
             if var_raw.type == "cds":
@@ -227,23 +220,18 @@ class SonarImport:
                 cds = gene_cache_by_accession[var_raw.replicon_or_cds_accession]
                 if var_raw.alt is None:
                     var_raw.ref = ""
-                mutation_data = {
-                    "cds": cds,
-                    "ref": var_raw.ref if var_raw.ref else "",
-                    "alt": var_raw.alt if var_raw.alt else "",
-                    "start": var_raw.start if var_raw.start else 0,
-                    "end": var_raw.end if var_raw.end else 0,
-                }
-                mutation = next(
-                    filter(
-                        lambda x: self.is_same_mutation(mutation_data, x),
-                        cds_mutation_set,
-                    ),
-                    None,
-                )
+                ref = var_raw.ref if var_raw.ref else ""
+                alt = var_raw.alt if var_raw.alt else ""
+                start = var_raw.start if var_raw.start else 0
+                end = var_raw.end if var_raw.end else 0
+                # dict lookup
+                dedup_key = (ref, alt, start, end, id(cds))
+                mutation = cds_mutation_dict.get(dedup_key)
                 if not mutation:
-                    mutation = AminoAcidMutation(**mutation_data)
-                    cds_mutation_set.append(mutation)
+                    mutation = AminoAcidMutation(
+                        cds=cds, ref=ref, alt=alt, start=start, end=end
+                    )
+                    cds_mutation_dict[dedup_key] = mutation
                 aa_mutation_alignment_relations.append(
                     AminoAcidMutation.alignments.through(
                         aminoacidmutation=mutation, alignment=self.alignment
@@ -265,10 +253,9 @@ class SonarImport:
                             )
                         except KeyError:
                             LOGGER.warning(
-                                f"Parent ID {parent_id} not found in parent_id_mapping for mutation {mutation_data}"
+                                f"Parent ID {parent_id} not found in parent_id_mapping for mutation {dedup_key}"
                             )
                             pass
-                sample_cds_mutations.append(mutation)
         return mutation_parent_relations
 
     def _import_pickle(self, path: str):

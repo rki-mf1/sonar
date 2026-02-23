@@ -139,13 +139,16 @@ services:
     !!merge <<: *backend-env
     image: backend:local
     container_name: celery-workers
-    # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend. For example, 
-    # if the concurrency is set too high and the SAMPLE_BATCH_SIZE is too high,
-    # this will not speed up the process. You need to lower SAMPLE_BATCH_SIZE into smaller chunks to gain the benefits
+    # Celery concurrency and batch size tuning:
+    # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend.
+    # Recommended SAMPLE_BATCH_SIZE: 10-30.
+    # If concurrency is too high with large SAMPLE_BATCH_SIZE, Redis lock contention on "sequence",
+    # "alignment", and "mutation" keys serializes workers. Balance: fewer concurrent workers with larger
+    # batches, or more workers with smaller batches. The --max-tasks-per-child prevents memory leaks.
     # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
     # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
-    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair  --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
+    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair  --concurrency=6 -E --max-tasks-per-child 30 --time-limit 600 -n Bob
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:

@@ -509,6 +509,10 @@ class Sample(models.Model):
             models.Index(fields=["data_set"]),
             models.Index(fields=["init_upload_date"]),
             models.Index(fields=["last_update_date"]),
+            # Composite index for lineage-grouped time-series queries
+            models.Index(
+                fields=["lineage", "collection_date"], name="idx_sample_lineage_date"
+            ),
         ]
 
     def save(self, *args, **kwargs):
@@ -549,6 +553,19 @@ class Sample2Property(models.Model):
 
     class Meta:
         db_table = "sample2property"
+        indexes = [
+            # Composite index for property-based filtering (primary optimization)
+            models.Index(fields=["sample", "property"], name="idx_s2p_sample_property"),
+            # Value column indexes — speeds up distinct value counting & filtering
+            models.Index(
+                fields=["property", "value_varchar"], name="idx_s2p_prop_varchar"
+            ),
+            models.Index(
+                fields=["property", "value_integer"], name="idx_s2p_prop_integer"
+            ),
+            models.Index(fields=["property", "value_date"], name="idx_s2p_prop_date"),
+            models.Index(fields=["property", "value_float"], name="idx_s2p_prop_float"),
+        ]
         constraints = [
             UniqueConstraint(
                 name="unique_property2sample",
@@ -599,13 +616,21 @@ class NucleotideMutation(models.Model):
             models.Index(fields=["end"]),
             models.Index(fields=["ref"]),
             models.Index(fields=["alt"]),
+            # Composite indexes (previously dead code — bare tuple expressions)
+            models.Index(
+                fields=["start", "end"], name="idx_nt_mut_start_end"
+            ),  # Range queries
+            models.Index(fields=["ref", "alt"], name="idx_nt_mut_ref_alt"),
+            models.Index(
+                fields=["end", "ref", "alt"], name="idx_nt_mut_end_ref_alt"
+            ),  # SNP queries
+            models.Index(
+                fields=["alt", "end", "start"], name="idx_nt_mut_alt_end_start"
+            ),  # DEL queries
+            models.Index(
+                fields=["alt", "end", "ref"], name="idx_nt_mut_alt_end_ref"
+            ),  # INS queries
         ]
-        (models.Index(fields=["start", "end"]),)  # Range Queries
-        (models.Index(fields=["ref", "alt"]),)
-        (models.Index(fields=["end", "ref", "alt"]),)  # Composite for SNP queries
-        (models.Index(fields=["alt", "end", "start"]),)  # Composite for DEL queries
-        (models.Index(fields=["alt", "end", "ref"]),)  # Composite for INS queries
-
         constraints = [
             UniqueConstraint(
                 name="unique_nt_mutation",

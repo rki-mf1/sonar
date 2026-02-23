@@ -1,5 +1,6 @@
 import hashlib
 
+from django.conf import settings
 from django.core.cache import caches
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
@@ -8,7 +9,9 @@ from rest_framework.utils.urls import replace_query_param
 
 
 # ------------- Method 4, this is a simple method to cache the count of a queryset
-def CachedCountQueryset(queryset, timeout=60 * 60 * 24, cache_name="default"):
+def CachedCountQueryset(
+    queryset, timeout=getattr(settings, "CACHE_OBJECT_TTL", 3600), cache_name="default"
+):
     """
     This method we cache only count of a queryset, but not the result from whole queryset.
     (Surprisingly improved the performance of the API)
@@ -69,9 +72,8 @@ class SerializedOutputCachePagination(LimitOffsetPagination):
     1. we still have to find the better way for cache timeout
     """
 
-    # NOTE: 1 day cache, Should we set expired date becuase we might rebuild the data
-    # and we don't want to cache old data?
-    cache_timeout = 60 * 60 * 24
+    # Use CACHE_OBJECT_TTL from settings for consistency across all caching layers.
+    cache_timeout = getattr(settings, "CACHE_OBJECT_TTL", 3600)
 
     cache_name = "default"
 

@@ -269,6 +269,43 @@ CACHES = {
         },
     }
 }
+
+
+# Cache
+#
+# Redis DB assignments
+# ~~~~~~~~~~~~~~~~~~~~
+# DB 0 — Celery broker & result backend (CELERY_BROKER_URL / CELERY_RESULT_BACKEND)
+# DB 1 — Django cache (CACHES["default"])
+#
+# Cache key prefixes (all stored in DB 1)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# serialized-cache:<md5>         — Full serialized page responses
+#                                  (customDRF.SerializedOutputCachePagination)
+# query-count:<md5>              — Cached COUNT(*) per queryset
+#                                  (customDRF.CachedCountQueryset)
+# all_properties:<md5>           — Property list + unique value counts
+#                                  (viewsets.PropertyViewSet.get_all_properties)
+# metadata_coverage:<md5>        — Field coverage counts across samples
+#                                  (viewsets_statistics_and_plots.get_metadata_coverage)
+# grouped_lineages_per_week:<md5>— Weekly lineage-group breakdown
+#                                  (viewsets_statistics_and_plots._get_grouped_lineages_per_week)
+#
+# TTL configuration
+# ~~~~~~~~~~~~~~~~~
+# CACHE_OBJECT_TTL (env var, default 3600 s) controls the TTL for all layers:
+#   - SerializedOutputCachePagination.cache_timeout  (customDRF.py)
+#   - CachedCountQueryset timeout                    (customDRF.py)
+#   - Viewset-level @cache_page decorators           (viewsets*.py)
+#
+# Cache invalidation
+# ~~~~~~~~~~~~~~~~~~
+# After a successful data import, rest_api.cache_tasks.invalidate_query_cache
+# is dispatched via Celery to flush all serialized-cache:* and query-count:*
+# keys, so API consumers immediately see fresh data.
+# Manual invalidation: python manage.py rebuild_cache
+# ──────────────────────────────────────────────────────────────
+
 CACHE_OBJECT_TTL = env.int(
     "CACHE_OBJECT_TTL", default=3600
 )  # (default: Time to Live 60 minutes)
