@@ -32,6 +32,7 @@ from rest_framework.response import Response
 from covsonar_backend.settings import DEBUG
 from covsonar_backend.settings import LOGGER
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from rest_api.customDRF import SerializedOutputCachePagination
 from rest_api.data_entry.sample_job import delete_samples
 from rest_api.data_entry.sample_job import delete_sequences
 from rest_api.serializers import SampleGenomesExportStreamSerializer
@@ -342,7 +343,6 @@ class SampleFilterMixin:
                 )
 
             else:
-
                 raise ValueError(
                     f"Unsupported mutation type: {parsed_mutation.get('label')}"
                 )
@@ -683,6 +683,7 @@ class SampleViewSet(
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     lookup_field = "name"
     filter_fields = ["name"]
+    pagination_class = SerializedOutputCachePagination
 
     def _get_genomic_and_proteomic_profiles_queryset(
         self, queryset, reference_accession, showNX=False
