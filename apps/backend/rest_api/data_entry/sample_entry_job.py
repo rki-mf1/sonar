@@ -394,97 +394,93 @@ def process_batch_run(
             for sample_import_obj in sonar_import_objs
         ]
 
-        # Wrap all DB writes in a single transaction to reduce WAL overhead
-        with transaction.atomic():
-            # Use bulk upsert
-            # performs INSERT ... ON CONFLICT DO UPDATE
-            with cache.lock("sequence"):
-                Sequence.objects.bulk_create(
-                    sequences,
-                    update_conflicts=True,
-                    unique_fields=["name"],
-                    update_fields=["seqhash", "length", "last_update_date"],
-                )
-            # Dict-based O(1) alignment dedup instead of O(n) list scan
-            alignments_dict: dict[tuple, Alignment] = {}
-            for sample_import_obj in sonar_import_objs:
-                sample_import_obj.update_replicon_obj(replicon_cache)
-                sample_import_obj.create_alignment(alignments_dict)
+        # Use bulk upsert
+        # performs INSERT ... ON CONFLICT DO UPDATE
+        with cache.lock("sequence"):
+            Sequence.objects.bulk_create(
+                sequences,
+                update_conflicts=True,
+                unique_fields=["name"],
+                update_fields=["seqhash", "length", "last_update_date"],
+            )
+        # Dict-based O(1) alignment dedup instead of O(n) list scan
+        alignments_dict: dict[tuple, Alignment] = {}
+        for sample_import_obj in sonar_import_objs:
+            sample_import_obj.update_replicon_obj(replicon_cache)
+            sample_import_obj.create_alignment(alignments_dict)
 
-            with cache.lock("alignment"):
-                Alignment.objects.bulk_create(
-                    list(alignments_dict.values()),
-                    update_conflicts=True,
-                    unique_fields=["sequence", "replicon"],
-                    update_fields=["sequence", "replicon"],
-                )
+        with cache.lock("alignment"):
+            Alignment.objects.bulk_create(
+                list(alignments_dict.values()),
+                update_conflicts=True,
+                unique_fields=["sequence", "replicon"],
+                update_fields=["sequence", "replicon"],
+            )
 
-            # Dict-based O(1) mutation dedup instead of O(n) list scan
-            nt_mutation_dict: dict[tuple, NucleotideMutation] = {}
-            cds_mutation_dict: dict[tuple, AminoAcidMutation] = {}
-            mutation_parent_relations = []
-            nt_mutation_alignment_relations: list[
-                NucleotideMutation.alignments.through
-            ] = []
-            aa_mutation_alignment_relations: list[
-                AminoAcidMutation.alignments.through
-            ] = []
-            for sample_import_obj in sonar_import_objs:
-                id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
-                    nt_mutation_dict,
-                    replicon_cache,
-                    gene_cache_by_var_pos,
-                    nt_mutation_alignment_relations,
+        # Dict-based O(1) mutation dedup instead of O(n) list scan
+        nt_mutation_dict: dict[tuple, NucleotideMutation] = {}
+        cds_mutation_dict: dict[tuple, AminoAcidMutation] = {}
+        mutation_parent_relations = []
+        nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through] = (
+            []
+        )
+        aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = []
+        for sample_import_obj in sonar_import_objs:
+            id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
+                nt_mutation_dict,
+                replicon_cache,
+                gene_cache_by_var_pos,
+                nt_mutation_alignment_relations,
+            )
+            parent_relations = (
+                sample_import_obj.get_mutation_objs_cds_and_parent_relations(
+                    cds_mutation_dict,
+                    gene_cache_by_accession,
+                    id_to_mutation_mapping,
+                    aa_mutation_alignment_relations,
                 )
-                parent_relations = (
-                    sample_import_obj.get_mutation_objs_cds_and_parent_relations(
-                        cds_mutation_dict,
-                        gene_cache_by_accession,
-                        id_to_mutation_mapping,
-                        aa_mutation_alignment_relations,
+            )
+            mutation_parent_relations.extend(parent_relations)
+        with cache.lock("mutation"):
+            NucleotideMutation.objects.bulk_create(
+                list(nt_mutation_dict.values()),
+                update_conflicts=True,
+                unique_fields=["ref", "alt", "start", "end", "replicon"],
+                update_fields=[
+                    "is_frameshift",
+                ],
+            )
+
+            AminoAcidMutation.objects.bulk_create(
+                list(cds_mutation_dict.values()),
+                update_conflicts=True,
+                unique_fields=["ref", "alt", "start", "end", "cds"],
+                update_fields=["ref", "alt", "start", "end", "cds"],
+            )
+            AminoAcidMutation.parent.through.objects.bulk_create(
+                mutation_parent_relations,
+                ignore_conflicts=True,
+            )
+            NucleotideMutation.alignments.through.objects.bulk_create(
+                [
+                    NucleotideMutation.alignments.through(
+                        nucleotidemutation_id=rel.nucleotidemutation.id,
+                        alignment_id=rel.alignment.id,
                     )
-                )
-                mutation_parent_relations.extend(parent_relations)
-            with cache.lock("mutation"):
-                NucleotideMutation.objects.bulk_create(
-                    list(nt_mutation_dict.values()),
-                    update_conflicts=True,
-                    unique_fields=["ref", "alt", "start", "end", "replicon"],
-                    update_fields=[
-                        "is_frameshift",
-                    ],
-                )
-
-                AminoAcidMutation.objects.bulk_create(
-                    list(cds_mutation_dict.values()),
-                    update_conflicts=True,
-                    unique_fields=["ref", "alt", "start", "end", "cds"],
-                    update_fields=["ref", "alt", "start", "end", "cds"],
-                )
-                AminoAcidMutation.parent.through.objects.bulk_create(
-                    mutation_parent_relations,
-                    ignore_conflicts=True,
-                )
-                NucleotideMutation.alignments.through.objects.bulk_create(
-                    [
-                        NucleotideMutation.alignments.through(
-                            nucleotidemutation_id=rel.nucleotidemutation.id,
-                            alignment_id=rel.alignment.id,
-                        )
-                        for rel in nt_mutation_alignment_relations
-                    ],
-                    ignore_conflicts=True,
-                )
-                AminoAcidMutation.alignments.through.objects.bulk_create(
-                    [
-                        AminoAcidMutation.alignments.through(
-                            aminoacidmutation_id=rel.aminoacidmutation.id,
-                            alignment_id=rel.alignment.id,
-                        )
-                        for rel in aa_mutation_alignment_relations
-                    ],
-                    ignore_conflicts=True,
-                )
+                    for rel in nt_mutation_alignment_relations
+                ],
+                ignore_conflicts=True,
+            )
+            AminoAcidMutation.alignments.through.objects.bulk_create(
+                [
+                    AminoAcidMutation.alignments.through(
+                        aminoacidmutation_id=rel.aminoacidmutation.id,
+                        alignment_id=rel.alignment.id,
+                    )
+                    for rel in aa_mutation_alignment_relations
+                ],
+                ignore_conflicts=True,
+            )
 
         return (True, None, None)
 
