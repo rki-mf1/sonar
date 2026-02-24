@@ -2,12 +2,7 @@
   <div class="landing-container">
     <span class="sonar-title">SONAR</span>
     <div class="sonar-icon-wrapper">
-      <v-icon
-        name="gi-radar-sweep"
-        scale="5"
-        fill="white"
-        animation="spin"
-      />
+      <v-icon name="gi-radar-sweep" scale="5" fill="white" animation="spin" />
     </div>
 
     <div

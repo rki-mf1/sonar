@@ -1,7 +1,18 @@
 <template>
   <div class="container">
-    <PrimeDialog v-model:visible="samplesStore.loading" class="flex" modal :closable="false" header="Loading...">
-      <ProgressSpinner v-if="samplesStore.loading" class="flex-1 p-3" size="small" style="color: whitesmoke" />
+    <PrimeDialog
+      v-model:visible="samplesStore.loading"
+      class="flex"
+      modal
+      :closable="false"
+      header="Loading..."
+    >
+      <ProgressSpinner
+        v-if="samplesStore.loading"
+        class="flex-1 p-3"
+        size="small"
+        style="color: whitesmoke"
+      />
     </PrimeDialog>
 
     <!-- sample count plot-->
@@ -9,66 +20,120 @@
       <PrimePanel header="Number of Samples per Calendar Week" class="w-full shadow-2">
         <!-- Zoom toggle (top-right) — wheel zoom disabled by default to avoid accidental zooming while scrolling the page -->
         <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem">
-          <PrimeToggleButton v-model="samplesPerWeekZoomEnabled" :on-label="'Zoom ON'" :off-label="'Zoom OFF'"
-            :on-icon="'pi pi-search-plus'" :off-icon="'pi pi-search-minus'" />
+          <PrimeToggleButton
+            v-model="samplesPerWeekZoomEnabled"
+            :on-label="'Zoom ON'"
+            :off-label="'Zoom OFF'"
+            :on-icon="'pi pi-search-plus'"
+            :off-icon="'pi pi-search-minus'"
+          />
         </div>
         <div style="width: 100%; display: flex; justify-content: center">
-          <PrimeChart type="bar" :data="samplesPerWeekData()" :options="samplesPerWeekOptions()"
-            style="width: 100%; height: 25vh" />
+          <PrimeChart
+            type="bar"
+            :data="samplesPerWeekData()"
+            :options="samplesPerWeekOptions()"
+            style="width: 100%; height: 25vh"
+          />
         </div>
       </PrimePanel>
     </div>
 
     <!-- lineage plot-->
     <div class="panel">
-      <PrimePanel header="Distribution of grouped Lineages per Calendar Week" class="w-full shadow-2">
+      <PrimePanel
+        header="Distribution of grouped Lineages per Calendar Week"
+        class="w-full shadow-2"
+      >
         <!-- Toggle for chart type -->
         <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem">
-          <PrimeToggleButton v-model="isBarChart" :on-label="'Bar Chart'" :off-label="'Area Chart'"
-            :on-icon="'pi pi-chart-bar'" :off-icon="'pi pi-chart-line'" class="w-full md:w-56" />
+          <PrimeToggleButton
+            v-model="isBarChart"
+            :on-label="'Bar Chart'"
+            :off-label="'Area Chart'"
+            :on-icon="'pi pi-chart-bar'"
+            :off-icon="'pi pi-chart-line'"
+            class="w-full md:w-56"
+          />
         </div>
         <div style="width: 100%; display: flex; justify-content: center">
-          <PrimeChart v-if="
-            samplesStore.plotGroupedLineagesPerWeek &&
-            samplesStore.plotGroupedLineagesPerWeek.length
-          " ref="lineageChart" :key="isBarChart" :type="isBarChart ? 'bar' : 'line'"
+          <PrimeChart
+            v-if="
+              samplesStore.plotGroupedLineagesPerWeek &&
+              samplesStore.plotGroupedLineagesPerWeek.length
+            "
+            ref="lineageChart"
+            :key="isBarChart"
+            :type="isBarChart ? 'bar' : 'line'"
             :data="isBarChart ? lineageBarData() : lineageAreaData()"
             :options="isBarChart ? lineageBarChartOptions() : lineageAreaChartOptions()"
-            style="width: 100%; height: 50vh" />
+            style="width: 100%; height: 50vh"
+          />
           <div v-else>No lineage data available.</div>
         </div>
         <!-- Week range slider — allows users to select which weeks are visible in the chart -->
         <div v-if="totalLineageWeeks() > 1" style="padding: 1rem 1rem 0 1rem">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.5rem;
+            "
+          >
             <span style="font-size: 0.85rem; color: var(--text-color-secondary)">
-              Showing weeks {{ lineageWeekRangeLabels[0] }} — {{ lineageWeekRangeLabels[1] }}
-              ({{ lineageWeekRange[1] - lineageWeekRange[0] + 1 }} of {{ totalLineageWeeks() }} weeks)
+              Showing weeks {{ lineageWeekRangeLabels[0] }} — {{ lineageWeekRangeLabels[1] }} ({{
+                lineageWeekRange[1] - lineageWeekRange[0] + 1
+              }}
+              of {{ totalLineageWeeks() }} weeks)
             </span>
-            <PrimeButton label="Show All" class="p-button-text p-button-sm" icon="pi pi-arrows-h"
-              @click="lineageWeekRange = [0, totalLineageWeeks() - 1]" />
+            <PrimeButton
+              label="Show All"
+              class="p-button-text p-button-sm"
+              icon="pi pi-arrows-h"
+              @click="lineageWeekRange = [0, totalLineageWeeks() - 1]"
+            />
           </div>
-          <PrimeSlider v-model="lineageWeekRange" :min="0" :max="totalLineageWeeks() - 1" range style="width: 100%" />
+          <PrimeSlider
+            v-model="lineageWeekRange"
+            :min="0"
+            :max="totalLineageWeeks() - 1"
+            range
+            style="width: 100%"
+          />
         </div>
       </PrimePanel>
     </div>
 
-    <div class="plots-container" style="
+    <div
+      class="plots-container"
+      style="
         display: grid;
         gap: 1rem;
         grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
         width: 100%;
-      ">
+      "
+    >
       <!-- metadata plot-->
       <div class="panel metadata-plot" style="grid-column: span 2">
         <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
           <!-- Zoom toggle (top-right) — wheel zoom disabled by default to avoid accidental zooming while scrolling the page -->
           <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem">
-            <PrimeToggleButton v-model="metadataCoverageZoomEnabled" :on-label="'Zoom ON'" :off-label="'Zoom OFF'"
-              :on-icon="'pi pi-search-plus'" :off-icon="'pi pi-search-minus'" />
+            <PrimeToggleButton
+              v-model="metadataCoverageZoomEnabled"
+              :on-label="'Zoom ON'"
+              :off-label="'Zoom OFF'"
+              :on-icon="'pi pi-search-plus'"
+              :off-icon="'pi pi-search-minus'"
+            />
           </div>
           <div style="width: 100%; display: flex; justify-content: center">
-            <PrimeChart type="bar" :data="metadataCoverageData()" :options="metadataCoverageOptions()"
-              style="width: 100%; height: 25vh" />
+            <PrimeChart
+              type="bar"
+              :data="metadataCoverageData()"
+              :options="metadataCoverageOptions()"
+              style="width: 100%; height: 25vh"
+            />
           </div>
         </PrimePanel>
       </div>
@@ -76,64 +141,123 @@
       <div v-for="(plot, index) in plots" :key="index" class="panel" style="grid-column: span 2">
         <PrimePanel :header="plot.plotTitle" class="w-full shadow-2">
           <!-- Top bar: remove button (left) + zoom toggle (right) -->
-          <div style="
+          <div
+            style="
               display: flex;
               justify-content: space-between;
               align-items: center;
               margin-bottom: 0.5rem;
-            ">
-            <PrimeButton icon="pi pi-times" class="p-button-danger p-button-rounded"
-              style="height: 1.5rem; width: 1.5rem" @click="removePropertyPlot(plot)" />
-            <PrimeToggleButton v-model="plot.zoomEnabled" :on-label="'Zoom ON'" :off-label="'Zoom OFF'"
-              :on-icon="'pi pi-search-plus'" :off-icon="'pi pi-search-minus'" />
+            "
+          >
+            <PrimeButton
+              icon="pi pi-times"
+              class="p-button-danger p-button-rounded"
+              style="height: 1.5rem; width: 1.5rem"
+              @click="removePropertyPlot(plot)"
+            />
+            <PrimeToggleButton
+              v-model="plot.zoomEnabled"
+              :on-label="'Zoom ON'"
+              :off-label="'Zoom OFF'"
+              :on-icon="'pi pi-search-plus'"
+              :off-icon="'pi pi-search-minus'"
+            />
           </div>
           <div style="width: 100%; display: flex; justify-content: center">
-            <PrimeChart :type="getChartType(plot.type)" :data="plot.data" :options="effectiveCustomPlotOptions(plot)"
-              style="width: 100%; height: 25vh" />
+            <PrimeChart
+              :type="getChartType(plot.type)"
+              :data="plot.data"
+              :options="effectiveCustomPlotOptions(plot)"
+              style="width: 100%; height: 25vh"
+            />
           </div>
         </PrimePanel>
       </div>
       <!-- + Button for Adding New Property Plots -->
       <div class="add-plot-button">
-        <PrimeButton label="Add Property Plot" icon="pi pi-plus" class="p-button-warning"
-          @click="showPlotSelectionDialog" />
+        <PrimeButton
+          label="Add Property Plot"
+          icon="pi pi-plus"
+          class="p-button-warning"
+          @click="showPlotSelectionDialog"
+        />
       </div>
     </div>
     <!-- Plot Selection Dialog -->
     <PrimeDialog v-model:visible="plotSelectionDialogVisible" header="Select Plot Type" modal>
       <div style="display: flex; flex-direction: column; gap: 1rem">
-        <PrimeDropdown v-model="selectedPlotType" :options="plotTypes" placeholder="Select Plot Type" class="w-full" />
-        <PrimeButton label="Next" icon="pi pi-arrow-right" class="p-button-success" :disabled="!selectedPlotType"
-          @click="showFeatureSelectionDialog" />
+        <PrimeDropdown
+          v-model="selectedPlotType"
+          :options="plotTypes"
+          placeholder="Select Plot Type"
+          class="w-full"
+        />
+        <PrimeButton
+          label="Next"
+          icon="pi pi-arrow-right"
+          class="p-button-success"
+          :disabled="!selectedPlotType"
+          @click="showFeatureSelectionDialog"
+        />
       </div>
     </PrimeDialog>
 
     <!-- Feature Selection Dialog -->
-    <PrimeDialog v-model:visible="featureSelectionDialogVisible" :header="`Select Features for ${selectedPlotType}`"
-      modal>
+    <PrimeDialog
+      v-model:visible="featureSelectionDialogVisible"
+      :header="`Select Features for ${selectedPlotType}`"
+      modal
+    >
       <div style="display: flex; flex-direction: column; gap: 1rem">
         <!-- Conditional rendering based on plot type -->
-        <div v-if="
-          selectedPlotType === 'bar' ||
-          selectedPlotType === 'doughnut' ||
-          selectedPlotType === 'line'
-        ">
-          <PrimeDropdown v-model="selectedProperty" :options="samplesStore.metaCoverageOptions"
-            placeholder="Select Property" class="w-full" />
+        <div
+          v-if="
+            selectedPlotType === 'bar' ||
+            selectedPlotType === 'doughnut' ||
+            selectedPlotType === 'line'
+          "
+        >
+          <PrimeDropdown
+            v-model="selectedProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select Property"
+            class="w-full"
+          />
         </div>
         <div v-if="selectedPlotType === 'scatter'">
-          <PrimeDropdown v-model="selectedXProperty" :options="samplesStore.metaCoverageOptions"
-            placeholder="Select X-Axis Property (Date or Numeric or Categorical)" class="w-full" />
-          <PrimeDropdown v-model="selectedYProperty" :options="samplesStore.metaCoverageOptions"
-            placeholder="Select Y-Axis Property (Categorical)" class="w-full" />
+          <PrimeDropdown
+            v-model="selectedXProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select X-Axis Property (Date or Numeric or Categorical)"
+            class="w-full"
+          />
+          <PrimeDropdown
+            v-model="selectedYProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select Y-Axis Property (Categorical)"
+            class="w-full"
+          />
         </div>
         <div v-if="selectedPlotType === 'histogram'">
-          <PrimeDropdown v-model="selectedProperty" :options="samplesStore.metaCoverageOptions"
-            placeholder="Select a Numeric Property" class="w-full" />
-          <PrimeInputNumber v-model="selectedBinSize" placeholder="Select Bin Size" class="w-full" />
+          <PrimeDropdown
+            v-model="selectedProperty"
+            :options="samplesStore.metaCoverageOptions"
+            placeholder="Select a Numeric Property"
+            class="w-full"
+          />
+          <PrimeInputNumber
+            v-model="selectedBinSize"
+            placeholder="Select Bin Size"
+            class="w-full"
+          />
         </div>
-        <PrimeButton label="Add Plot" icon="pi pi-check" class="p-button-success" :disabled="!isFeatureSelectionValid"
-          @click="addPlot" />
+        <PrimeButton
+          label="Add Plot"
+          icon="pi pi-check"
+          class="p-button-success"
+          :disabled="!isFeatureSelectionValid"
+          @click="addPlot"
+        />
       </div>
     </PrimeDialog>
   </div>
@@ -226,7 +350,7 @@ export default {
       this.initLineageWeekRange()
     },
   },
-  mounted() { },
+  mounted() {},
   methods: {
     // keep plots in sync with route params
     applySelectionFromRoute() {
@@ -444,7 +568,13 @@ export default {
         }
       }
 
-      return { lineages_per_week, lineages: visibleLineages, colors: visibleColors, weeks, lookupMap }
+      return {
+        lineages_per_week,
+        lineages: visibleLineages,
+        colors: visibleColors,
+        weeks,
+        lookupMap,
+      }
     },
 
     /** Returns the total number of weeks available in the lineage data (used by the range slider) */
@@ -676,19 +806,19 @@ export default {
         },
         scales: has_axes
           ? {
-            x: {
-              title: {
-                display: not_display_legend,
-                text: this.selectedProperty || '',
+              x: {
+                title: {
+                  display: not_display_legend,
+                  text: this.selectedProperty || '',
+                },
               },
-            },
-            y: {
-              title: {
-                display: not_display_legend,
-                text: 'Number of Samples',
+              y: {
+                title: {
+                  display: not_display_legend,
+                  text: 'Number of Samples',
+                },
               },
-            },
-          }
+            }
           : {},
       }
     },
@@ -979,9 +1109,9 @@ export default {
         }
         return this.selectedXProperty && this.selectedYProperty
           ? (this.getScatterPlotData(
-            this.selectedXProperty as string,
-            this.selectedYProperty as string,
-          ) as ScatterPlotData)
+              this.selectedXProperty as string,
+              this.selectedYProperty as string,
+            ) as ScatterPlotData)
           : undefined
       }
 
@@ -997,9 +1127,9 @@ export default {
         }
         return this.selectedProperty && this.selectedBinSize !== null
           ? (this.getHistogramPlotData(
-            this.selectedProperty,
-            this.selectedBinSize,
-          ) as HistogramData)
+              this.selectedProperty,
+              this.selectedBinSize,
+            ) as HistogramData)
           : undefined
       }
     },
@@ -1014,8 +1144,8 @@ export default {
       } else {
         return this.customChartOptions(
           this.selectedPlotType == 'histogram' ||
-          this.selectedPlotType == 'bar' ||
-          this.selectedPlotType == 'line',
+            this.selectedPlotType == 'bar' ||
+            this.selectedPlotType == 'line',
           this.selectedPlotType !== 'doughnut',
         )
       }

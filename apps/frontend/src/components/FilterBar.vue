@@ -4,12 +4,26 @@
       <div class="filter-content">
         <div class="filter-container">
           <span :style="{ color: 'black', fontWeight: '500' }">Time Range</span>
-          <PrimeCalendar v-model="startDate" style="flex: auto; min-width: 10rem" show-icon date-format="yy-mm-dd">
+          <PrimeCalendar
+            v-model="startDate"
+            style="flex: auto; min-width: 10rem"
+            show-icon
+            date-format="yy-mm-dd"
+          >
           </PrimeCalendar>
-          <PrimeCalendar v-model="endDate" style="flex: auto; min-width: 10rem" show-icon date-format="yy-mm-dd">
+          <PrimeCalendar
+            v-model="endDate"
+            style="flex: auto; min-width: 10rem"
+            show-icon
+            date-format="yy-mm-dd"
+          >
           </PrimeCalendar>
-          <PrimeButton icon="pi pi-arrow-circle-left" label="&nbsp;Default" class="default-calendar-button"
-            @click="setDefaultTimeRange">
+          <PrimeButton
+            icon="pi pi-arrow-circle-left"
+            label="&nbsp;Default"
+            class="default-calendar-button"
+            @click="setDefaultTimeRange"
+          >
           </PrimeButton>
           <PrimeButton v-if="startDate" class="ml-2 p-button-sm" @click="removeTimeRange">
             <i class="pi pi-trash" style="font-size: medium" />
@@ -18,32 +32,64 @@
 
         <div class="filter-container">
           <span style="font-weight: 500">Lineage</span>
-          <MultiSelect v-model="lineageFilter.lineageList" display="chip" :options="samplesStore.lineageOptions" filter
-            placeholder="Select Lineages" style="width: 68%" :virtual-scroller-options="{ itemSize: 30 }" />
+          <MultiSelect
+            v-model="lineageFilter.lineageList"
+            display="chip"
+            :options="samplesStore.lineageOptions"
+            filter
+            placeholder="Select Lineages"
+            style="width: 68%"
+            :virtual-scroller-options="{ itemSize: 30 }"
+          />
 
           <div class="switch">
             Include Sublineages?
             <InputSwitch v-model="lineageFilter.includeSublineages" />
           </div>
-          <PrimeButton v-if="lineageFilter.lineageList.length > 0" icon="pi pi-trash" class="ml-2 p-button-sm"
-            @click="removeLineageFilter" />
+          <PrimeButton
+            v-if="lineageFilter.lineageList.length > 0"
+            icon="pi pi-trash"
+            class="ml-2 p-button-sm"
+            @click="removeLineageFilter"
+          />
         </div>
 
         <div class="filter-container">
           <span style="font-weight: 500">DNA/AA Profile</span>
-          <InputText v-model="profileFilter.value" style="flex: auto"
-            :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'" class="mr-1"
-            @keyup.enter="updateSamplesInTableAndFilteredStatistics()" />
-          <PrimeButton v-if="profileFilter.value" icon="pi pi-trash" class="ml-2 p-button-sm"
-            @click="removeProfileFilter" />
+          <InputText
+            v-model="profileFilter.value"
+            style="flex: auto"
+            :placeholder="'S:L452R, S:del:143-144, del:21114-21929, T23018G'"
+            class="mr-1"
+            @keyup.enter="updateSamplesInTableAndFilteredStatistics()"
+          />
+          <PrimeButton
+            v-if="profileFilter.value"
+            icon="pi pi-trash"
+            class="ml-2 p-button-sm"
+            @click="removeProfileFilter"
+          />
         </div>
 
         <div class="button-1">
-          <PrimeButton icon="pi pi-filter" label="&nbsp;Set Advanced Filters" severity="warning" raised :style="{
-            border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
-          }" @click="displayDialogFilter = true" />
-          <PrimeButton icon="pi pi-database" label="&nbsp;Update sample selection" severity="warning" raised
-            :disabled="samplesStore.filtersChanged ? false : true" @click="updateSamplesInTableAndFilteredStatistics()">
+          <PrimeButton
+            icon="pi pi-filter"
+            label="&nbsp;Set Advanced Filters"
+            severity="warning"
+            raised
+            :style="{
+              border: isAdvancedFiltersSet ? '3px solid #cf3004' : '3px solid rgba(1,1,1,0)',
+            }"
+            @click="displayDialogFilter = true"
+          />
+          <PrimeButton
+            icon="pi pi-database"
+            label="&nbsp;Update sample selection"
+            severity="warning"
+            raised
+            :disabled="samplesStore.filtersChanged ? false : true"
+            @click="updateSamplesInTableAndFilteredStatistics()"
+          >
           </PrimeButton>
         </div>
       </div>
@@ -51,21 +97,32 @@
       <PrimeDialog v-model:visible="displayDialogFilter" modal header="Set Filters">
         <div style="display: flex; gap: 10px">
           <div>
-            <FilterGroup style="width: fit-content; margin: auto" :filter-group="samplesStore.filterGroup"
+            <FilterGroup
+              style="width: fit-content; margin: auto"
+              :filter-group="samplesStore.filterGroup"
               :property-menu-options="samplesStore.propertyMenuOptions"
               :replicon-accession-options="samplesStore.repliconAccessionOptions"
-              :lineage-options="samplesStore.lineageOptions" :symbol-options="samplesStore.symbolOptions"
-              :operators="Object.values(DjangoFilterType)" :property-value-options="samplesStore.propertyValueOptions"
+              :lineage-options="samplesStore.lineageOptions"
+              :symbol-options="samplesStore.symbolOptions"
+              :operators="Object.values(DjangoFilterType)"
+              :property-value-options="samplesStore.propertyValueOptions"
               :properties-dict="samplesStore.propertiesDict"
-              @update-property-value-options="samplesStore.updatePropertyValueOptions" />
+              @update-property-value-options="samplesStore.updatePropertyValueOptions"
+            />
           </div>
         </div>
         <div v-if="samplesStore.errorMessage" style="margin-top: 20px">
           <PrimeMessage severity="error">{{ samplesStore.errorMessage }}</PrimeMessage>
         </div>
         <div style="display: flex; justify-content: end; gap: 10px">
-          <PrimeButton icon="pi pi-database" label="&nbsp;Update sample selection" severity="warning" raised
-            :disabled="samplesStore.filtersChanged ? false : true" @click="closeAdvancedFilterDialogAndUpdate">
+          <PrimeButton
+            icon="pi pi-database"
+            label="&nbsp;Update sample selection"
+            severity="warning"
+            raised
+            :disabled="samplesStore.filtersChanged ? false : true"
+            @click="closeAdvancedFilterDialogAndUpdate"
+          >
           </PrimeButton>
         </div>
         <PrimeButton type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
@@ -235,7 +292,7 @@ export default {
         const filter = this.collectionDateFilter
         if (filter) {
           if (!Array.isArray(filter.value)) filter.value = [] as Date[]
-            ; (filter.value as Date[])[0] = newValue
+          ;(filter.value as Date[])[0] = newValue
         }
       },
     },
@@ -265,7 +322,7 @@ export default {
         const filter = this.collectionDateFilter
         if (filter) {
           if (!Array.isArray(filter.value)) filter.value = [] as Date[]
-            ; (filter.value as Date[])[1] = newValue
+          ;(filter.value as Date[])[1] = newValue
         }
       },
     },
