@@ -22,7 +22,6 @@ TTL is controlled by ``settings.CACHE_OBJECT_TTL`` (default 3600 s = 1 hour).
 import logging
 
 from celery import shared_task
-from django.core.cache import caches
 from django_redis import get_redis_connection
 
 logger = logging.getLogger(__name__)
