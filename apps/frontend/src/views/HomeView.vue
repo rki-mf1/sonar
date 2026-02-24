@@ -1,13 +1,14 @@
 <template>
   <div class="landing-container">
-    <span style="color: white; font-weight: bold; font-size: 100px">SONAR</span>
-    <v-icon
-      name="gi-radar-sweep"
-      scale="5"
-      fill="white"
-      animation="spin"
-      style="margin-bottom: 50px"
-    />
+    <span class="sonar-title">SONAR</span>
+    <div class="sonar-icon-wrapper">
+      <v-icon
+        name="gi-radar-sweep"
+        scale="5"
+        fill="white"
+        animation="spin"
+      />
+    </div>
 
     <div
       v-animateonscroll="{ enterClass: 'fadein', leaveClass: 'fadeout' }"
@@ -134,8 +135,11 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh; /* min-height instead of height so the page scrolls when content overflows */
   width: 100%;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  overflow-y: auto;
   background-color: var(--primary-color);
 }
 
@@ -144,7 +148,33 @@ export default {
   flex-direction: column;
   justify-content: center;
   gap: 1rem;
-  width: 30vw;
-  height: 35vh;
+  width: clamp(280px, 40vw, 500px); /* responsive: min 280px, scales with viewport, max 500px */
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .landing-container {
+    padding: 1rem 0.5rem;
+  }
+  .content-container {
+    width: clamp(260px, 85vw, 500px);
+  }
+  .sonar-title {
+    font-size: 48px;
+  }
+  .sonar-icon-wrapper {
+    transform: scale(0.6);
+    margin-bottom: 1.5rem;
+  }
+}
+
+.sonar-title {
+  color: white;
+  font-weight: bold;
+  font-size: 100px;
+}
+
+.sonar-icon-wrapper {
+  margin-bottom: 50px;
 }
 </style>
