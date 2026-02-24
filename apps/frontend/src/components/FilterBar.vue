@@ -222,7 +222,7 @@
 
 <script lang="ts">
 import { useSamplesStore } from '@/stores/samples'
-import { DjangoFilterType } from '@/util/types'
+import { DjangoFilterType, DateDjangoFilterType } from '@/util/types'
 
 export default {
   name: 'FilterBar',
@@ -279,8 +279,20 @@ export default {
         return null
       },
       set(newValue: Date) {
-        if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
-          this.collectionDateFilter.value[0] = newValue
+        // If no collection_date filter exists yet, create one so the value can be stored
+        if (!this.collectionDateFilter) {
+          this.samplesStore.filterGroup.filters.propertyFilters.push({
+            fetchOptions: false,
+            label: 'Property',
+            propertyName: 'collection_date',
+            filterType: DateDjangoFilterType.RANGE,
+            value: [] as Date[],
+          })
+        }
+        const filter = this.collectionDateFilter
+        if (filter) {
+          if (!Array.isArray(filter.value)) filter.value = [] as Date[]
+          ;(filter.value as Date[])[0] = newValue
         }
       },
     },
@@ -297,8 +309,20 @@ export default {
       },
 
       set(newValue: Date) {
-        if (this.collectionDateFilter && Array.isArray(this.collectionDateFilter.value)) {
-          this.collectionDateFilter.value[1] = newValue
+        // If no collection_date filter exists yet, create one so the value can be stored
+        if (!this.collectionDateFilter) {
+          this.samplesStore.filterGroup.filters.propertyFilters.push({
+            fetchOptions: false,
+            label: 'Property',
+            propertyName: 'collection_date',
+            filterType: DateDjangoFilterType.RANGE,
+            value: [] as Date[],
+          })
+        }
+        const filter = this.collectionDateFilter
+        if (filter) {
+          if (!Array.isArray(filter.value)) filter.value = [] as Date[]
+          ;(filter.value as Date[])[1] = newValue
         }
       },
     },

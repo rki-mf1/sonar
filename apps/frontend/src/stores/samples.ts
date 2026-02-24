@@ -321,12 +321,14 @@ export const useSamplesStore = defineStore('samples', {
     processGroupedLineagesPerWeek(
       data: Array<{ week: string; lineage_group: string; count: number; percentage: number }>,
     ) {
-      // Extract all unique weeks and sort them
-      const allWeeks = [...new Set(data.map((item) => item.week))].sort(
-        (a, b) =>
-          new Date(parseInt(a.split('-W')[0]), parseInt(a.split('-W')[1])).getTime() -
-          new Date(parseInt(b.split('-W')[0]), parseInt(b.split('-W')[1])).getTime(),
-      )
+      // Extract all unique weeks and sort them.
+      // The "YYYY-Www" format (year-first, zero-padded week) is naturally
+      // sortable as a string — no Date conversion needed.
+      // NOTE: the previous comparator used `new Date(year, weekNumber)` which
+      // treated the ISO week number as a *month index*, causing incorrect
+      // ordering across year boundaries (e.g. 2020-W52 sorted after 2023-W10)
+      // and truncating multi-year datasets.
+      const allWeeks = [...new Set(data.map((item) => item.week))].sort()
       const completeWeeks = this.generateWeeksBetween(allWeeks[0], allWeeks[allWeeks.length - 1])
 
       // Create a map to store the processed data

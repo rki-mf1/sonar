@@ -18,6 +18,16 @@
     <!-- sample count plot-->
     <div class="panel">
       <PrimePanel header="Number of Samples per Calendar Week" class="w-full shadow-2">
+        <!-- Zoom toggle (top-right) — wheel zoom disabled by default to avoid accidental zooming while scrolling the page -->
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem">
+          <PrimeToggleButton
+            v-model="samplesPerWeekZoomEnabled"
+            :on-label="'Zoom ON'"
+            :off-label="'Zoom OFF'"
+            :on-icon="'pi pi-search-plus'"
+            :off-icon="'pi pi-search-minus'"
+          />
+        </div>
         <div style="width: 100%; display: flex; justify-content: center">
           <PrimeChart
             type="bar"
@@ -61,6 +71,37 @@
           />
           <div v-else>No lineage data available.</div>
         </div>
+        <!-- Week range slider — allows users to select which weeks are visible in the chart -->
+        <div v-if="totalLineageWeeks() > 1" style="padding: 1rem 1rem 0 1rem">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.5rem;
+            "
+          >
+            <span style="font-size: 0.85rem; color: var(--text-color-secondary)">
+              Showing weeks {{ lineageWeekRangeLabels[0] }} — {{ lineageWeekRangeLabels[1] }} ({{
+                lineageWeekRange[1] - lineageWeekRange[0] + 1
+              }}
+              of {{ totalLineageWeeks() }} weeks)
+            </span>
+            <PrimeButton
+              label="Show All"
+              class="p-button-text p-button-sm"
+              icon="pi pi-arrows-h"
+              @click="lineageWeekRange = [0, totalLineageWeeks() - 1]"
+            />
+          </div>
+          <PrimeSlider
+            v-model="lineageWeekRange"
+            :min="0"
+            :max="totalLineageWeeks() - 1"
+            range
+            style="width: 100%"
+          />
+        </div>
       </PrimePanel>
     </div>
 
@@ -76,6 +117,16 @@
       <!-- metadata plot-->
       <div class="panel metadata-plot" style="grid-column: span 2">
         <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
+          <!-- Zoom toggle (top-right) — wheel zoom disabled by default to avoid accidental zooming while scrolling the page -->
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem">
+            <PrimeToggleButton
+              v-model="metadataCoverageZoomEnabled"
+              :on-label="'Zoom ON'"
+              :off-label="'Zoom OFF'"
+              :on-icon="'pi pi-search-plus'"
+              :off-icon="'pi pi-search-minus'"
+            />
+          </div>
           <div style="width: 100%; display: flex; justify-content: center">
             <PrimeChart
               type="bar"
@@ -89,17 +140,34 @@
       <!-- Property plots -->
       <div v-for="(plot, index) in plots" :key="index" class="panel" style="grid-column: span 2">
         <PrimePanel :header="plot.plotTitle" class="w-full shadow-2">
-          <div style="width: 100%; display: flex; justify-content: center">
+          <!-- Top bar: remove button (left) + zoom toggle (right) -->
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.5rem;
+            "
+          >
             <PrimeButton
               icon="pi pi-times"
               class="p-button-danger p-button-rounded"
               style="height: 1.5rem; width: 1.5rem"
               @click="removePropertyPlot(plot)"
             />
+            <PrimeToggleButton
+              v-model="plot.zoomEnabled"
+              :on-label="'Zoom ON'"
+              :off-label="'Zoom OFF'"
+              :on-icon="'pi pi-search-plus'"
+              :off-icon="'pi pi-search-minus'"
+            />
+          </div>
+          <div style="width: 100%; display: flex; justify-content: center">
             <PrimeChart
               :type="getChartType(plot.type)"
               :data="plot.data"
-              :options="plot.options"
+              :options="effectiveCustomPlotOptions(plot)"
               style="width: 100%; height: 25vh"
             />
           </div>
@@ -230,12 +298,28 @@ export default {
       selectedYProperty: null as string | null,
       selectedBinSize: null as number | null,
       plotTypes: Object.values(PlotType),
+      // Zoom toggle state per chart — wheel zoom is disabled by default to prevent
+      // accidental zooming when scrolling the page
+      samplesPerWeekZoomEnabled: false,
+      metadataCoverageZoomEnabled: false,
+      // Lineage chart windowing: default window of 52 weeks from the end.
+      // lineageWeekRange is a [start, end] pair of indices into the full weeks array.
+      lineageWeekRange: [0, 51] as [number, number],
     }
   },
   computed: {
     selectionKey(): string {
       const { reference_accession, dataset = [] } = this.$route.query
       return JSON.stringify({ reference_accession, dataset })
+    },
+    /** Returns human-readable week labels (e.g. "2024-W01") for the current slider range */
+    lineageWeekRangeLabels(): [string, string] {
+      const data = this.samplesStore.plotGroupedLineagesPerWeek || []
+      if (!Array.isArray(data) || data.length === 0) return ['—', '—']
+      const allWeeks = [...new Set(data.map((item: { week: string }) => item.week))]
+      const startLabel = allWeeks[this.lineageWeekRange[0]] || '—'
+      const endLabel = allWeeks[this.lineageWeekRange[1]] || '—'
+      return [startLabel, endLabel]
     },
     isFeatureSelectionValid(): boolean {
       if (
@@ -260,6 +344,10 @@ export default {
       handler() {
         this.applySelectionFromRoute()
       },
+    },
+    // Re-initialize the week range slider when lineage data changes (e.g. after filter update)
+    'samplesStore.plotGroupedLineagesPerWeek'() {
+      this.initLineageWeekRange()
     },
   },
   mounted() {},
@@ -295,7 +383,10 @@ export default {
       this.samplesStore.updateRepliconAccessionOptions()
 
       this.samplesStore.updatePlotSamplesPerWeek()
-      this.samplesStore.updatePlotGroupedLineagesPerWeek()
+      // After lineage data loads, initialize the week range slider to show the last 52 weeks
+      this.samplesStore.updatePlotGroupedLineagesPerWeek().then(() => {
+        this.initLineageWeekRange()
+      })
       this.samplesStore.updatePlotMetadataCoverage()
     },
     isDataEmpty(
@@ -405,7 +496,8 @@ export default {
               mode: 'x',
             },
             zoom: {
-              wheel: { enabled: true },
+              // Wheel zoom is toggled by the user via the zoom button (disabled by default)
+              wheel: { enabled: this.samplesPerWeekZoomEnabled },
               pinch: { enabled: true },
               mode: 'x',
             },
@@ -427,7 +519,7 @@ export default {
       const lineages_per_week = this.samplesStore.plotGroupedLineagesPerWeek || []
       if (!Array.isArray(lineages_per_week) || lineages_per_week.length === 0) {
         console.error('lineages_per_week is undefined or empty')
-        return { lineages_per_week: [], lineages: [], colors: [], weeks: [] }
+        return { lineages_per_week: [], lineages: [], colors: [], weeks: [], lookupMap: new Map() }
       }
       let lineages = [...new Set(lineages_per_week.map((item) => item.lineage_group))]
         .filter((l) => l !== null)
@@ -443,20 +535,69 @@ export default {
         colors = this.generateColorPalette(lineages.length)
       }
 
-      const weeks = [...new Set(lineages_per_week.map((item) => item.week))]
+      const allWeeks = [...new Set(lineages_per_week.map((item) => item.week))]
 
-      return { lineages_per_week, lineages, colors, weeks }
+      // Build lookup map keyed by "week|lineage_group" for fast data access
+      const lookupMap = new Map<string, { percentage: number; count: number }>()
+      for (const item of lineages_per_week) {
+        lookupMap.set(`${item.week}|${item.lineage_group}`, {
+          percentage: item.percentage,
+          count: item.count,
+        })
+      }
+
+      // Apply windowing: only show the selected range of weeks
+      const maxIndex = allWeeks.length - 1
+      const rangeStart = Math.min(this.lineageWeekRange[0], maxIndex)
+      const rangeEnd = Math.min(this.lineageWeekRange[1], maxIndex)
+      const weeks = allWeeks.slice(rangeStart, rangeEnd + 1)
+
+      // Filter lineages to only those with data in the visible week window,
+      // so the legend only shows lineages relevant to the current view
+      const visibleLineages: string[] = []
+      const visibleColors: string[] = []
+      for (let i = 0; i < lineages.length; i++) {
+        const lineage = lineages[i]
+        const hasData = weeks.some((week) => {
+          const entry = lookupMap.get(`${week}|${lineage}`)
+          return entry && entry.percentage > 0
+        })
+        if (hasData) {
+          visibleLineages.push(lineage)
+          visibleColors.push(colors[i])
+        }
+      }
+
+      return {
+        lineages_per_week,
+        lineages: visibleLineages,
+        colors: visibleColors,
+        weeks,
+        lookupMap,
+      }
+    },
+
+    /** Returns the total number of weeks available in the lineage data (used by the range slider) */
+    totalLineageWeeks(): number {
+      const data = this.samplesStore.plotGroupedLineagesPerWeek || []
+      if (!Array.isArray(data) || data.length === 0) return 0
+      return [...new Set(data.map((item) => item.week))].length
+    },
+
+    /** Initializes the lineage week range to show the last ~6 months (26 weeks), or all if fewer */
+    initLineageWeekRange() {
+      const total = this.totalLineageWeeks()
+      if (total === 0) return
+      const windowSize = Math.min(26, total) // 26 weeks ≈ 6 months
+      this.lineageWeekRange = [total - windowSize, total - 1]
     },
 
     lineageBarData() {
-      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data()
+      const { lineages, colors, weeks, lookupMap } = this.get_lineage_data()
+      // Use Map lookup for O(1) access instead of .find() per cell
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
-        data: weeks.map(
-          (week) =>
-            lineages_per_week.find((item) => item.week === week && item.lineage_group === lineage)
-              ?.percentage || 0,
-        ),
+        data: weeks.map((week) => lookupMap.get(`${week}|${lineage}`)?.percentage || 0),
         backgroundColor: colors[index],
         borderColor: chroma(colors[index]).darken(0.5).hex(),
         borderWidth: 1.5,
@@ -465,15 +606,24 @@ export default {
     },
 
     lineageAreaData() {
-      const { lineages_per_week, lineages, colors, weeks } = this.get_lineage_data()
+      const { lineages, colors, weeks, lookupMap } = this.get_lineage_data()
+
+      // Pre-compute total percentage per week for normalization (O(1) per lookup)
+      const weekTotals = new Map<string, number>()
+      for (const week of weeks) {
+        let total = 0
+        for (const lineage of lineages) {
+          total += lookupMap.get(`${week}|${lineage}`)?.percentage || 0
+        }
+        weekTotals.set(week, total)
+      }
+
       // Normalize data so that percentages for each week sum up to 100%
       const datasets = lineages.map((lineage, index) => ({
         label: lineage,
         data: weeks.map((week) => {
-          const weekData = lineages_per_week.filter((item) => item.week === week)
-          const totalPercentage = weekData.reduce((sum, item) => sum + item.percentage, 0)
-          const lineageData =
-            weekData.find((item) => item.lineage_group === lineage)?.percentage || 0
+          const totalPercentage = weekTotals.get(week) || 1
+          const lineageData = lookupMap.get(`${week}|${lineage}`)?.percentage || 0
           return (lineageData / totalPercentage) * 100 // Normalize to 100%
         }),
         borderColor: colors[index],
@@ -593,7 +743,8 @@ export default {
               mode: 'x',
             },
             zoom: {
-              wheel: { enabled: true },
+              // Wheel zoom is toggled by the user via the zoom button (disabled by default)
+              wheel: { enabled: this.metadataCoverageZoomEnabled },
               pinch: { enabled: true },
               mode: 'x',
             },
@@ -646,7 +797,8 @@ export default {
               mode: 'x',
             },
             zoom: {
-              wheel: { enabled: true },
+              // Wheel zoom is toggled per-chart by the user via the zoom button (disabled by default)
+              wheel: { enabled: false },
               pinch: { enabled: true },
               mode: 'x',
             },
@@ -719,7 +871,8 @@ export default {
               mode: 'x',
             },
             zoom: {
-              wheel: { enabled: true },
+              // Wheel zoom is toggled per-chart by the user via the zoom button (disabled by default)
+              wheel: { enabled: false },
               pinch: { enabled: true },
               mode: 'x',
             },
@@ -765,6 +918,7 @@ export default {
         plotTitle: plotTitle,
         data: plotData,
         options: this.generatePlotOptions(),
+        zoomEnabled: false, // Wheel zoom disabled by default; toggle with button
       }
       this.plots.push(plotConfig)
       this.resetSelections()
@@ -996,6 +1150,27 @@ export default {
         )
       }
     },
+    effectiveCustomPlotOptions(plot: PlotConfig): ChartOptions {
+      // Dynamically apply zoom.wheel.enabled based on the plot's toggle state.
+      // This avoids mutating the stored options object directly.
+      const base = plot.options as ChartOptions & {
+        plugins?: { zoom?: { zoom?: { wheel?: { enabled: boolean } } } }
+      }
+      if (!base?.plugins?.zoom?.zoom) return base
+      return {
+        ...base,
+        plugins: {
+          ...base.plugins,
+          zoom: {
+            ...base.plugins?.zoom,
+            zoom: {
+              ...base.plugins?.zoom?.zoom,
+              wheel: { enabled: plot.zoomEnabled ?? false },
+            },
+          },
+        },
+      }
+    },
   },
 }
 </script>
@@ -1008,6 +1183,7 @@ export default {
   overflow-x: auto;
   width: 98%;
 }
+
 .panel {
   display: flex;
   flex-wrap: wrap;
@@ -1018,12 +1194,15 @@ export default {
   margin-bottom: 1em;
   width: 100%;
 }
+
 .plots-container {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Responsive grid */
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  /* Responsive grid */
   width: 100%;
 }
+
 .add-property-button {
   display: flex;
   justify-content: center;
