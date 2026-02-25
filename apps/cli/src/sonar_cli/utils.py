@@ -1303,7 +1303,11 @@ class sonarUtils:
             # VCF: accumulate all pages because the VCF header requires all
             # sample names upfront — this is an inherent limitation of the format.
             all_results = [
-                r for page in sonarUtils._fetch_all_pages(params) for r in page
+                r
+                for page in sonarUtils._fetch_all_pages(
+                    params, progress=outfile is not None
+                )
+                for r in page
             ]
             LOGGER.info("Write outputs...")
             sonarUtils._export_query_results(
@@ -1349,7 +1353,9 @@ class sonarUtils:
                 lineterminator=os.linesep,
             )
             writer.writeheader()
-            for page in sonarUtils._fetch_all_pages(params):
+            for page in sonarUtils._fetch_all_pages(
+                params, progress=outfile is not None
+            ):
                 for row in flatten_json_output(page, exclude_annotation):
                     try:
                         writer.writerow({k: row.get(k, None) for k in columns})
@@ -1408,7 +1414,7 @@ class sonarUtils:
             sys.exit(1)
 
     @staticmethod
-    def _fetch_all_pages(params: dict):
+    def _fetch_all_pages(params: dict, progress: bool = True):
         """
         Generator that fetches pages from the backend using limit/offset
         pagination, yielding each page's results list one at a time.
@@ -1418,6 +1424,9 @@ class sonarUtils:
 
         Args:
             params: Query parameters dict (will be mutated with limit/offset).
+            progress: If True, display a tqdm progress bar on stderr.
+                      Set to False when the output target is stdout to avoid
+                      interleaving the bar with streamed CSV/TSV rows.
 
         Yields:
             list: The results list from each page response.
@@ -1429,7 +1438,9 @@ class sonarUtils:
 
         # total is unknown until the first response; initialise with 0 and
         # update once the backend returns the real count.
-        with tqdm(total=0, unit="records", desc="Fetching records") as pbar:
+        with tqdm(
+            total=0, unit="records", desc="Fetching records", disable=not progress
+        ) as pbar:
             while True:
                 json_response = client.get_variant_profile_bymatch_command(
                     params=params
