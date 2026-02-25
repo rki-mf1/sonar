@@ -1276,21 +1276,85 @@ class sonarUtils:
                 LOGGER.error("server cannot return a result")
                 sys.exit(1)
             rows = json_response
-        else:
-            # Fetch results in pages of MATCH_CHUNK_LIMIT to avoid high memory
-            all_results = sonarUtils._fetch_all_pages(params)
-            rows = {"results": all_results, "count": len(all_results)}
+            LOGGER.info("Write outputs...")
+            sonarUtils._export_query_results(
+                rows,
+                format,
+                reference,
+                default_columns=default_columns,
+                outfile=outfile,
+                exclude_annotation=exclude_annotation,
+                output_column=output_column,
+            )
 
-        LOGGER.info("Write outputs...")
-        sonarUtils._export_query_results(
-            rows,
-            format,
-            reference,
-            default_columns=default_columns,
-            outfile=outfile,
-            exclude_annotation=exclude_annotation,
-            output_column=output_column,
-        )
+        elif format in ["csv", "tsv"]:
+            # page (~MATCH_CHUNK_LIMIT rows) is held in memory at a time.
+            LOGGER.info("Write outputs...")
+            sonarUtils._export_csv_tsv_pages(
+                params=params,
+                format=format,
+                default_columns=default_columns,
+                outfile=outfile,
+                exclude_annotation=exclude_annotation,
+                output_column=output_column,
+            )
+
+        else:
+            # VCF: accumulate all pages because the VCF header requires all
+            # sample names upfront — this is an inherent limitation of the format.
+            all_results = [
+                r for page in sonarUtils._fetch_all_pages(params) for r in page
+            ]
+            LOGGER.info("Write outputs...")
+            sonarUtils._export_query_results(
+                {"results": all_results, "count": len(all_results)},
+                format,
+                reference,
+                default_columns=default_columns,
+                outfile=outfile,
+                exclude_annotation=exclude_annotation,
+                output_column=output_column,
+            )
+
+    @staticmethod
+    def _export_csv_tsv_pages(
+        params: dict,
+        format: str,
+        default_columns: List[str],
+        outfile: Optional[str],
+        exclude_annotation: bool = False,
+        output_column: Optional[List[str]] = [],
+    ) -> None:
+        """
+        Fetch paginated results and stream them directly to a CSV/TSV output.
+
+        Only one page (~MATCH_CHUNK_LIMIT rows) is held in memory at a time,
+        making this suitable for arbitrarily large result sets.
+
+        Args:
+            params: Query parameters dict (passed to _fetch_all_pages).
+            format: 'csv' or 'tsv'.
+            default_columns: Default output columns from the database properties.
+            outfile: Output file path (None for stdout).
+            exclude_annotation: Whether to exclude annotation details.
+            output_column: User-specified output columns (overrides default_columns).
+        """
+        columns = output_column if output_column else default_columns
+        sep = "\t" if format == "tsv" else ","
+        with out_autodetect(outfile) as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=columns,
+                delimiter=sep,
+                lineterminator=os.linesep,
+            )
+            writer.writeheader()
+            for page in sonarUtils._fetch_all_pages(params):
+                for row in flatten_json_output(page, exclude_annotation):
+                    try:
+                        writer.writerow({k: row.get(k, None) for k in columns})
+                    except BrokenPipeError:
+                        return
 
     @staticmethod
     def _export_query_results(
@@ -1344,23 +1408,23 @@ class sonarUtils:
             sys.exit(1)
 
     @staticmethod
-    def _fetch_all_pages(params: dict) -> list:
+    def _fetch_all_pages(params: dict):
         """
-        Fetch all pages from the backend using limit/offset pagination and
-        return the accumulated results list.
+        Generator that fetches pages from the backend using limit/offset
+        pagination, yielding each page's results list one at a time.
 
-        Used for output formats (e.g. VCF) that require the full dataset
-        in memory before exporting.
+        This allows callers to process records incrementally without holding
+        the entire result set in memory.
 
         Args:
             params: Query parameters dict (will be mutated with limit/offset).
 
-        Returns:
-            A list of all result dicts accumulated across pages.
+        Yields:
+            list: The results list from each page response.
         """
         params["limit"] = MATCH_CHUNK_LIMIT
         params["offset"] = 0
-        all_results = []
+        fetched = 0
         client = APIClient(base_url=BASE_URL)
 
         # total is unknown until the first response; initialise with 0 and
@@ -1375,21 +1439,21 @@ class sonarUtils:
                     sys.exit(1)
 
                 results = json_response["results"]
-                all_results.extend(results)
-
                 total = json_response.get("count", 0)
+
                 # Set the real total on the first page
                 if pbar.total != total:
                     pbar.total = total
                     pbar.refresh()
 
                 pbar.update(len(results))
+                fetched += len(results)
 
-                if len(all_results) >= total or not results:
+                yield results
+
+                if fetched >= total or not results:
                     break
                 params["offset"] += MATCH_CHUNK_LIMIT
-
-        return all_results
 
     @staticmethod
     def export_csv(
