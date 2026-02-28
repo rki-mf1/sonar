@@ -11,7 +11,7 @@
       <div class="filter-container">
         <span class="filter-label">Lineage</span>
         <MultiSelect
-          v-model="filterGroup.filters.lineageFilter.lineageList"
+          v-model="localFilterGroup.filters.lineageFilter.lineageList"
           display="chip"
           :options="lineageOptions"
           filter
@@ -21,11 +21,11 @@
         />
         <div class="switch">
           Include Sublineages?
-          <InputSwitch v-model="filterGroup.filters.lineageFilter.includeSublineages" />
+          <InputSwitch v-model="localFilterGroup.filters.lineageFilter.includeSublineages" />
         </div>
         <div class="switch">
           Exclude?
-          <InputSwitch v-model="filterGroup.filters.lineageFilter.exclude" />
+          <InputSwitch v-model="localFilterGroup.filters.lineageFilter.exclude" />
         </div>
         <PrimeButton
           type="button"
@@ -168,12 +168,7 @@
             type="button"
             size="small"
             icon="pi pi-trash"
-            @click="
-              filterGroup.filters?.repliconFilters?.splice(
-                filterGroup.filters?.repliconFilters?.indexOf(filter),
-                1,
-              )
-            "
+            @click="removeRepliconFilter(filter)"
           />
         </div>
       </div>
@@ -224,9 +219,7 @@
         severity="danger"
         size="small"
         style="float: right"
-        @click="
-          filterGroup.filterGroups?.splice(filterGroup.filterGroups?.indexOf(subFilterGroup), 1)
-        "
+        @click="removeSubFilterGroup(subFilterGroup)"
         @mouseenter="markGroup(subFilterGroup, true)"
         @mouseleave="markGroup(subFilterGroup, false)"
       >
@@ -305,6 +298,7 @@ export default {
   data() {
     const samplesStore = useSamplesStore()
     return {
+      localFilterGroup: this.filterGroup,
       localOperators: [...this.operators],
       fetchOptionsProperties: samplesStore.propertyMenuOptions.filter((prop) =>
         samplesStore.shouldShowDropdown(prop),
@@ -344,24 +338,24 @@ export default {
         label: 'DNA/AA Profile',
         icon: 'pi pi-plus',
         command: () => {
-          this.filterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
+          this.localFilterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
         },
       })
       menuItems.push({
         label: 'Replicon Filter',
         icon: 'pi pi-plus',
         command: () => {
-          this.filterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
+          this.localFilterGroup.filters.repliconFilters.push({ ...this.RepliconFilter })
         },
       })
       // only one lineage filter per group
-      if (!this.filterGroup.filters.lineageFilter.isVisible) {
+      if (!this.localFilterGroup.filters.lineageFilter.isVisible) {
         this.LineageFilter.isVisible = true
         menuItems.push({
           label: 'LineageFilter',
           icon: 'pi pi-plus',
           command: () => {
-            this.filterGroup.filters.lineageFilter = { ...this.LineageFilter }
+            this.localFilterGroup.filters.lineageFilter = { ...this.LineageFilter }
           },
         })
       }
@@ -373,7 +367,7 @@ export default {
             ...this.PropertyFilter,
             propertyName: 'name',
           }
-          this.filterGroup.filters.propertyFilters.push(newFilter)
+          this.localFilterGroup.filters.propertyFilters.push(newFilter)
         },
       })
       return menuItems
@@ -401,7 +395,7 @@ export default {
   },
   watch: {},
   mounted() {
-    this.filterGroup.filters.propertyFilters.forEach((filter) => {
+    this.localFilterGroup.filters.propertyFilters.forEach((filter) => {
       if (filter.propertyName) {
         this.initializeOperators(filter)
       }
@@ -436,7 +430,7 @@ export default {
       return this.dateRanges[propertyName]
     },
     addOrFilterGroup() {
-      this.filterGroup.filterGroups.push({
+      this.localFilterGroup.filterGroups.push({
         filterGroups: [],
         filters: {
           propertyFilters: [],
@@ -456,7 +450,19 @@ export default {
       group.marked = mark
     },
     addProfileFilter() {
-      this.filterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
+      this.localFilterGroup.filters.profileFilters.push({ ...this.ProfileFilter })
+    },
+    removeRepliconFilter(filter: RepliconFilter) {
+      this.localFilterGroup.filters?.repliconFilters?.splice(
+        this.localFilterGroup.filters?.repliconFilters?.indexOf(filter),
+        1,
+      )
+    },
+    removeSubFilterGroup(subFilterGroup: FilterGroup) {
+      this.localFilterGroup.filterGroups?.splice(
+        this.localFilterGroup.filterGroups?.indexOf(subFilterGroup),
+        1,
+      )
     },
 
     async updatePropertyValueOptions(filter: PropertyFilter) {

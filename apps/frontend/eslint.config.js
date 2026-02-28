@@ -30,7 +30,7 @@ export default typescriptEslint.config(
       },
     },
     rules: {
-      'vue/no-mutating-props': 'off',
+      'vue/no-mutating-props': 'error',
     },
   },
   eslintConfigPrettier,
