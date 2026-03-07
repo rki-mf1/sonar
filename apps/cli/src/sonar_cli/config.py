@@ -25,6 +25,11 @@ CACHE_CLEAR_N_JOBS = int(os.getenv("CACHE_CLEAR_N_JOBS") or 4)
 
 FILTER_DELETE_SIZE = int(os.getenv("FILTER_DELETE_SIZE") or 2000)
 
+# Page size for the match command pagination loop.
+# The CLI fetches results in chunks of this size instead of requesting
+# everything at once, to avoid high memory usage and backend timeouts.
+MATCH_CHUNK_LIMIT = int(os.getenv("MATCH_CHUNK_LIMIT") or 300)
+
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))
 
 ANNO_TOOL_PATH = os.getenv("ANNO_TOOL_PATH", "snpEff")

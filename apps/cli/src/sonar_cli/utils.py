@@ -43,6 +43,7 @@ from sonar_cli.config import CACHE_CLEAR_CHUNK_SIZE
 from sonar_cli.config import CACHE_CLEAR_N_JOBS
 from sonar_cli.config import CHUNK_SIZE
 from sonar_cli.config import KSIZE
+from sonar_cli.config import MATCH_CHUNK_LIMIT
 from sonar_cli.config import PARANOID_CHUNK_SIZE
 from sonar_cli.config import PARANOID_N_JOBS
 from sonar_cli.config import PROP_CHUNK_SIZE
@@ -1262,34 +1263,104 @@ class sonarUtils:
         params["reference"] = reference
         params["vcf_format"] = True if format == "vcf" else False
 
-        if format == "count":
-            params["limit"] = 1
-        else:
-            # hack (to get all result by using max bigint)
-            params["limit"] = 999999999999999999
-        params["offset"] = 0
-
         LOGGER.debug(params["filters"])
 
-        json_response = APIClient(
-            base_url=BASE_URL
-        ).get_variant_profile_bymatch_command(params=params)
-        LOGGER.info("Write outputs...")
-        if "results" in json_response:
+        if format == "count":
+            # Count mode: single request with limit=1 is sufficient.
+            params["limit"] = 1
+            params["offset"] = 0
+            json_response = APIClient(
+                base_url=BASE_URL
+            ).get_variant_profile_bymatch_command(params=params)
+            if "count" not in json_response:
+                LOGGER.error("server cannot return a result")
+                sys.exit(1)
             rows = json_response
-        else:
-            LOGGER.error("server cannot return a result")
-            sys.exit(1)  # or just return??
+            LOGGER.info("Write outputs...")
+            sonarUtils._export_query_results(
+                rows,
+                format,
+                reference,
+                default_columns=default_columns,
+                outfile=outfile,
+                exclude_annotation=exclude_annotation,
+                output_column=output_column,
+            )
 
-        sonarUtils._export_query_results(
-            rows,
-            format,
-            reference,
-            default_columns=default_columns,
-            outfile=outfile,
-            exclude_annotation=exclude_annotation,
-            output_column=output_column,
-        )
+        elif format in ["csv", "tsv"]:
+            # page (~MATCH_CHUNK_LIMIT rows) is held in memory at a time.
+            LOGGER.info("Write outputs...")
+            sonarUtils._export_csv_tsv_pages(
+                params=params,
+                format=format,
+                default_columns=default_columns,
+                outfile=outfile,
+                exclude_annotation=exclude_annotation,
+                output_column=output_column,
+            )
+
+        else:
+            # VCF: accumulate all pages because the VCF header requires all
+            # sample names upfront — this is an inherent limitation of the format.
+            all_results = [
+                r
+                for page in sonarUtils._fetch_all_pages(
+                    params, progress=outfile is not None
+                )
+                for r in page
+            ]
+            LOGGER.info("Write outputs...")
+            sonarUtils._export_query_results(
+                {"results": all_results, "count": len(all_results)},
+                format,
+                reference,
+                default_columns=default_columns,
+                outfile=outfile,
+                exclude_annotation=exclude_annotation,
+                output_column=output_column,
+            )
+
+    @staticmethod
+    def _export_csv_tsv_pages(
+        params: dict,
+        format: str,
+        default_columns: List[str],
+        outfile: Optional[str],
+        exclude_annotation: bool = False,
+        output_column: Optional[List[str]] = [],
+    ) -> None:
+        """
+        Fetch paginated results and stream them directly to a CSV/TSV output.
+
+        Only one page (~MATCH_CHUNK_LIMIT rows) is held in memory at a time,
+        making this suitable for arbitrarily large result sets.
+
+        Args:
+            params: Query parameters dict (passed to _fetch_all_pages).
+            format: 'csv' or 'tsv'.
+            default_columns: Default output columns from the database properties.
+            outfile: Output file path (None for stdout).
+            exclude_annotation: Whether to exclude annotation details.
+            output_column: User-specified output columns (overrides default_columns).
+        """
+        columns = output_column if output_column else default_columns
+        sep = "\t" if format == "tsv" else ","
+        with out_autodetect(outfile) as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=columns,
+                delimiter=sep,
+                lineterminator=os.linesep,
+            )
+            writer.writeheader()
+            for page in sonarUtils._fetch_all_pages(
+                params, progress=outfile is not None
+            ):
+                for row in flatten_json_output(page, exclude_annotation):
+                    try:
+                        writer.writerow({k: row.get(k, None) for k in columns})
+                    except BrokenPipeError:
+                        return
 
     @staticmethod
     def _export_query_results(
@@ -1341,6 +1412,59 @@ class sonarUtils:
         else:
             LOGGER.error(f"'{format}' is not a valid output format")
             sys.exit(1)
+
+    @staticmethod
+    def _fetch_all_pages(params: dict, progress: bool = True):
+        """
+        Generator that fetches pages from the backend using limit/offset
+        pagination, yielding each page's results list one at a time.
+
+        This allows callers to process records incrementally without holding
+        the entire result set in memory.
+
+        Args:
+            params: Query parameters dict (will be mutated with limit/offset).
+            progress: If True, display a tqdm progress bar on stderr.
+                      Set to False when the output target is stdout to avoid
+                      interleaving the bar with streamed CSV/TSV rows.
+
+        Yields:
+            list: The results list from each page response.
+        """
+        params["limit"] = MATCH_CHUNK_LIMIT
+        params["offset"] = 0
+        fetched = 0
+        client = APIClient(base_url=BASE_URL)
+
+        # total is unknown until the first response; initialise with 0 and
+        # update once the backend returns the real count.
+        with tqdm(
+            total=0, unit="records", desc="Fetching records", disable=not progress
+        ) as pbar:
+            while True:
+                json_response = client.get_variant_profile_bymatch_command(
+                    params=params
+                )
+                if "results" not in json_response:
+                    LOGGER.error("server cannot return a result")
+                    sys.exit(1)
+
+                results = json_response["results"]
+                total = json_response.get("count", 0)
+
+                # Set the real total on the first page
+                if pbar.total != total:
+                    pbar.total = total
+                    pbar.refresh()
+
+                pbar.update(len(results))
+                fetched += len(results)
+
+                yield results
+
+                if fetched >= total or not results:
+                    break
+                params["offset"] += MATCH_CHUNK_LIMIT
 
     @staticmethod
     def export_csv(
