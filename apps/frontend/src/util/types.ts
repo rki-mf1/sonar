@@ -219,4 +219,5 @@ export type PlotConfig = {
   plotTitle: string
   data: HistogramData | SimplePlotData | ScatterPlotData | undefined
   options: ChartOptions
+  zoomEnabled: boolean // Tracks the per-chart zoom toggle state (wheel zoom disabled by default)
 }
