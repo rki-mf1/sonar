@@ -21,7 +21,7 @@ jobs:
         working-directory: ./apps/backend
     steps:
       - name: Check out pipeline code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
       - name: Build the backend container

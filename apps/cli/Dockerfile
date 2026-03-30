@@ -14,7 +14,6 @@ WORKDIR /code
 
 # The reason for copying certain core files and folders beforehand is to address failures in GH action (during poetry install)
 COPY README.md environment.yml poetry.lock pyproject.toml ./
-COPY env.template .env
 COPY src/ /code/src
 
 RUN conda config --set solver classic
