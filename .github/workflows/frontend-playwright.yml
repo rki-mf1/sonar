@@ -24,7 +24,7 @@ jobs:
         run: echo 'VITE_SONAR_BACKEND_ADDRESS="http://127.0.0.1:8000/api/"' >> .env.production.local
       - name: Build frontend
         working-directory: ./apps/frontend
-        run: npm run build
+        run: npm run build:backend-proxy
       - name: Start backend containers
         working-directory: ./apps/backend
         run: ./scripts/linux/clean-dev-env.sh
