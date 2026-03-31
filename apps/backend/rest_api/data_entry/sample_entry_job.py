@@ -26,6 +26,7 @@ from covsonar_backend.settings import SONAR_DATA_ARCHIVE
 from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 from rest_api import models
+from rest_api.cache_tasks import invalidate_query_cache
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.data_entry.sample_import import SonarImport
 from rest_api.models import Alignment
@@ -343,6 +344,13 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                     status=ProcessingJob.ImportType.COMPLETED
                 )
                 LOGGER.info(f"### Job ID: {job_ID} \nRun status: Completed")
+                # Invalidate stale API caches so fresh data is served
+                # immediately.  Runs async via Celery if available,
+                # otherwise falls back to synchronous flush.
+                if REDIS_URL:
+                    invalidate_query_cache.delay()
+                else:
+                    invalidate_query_cache()
 
 
 @shared_task
@@ -395,21 +403,23 @@ def process_batch_run(
                 unique_fields=["name"],
                 update_fields=["seqhash", "length", "last_update_date"],
             )
-        alignments: list[Alignment] = []
+        # Dict-based O(1) alignment dedup instead of O(n) list scan
+        alignments_dict: dict[tuple, Alignment] = {}
         for sample_import_obj in sonar_import_objs:
             sample_import_obj.update_replicon_obj(replicon_cache)
-            sample_import_obj.create_alignment(alignments)
+            sample_import_obj.create_alignment(alignments_dict)
 
         with cache.lock("alignment"):
             Alignment.objects.bulk_create(
-                alignments,
+                list(alignments_dict.values()),
                 update_conflicts=True,
                 unique_fields=["sequence", "replicon"],
                 update_fields=["sequence", "replicon"],
             )
 
-        nt_mutation_set: list[NucleotideMutation] = []
-        cds_mutation_set: list[AminoAcidMutation] = []
+        # Dict-based O(1) mutation dedup instead of O(n) list scan
+        nt_mutation_dict: dict[tuple, NucleotideMutation] = {}
+        cds_mutation_dict: dict[tuple, AminoAcidMutation] = {}
         mutation_parent_relations = []
         nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through] = (
             []
@@ -417,14 +427,14 @@ def process_batch_run(
         aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = []
         for sample_import_obj in sonar_import_objs:
             id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
-                nt_mutation_set,
+                nt_mutation_dict,
                 replicon_cache,
                 gene_cache_by_var_pos,
                 nt_mutation_alignment_relations,
             )
             parent_relations = (
                 sample_import_obj.get_mutation_objs_cds_and_parent_relations(
-                    cds_mutation_set,
+                    cds_mutation_dict,
                     gene_cache_by_accession,
                     id_to_mutation_mapping,
                     aa_mutation_alignment_relations,
@@ -433,7 +443,7 @@ def process_batch_run(
             mutation_parent_relations.extend(parent_relations)
         with cache.lock("mutation"):
             NucleotideMutation.objects.bulk_create(
-                nt_mutation_set,
+                list(nt_mutation_dict.values()),
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "replicon"],
                 update_fields=[
@@ -442,7 +452,7 @@ def process_batch_run(
             )
 
             AminoAcidMutation.objects.bulk_create(
-                cds_mutation_set,
+                list(cds_mutation_dict.values()),
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "cds"],
                 update_fields=["ref", "alt", "start", "end", "cds"],
@@ -534,17 +544,19 @@ def process_batch_single_thread(
                 ],  # Update these fields
             )
             [x.update_replicon_obj(replicon_cache) for x in sample_import_objs]
-            alignments: list[Alignment] = []
+            # Dict-based alignment dedup
+            alignments_dict: dict[tuple, Alignment] = {}
             for sample_import_obj in sample_import_objs:
-                sample_import_obj.create_alignment(alignments)
+                sample_import_obj.create_alignment(alignments_dict)
             Alignment.objects.bulk_create(
-                alignments,
+                list(alignments_dict.values()),
                 update_conflicts=True,
                 unique_fields=["sequence", "replicon"],
                 update_fields=["sequence", "replicon"],
             )
-            nt_mutation_set: list[NucleotideMutation] = []
-            cds_mutation_set: list[AminoAcidMutation] = []
+            # Dict-based mutation dedup
+            nt_mutation_dict: dict[tuple, NucleotideMutation] = {}
+            cds_mutation_dict: dict[tuple, AminoAcidMutation] = {}
             mutation_parent_relations = []
             nt_mutation_alignment_relations: list[
                 NucleotideMutation.alignments.through
@@ -555,14 +567,14 @@ def process_batch_single_thread(
 
             for sample_import_obj in sample_import_objs:
                 id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
-                    nt_mutation_set,
+                    nt_mutation_dict,
                     replicon_cache,
                     gene_cache_by_var_pos,
                     nt_mutation_alignment_relations,
                 )
                 parent_relations = (
                     sample_import_obj.get_mutation_objs_cds_and_parent_relations(
-                        cds_mutation_set,
+                        cds_mutation_dict,
                         gene_cache_by_accession,
                         id_to_mutation_mapping,
                         aa_mutation_alignment_relations,
@@ -571,13 +583,13 @@ def process_batch_single_thread(
                 mutation_parent_relations.extend(parent_relations)
 
             NucleotideMutation.objects.bulk_create(
-                nt_mutation_set,
+                list(nt_mutation_dict.values()),
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "replicon"],
                 update_fields=["ref", "alt", "start", "end", "replicon"],
             )
             AminoAcidMutation.objects.bulk_create(
-                cds_mutation_set,
+                list(cds_mutation_dict.values()),
                 update_conflicts=True,
                 unique_fields=["ref", "alt", "start", "end", "cds"],
                 update_fields=["ref", "alt", "start", "end", "cds"],
@@ -868,7 +880,7 @@ def _process_property_file(
                 if name in column_mapping.keys():
                     db_name = column_mapping[name].db_property_name
                     if db_name in sample_property_names:
-                        print("setattr: ", new_sample, db_name, value)
+                        # print("setattr: ", new_sample, db_name, value)
                         setattr(new_sample, db_name, value)
 
             sequence_ids = row[related_sequences_column]
