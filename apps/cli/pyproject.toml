@@ -30,7 +30,7 @@ pango-aliasor = "^0.3.0"
 pyarrow = "^19.0.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
+black = "^26.3.1"
 coverage = {extras = ["toml"], version = "^7.4.3"}
 flake8 = "^4.0.1"
 flake8-bandit = "^3.0.0"
