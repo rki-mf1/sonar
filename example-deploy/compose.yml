@@ -37,7 +37,7 @@ services:
     env_file:
       - ./backend.env
       - ./backend.secrets.env
-    command: /bin/sh -c "$$START_DJANGO_SERVER"
+    command: ["/bin/sh", "-lc", "eval \"$$START_DJANGO_SERVER\""]
     volumes:
       - sonar-data:/sonar/data
       - sonar-logs:/logs
@@ -81,6 +81,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./frontend.env
+    environment:
+      NGINX_PORT: "80"
     ports:
       - "${SONAR_PUBLIC_FRONTEND_PORT}:80"
     depends_on:

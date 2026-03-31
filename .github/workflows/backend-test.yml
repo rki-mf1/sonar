@@ -6,13 +6,10 @@ on:
   workflow_dispatch:
 permissions: write-all
 concurrency:
-  group: "pages"
+  group: "backend-test-${{ github.ref }}"
   cancel-in-progress: true
 jobs:
   test:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     env:
       COMPOSE_ARGS: "-f compose.yml -f compose-dev.yml --env-file conf/docker/common.env --env-file conf/docker/dev.env --env-file conf/docker/dev-secrets.env"
     runs-on: ubuntu-latest

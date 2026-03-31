@@ -69,6 +69,10 @@ The deploy bundle itself does not include datasets. For a quick trial, either:
 The commands below use a local `data/` directory so they work with the release
 bundle as well.
 
+The CLI is intentionally not part of the `compose.yml` stack. It is meant to
+run separately and talk to the backend over its HTTP API, including from a
+different machine.
+
 ### Download Small Test Datasets
 
 ```sh
@@ -98,17 +102,18 @@ set -a
 . ./.env
 set +a
 
+SONAR_API_URL="${SONAR_API_URL:-http://127.0.0.1:8000/api}"
+
 run_cli() {
   docker run --rm \
-    --network example-deploy_default \
-    --env API_URL=http://sonar-django-backend:9080/api \
+    --env API_URL="$SONAR_API_URL" \
     --volume "$PWD/data:/data:ro" \
     "$SONAR_CLI_IMAGE" "$@"
 }
 ```
 
-If you changed the compose project name, replace `example-deploy_default` with
-your actual Docker network name.
+If the CLI runs on a different machine than the backend, set
+`SONAR_API_URL=https://your-backend-host/api` before calling `run_cli`.
 
 ### Minimal SARS-CoV-2 Dataset
 

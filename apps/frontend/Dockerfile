@@ -13,6 +13,7 @@ RUN npm run build
 
 # production stage
 FROM nginx:stable-alpine AS production-stage
+ENV NGINX_PORT=80
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 COPY docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/nginx/runtime-config.js.template /usr/share/nginx/html/runtime-config.js.template
