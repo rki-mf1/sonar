@@ -39,6 +39,131 @@ from prebuilt container images.
    - frontend: `http://localhost:8080`
    - backend API: `http://localhost:8000/api/`
 
+## Fresh-Setup Smoke Test
+
+Run these checks from inside `example-deploy/` after creating the env files:
+
+```sh
+docker compose config -q
+docker compose up -d
+docker compose ps
+curl --fail http://localhost:8000/api/database/get_database_tables_status/
+curl --fail http://localhost:8000/api/info/
+```
+
+If `docker compose up -d` fails with an error like
+`ghcr.io/rki-mf1/sonar-backend:latest ... denied`, your environment cannot pull
+the published GHCR images. In practice that means one of these is true:
+
+- you need to authenticate first with `docker login ghcr.io`
+- the package is not publicly pullable, so this bundle cannot currently be used
+  by an unauthenticated new user
+
+## Example Data Setup
+
+The deploy bundle itself does not include datasets. For a quick trial, either:
+
+- clone the repository and mount `../test-data`
+- or download a few small public/example files into `example-deploy/data`
+
+The commands below use a local `data/` directory so they work with the release
+bundle as well.
+
+### Download Small Test Datasets
+
+```sh
+mkdir -p data/sars-cov-2 data/mpox
+
+curl -L -o data/sars-cov-2/MN908947.nextclade.gb \
+  https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/sars-cov-2/MN908947.nextclade.gb
+curl -L -o data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
+  https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/sars-cov-2/SARS-CoV-2_12.fasta.xz
+curl -L -o data/sars-cov-2/SARS-CoV-2_12.tsv.xz \
+  https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/sars-cov-2/SARS-CoV-2_12.tsv.xz
+curl -L -o data/sars-cov-2/lineages_test.tsv \
+  https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/sars-cov-2/lineages_test.tsv
+
+curl -L -o data/mpox/clade-IIb-NC_063383.1.gb \
+  https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/mpox/clade-IIb-NC_063383.1.gb
+curl -L -o data/mpox/mpox_2.fasta.xz \
+  https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/mpox/mpox_2.fasta.xz
+curl -L -o data/mpox/mpox_2.tsv \
+  https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/mpox/mpox_2.tsv
+```
+
+### Define a Reusable CLI Helper
+
+```sh
+set -a
+. ./.env
+set +a
+
+run_cli() {
+  docker run --rm \
+    --network example-deploy_default \
+    --env API_URL=http://sonar-django-backend:9080/api \
+    --volume "$PWD/data:/data:ro" \
+    "$SONAR_CLI_IMAGE" "$@"
+}
+```
+
+If you changed the compose project name, replace `example-deploy_default` with
+your actual Docker network name.
+
+### Minimal SARS-CoV-2 Dataset
+
+```sh
+run_cli add-ref --gb /data/sars-cov-2/MN908947.nextclade.gb
+
+# Optional but useful for SARS-CoV-2 sublineage queries.
+run_cli import-lineage -l /data/sars-cov-2/lineages_test.tsv
+
+run_cli import \
+  -r MN908947.3 \
+  --fasta /data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
+  --tsv /data/sars-cov-2/SARS-CoV-2_12.tsv.xz \
+  --cols \
+    name=name \
+    sequencing_reason=sequencing_reason \
+    sample_type=sample_type \
+    euro=euro \
+    age=age \
+    comments=comments \
+    sequencing_tech=sequencing_tech \
+    zip_code=zip_code \
+    lab=lab \
+    lineage=lineage \
+    collection_date=collection_date
+```
+
+Basic checks:
+
+```sh
+run_cli list-ref
+run_cli info
+run_cli match -r MN908947.3 --count
+```
+
+### Minimal Mpox Dataset
+
+```sh
+run_cli add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
+
+run_cli import \
+  -r NC_063383.1 \
+  --fasta /data/mpox/mpox_2.fasta.xz \
+  --tsv /data/mpox/mpox_2.tsv \
+  --cols name=name
+```
+
+Basic checks:
+
+```sh
+run_cli list-ref
+run_cli info
+run_cli match -r NC_063383.1 --count
+```
+
 ## Updating Images
 
 Update the image tags in `.env`, then run:
