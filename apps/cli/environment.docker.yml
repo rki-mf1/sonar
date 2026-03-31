@@ -1,0 +1,14 @@
+name: sonar-cli
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - bcftools=1.20
+  - mafft=7.526
+  - python=3.11
+  - snpeff=5.2
+  - sourmash-minimal=4.8.14
+  - pip
+  - pip:
+      - git+https://github.com/JosephLalli/pywfa.git@ce138c3
