@@ -47,8 +47,8 @@ Run these checks from inside `example-deploy/` after creating the env files:
 docker compose config -q
 docker compose up -d
 docker compose ps
-curl --fail http://localhost:8000/api/database/get_database_tables_status/
-curl --fail http://localhost:8000/api/info/
+docker compose exec -T sonar-django-backend \
+  curl --fail http://127.0.0.1:9080/api/database/get_database_tables_status/
 ```
 
 If `docker compose up -d` fails with an error like
@@ -106,14 +106,19 @@ SONAR_API_URL="${SONAR_API_URL:-http://127.0.0.1:8000/api}"
 
 run_cli() {
   docker run --rm \
+    --network host \
     --env API_URL="$SONAR_API_URL" \
     --volume "$PWD/data:/data:ro" \
     "$SONAR_CLI_IMAGE" "$@"
 }
 ```
 
-If the CLI runs on a different machine than the backend, set
-`SONAR_API_URL=https://your-backend-host/api` before calling `run_cli`.
+For a local deployment on Linux, `--network host` lets the CLI container reach
+the backend at `127.0.0.1:8000` without joining the compose network.
+
+If the CLI runs on a different machine than the backend, use the same command
+shape but point `SONAR_API_URL` at the remote backend, for example
+`https://your-backend-host/api`.
 
 ### Minimal SARS-CoV-2 Dataset
 
@@ -187,16 +192,3 @@ This example stores persistent data in Docker named volumes:
 - `sonar-logs`
 
 Switch these to bind mounts if you want host-managed storage.
-
-## CLI Usage
-
-The matching CLI image is `${SONAR_CLI_IMAGE}` from `.env`. Example:
-
-```sh
-docker run --rm \
-  --network example-deploy_default \
-  --env API_URL=http://sonar-django-backend:9080/api \
-  ${SONAR_CLI_IMAGE} list-ref
-```
-
-If you rename the compose project, adjust the network name accordingly.
