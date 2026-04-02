@@ -47,7 +47,7 @@ Run these checks from inside `example-deploy/` after creating the env files:
 docker compose config -q
 docker compose up -d
 docker compose ps
-docker compose exec -T sonar-django-backend \
+docker compose exec -T sonar-backend \
   curl --fail http://127.0.0.1:9080/api/database/get_database_tables_status/
 ```
 
