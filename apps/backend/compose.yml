@@ -58,7 +58,7 @@ services:
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
     container_name: sonar-django-backend-migrate
     restart: no
-    command: python manage.py migrate
+    command: ["python", "manage.py", "migrate"]
     volumes:
       - ./covsonar2_server/test/media:/covsonarmedia
       - ./covsonar2_server/test/static:/staticfiles
@@ -102,7 +102,7 @@ services:
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
     container_name: sonar-django-apscheduler
     restart: on-failure
-    command: python manage.py runapscheduler
+    command: ["python", "manage.py", "runapscheduler"]
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
@@ -142,7 +142,7 @@ services:
     # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
     # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
-    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair  --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
+    command: ["celery", "-A", "covsonar_backend", "worker", "--loglevel", "${LOG_LEVEL}", "-Ofair", "--concurrency=4", "-E", "--max-tasks-per-child", "8", "--time-limit", "600", "-n", "Bob"]
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
@@ -154,7 +154,7 @@ services:
     !!merge <<: *backend-env
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
     container_name: celery-monitor
-    command: celery -A covsonar_backend flower --port=5555 --basic_auth="$CELERY_FLOWER_AUTH" --enable_events=False
+    command: ["celery", "-A", "covsonar_backend", "flower", "--port=5555", "--basic_auth=${CELERY_FLOWER_AUTH}", "--enable_events=False"]
     depends_on:
       celery-workers:
         condition: service_started

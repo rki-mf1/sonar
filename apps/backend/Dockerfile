@@ -45,5 +45,4 @@ COPY permission_model/ /code/permission_model
 COPY covsonar_backend/ /code/covsonar_backend
 COPY rest_api/ /code/rest_api
 
-ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["eval \"$START_DJANGO_SERVER\""]
+CMD ["/bin/sh", "-c", "eval \"$START_DJANGO_SERVER\""]
