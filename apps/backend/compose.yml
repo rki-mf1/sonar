@@ -16,6 +16,8 @@ x-backend-env: &backend-env
     - POSTGRES_PORT=$POSTGRES_PORT
     - ALLOWED_HOSTS=$ALLOWED_HOSTS
     - CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS
+    - DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+    - START_DJANGO_SERVER=$START_DJANGO_SERVER
     - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
     - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
     - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
@@ -24,7 +26,6 @@ x-backend-env: &backend-env
 services:
   sonar-db:
     image: $DOCKER_POSTGRES_IMAGE
-    container_name: sonar-db
     restart: unless-stopped
     command: -c config_file=/etc/postgresql/conf/${POSTGRES_CONFIG_FILE} -c port=$POSTGRES_PORT
     # This works around an error "could not resize shared memory segment /PostgreSQL.<num>"
@@ -53,12 +54,11 @@ services:
       start_period: 30s
       timeout: 10s
   # A one shot service that runs migrations before the actual backend starts
-  sonar-django-backend-migrate:
+  sonar-backend-migrate:
     !!merge <<: *backend-env
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
-    container_name: sonar-django-backend-migrate
     restart: no
-    command: ["python", "manage.py", "migrate"]
+    command: python manage.py migrate
     volumes:
       - ./covsonar2_server/test/media:/covsonarmedia
       - ./covsonar2_server/test/static:/staticfiles
@@ -71,10 +71,9 @@ services:
         condition: service_started
       sonar-db:
         condition: service_healthy
-  sonar-django-backend:
+  sonar-backend:
     !!merge <<: *backend-env
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
-    container_name: sonar-django-backend
     restart: unless-stopped
     volumes:
       - ./covsonar2_server/test/media:/covsonarmedia
@@ -91,70 +90,76 @@ services:
       retries: 5
       timeout: 10s
     depends_on:
-      sonar-django-backend-migrate:
+      sonar-backend-migrate:
         condition: service_completed_successfully
       sonar-cache:
         condition: service_started
       sonar-db:
         condition: service_healthy
-  sonar-django-apscheduler:
+  sonar-backend-apscheduler:
     !!merge <<: *backend-env
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
-    container_name: sonar-django-apscheduler
     restart: on-failure
-    command: ["python", "manage.py", "runapscheduler"]
+    command: python manage.py runapscheduler
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
       sonar-db:
         condition: service_healthy
-      sonar-django-backend:
+      sonar-backend:
         condition: service_healthy
   # This nginx reverse proxy instance is for both the backend and frontend.
   sonar-proxy:
     image: $DOCKER_NGINX_IMAGE
-    container_name: sonar-proxy
     volumes:
       - ./conf/nginx/templates:/etc/nginx/templates
       # These are for the backend(?)
       - ./covsonar2_server/test/static:/staticfiles
       - ./covsonar2_server/test/media:/mediafiles
-      # These are for the frontend
-      - ./work/frontend/dist:/frontend
     environment:
       - NGINX_PORT=8000
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
-      sonar-django-backend:
+      sonar-backend:
         condition: service_healthy
+      sonar-frontend:
+        condition: service_started
   sonar-cache:
     image: $DOCKER_REDIS_IMAGE
-    container_name: sonar-cache
     restart: unless-stopped
-  celery-workers:
+  sonar-celery-workers:
     !!merge <<: *backend-env
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
-    container_name: celery-workers
     # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend. For example, 
     # if the concurrency is set too high and the SAMPLE_BATCH_SIZE is too high,
     # this will not speed up the process. You need to lower SAMPLE_BATCH_SIZE into smaller chunks to gain the benefits
     # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
     # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
-    command: ["celery", "-A", "covsonar_backend", "worker", "--loglevel", "${LOG_LEVEL}", "-Ofair", "--concurrency=4", "-E", "--max-tasks-per-child", "8", "--time-limit", "600", "-n", "Bob"]
+    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
       sonar-cache:
         condition: service_started
-      sonar-django-backend:
+      sonar-backend:
         condition: service_healthy
-  celery-monitor:
+  sonar-celery-monitor:
     !!merge <<: *backend-env
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
-    container_name: celery-monitor
-    command: ["celery", "-A", "covsonar_backend", "flower", "--port=5555", "--basic_auth=${CELERY_FLOWER_AUTH}", "--enable_events=False"]
+    command: celery -A covsonar_backend flower --port=5555 --basic_auth=${CELERY_FLOWER_AUTH} --enable_events=False
     depends_on:
-      celery-workers:
+      sonar-celery-workers:
         condition: service_started
+  sonar-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: frontend:local
+    restart: unless-stopped
+    environment:
+      - SONAR_FRONTEND_BACKEND_ADDRESS=http://localhost:8000/api/
+    depends_on:
+      sonar-backend:
+        condition: service_healthy

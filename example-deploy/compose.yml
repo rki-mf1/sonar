@@ -1,7 +1,6 @@
 services:
   sonar-db:
     image: ${POSTGRES_IMAGE}
-    container_name: sonar-db
     restart: unless-stopped
     env_file:
       - ./backend.env
@@ -16,16 +15,14 @@ services:
       start_period: 20s
   sonar-cache:
     image: ${REDIS_IMAGE}
-    container_name: sonar-cache
     restart: unless-stopped
   sonar-backend-migrate:
     image: ${SONAR_BACKEND_IMAGE}
-    container_name: sonar-backend-migrate
     restart: "no"
     env_file:
       - ./backend.env
       - ./backend.secrets.env
-    command: ["python", "manage.py", "migrate"]
+    command: python manage.py migrate
     volumes:
       - sonar-data:/sonar/data
       - sonar-logs:/logs
@@ -36,7 +33,6 @@ services:
         condition: service_started
   sonar-backend:
     image: ${SONAR_BACKEND_IMAGE}
-    container_name: sonar-backend
     restart: unless-stopped
     env_file:
       - ./backend.env
@@ -55,12 +51,11 @@ services:
         condition: service_started
   sonar-backend-apscheduler:
     image: ${SONAR_BACKEND_IMAGE}
-    container_name: sonar-backend-apscheduler
     restart: unless-stopped
     env_file:
       - ./backend.env
       - ./backend.secrets.env
-    command: ["python", "manage.py", "runapscheduler"]
+    command: python manage.py runapscheduler
     volumes:
       - sonar-data:/sonar/data
       - sonar-logs:/logs
@@ -69,12 +64,11 @@ services:
         condition: service_started
   sonar-celery-workers:
     image: ${SONAR_BACKEND_IMAGE}
-    container_name: sonar-celery-workers
     restart: unless-stopped
     env_file:
       - ./backend.env
       - ./backend.secrets.env
-    command: ["celery", "-A", "covsonar_backend", "worker", "--loglevel", "${LOG_LEVEL:-INFO}", "-Ofair", "--concurrency=4", "-E", "--max-tasks-per-child", "8", "--time-limit", "600", "-n", "Bob"]
+    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL:-INFO} -Ofair --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
     volumes:
       - sonar-data:/sonar/data
       - sonar-logs:/logs
@@ -83,7 +77,6 @@ services:
         condition: service_started
   sonar-frontend:
     image: ${SONAR_FRONTEND_IMAGE}
-    container_name: sonar-frontend
     restart: unless-stopped
     env_file:
       - ./frontend.env

@@ -36,8 +36,8 @@ from prebuilt container images.
    ```
 
 5. Access the services:
-   - frontend: `http://localhost:8080`
-   - backend API: `http://localhost:8000/api/`
+   - frontend: `http://localhost:18080`
+   - backend API: `http://localhost:18000/api/`
 
 ## Fresh-Setup Smoke Test
 

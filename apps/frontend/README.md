@@ -43,7 +43,23 @@ npm install
 npm run dev
 ```
 
-Note: the url of the backend api (`VITE_SONAR_BACKEND_ADDRESS`) is set in the `.env.development` file. It defaults to "http://localhost:8000/api/".
+Note: the url of the backend api (`VITE_SONAR_BACKEND_ADDRESS`) is set in the `.env.development` file. The recommended local setup is:
+
+- backend dev stack on `http://localhost:9080/api/`
+- Vite frontend on `http://localhost:5173`
+- optional built frontend container on `http://localhost:8000`
+
+For frontend work, create a local override file and point Vite at the backend directly:
+
+```sh
+cp .env.development.local.example .env.development.local
+```
+
+That file sets:
+
+```sh
+VITE_SONAR_BACKEND_ADDRESS="http://localhost:9080/api/"
+```
 
 This local dev flow is unchanged and still provides automatic updates via the
 Vite dev server.
