@@ -95,6 +95,16 @@ curl -L -o data/mpox/mpox_2.tsv \
   https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/mpox/mpox_2.tsv
 ```
 
+### Update CLI Image
+
+```sh
+set -a
+. ./.env
+set +a
+
+docker pull "$SONAR_CLI_IMAGE"
+```
+
 ### Define a Reusable CLI Helper
 
 ```sh
@@ -130,6 +140,7 @@ run_cli import-lineage -l /data/sars-cov-2/lineages_test.tsv
 
 run_cli import \
   -r MN908947.3 \
+  --auto-anno \
   --fasta /data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
   --tsv /data/sars-cov-2/SARS-CoV-2_12.tsv.xz \
   --cols \
@@ -161,6 +172,7 @@ run_cli add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
 
 run_cli import \
   -r NC_063383.1 \
+  --auto-anno \
   --fasta /data/mpox/mpox_2.fasta.xz \
   --tsv /data/mpox/mpox_2.tsv \
   --cols name=name
