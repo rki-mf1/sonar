@@ -3,6 +3,7 @@ import csv
 from io import BytesIO
 import json
 import os
+from pathlib import Path
 import pickle
 import sys
 import time
@@ -845,13 +846,15 @@ class sonarUtils:
         # Create an in-memory ZIP file
         for _file in all_files:
             LOGGER.info(f"Processing file: {_file}")
-            file_extension = os.path.splitext(_file)[-1].lower()
+            suffixes = [suffix.lower() for suffix in Path(_file).suffixes]
+            file_extension = ".tsv" if ".tsv" in suffixes else ".csv"
 
             # Use pandas to read the file in chunks and process it
             chunk_iter = pd.read_csv(
                 _file,
                 sep="\t" if file_extension == ".tsv" else ",",
                 dtype="string",
+                compression="infer",
                 chunksize=PROP_CHUNK_SIZE,
                 usecols=columns_to_use,
             )
@@ -866,9 +869,14 @@ class sonarUtils:
 
                 with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_LZMA) as zip_file:
                     # Create a temporary in-memory file for the chunk
-                    chunk_filename = (
-                        f"{os.path.basename(_file)}_chunk_{chunk_num}{file_extension}"
-                    )
+                    basename = os.path.basename(_file)
+                    for compression_extension in (".xz", ".gz", ".bz2", ".zip"):
+                        if basename.lower().endswith(compression_extension):
+                            basename = basename[: -len(compression_extension)]
+                            break
+                    if basename.lower().endswith(file_extension):
+                        basename = basename[: -len(file_extension)]
+                    chunk_filename = f"{basename}_chunk_{chunk_num}{file_extension}"
                     csv_buffer = BytesIO()
 
                     # Write the chunk to the in-memory buffer

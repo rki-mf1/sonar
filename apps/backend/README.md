@@ -50,6 +50,10 @@ For reference, the config directory also includes `default-config-notused.conf` 
 
 ## Production
 
+If you want to deploy without cloning the repository, use the published backend
+image `ghcr.io/rki-mf1/sonar-backend` together with the example bundle in
+[`example-deploy`](../../example-deploy).
+
 ### Software requirements
 
 We have currently tested running producion on a server with:
@@ -121,6 +125,10 @@ Next, you can start up a dev instance of the software stack using docker compose
 ```bash
 $ ./apps/backend/scripts/linux/clean-dev-env.sh
 ```
+
+This local development setup is still the recommended contributor workflow. It
+keeps the backend source mounted into the running containers so code changes are
+picked up without rebuilding the image.
 
 After that command finishes, you should have the following services running on these ports:
 

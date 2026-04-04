@@ -97,11 +97,10 @@ Current version sonar-cli:1.0.0
 
 ## 3. Sonar-cli Setup (Docker)
 
-It is also possible to build and run the sonar-cli using docker, but we still
-have to figure out how to run commands like `import` which require access to
-the filesystem outside of the container.
+It is also possible to run the published sonar-cli image directly. For local
+development, the conda + poetry workflow above remains the recommended path.
 
-For now, you can build the cli container:
+You can still build the cli container locally:
 
 ```
 $ ./scripts/linux/build-docker.sh
@@ -123,6 +122,24 @@ positional arguments:
     list-ref            Lists all available references in the database
     add-prop            add a property to the database
 [...]
+```
+
+The published image is `ghcr.io/rki-mf1/sonar-cli`. For example:
+
+```sh
+docker run --rm \
+  --env API_URL=http://127.0.0.1:8000/api \
+  ghcr.io/rki-mf1/sonar-cli:latest list-ref
+```
+
+For commands that read local files, mount the input directory into the
+container:
+
+```sh
+docker run --rm \
+  --env API_URL=http://127.0.0.1:8000/api \
+  -v "$PWD/test-data:/data" \
+  ghcr.io/rki-mf1/sonar-cli:latest import -r MN908947.3 --fasta /data/SARS-CoV-2_1000.fasta.xz
 ```
 
 ### Test Datasets

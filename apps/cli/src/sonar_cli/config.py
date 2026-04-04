@@ -33,6 +33,7 @@ MATCH_CHUNK_LIMIT = int(os.getenv("MATCH_CHUNK_LIMIT") or 300)
 TMP_CACHE = os.path.abspath(mkdtemp(prefix=".sonarCache_"))
 
 ANNO_TOOL_PATH = os.getenv("ANNO_TOOL_PATH", "snpEff")
+ANNO_CONFIG_FILE = os.getenv("ANNO_CONFIG_FILE")
 # SNPSIFT_TOOL_PATH = os.getenv("SNPSIFT_TOOL_PATH","")
 # VCF_ONEPERLINE_PATH = os.getenv("VCF_ONEPERLINE_PATH","")
 
