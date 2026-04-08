@@ -49,6 +49,9 @@ Note: the url of the backend api (`VITE_SONAR_BACKEND_ADDRESS`) is set in the `.
 - Vite frontend on `http://localhost:5173`
 - optional built frontend container on `http://localhost:8000`
 
+Use `5173` when working on the Vite frontend directly. Use `8000` when you want
+to exercise the nginx-served stack, which proxies `/api` to the backend.
+
 For frontend work, create a local override file and point Vite at the backend directly:
 
 ```sh

@@ -132,8 +132,8 @@ picked up without rebuilding the image.
 
 After that command finishes, you should have the following services running on these ports:
 
-- 9080: django app server (`manage.py runserver`)
-- 8000: nginx forwarding requests to the django dev appserver on port 9080. You can access the django admin interface at `localhost:8000/admin`
+- 9080: django app server (`manage.py runserver`) for direct backend access
+- 8000: nginx forwarding requests to the django dev appserver on port 9080. This is the preferred local entrypoint for the full stack, including `/api` and `/admin`
 - 5432 (configurable by env file): PostgreSQL database
 - 6379: redis used by celery
 - 5555: celery monitor web interface

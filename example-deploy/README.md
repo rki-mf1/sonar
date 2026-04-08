@@ -39,6 +39,13 @@ from prebuilt container images.
    - frontend: `http://localhost:18080`
    - backend API: `http://localhost:18000/api/`
 
+Port roles in this example:
+
+- `18080`: public frontend port published from the frontend container
+- `18000`: public backend API port published from the backend container
+- `80`: frontend container internal port
+- `9080`: backend container internal app-server port
+
 ## Fresh-Setup Smoke Test
 
 Run these checks from inside `example-deploy/` after creating the env files:
@@ -112,7 +119,7 @@ set -a
 . ./.env
 set +a
 
-SONAR_API_URL="${SONAR_API_URL:-http://127.0.0.1:8000/api}"
+SONAR_API_URL="${SONAR_API_URL:-http://127.0.0.1:18000/api}"
 
 run_cli() {
   docker run --rm \
@@ -124,7 +131,7 @@ run_cli() {
 ```
 
 For a local deployment on Linux, `--network host` lets the CLI container reach
-the backend at `127.0.0.1:8000` without joining the compose network.
+the backend at `127.0.0.1:18000` without joining the compose network.
 
 If the CLI runs on a different machine than the backend, use the same command
 shape but point `SONAR_API_URL` at the remote backend, for example
