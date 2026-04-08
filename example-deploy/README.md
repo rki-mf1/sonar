@@ -13,6 +13,29 @@ from prebuilt container images.
 
 ## Quick Start
 
+For the fastest end-to-end setup, use the bootstrap script:
+
+```sh
+./bootstrap.sh --tag latest
+```
+
+This script:
+
+- creates active config files from the `*.example` templates if needed
+- preserves existing config files unless you pass `--force`
+- updates the active `.env` file to use the requested backend, frontend, and CLI image tag
+- pulls the latest images for that tag
+- starts the stack and runs the smoke test
+- downloads the example datasets
+- runs the documented SARS-CoV-2 and Mpox CLI example commands
+
+Useful options:
+
+```sh
+./bootstrap.sh --tag v1.2.3
+./bootstrap.sh --tag latest --force
+```
+
 1. Copy the example files:
 
    ```sh
@@ -132,6 +155,9 @@ run_cli() {
 
 For a local deployment on Linux, `--network host` lets the CLI container reach
 the backend at `127.0.0.1:18000` without joining the compose network.
+
+The bootstrap script uses the same `--network host` approach, so it currently
+assumes a Linux host with Docker and `docker compose` available.
 
 If the CLI runs on a different machine than the backend, use the same command
 shape but point `SONAR_API_URL` at the remote backend, for example
