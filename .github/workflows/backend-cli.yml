@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SONAR_LOCAL_API_URL: http://127.0.0.1:8000/api
     defaults:
       run:
         shell: bash -el {0}
@@ -42,7 +44,7 @@ jobs:
       - name: Run Pytest 🐶
         working-directory: ./apps/cli
         env:
-          API_URL: "http://127.0.0.1:8000/api"
+          API_URL: ${{ env.SONAR_LOCAL_API_URL }}
           LOG_LEVEL: "DEBUG"
           CHUNK_SIZE: 100
           ANNO_TOOL_PATH: "snpEff"

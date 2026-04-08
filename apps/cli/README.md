@@ -132,6 +132,10 @@ docker run --rm \
   ghcr.io/rki-mf1/sonar-cli:latest list-ref
 ```
 
+Use `http://127.0.0.1:8000/api` when talking to the local development stack
+through nginx. For the `example-deploy` bundle, use its published backend API
+port instead, which defaults to `http://127.0.0.1:18000/api`.
+
 For commands that read local files, mount the input directory into the
 container:
 
@@ -170,6 +174,9 @@ The table below shows the several commands that can be used.
 > You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
 >
 > for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
+>
+> for the `example-deploy` bundle, the corresponding default would be
+> `sonar-cli add-ref --db "http://127.0.0.1:18000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
 
 ## Adding Reference
 
