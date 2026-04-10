@@ -39,6 +39,7 @@ def test_find_snpeff_config_uses_tool_path_layout(monkeypatch, tmp_path):
 def test_find_snpeff_config_fails_without_any_source(monkeypatch):
     monkeypatch.setattr("sonar_cli.cache.ANNO_CONFIG_FILE", None)
     monkeypatch.setattr("sonar_cli.cache.ANNO_TOOL_PATH", "snpEff")
+    monkeypatch.setattr("sonar_cli.cache.shutil.which", lambda _tool: None)
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
 
     cache = sonarCache.__new__(sonarCache)
