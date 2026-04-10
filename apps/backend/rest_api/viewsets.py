@@ -26,9 +26,6 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from covsonar_backend.settings import CACHE_OBJECT_TTL
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.gbk_import import import_gbk_file
 from rest_api.data_entry.property_job import delete_property
 from rest_api.data_entry.property_job import find_or_create_property
@@ -40,6 +37,9 @@ from rest_api.utils import get_distinct_gene_symbols
 from rest_api.utils import parse_default_data
 from rest_api.utils import PropertyColumnMapping
 from rest_api.utils import strtobool
+from sonar_backend.settings import CACHE_OBJECT_TTL
+from sonar_backend.settings import LOGGER
+from sonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from . import models
 from .serializers import AlignmentSerializer
 from .serializers import GeneSerializer

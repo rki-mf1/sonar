@@ -18,10 +18,10 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from covsonar_backend.settings import CACHE_OBJECT_TTL
-from covsonar_backend.settings import LOGGER
 from rest_api.viewsets import PropertyViewSet
 from rest_api.viewsets_sample import SampleFilterMixin
+from sonar_backend.settings import CACHE_OBJECT_TTL
+from sonar_backend.settings import LOGGER
 from . import models
 
 

@@ -837,6 +837,6 @@ curl "http://localhost:8000/api/database/get_database_tables_status/"
 
 # Acknowledgments
 
-This tool is built upon the foundations of covsonar and mpoxsonar projects.
+This tool is built upon the foundations of sonar and mpoxsonar projects.
 
 Special thanks to all sonar contributors...
