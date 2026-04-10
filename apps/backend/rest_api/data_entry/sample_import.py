@@ -8,7 +8,6 @@ from typing import Optional
 from django.utils import timezone
 import pandas as pd
 
-from covsonar_backend.settings import LOGGER
 from rest_api.models import Alignment
 from rest_api.models import AminoAcidMutation
 from rest_api.models import CDS
@@ -17,6 +16,7 @@ from rest_api.models import NucleotideMutation
 from rest_api.models import Replicon
 from rest_api.models import Sample
 from rest_api.models import Sequence
+from sonar_backend.settings import LOGGER
 
 
 @dataclass

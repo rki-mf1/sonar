@@ -1,5 +1,5 @@
-from covsonar_backend.settings import DEBUG
 from rest_api.models import Sequence
+from sonar_backend.settings import DEBUG
 
 
 def clean_unused_sequences():

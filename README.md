@@ -109,5 +109,5 @@ This project has been developed as part of the following scientific initiatives:
 
 We also gratefully acknowledge the support of the Hasso Plattner Institute (HPI).
 
-Sonar is built on the foundation of covsonar and mpoxsonar, with contributions from a wide range of collaborators.
+Sonar is built on the foundation of sonar and mpoxsonar, with contributions from a wide range of collaborators.
 Special thanks to all Sonar contributors for their invaluable input and dedication.

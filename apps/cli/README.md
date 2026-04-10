@@ -308,6 +308,6 @@ sonar-cli delete-sample --sample IMS-10116-CVDP-77AB96B7-B9FB-46D6-B844-F9356151
 
 # Acknowledgments
 
-This tool is built upon the foundations of covsonar and pathosonar projects.
+This tool is built upon the foundations of sonar and pathosonar projects.
 
 Special thanks to the sonar contributors

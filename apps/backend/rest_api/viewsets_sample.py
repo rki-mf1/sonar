@@ -29,9 +29,6 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from covsonar_backend.settings import DEBUG
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.data_entry.sample_job import delete_samples
 from rest_api.data_entry.sample_job import delete_sequences
 from rest_api.serializers import SampleGenomesExportStreamSerializer
@@ -42,6 +39,9 @@ from rest_api.utils import get_distinct_replicon_accessions
 from rest_api.utils import resolve_ambiguous_NT_AA
 from rest_api.utils import strtobool
 from rest_api.viewsets import PropertyViewSet
+from sonar_backend.settings import DEBUG
+from sonar_backend.settings import LOGGER
+from sonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from . import models
 from .serializers import SampleGenomesSerializer
 from .serializers import SampleGenomesSerializerVCF
