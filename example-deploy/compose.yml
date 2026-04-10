@@ -49,6 +49,12 @@ services:
         condition: service_healthy
       sonar-cache:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://127.0.0.1:9080/api/database/get_database_tables_status/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
   sonar-backend-apscheduler:
     image: ${SONAR_BACKEND_IMAGE}
     restart: unless-stopped
@@ -61,7 +67,7 @@ services:
       - sonar-logs:/logs
     depends_on:
       sonar-backend:
-        condition: service_started
+        condition: service_healthy
   sonar-celery-workers:
     image: ${SONAR_BACKEND_IMAGE}
     restart: unless-stopped
@@ -74,7 +80,7 @@ services:
       - sonar-logs:/logs
     depends_on:
       sonar-backend:
-        condition: service_started
+        condition: service_healthy
   sonar-frontend:
     image: ${SONAR_FRONTEND_IMAGE}
     restart: unless-stopped
@@ -86,7 +92,7 @@ services:
       - "${SONAR_PUBLIC_FRONTEND_PORT}:80"
     depends_on:
       sonar-backend:
-        condition: service_started
+        condition: service_healthy
 volumes:
   sonar-data:
   sonar-logs:
