@@ -5,3 +5,4 @@ example-deploy/.env
 example-deploy/backend.env
 example-deploy/backend.secrets.env
 example-deploy/frontend.env
+example-deploy/data

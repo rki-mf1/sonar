@@ -21,6 +21,7 @@ import zipfile
 
 from mpire import WorkerPool
 import pandas as pd
+from sonar_cli import config
 from sonar_cli.api_interface import APIClient
 from sonar_cli.common_utils import file_collision
 from sonar_cli.common_utils import get_fname
@@ -31,7 +32,6 @@ from sonar_cli.common_utils import remove_charfromsequence_data
 from sonar_cli.common_utils import slugify
 from sonar_cli.config import ANNO_CONFIG_FILE
 from sonar_cli.config import ANNO_TOOL_PATH
-from sonar_cli.config import BASE_URL
 from sonar_cli.config import KSIZE
 from sonar_cli.config import SCALED
 from sonar_cli.config import TMP_CACHE
@@ -77,7 +77,7 @@ class sonarCache:
             disable_progress (bool): Whether to disable progress display or not.
         """
         self.result_queue = Queue()
-        self.base_url = db if db else BASE_URL
+        self.base_url = config.resolve_base_url(db)
         self.allow_updates = allow_updates
         self.debug = debug
         self.refacc = refacc
@@ -86,7 +86,7 @@ class sonarCache:
         self.disable_progress = disable_progress
         # Molecule/replicon data that belongs to the reference.\
         # self.source replaced by self.refmols
-        self.refmols = APIClient(base_url=BASE_URL).get_molecule_data(
+        self.refmols = APIClient(base_url=self.base_url).get_molecule_data(
             reference_accession=self.refacc,
         )
         if not self.refmols:

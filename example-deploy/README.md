@@ -9,6 +9,8 @@ from prebuilt container images.
 - `backend.env.example`: non-secret backend settings
 - `backend.secrets.env.example`: secret values you must replace
 - `frontend.env.example`: frontend runtime configuration
+- `sonar-cli.sh`: helper script for running the published CLI container
+- `sonar-cli.config.example`: example CLI configuration for the deploy bundle
 - `compose.yml`: image-based deployment example
 
 ## Quick Start
@@ -24,6 +26,7 @@ This script:
 - creates active config files from the `*.example` templates if needed
 - preserves existing config files unless you pass `--force`
 - updates the active `.env` file to use the requested backend, frontend, and CLI image tag
+- writes the active `sonar-cli.config` to the example-deploy backend API URL
 - pulls the latest images for that tag
 - starts the stack and runs the smoke test
 - downloads the example datasets
@@ -43,6 +46,7 @@ Useful options:
    cp backend.env.example backend.env
    cp backend.secrets.env.example backend.secrets.env
    cp frontend.env.example frontend.env
+   cp sonar-cli.config.example sonar-cli.config
    ```
 
 2. Replace the secret values in `backend.secrets.env`.
@@ -135,43 +139,52 @@ set +a
 docker pull "$SONAR_CLI_IMAGE"
 ```
 
-### Define a Reusable CLI Helper
+### Prepare the CLI Config
 
 ```sh
-set -a
-. ./.env
-set +a
-
-SONAR_API_URL="${SONAR_API_URL:-http://127.0.0.1:18000/api}"
-
-run_cli() {
-  docker run --rm \
-    --network host \
-    --env API_URL="$SONAR_API_URL" \
-    --volume "$PWD/data:/data:ro" \
-    "$SONAR_CLI_IMAGE" "$@"
-}
+cp sonar-cli.config.example sonar-cli.config
 ```
 
-For a local deployment on Linux, `--network host` lets the CLI container reach
-the backend at `127.0.0.1:18000` without joining the compose network.
+Then uncomment and adjust `API_URL` in `sonar-cli.config` if you changed the
+published backend port. The default example value is `http://127.0.0.1:18000/api`.
 
-The bootstrap script uses the same `--network host` approach, so it currently
+If you want to persist the same config outside the bundle, copy it to:
+
+```sh
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli"
+cp sonar-cli.config "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli/sonar-cli.config"
+```
+
+### Reusable CLI Helper
+
+Use the provided script:
+
+```sh
+./sonar-cli.sh list-ref
+```
+
+`sonar-cli.sh`:
+
+- mounts `data/` into the container
+- prefers the local `sonar-cli.config` file when present
+- otherwise falls back to the host XDG config file if `~/.config/sonar-cli/sonar-cli.config` exists
+- otherwise falls back to `API_URL=http://127.0.0.1:18000/api`
+- uses `ghcr.io/rki-mf1/sonar-cli:latest` by default, or `SONAR_CLI_IMAGE=...` if you override it explicitly
+
+For a local deployment on Linux, `sonar-cli.sh` uses `--network host` so the CLI
+container can reach the backend at `127.0.0.1:18000` without joining the
+compose network. The bootstrap script uses the same approach, so it currently
 assumes a Linux host with Docker and `docker compose` available.
-
-If the CLI runs on a different machine than the backend, use the same command
-shape but point `SONAR_API_URL` at the remote backend, for example
-`https://your-backend-host/api`.
 
 ### Minimal SARS-CoV-2 Dataset
 
 ```sh
-run_cli add-ref --gb /data/sars-cov-2/MN908947.nextclade.gb
+./sonar-cli.sh add-ref --gb /data/sars-cov-2/MN908947.nextclade.gb
 
 # Optional but useful for SARS-CoV-2 sublineage queries.
-run_cli import-lineage -l /data/sars-cov-2/lineages_test.tsv
+./sonar-cli.sh import-lineage -l /data/sars-cov-2/lineages_test.tsv
 
-run_cli import \
+./sonar-cli.sh import \
   -r MN908947.3 \
   --auto-anno \
   --fasta /data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
@@ -193,17 +206,17 @@ run_cli import \
 Basic checks:
 
 ```sh
-run_cli list-ref
-run_cli info
-run_cli match -r MN908947.3 --count
+./sonar-cli.sh list-ref
+./sonar-cli.sh info
+./sonar-cli.sh match -r MN908947.3 --count
 ```
 
 ### Minimal Mpox Dataset
 
 ```sh
-run_cli add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
+./sonar-cli.sh add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
 
-run_cli import \
+./sonar-cli.sh import \
   -r NC_063383.1 \
   --auto-anno \
   --fasta /data/mpox/mpox_2.fasta.xz \
@@ -214,9 +227,9 @@ run_cli import \
 Basic checks:
 
 ```sh
-run_cli list-ref
-run_cli info
-run_cli match -r NC_063383.1 --count
+./sonar-cli.sh list-ref
+./sonar-cli.sh info
+./sonar-cli.sh match -r NC_063383.1 --count
 ```
 
 ## Updating Images

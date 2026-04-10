@@ -17,6 +17,7 @@ import zipfile
 
 from mpire import WorkerPool
 import pandas as pd
+from sonar_cli import config
 from sonar_cli.align import sonarAligner
 from sonar_cli.annotation import Annotator
 from sonar_cli.api_interface import APIClient
@@ -39,7 +40,6 @@ from sonar_cli.common_utils import out_autodetect
 from sonar_cli.common_utils import read_var_parquet_file
 from sonar_cli.config import ANNO_CHUNK_SIZE
 from sonar_cli.config import ANNO_TOOL_PATH
-from sonar_cli.config import BASE_URL
 from sonar_cli.config import CACHE_CLEAR_CHUNK_SIZE
 from sonar_cli.config import CACHE_CLEAR_N_JOBS
 from sonar_cli.config import CHUNK_SIZE
@@ -279,7 +279,7 @@ class sonarUtils:
         no_upload_sample: bool = False,
     ):
         if not no_upload_sample:
-            json_resp = APIClient(base_url=BASE_URL).get_jobID()
+            json_resp = APIClient(base_url=config.get_base_url()).get_jobID()
             job_id = json_resp["job_id"]
 
         if not fasta_files:
@@ -392,7 +392,9 @@ class sonarUtils:
                 chunks_tmp = incomplete_chunks.copy()
                 for chunk_number in chunks_tmp:
                     job_with_chunk = f"{job_id}_chunk{chunk_number}"
-                    resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                    resp = APIClient(base_url=config.get_base_url()).get_job_byID(
+                        job_with_chunk
+                    )
                     job_status = resp["status"]
                     LOGGER.debug(f"Chunk {chunk_number} status: {job_status}")
                     if job_status in ["Q", "IP"]:
@@ -433,7 +435,9 @@ class sonarUtils:
                     chunks_tmp = incomplete_anno_chunks.copy()
                     for chunk_number in chunks_tmp:
                         job_with_chunk = f"{job_id}_chunk{chunk_number}"
-                        resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                        resp = APIClient(base_url=config.get_base_url()).get_job_byID(
+                            job_with_chunk
+                        )
                         job_status = resp["status"]
                         if job_status in ["Q", "IP"]:
                             continue
@@ -494,7 +498,7 @@ class sonarUtils:
             method: Alignment method (can be "mafft", "parasail" or "wfa")
         """
         if not no_upload_sample:
-            json_resp = APIClient(base_url=BASE_URL).get_jobID()
+            json_resp = APIClient(base_url=config.get_base_url()).get_jobID()
             job_id = json_resp["job_id"]
 
         if not fasta_files:
@@ -649,7 +653,9 @@ class sonarUtils:
                 chunks_tmp = incomplete_chunks.copy()
                 for chunk_number in chunks_tmp:
                     job_with_chunk = f"{job_id}_chunk{chunk_number}"
-                    resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                    resp = APIClient(base_url=config.get_base_url()).get_job_byID(
+                        job_with_chunk
+                    )
                     job_status = resp["status"]
                     LOGGER.debug(f"Chunk {chunk_number} status: {job_status}")
                     if job_status in ["Q", "IP"]:
@@ -689,7 +695,9 @@ class sonarUtils:
                     chunks_tmp = incomplete_anno_chunks.copy()
                     for chunk_number in chunks_tmp:
                         job_with_chunk = f"{job_id}_chunk{chunk_number}"
-                        resp = APIClient(base_url=BASE_URL).get_job_byID(job_with_chunk)
+                        resp = APIClient(base_url=config.get_base_url()).get_job_byID(
+                            job_with_chunk
+                        )
                         job_status = resp["status"]
                         if job_status in ["Q", "IP"]:
                             continue
@@ -750,7 +758,7 @@ class sonarUtils:
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
         LOGGER.debug(f"Uploading mutation annotations (job_id: {job_with_chunk})")
-        json_response = APIClient(base_url=BASE_URL).post_import_upload(
+        json_response = APIClient(base_url=config.get_base_url()).post_import_upload(
             files, job_id=job_with_chunk
         )
         msg = json_response["detail"]
@@ -804,7 +812,7 @@ class sonarUtils:
         job_id = shared_objects["job_id"]
         job_with_chunk = f"{job_id}_chunk{chunk_number}"
         LOGGER.debug(f"Uploading mutation profiles (job_id: {job_with_chunk})")
-        json_response = APIClient(base_url=BASE_URL).post_import_upload(
+        json_response = APIClient(base_url=config.get_base_url()).post_import_upload(
             files, job_id=job_with_chunk
         )
         LOGGER.debug(f"Uploading job_id: {job_with_chunk} -- done")
@@ -895,9 +903,9 @@ class sonarUtils:
                 zip_buffer.seek(0)
 
                 # Prepare data for the API call
-                job_id = APIClient(base_url=BASE_URL).get_jobID(is_prop_job=True)[
-                    "job_id"
-                ]
+                job_id = APIClient(base_url=config.get_base_url()).get_jobID(
+                    is_prop_job=True
+                )["job_id"]
                 file = {"zip_file": ("properties.zip", zip_buffer, "application/zip")}
                 data = {
                     "sample_id_column": sample_id_column,
@@ -907,9 +915,9 @@ class sonarUtils:
                 }
 
                 # Send the chunk to the backend
-                json_response = APIClient(base_url=BASE_URL).post_import_upload(
-                    data=data, files=file
-                )
+                json_response = APIClient(
+                    base_url=config.get_base_url()
+                ).post_import_upload(data=data, files=file)
 
                 msg = json_response.get("detail", "Unknown error")
                 if msg != "File uploaded successfully":
@@ -929,7 +937,7 @@ class sonarUtils:
             # iterated through
             jobs_tmp = incomplete_jobs.copy()
             for job in jobs_tmp:
-                resp = APIClient(base_url=BASE_URL).get_job_byID(job)
+                resp = APIClient(base_url=config.get_base_url()).get_job_byID(job)
                 job_status = resp["status"]
                 if job_status in ["Q", "IP"]:
                     next
@@ -1278,7 +1286,7 @@ class sonarUtils:
             params["limit"] = 1
             params["offset"] = 0
             json_response = APIClient(
-                base_url=BASE_URL
+                base_url=config.get_base_url()
             ).get_variant_profile_bymatch_command(params=params)
             if "count" not in json_response:
                 LOGGER.error("server cannot return a result")
@@ -1442,7 +1450,7 @@ class sonarUtils:
         params["limit"] = MATCH_CHUNK_LIMIT
         params["offset"] = 0
         fetched = 0
-        client = APIClient(base_url=BASE_URL)
+        client = APIClient(base_url=config.get_base_url())
 
         # total is unknown until the first response; initialise with 0 and
         # update once the backend returns the real count.
@@ -1574,7 +1582,7 @@ class sonarUtils:
                 )
             else:
                 # reference sequence for pre_ref and deletion/insertion
-                _dict = APIClient(base_url=BASE_URL).get_molecule_data(
+                _dict = APIClient(base_url=config.get_base_url()).get_molecule_data(
                     reference_accession=reference,
                 )[reference]
                 reference_sequence = _dict["sequence"]
@@ -1592,12 +1600,12 @@ class sonarUtils:
 
     @staticmethod
     def get_all_properties():
-        json_response = APIClient(base_url=BASE_URL).get_all_properties()
+        json_response = APIClient(base_url=config.get_base_url()).get_all_properties()
         return json_response["keys"], json_response["values"]
 
     @staticmethod
     def get_all_references():
-        rows = APIClient(base_url=BASE_URL).get_all_references()
+        rows = APIClient(base_url=config.get_base_url()).get_all_references()
         if not rows:
             return {"id": "", "accession": "", "taxon": "", "organism": ""}
         # only neccessary column
@@ -1630,7 +1638,7 @@ class sonarUtils:
             reference_gb_obj.append(open(reference_gb, "rb"))
 
         try:
-            flag = APIClient(base_url=BASE_URL).post_add_reference(
+            flag = APIClient(base_url=config.get_base_url()).post_add_reference(
                 reference_gb_obj, segment
             )
 
@@ -1646,10 +1654,11 @@ class sonarUtils:
     @staticmethod
     def delete_reference(reference):
         # Convert reference ID to accession if needed
-        reference = _check_reference(db=BASE_URL, reference=reference)
+        base_url = config.get_base_url()
+        reference = _check_reference(db=base_url, reference=reference)
 
         LOGGER.info("Start to delete....the process is not reversible.")
-        json_response = APIClient(base_url=BASE_URL).post_delete_reference(reference)
+        json_response = APIClient(base_url=base_url).post_delete_reference(reference)
         LOGGER.info(
             f"{json_response['samples_count']} alignments that are linked to the reference will also be deleted."
         )
@@ -1669,7 +1678,7 @@ class sonarUtils:
         if len(samples) == 0:
             LOGGER.info("Nothing to delete.")
 
-        json_response = APIClient(base_url=BASE_URL).post_delete_sample(
+        json_response = APIClient(base_url=config.get_base_url()).post_delete_sample(
             reference, samples=samples
         )
 
@@ -1691,7 +1700,7 @@ class sonarUtils:
         if len(sequences) == 0:
             LOGGER.info("Nothing to delete.")
 
-        json_response = APIClient(base_url=BASE_URL).post_delete_sequence(
+        json_response = APIClient(base_url=config.get_base_url()).post_delete_sequence(
             reference, sequences=sequences
         )
 
@@ -1715,14 +1724,18 @@ class sonarUtils:
             "description": description,
             "default": default,
         }
-        json_response = APIClient(base_url=BASE_URL).post_add_property(data)
+        json_response = APIClient(base_url=config.get_base_url()).post_add_property(
+            data
+        )
         LOGGER.info(json_response["detail"])
 
     @staticmethod
     def delete_property(
         name: str,
     ) -> int:
-        json_response = APIClient(base_url=BASE_URL).post_delete_property(name)
+        json_response = APIClient(base_url=config.get_base_url()).post_delete_property(
+            name
+        )
         LOGGER.info(json_response["detail"])
 
 

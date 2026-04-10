@@ -43,8 +43,8 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from sonar_cli import config
 from sonar_cli.api_interface import APIClient
-from sonar_cli.config import BASE_URL
 
 from .logging import LoggingConfigurator
 
@@ -493,7 +493,7 @@ def remove_empty_lists(d):
 
 
 def _check_property(db=None, prop_name_list: list[str] = []):
-    json_response = APIClient(base_url=BASE_URL).get_all_properties()
+    json_response = APIClient(base_url=config.get_base_url()).get_all_properties()
     # Use list to preserve order from API response
     available_names_list = [item["name"] for item in json_response["values"]]
 
@@ -524,7 +524,7 @@ def _check_property(db=None, prop_name_list: list[str] = []):
 
 
 def _check_reference(db=None, reference=None):
-    base_url = db if db else BASE_URL
+    base_url = config.resolve_base_url(db)
     accession_list = APIClient(base_url=base_url).get_all_references()
 
     # Create a mapping of IDs and accessions

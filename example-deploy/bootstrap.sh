@@ -149,6 +149,7 @@ copy_template_if_needed ".env.example" ".env"
 copy_template_if_needed "backend.env.example" "backend.env"
 copy_template_if_needed "backend.secrets.env.example" "backend.secrets.env"
 copy_template_if_needed "frontend.env.example" "frontend.env"
+copy_template_if_needed "sonar-cli.config.example" "sonar-cli.config"
 
 if [[ $FORCE -eq 1 || $SECRETS_WAS_COPIED -eq 1 || ! -s backend.secrets.env ]]; then
   ensure_secret_defaults "backend.secrets.env"
@@ -161,6 +162,8 @@ set_env_value ".env" "SONAR_CLI_IMAGE" "${CLI_REPO}:${TAG}"
 set -a
 . ./.env
 set +a
+
+set_env_value "sonar-cli.config" "API_URL" "http://127.0.0.1:${SONAR_PUBLIC_BACKEND_PORT}/api"
 
 echo "Pulling stack images for tag: ${TAG}"
 docker compose pull
@@ -200,20 +203,10 @@ download_file \
   "https://raw.githubusercontent.com/rki-mf1/sonar/main/test-data/mpox/mpox_2.tsv" \
   "data/mpox/mpox_2.tsv"
 
-SONAR_API_URL="${SONAR_API_URL:-http://127.0.0.1:${SONAR_PUBLIC_BACKEND_PORT}/api}"
-
-run_cli() {
-  docker run --rm \
-    --network host \
-    --env API_URL="$SONAR_API_URL" \
-    --volume "$PWD/data:/data:ro" \
-    "$SONAR_CLI_IMAGE" "$@"
-}
-
 echo "Running CLI example commands"
-run_cli add-ref --gb /data/sars-cov-2/MN908947.nextclade.gb
-run_cli import-lineage -l /data/sars-cov-2/lineages_test.tsv
-run_cli import \
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh add-ref --gb /data/sars-cov-2/MN908947.nextclade.gb
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh import-lineage -l /data/sars-cov-2/lineages_test.tsv
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh import \
   -r MN908947.3 \
   --auto-anno \
   --fasta /data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
@@ -230,20 +223,20 @@ run_cli import \
   lab=lab \
   lineage=lineage \
   collection_date=collection_date
-run_cli list-ref
-run_cli info
-run_cli match -r MN908947.3 --count
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh list-ref
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh info
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh match -r MN908947.3 --count
 
-run_cli add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
-run_cli import \
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh import \
   -r NC_063383.1 \
   --auto-anno \
   --fasta /data/mpox/mpox_2.fasta.xz \
   --tsv /data/mpox/mpox_2.tsv \
   --cols name=name
-run_cli list-ref
-run_cli info
-run_cli match -r NC_063383.1 --count
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh list-ref
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh info
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh match -r NC_063383.1 --count
 
 echo
 echo "Bootstrap completed."
