@@ -1,0 +1,13 @@
+.coverage
+.env
+.nextflow-console.log
+.poetry/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.vscode/
+dist/
+ruff-all-src.txt
+test-data/
+tests/
+work/

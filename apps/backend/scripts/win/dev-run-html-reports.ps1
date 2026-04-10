@@ -1,6 +1,6 @@
 try {
-    scripts\win\dc-dev.ps1 exec -T sonar-django-backend coverage report $args
-    scripts\win\dc-dev.ps1 exec -T soanr-django-backend coverage html $args
+    scripts\win\dc-dev.ps1 exec -T sonar-backend coverage report $args
+    scripts\win\dc-dev.ps1 exec -T sonar-backend coverage html $args
     Invoke-Item htmlcov/index.html
 }
 catch {

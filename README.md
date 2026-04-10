@@ -59,6 +59,36 @@ See apps/frontend/README.md for setup and customization.
 git clone https://github.com/rki-mf1/sonar.git
 cd sonar
 ```
+
+## Deploy from prebuilt images
+
+If you want to deploy sonar without cloning the repository, use the GHCR image
+deployment bundle in [`example-deploy`](./example-deploy).
+
+The release process also packages this directory as a downloadable
+`sonar-ghcr-deploy-bundle.tar.gz` artifact. The bundle contains:
+
+- an example `compose.yml`
+- backend env and secrets templates
+- frontend runtime config template
+
+The published images are:
+
+- `ghcr.io/rki-mf1/sonar-backend`
+- `ghcr.io/rki-mf1/sonar-frontend`
+- `ghcr.io/rki-mf1/sonar-cli`
+
+## Local development
+
+Local development remains source-based:
+
+- backend development still uses the existing compose setup with source mounts
+  and Django autoreload
+- frontend development still uses the Vite dev server with automatic updates
+  on file changes
+
+The production image/deployment path is separate from the local contributor
+workflow.
 ## Contributing
 
 Contributions to sonar are welcome! If you encounter issues or have suggestions for improvements, please open an issue on the GitHub repository.
