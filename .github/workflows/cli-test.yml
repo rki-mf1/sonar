@@ -20,6 +20,6 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies 🐱
-        run: pip install poetry flake8
+        run: pip install "poetry==2.3.3" flake8
       - name: Run flake8 - Code style check 🐱
         run: poetry run flake8 src/ --config=.flake8 -v
