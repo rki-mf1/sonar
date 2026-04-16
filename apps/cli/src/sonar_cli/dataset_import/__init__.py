@@ -75,5 +75,3 @@ def get_importer(source: str, pathogen: str, **kwargs):
 
     importer_class = DATASET_SOURCES[source]
     return importer_class(pathogen=pathogen, **kwargs)
-
-

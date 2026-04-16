@@ -65,7 +65,9 @@ class DatasetImporter(ABC):
                 self._temp_dir.cleanup()
                 self._temp_dir = None
             except Exception as exc:
-                LOGGER.warning("Failed to clean up temporary directory %s: %s", self._temp_dir, exc)
+                LOGGER.warning(
+                    "Failed to clean up temporary directory %s: %s", self._temp_dir, exc
+                )
 
     @property
     @abstractmethod
