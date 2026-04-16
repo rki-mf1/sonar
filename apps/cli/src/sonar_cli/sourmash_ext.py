@@ -63,6 +63,7 @@ def create_cluster_db(records: dict, db_name: str, ksize=11, scaled=1):
 def perform_search(fasta_file: str, db_path: str, ksize: int = 11, scaled: int = 1):
     db = _load_db(db_path)
     best_alignments = {}
+    decompressed_file = None
     # Check if the file is compressed with .gz, .xz, or .zip
     if fasta_file.endswith(".gz"):
         decompressed_file = fasta_file.rstrip(".gz")
@@ -107,7 +108,8 @@ def perform_search(fasta_file: str, db_path: str, ksize: int = 11, scaled: int =
             # print(f"Best match for {sample_id}: {best_match}")
 
     # rm the copy file
-    os.remove(decompressed_file)
+    if decompressed_file and os.path.exists(decompressed_file):
+        os.remove(decompressed_file)
     return best_alignments
 
 

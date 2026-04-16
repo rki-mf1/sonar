@@ -200,7 +200,7 @@ class Annotator:
         # Merge.
         # bcftools = can use --use-header to modify VCF header or reheader command
         full_inputs = " ".join(compressed_vcf_list)
-        command = f"bcftools merge {full_inputs} -o {output_vcf}  "
+        command = f"bcftools merge --force-samples {full_inputs} -o {output_vcf}  "
         result = subprocess.run(command, shell=True, stderr=subprocess.PIPE)
 
         if result.returncode != 0:

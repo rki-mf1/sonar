@@ -1,3 +1,25 @@
+# Shared environment variables that are needed by most services that use the backend image
+x-backend-env: &backend-env
+  environment:
+    - DEBUG=$DEBUG
+    - REDIS_URL=$REDIS_URL
+    - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
+    - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
+    - LOG_PATH=$LOG_PATH
+    - LOG_LEVEL=$LOG_LEVEL
+    - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
+    - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
+    - POSTGRES_HOST=$POSTGRES_HOST
+    - POSTGRES_DB=$POSTGRES_DB
+    - POSTGRES_USER=$POSTGRES_USER
+    - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+    - POSTGRES_PORT=$POSTGRES_PORT
+    - ALLOWED_HOSTS=$ALLOWED_HOSTS
+    - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
+    - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
+    - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
+    - SECRET_KEY=$SECRET_KEY
+    - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
 services:
   sonar-db:
     image: $DOCKER_POSTGRES_IMAGE
@@ -31,28 +53,9 @@ services:
       timeout: 10s
   # A one shot service that runs migrations before the actual backend starts
   sonar-django-backend-migrate:
+    !!merge <<: *backend-env
     image: backend:local
     container_name: sonar-django-backend-migrate
-    environment:
-      - DEBUG=$DEBUG
-      - REDIS_URL=$REDIS_URL
-      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
-      - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
-      - LOG_PATH=$LOG_PATH
-      - LOG_LEVEL=$LOG_LEVEL
-      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
-      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
-      - POSTGRES_HOST=$POSTGRES_HOST
-      - POSTGRES_DB=$POSTGRES_DB
-      - POSTGRES_USER=$POSTGRES_USER
-      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-      - POSTGRES_PORT=$POSTGRES_PORT
-      - ALLOWED_HOSTS=$ALLOWED_HOSTS
-      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
-      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
-      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
-      - SECRET_KEY=$SECRET_KEY
-      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     restart: no
     entrypoint: /bin/sh -c
     command: ["python manage.py migrate"]
@@ -69,28 +72,9 @@ services:
       sonar-db:
         condition: service_healthy
   sonar-django-backend:
+    !!merge <<: *backend-env
     image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
     container_name: sonar-django-backend
-    environment:
-      - DEBUG=$DEBUG
-      - REDIS_URL=$REDIS_URL
-      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
-      - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
-      - LOG_PATH=$LOG_PATH
-      - LOG_LEVEL=$LOG_LEVEL
-      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
-      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
-      - POSTGRES_HOST=$POSTGRES_HOST
-      - POSTGRES_DB=$POSTGRES_DB
-      - POSTGRES_USER=$POSTGRES_USER
-      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-      - POSTGRES_PORT=$POSTGRES_PORT
-      - ALLOWED_HOSTS=$ALLOWED_HOSTS
-      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
-      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
-      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
-      - SECRET_KEY=$SECRET_KEY
-      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     restart: unless-stopped
     entrypoint: /bin/sh -c
     command: ["${START_DJANGO_SERVER}"]
@@ -116,28 +100,9 @@ services:
       sonar-db:
         condition: service_healthy
   sonar-django-apscheduler:
+    !!merge <<: *backend-env
     image: backend:local # hint: must be built before, use "build_docker_dev.ps1"
     container_name: sonar-django-apscheduler
-    environment:
-      - DEBUG=$DEBUG
-      - REDIS_URL=$REDIS_URL
-      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
-      - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
-      - LOG_PATH=$LOG_PATH
-      - LOG_LEVEL=$LOG_LEVEL
-      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
-      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
-      - POSTGRES_HOST=$POSTGRES_HOST
-      - POSTGRES_DB=$POSTGRES_DB
-      - POSTGRES_USER=$POSTGRES_USER
-      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-      - POSTGRES_PORT=$POSTGRES_PORT
-      - ALLOWED_HOSTS=$ALLOWED_HOSTS
-      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
-      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
-      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
-      - SECRET_KEY=$SECRET_KEY
-      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     restart: on-failure
     entrypoint: /bin/sh -c
     command: ["python manage.py runapscheduler"]
@@ -171,6 +136,7 @@ services:
     container_name: sonar-cache
     restart: unless-stopped
   celery-workers:
+    !!merge <<: *backend-env
     image: backend:local
     container_name: celery-workers
     # The workers (concurrency, autoscale) are affected by the SAMPLE_BATCH_SIZE parameter in backend. For example, 
@@ -182,62 +148,16 @@ services:
     command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair  --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
-    environment:
-      - DEBUG=$DEBUG
-      - PROFILE_IMPORT=$PROFILE_IMPORT
-      - REDIS_URL=$REDIS_URL
-      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
-      - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
-      - LOG_PATH=$LOG_PATH
-      - LOG_LEVEL=$LOG_LEVEL
-      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
-      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
-      - POSTGRES_HOST=$POSTGRES_HOST
-      - POSTGRES_DB=$POSTGRES_DB
-      - POSTGRES_USER=$POSTGRES_USER
-      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-      - POSTGRES_PORT=$POSTGRES_PORT
-      - ALLOWED_HOSTS=$ALLOWED_HOSTS
-      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
-      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
-      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
-      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
-      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
-      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
-      - SECRET_KEY=$SECRET_KEY
-      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     depends_on:
       sonar-cache:
         condition: service_started
       sonar-django-backend:
         condition: service_healthy
   celery-monitor:
+    !!merge <<: *backend-env
     image: backend:local
     container_name: celery-monitor
     command: celery -A covsonar_backend flower --port=5555 --basic_auth="$CELERY_FLOWER_AUTH" --enable_events=False
-    environment:
-      - DEBUG=$DEBUG
-      - REDIS_URL=$REDIS_URL
-      - SAMPLE_BATCH_SIZE=$SAMPLE_BATCH_SIZE
-      - PROPERTY_BATCH_SIZE=$PROPERTY_BATCH_SIZE
-      - LOG_PATH=$LOG_PATH
-      - LOG_LEVEL=$LOG_LEVEL
-      - LDAP_DJANGO_QUERY_USER=$LDAP_DJANGO_QUERY_USER
-      - LDAP_DJANGO_QUERY_PASSWORD=$LDAP_DJANGO_QUERY_PASSWORD
-      - POSTGRES_HOST=$POSTGRES_HOST
-      - POSTGRES_DB=$POSTGRES_DB
-      - POSTGRES_USER=$POSTGRES_USER
-      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-      - POSTGRES_PORT=$POSTGRES_PORT
-      - ALLOWED_HOSTS=$ALLOWED_HOSTS
-      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
-      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
-      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
-      - SONAR_DATA_ENTRY_FOLDER=$SONAR_DATA_ENTRY_FOLDER
-      - SONAR_DATA_PROCESSING_FOLDER=$SONAR_DATA_PROCESSING_FOLDER
-      - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
-      - SECRET_KEY=$SECRET_KEY
-      - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
     depends_on:
       celery-workers:
         condition: service_started

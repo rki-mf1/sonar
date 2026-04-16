@@ -20,10 +20,33 @@ def test_version():
     assert pytest_wrapped_e.value.code == 0
 
 
+def test_info(capfd, api_url):
+    """Test that info command works without KeyError"""
+    code = run_cli(f" info --db {api_url} ")
+    out, err = capfd.readouterr()
+    # Check that basic statistics are present
+    assert "Samples Total:" in err
+    assert "Database Size:" in err
+    assert "Reference Genome:" in err
+    # Ensure no KeyError occurred
+    assert "KeyError" not in out
+    assert "KeyError" not in err
+    assert code == 0
+
+
 def test_get_list_prop(capfd, api_url):
     code = run_cli(f" list-prop --db {api_url} ")
     out, err = capfd.readouterr()
     assert "name" in out
+    assert code == 0
+
+
+def test_get_list_prop_has_length(capfd, api_url):
+    """Test that length property is visible in list-prop output"""
+    code = run_cli(f" list-prop --db {api_url} ")
+    out, err = capfd.readouterr()
+    assert "length" in out
+    assert "Sequence length in base pairs" in out
     assert code == 0
 
 
@@ -162,7 +185,6 @@ def test_delete_sample_fromfile(monkeypatch, capfd, api_url):
 
 
 def test_output_csv_format(capfd, api_url, tmpfile_name):
-
     code = run_cli(
         f" match --db {api_url} -r MN908947.3 --profile S:N440K C24503T --format csv -o {tmpfile_name}/out.csv "
     )

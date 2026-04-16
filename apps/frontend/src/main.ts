@@ -41,6 +41,7 @@ import ToastService from 'primevue/toastservice'
 import AnimateOnScroll from 'primevue/animateonscroll'
 import Panel from 'primevue/panel'
 import Skeleton from 'primevue/skeleton'
+import Slider from 'primevue/slider'
 import Splitter from 'primevue/splitter'
 import SplitterPanel from 'primevue/splitterpanel'
 import TabView from 'primevue/tabview'
@@ -111,6 +112,7 @@ app.component('PrimeMessage', Message)
 app.component('PrimeToast', Toast)
 app.component('PrimePanel', Panel)
 app.component('PrimeSkeleton', Skeleton)
+app.component('PrimeSlider', Slider)
 app.component('PrimeSplitter', Splitter)
 app.component('SplitterPanel', SplitterPanel)
 app.component('TabView', TabView)

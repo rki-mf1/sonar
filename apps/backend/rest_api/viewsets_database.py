@@ -89,13 +89,7 @@ class DatabaseInfoView(
         result["latest_genome_import"] = (
             latest_genome_import.init_upload_date if latest_genome_import else None
         )
-        # Unique Sequences
-        unique_sequences = models.Sequence.objects.count()
-        result["unique_sequences"] = unique_sequences
-        # Total Genomes
-        total_genomes = models.Alignment.objects.count()
-        result["genomes"] = total_genomes
-        # Reference Genomes
+        # Reference Genomes with organism-specific statistics
         result["reference_genomes"] = {}
         for reference in models.Reference.objects.all():
             organism = reference.organism
@@ -118,6 +112,22 @@ class DatabaseInfoView(
             result["reference_genomes"][organism]["annotated_proteins"] = ", ".join(
                 sorted(set(annotated_proteins))
             )
+
+            # Unique Sequences for this organism
+            unique_sequences = (
+                models.Sequence.objects.filter(
+                    alignments__replicon__reference__accession=reference.accession
+                )
+                .distinct()
+                .count()
+            )
+            result["reference_genomes"][organism]["unique_sequences"] = unique_sequences
+
+            # Total Genomes (alignments) for this organism
+            total_genomes = models.Alignment.objects.filter(
+                replicon__reference__accession=reference.accession
+            ).count()
+            result["reference_genomes"][organism]["genomes"] = total_genomes
         print(result["reference_genomes"])
         result["database_size"] = self.get_database_size()
         result["database_version"] = self.get_database_version()

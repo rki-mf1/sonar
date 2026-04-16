@@ -50,29 +50,67 @@ class LineageImport:
         """
         Process the lineage data.
         """
-        with open(self.lineage_file) as f:
-            tsv_data = pd.read_csv(self.lineage_file, sep="\t")
-        parents: dict[str, Lineage] = {}
-        children: list[Lineage] = []
-        for lineage, sublineages in tsv_data.itertuples(index=False):
-            # Ensure the lineage is added even if it has no children
-            if lineage not in parents:
-                parents[lineage] = Lineage(name=lineage)
+        tsv_data = pd.read_csv(self.lineage_file, sep="\t")
 
-            # Process sublineages if they exist
+        # Use a single dictionary to track all lineage objects
+        all_lineages: dict[str, Lineage] = {}
+
+        # First pass: Create all lineage objects
+        for lineage, sublineages in tsv_data.itertuples(index=False):
+            # Clean and validate lineage name
+            lineage = str(lineage).strip()
+            if len(lineage) > 50:
+                raise ValueError(
+                    f"Lineage name too long ({len(lineage)} chars): {lineage}"
+                )
+
+            # Ensure the lineage is added even if it has no children
+            if lineage not in all_lineages:
+                all_lineages[lineage] = Lineage(name=lineage)
+
+            # Process sublineages if they exist and create them if needed
             if sublineages != "none":
                 values = sublineages.split(",")
                 for val in values:
-                    children.append(Lineage(name=val, parent=parents[lineage]))
+                    val = val.strip()  # Remove whitespace
+                    if len(val) > 50:
+                        raise ValueError(
+                            f"Sublineage name too long " f"({len(val)} chars): {val}"
+                        )
+                    if val not in all_lineages:
+                        all_lineages[val] = Lineage(name=val)
+
+        # Second pass: Set parent relationships
+        for lineage, sublineages in tsv_data.itertuples(index=False):
+            lineage = str(lineage).strip()
+            if sublineages != "none":
+                values = sublineages.split(",")
+                for val in values:
+                    val = val.strip()
+                    # Set parent only if not set (first occurrence wins)
+                    if all_lineages[val].parent is None:
+                        all_lineages[val].parent = all_lineages[lineage]
 
         # Save all lineages to the database
+        # Separate into parents (no parent set) and children (parent set)
+        parents_to_save = [
+            lineage_obj
+            for lineage_obj in all_lineages.values()
+            if lineage_obj.parent is None
+        ]
+        children_to_save = [
+            lineage_obj
+            for lineage_obj in all_lineages.values()
+            if lineage_obj.parent is not None
+        ]
+
         with transaction.atomic():
-            for parent in parents.values():
+            # Save parents first so they have IDs
+            for parent in parents_to_save:
                 parent.save()
-            Lineage.objects.bulk_create(
-                objs=children,
-                ignore_conflicts=True,
-            )
+            # Then save children
+            for child in children_to_save:
+                child.save()
 
     def update_lineage_data(self, lineages: str) -> List[Lineage]:
         """
