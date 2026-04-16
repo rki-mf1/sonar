@@ -52,13 +52,20 @@ class DatasetImporter(ABC):
 
         LOGGER.info(f"Using cache directory: {self.cache_dir}")
 
-    def __del__(self):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.cleanup()
+
+    def cleanup(self):
         """Clean up temporary directory if created."""
         if self._temp_dir:
             try:
                 self._temp_dir.cleanup()
-            except Exception:
-                pass
+                self._temp_dir = None
+            except Exception as exc:
+                LOGGER.warning("Failed to clean up temporary directory %s: %s", self._temp_dir, exc)
 
     @property
     @abstractmethod

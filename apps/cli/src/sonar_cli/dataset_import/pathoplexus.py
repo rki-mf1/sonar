@@ -74,7 +74,7 @@ def normalize_date_format(date_str: str) -> str:
         else:
             # Invalid format, return empty
             LOGGER.warning(f"Invalid date format (too many parts): {date_str}")
-            return ""
+            return None
 
         # Validate and format the date using datetime
         default_date = datetime.date.fromisoformat(date_str)
@@ -117,7 +117,7 @@ PATHOPLEXUS_METADATA_FIELDS = [
 
 # Column mapping from Pathoplexus to sonar-cli
 PATHOPLEXUS_COLUMN_MAPPING = {
-    "accession": "name",  # Sample identifier
+    "accessionVersion": "name",  # Sample identifier (with version, e.g. PP_0029ASK.1 — matches FASTA headers)
     "sampleCollectionDate": "collection_date",  # Collection date (needs normalization)
     "geoLocCountry": "country",  # Country
     "geoLocAdmin1": "region",  # Region/State
@@ -376,6 +376,7 @@ class PathoplexusDatasetImporter(DatasetImporter):
 
         count = 0
         processed_sample_ids = []
+        seen_accessions = set()
 
         with open(output_path, "w", newline="", encoding="utf-8") as f_out:
             writer = csv.DictWriter(
@@ -384,6 +385,12 @@ class PathoplexusDatasetImporter(DatasetImporter):
             writer.writeheader()
 
             for item in metadata:
+                # Skip duplicate accessions from the API response
+                accession = item.get("accession", "")
+                if accession in seen_accessions:
+                    continue
+                seen_accessions.add(accession)
+
                 transformed = {}
                 for pp_col, sonar_col in PATHOPLEXUS_COLUMN_MAPPING.items():
                     value = item.get(pp_col, "")

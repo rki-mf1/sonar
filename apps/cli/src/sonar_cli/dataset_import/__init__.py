@@ -77,14 +77,3 @@ def get_importer(source: str, pathogen: str, **kwargs):
     return importer_class(pathogen=pathogen, **kwargs)
 
 
-# # RKI SARS-CoV-2 (ข้อมูลจาก Germany)
-# sonar-cli import-dataset --source rki --pathogen sars-cov-2 -r MN908947.3 --sample-size 1000
-
-# # Pathoplexus RSV-B
-# sonar-cli import-dataset --source pathoplexus --pathogen rsv-b -r <your-reference> --sample-size 500
-
-# # Download เท่านั้น (ไม่ import) ??
-# sonar-cli import-dataset --source rki --pathogen sars-cov-2 --sample-size 100 --download-only --cache ./my_cache
-
-# # Import ทั้งหมด
-# sonar-cli import-dataset --source pathoplexus --pathogen mpox -r <ref> --method wfa --threads 8

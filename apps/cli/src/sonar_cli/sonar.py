@@ -989,46 +989,45 @@ def handle_import_dataset(args: argparse.Namespace):
 
     try:
         # Create importer
-        importer = get_importer(
+        with get_importer(
             source=source,
             pathogen=pathogen,
             cache_dir=args.cache,
             sample_size=args.sample_size,
-        )
+        ) as importer:
+            # Download and preprocess
+            fasta_path, tsv_path = importer.run()
 
-        # Download and preprocess
-        fasta_path, tsv_path = importer.run()
+            if args.download_only:
+                LOGGER.info("Download-only mode: skipping database import")
+                LOGGER.info(f"Files are ready at: {importer.cache_dir}")
+                return
 
-        if args.download_only:
-            LOGGER.info("Download-only mode: skipping database import")
-            LOGGER.info(f"Files are ready at: {importer.cache_dir}")
-            return
+            # Import into database
+            LOGGER.info("Importing data into database...")
+            sonarUtils.import_data(
+                db=args.db,
+                nextclade_json=None,
+                fasta=[str(fasta_path)],
+                csv_files=[],
+                tsv_files=[str(tsv_path)],
+                prop_links=args.cols,
+                cachedir=args.cache,
+                autolink=args.auto_link,
+                auto_anno=args.auto_anno,
+                progress=not args.no_progress,
+                update=args.no_skip,
+                threads=args.threads,
+                quiet=not args.verbose,
+                reference=args.reference,
+                method=args.method,
+                no_upload_sample=False,
+                include_nx=not args.skip_nx,
+                debug=args.debug,
+                must_pass_paranoid=args.must_pass_paranoid,
+            )
 
-        # Import into database
-        LOGGER.info("Importing data into database...")
-        sonarUtils.import_data(
-            db=args.db,
-            nextclade_json=None,
-            fasta=[str(fasta_path)],
-            csv_files=[],
-            tsv_files=[str(tsv_path)],
-            prop_links=args.cols,
-            cachedir=args.cache,
-            autolink=args.auto_link,
-            auto_anno=args.auto_anno,
-            progress=not args.no_progress,
-            update=args.no_skip,
-            threads=args.threads,
-            quiet=not args.verbose,
-            reference=args.reference,
-            method=args.method,
-            no_upload_sample=False,
-            include_nx=not args.skip_nx,
-            debug=args.debug,
-            must_pass_paranoid=args.must_pass_paranoid,
-        )
-
-        LOGGER.info("Dataset import completed successfully!")
+            LOGGER.info("Dataset import completed successfully!")
 
     except Exception as e:
         LOGGER.error(f"Dataset import failed: {e}")
