@@ -46,8 +46,7 @@ def delete_samples(sample_list: list):
     sequence_ids = list(samples_qs.values_list("sequences__id", flat=True))
     LOGGER.info(f"Deleting samples with IDs: {sample_ids}")
     if DEBUG:
-        sequence_ids = list(samples_qs.values_list("sequences__id", flat=True))
-        print("\nAssociated sequence IDs", sequence_ids)
+        LOGGER.info("\nAssociated sequence IDs", sequence_ids)
 
     deleted_info = samples_qs.delete()  # returns (num_deleted, dict_of_models)
     LOGGER.info(f"Deleted samples: {deleted_info}")
