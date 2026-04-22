@@ -12,11 +12,11 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 
 1. Import genomes: alignment against a reference genome of your choice, mutation calling and mutation import to database
 2. Search: query database with mutation profiles or metadata (lineages, sampling dates, etc.)
-2. Support multiple genome references.
-3. Support multiple alignment tools.
-4. Support for high performance compute clusters.
+3. Support multiple genome references.
+4. Support multiple alignment tools.
+5. Support for high performance compute clusters.
 
-### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar/apps/cli/wiki/) 🏃‍♂️
+### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar/wiki/) 🏃‍♂️
 
 # QuickStart 🧬
 
@@ -28,7 +28,7 @@ We recommend [miniforge](https://conda-forge.org/download/), but other conda dis
 
 ### 1.2 Install sonar-backend
 
-Please visit [sonar-backend](https://github.com/rki-mf1/apps/backend) for download and installation
+Please visit [sonar-backend](https://github.com/rki-mf1/sonar) for download and installation
 
 ## 2. Sonar-cli Setup
 
@@ -87,7 +87,7 @@ Next make sure you can contact the backend:
 
 ```sh
 $ sonar-cli list-ref
-Current version sonar-cli:1.0.0
+Current version sonar-cli:1.0.3
 ╒══════╤═════════════╤═══════════════╤═════════════════════════════════════════════════╕
 │   id │ accession   │ taxon         │ organism                                        │
 ╞══════╪═════════════╪═══════════════╪═════════════════════════════════════════════════╡
@@ -115,7 +115,7 @@ usage: sonar-cli [-h] [-v]
                  {list-ref,add-prop,delete-prop,add-ref,delete-ref,import,delete-sample,list-prop,import-lineage,match,tasks}
                  ...
 
-sonar-cli 1.0.0: Sonar command line tool to interface with the sonar-backend
+sonar-cli 1.0.3: Sonar command line tool to interface with the sonar-backend
 and PostgreSQL version.
 
 positional arguments:
@@ -131,6 +131,8 @@ We provide the test datasets under the `test-data` directory.
 | File              | Usage                                                                            |
 | ----------------- | -------------------------------------------------------------------------------- |
 | `test-data/sars-cov-2/180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
+| `test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz` | 1000 FASTA sequences of SARS-CoV-2, used in import examples. |
+| `test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz` | Metadata (TSV) for the 1000 sequences above, used in import examples. |
 | `test-data/sars-cov-2/MN908947.nextclade.gb`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
 
 # Usage 🚀
@@ -139,6 +141,7 @@ The table below shows the several commands that can be used.
 
 | Subcommand                        | Purpose                                                            |
 | --------------------------------- | ------------------------------------------------------------------ |
+| [import-dataset](#importing-public-datasets) | Download and import public pathogen datasets (RKI, Pathoplexus). |
 | [import](#importing-genomes)      | Import genome sequences and sample information into the database.  |
 | [match](#matching-genomes)        | Match genome sequences and sample information within the database. |
 | [add-ref](#adding-reference)      | Add reference genome sequences to the database.                    |
@@ -148,6 +151,8 @@ The table below shows the several commands that can be used.
 | [add-prop](#adding-property)      | Add property key for storage and querying in the database.         |
 | [delete-prop](#deleting-property) | Delete properties in the database.                                 |
 | [delete-sample](#deleting-sample) | Delete samples and associated information from the database.       |
+| [import-lineage](#import-lineage) | Import lineage parent-child relationships (e.g. SARS-CoV-2 PANGO). |
+| [tasks](#tasks)                   | Query background job status.                                       |
 
 > [!TIP]
 > You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
@@ -169,19 +174,19 @@ The `import` subcommand is used to import genome sequences and sample informatio
 Basic command:
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method 1
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method mafft
 ```
 
 Example command: Including properties during import
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
 ```
 
 Example command: Including annotation step(`--auto-anno`)
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID  --auto-anno --auto-link
 ```
 
 To view all available options:
