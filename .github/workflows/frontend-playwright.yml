@@ -39,7 +39,7 @@ jobs:
       - name: Run Playwright tests (Firefox only)
         working-directory: ./apps/frontend
         run: npx playwright test --project firefox
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
