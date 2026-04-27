@@ -11,8 +11,13 @@
             <strong>Sonar</strong> is an open-source genomic surveillance platform that provides an
             end-to-end workflow, from raw consensus sequences to analysis-ready mutation and
             annotation profiles. Sonar is available at
-            <a href="https://github.com/rki-mf1/sonar" target="_blank" rel="noopener noreferrer"
-              class="text-primary font-bold">github.com/rki-mf1/sonar</a>
+            <a
+              href="https://github.com/rki-mf1/sonar"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary font-bold"
+              >github.com/rki-mf1/sonar</a
+            >
             under the open-source AGPL-3.0 license.
           </p>
           <p class="m-1 mt-3 line-height-3">
@@ -31,8 +36,11 @@
           <!-- Document I: Home Page -->
           <TabPanel header="Document I">
             <div class="flex flex-column gap-3 p-2 md:p-4">
-              <img src="@/assets/about-page/home-select-dataset.png"
-                alt="Home page — select organism, reference accession, and data source" class="doc-image" />
+              <img
+                src="@/assets/about-page/home-select-dataset.png"
+                alt="Home page — select organism, reference accession, and data source"
+                class="doc-image"
+              />
               <div>
                 <h4 class="text-primary mt-0 mb-2">Home Page — Select Your Dataset</h4>
                 <p class="m-0 line-height-3">
@@ -51,8 +59,11 @@
             <div class="flex flex-column gap-5 p-2 md:p-4">
               <!-- Block 1: Sample list -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/table-2-table-list.png" alt="Table view showing the full list of samples"
-                  class="doc-image" />
+                <img
+                  src="@/assets/about-page/table-2-table-list.png"
+                  alt="Table view showing the full list of samples"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Table View — Sample List</h4>
                   <p class="m-0 line-height-3">
@@ -66,8 +77,11 @@
 
               <!-- Block 2: Sample detail -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/table-3-sample-select.png" alt="Sample detail view after clicking a row"
-                  class="doc-image" />
+                <img
+                  src="@/assets/about-page/table-3-sample-select.png"
+                  alt="Sample detail view after clicking a row"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Sample Detail</h4>
                   <p class="m-0 line-height-3">
@@ -79,8 +93,11 @@
 
               <!-- Block 3: Filter bar -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/table-4-filter-bar.png"
-                  alt="Filter bar with collection time range, lineage, and profile filters" class="doc-image" />
+                <img
+                  src="@/assets/about-page/table-4-filter-bar.png"
+                  alt="Filter bar with collection time range, lineage, and profile filters"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Filter Bar</h4>
                   <p class="m-0 line-height-3">
@@ -94,15 +111,18 @@
 
               <!-- Block 4: Advanced filters -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/table-5-adv-filter-bar.png"
-                  alt="Advanced filter panel with AND/OR/Group logic operators" class="doc-image" />
+                <img
+                  src="@/assets/about-page/table-5-adv-filter-bar.png"
+                  alt="Advanced filter panel with AND/OR/Group logic operators"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Advanced Filters</h4>
                   <p class="m-0 line-height-3">
                     For more complex queries, the Advanced Filter panel allows you to filter by any
-                    property stored in the database. It supports logical operators (<strong>AND / OR / Group</strong>)
-                    and
-                    inclusion/exclusion logic, enabling you to build arbitrarily complex
+                    property stored in the database. It supports logical operators (<strong
+                      >AND / OR / Group</strong
+                    >) and inclusion/exclusion logic, enabling you to build arbitrarily complex
                     filter expressions.
                   </p>
                 </div>
@@ -115,8 +135,11 @@
             <div class="flex flex-column gap-5 p-2 md:p-4">
               <!-- Block 1: Graph overview -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/plot-1-page.png" alt="Graph page overview with interactive charts"
-                  class="doc-image" />
+                <img
+                  src="@/assets/about-page/plot-1-page.png"
+                  alt="Graph page overview with interactive charts"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Graph Page — Visualization Overview</h4>
                   <p class="m-0 line-height-3">
@@ -129,8 +152,11 @@
 
               <!-- Block 2: Number of samples -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/plot-2-numberofsample.png"
-                  alt="Bar chart showing number of samples per calendar week" class="doc-image" />
+                <img
+                  src="@/assets/about-page/plot-2-numberofsample.png"
+                  alt="Bar chart showing number of samples per calendar week"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Number of Samples per Calendar Week</h4>
                   <p class="m-0 line-height-3">
@@ -143,8 +169,11 @@
 
               <!-- Block 3: Lineage distribution -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/plot-2-distribution.png"
-                  alt="Stacked chart showing distribution of lineages per calendar week" class="doc-image" />
+                <img
+                  src="@/assets/about-page/plot-2-distribution.png"
+                  alt="Stacked chart showing distribution of lineages per calendar week"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">
                     Distribution of Grouped Lineages per Calendar Week
@@ -159,8 +188,11 @@
 
               <!-- Block 4: Custom graph -->
               <div class="flex flex-column gap-3">
-                <img src="@/assets/about-page/plot-3-create-graph.png" alt="Custom graph creation interface"
-                  class="doc-image" />
+                <img
+                  src="@/assets/about-page/plot-3-create-graph.png"
+                  alt="Custom graph creation interface"
+                  class="doc-image"
+                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Customize Your Own Graph</h4>
                   <p class="m-0 line-height-3">
@@ -180,7 +212,7 @@
     <div class="surface-card border-round shadow-4 mb-5 overflow-hidden">
       <div class="flex flex-column md:flex-row">
         <!-- Acknowledgements -->
-        <div class="flex-1 p-4  section-left">
+        <div class="flex-1 p-4 section-left">
           <h3 class="text-primary mt-0">Acknowledgements</h3>
           <p class="m-0 line-height-3">
             This work is supported by a BMWK grant (DAKI-FWS, 01MK21009E) as well as the de.NBI
@@ -199,12 +231,20 @@
                 time. Please don't hesitate to contact us via email:
                 <a href="mailto:FuchsS@rki.de" class="text-primary font-bold">FuchsS@rki.de</a>
                 or leave us a ticket at
-                <a href="https://github.com/rki-mf1/sonar/issues" target="_blank" rel="noopener noreferrer"
-                  class="text-primary font-bold">github.com/rki-mf1/sonar/issues</a>.
+                <a
+                  href="https://github.com/rki-mf1/sonar/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-primary font-bold"
+                  >github.com/rki-mf1/sonar/issues</a
+                >.
               </p>
             </div>
-            <img src="@/assets/images/undraw_in_the_office_re_jtgc.svg" alt="Contact illustration"
-              class="contact-illustration" />
+            <img
+              src="@/assets/images/undraw_in_the_office_re_jtgc.svg"
+              alt="Contact illustration"
+              class="contact-illustration"
+            />
           </div>
         </div>
       </div>
