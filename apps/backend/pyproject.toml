@@ -7,9 +7,9 @@ readme = "README.md"
 packages = [{include = "covsonar_backend"}]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.13"
-django = "^5.2.12"
-numpy = "^1.26.1"
+python = ">=3.13,<3.15"
+django = "^5.2.13"
+numpy = "^2.1.0"
 pandas = "^2.1.2"
 django-redis = "^5.4.0"
 django-cors-headers = "^4.3.0"

@@ -34,6 +34,7 @@ env = environ.Env(
     SONAR_DATA_ARCHIVE=(str, None),
     REDIS_URL=(str, None),
     ALLOWED_HOSTS=(str, None),
+    CORS_ALLOWED_ORIGINS=(str, "http://localhost:5173"),
     SAMPLE_BATCH_SIZE=(int, 10),
     PROPERTY_BATCH_SIZE=(int, 1000),
     PROFILE_IMPORT=(bool, False),
@@ -94,7 +95,11 @@ MIDDLEWARE = [
 ]
 ROOT_URLCONF = "covsonar_backend.urls"
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    origin.strip()
+    for origin in env("CORS_ALLOWED_ORIGINS", default="http://localhost:5173").split(
+        ","
+    )
+    if origin.strip()
 ]
 TEMPLATES = [
     {

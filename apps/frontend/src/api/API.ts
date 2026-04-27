@@ -1,4 +1,5 @@
 import type { FilterGroupRoot } from '@/util/types'
+import { runtimeConfig } from '@/util/runtimeConfig'
 import axios from 'axios'
 import { saveAs } from 'file-saver'
 import * as ExcelJS from 'exceljs'
@@ -18,7 +19,7 @@ export default class API {
   CODE_INTERNAL_SERVER_ERROR = 500
 
   TIMEOUT = 50000
-  BACKEND_ADDRESS = import.meta.env.VITE_SONAR_BACKEND_ADDRESS
+  BACKEND_ADDRESS = runtimeConfig.backendAddress
 
   static instance: API
   static getInstance(): API {
@@ -29,10 +30,15 @@ export default class API {
     return API.instance
   }
   fillAuthenticationHeader() {
-    axios.defaults.headers.common = {
-      Authorization: `Token M2BtbMGQMHsPg9CwPjIuDdWNfv3NkJL8`,
+    const headers: Record<string, string> = {
       Accept: 'application/json; version=1.0.1',
     }
+
+    if (runtimeConfig.authToken) {
+      headers.Authorization = `Token ${runtimeConfig.authToken}`
+    }
+
+    axios.defaults.headers.common = headers
   }
 
   async getRequestFullUrl(url: string, params: Record<string, unknown>, suppressError: boolean) {

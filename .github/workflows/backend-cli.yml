@@ -8,16 +8,18 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SONAR_LOCAL_API_URL: http://127.0.0.1:8000/api
     defaults:
       run:
         shell: bash -el {0}
     steps:
       - name: Checkout 🐶
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
       - name: Install base dependencies (python, poetry, mafft, ...)
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniforge-version: latest
           channels: conda-forge,bioconda
@@ -42,7 +44,7 @@ jobs:
       - name: Run Pytest 🐶
         working-directory: ./apps/cli
         env:
-          API_URL: "http://127.0.0.1:8000/api"
+          API_URL: ${{ env.SONAR_LOCAL_API_URL }}
           LOG_LEVEL: "DEBUG"
           CHUNK_SIZE: 100
           ANNO_TOOL_PATH: "snpEff"

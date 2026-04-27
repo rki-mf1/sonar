@@ -41,11 +41,29 @@ cd sonar/apps/cli
 
 ### 2.2 Configuration
 
-🤓 There is a "env.template" file in the apps/cli directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+🤓 There is a `sonar-cli.config` file in the `apps/cli` directory. It is a
+fully commented reference file that lists every configurable CLI setting and
+its built-in default value. It can be copied to
+`$XDG_CONFIG_HOME/sonar-cli/sonar-cli.config` (or `~/.config/sonar-cli/sonar-cli.config`)
+if you want to persist those settings for your user account.
+
+For contributor local development with `./apps/backend/scripts/linux/clean-dev-env.sh`,
+the default backend URL is `http://127.0.0.1:9080/api`. In CI and in proxy-based
+deployments, `http://127.0.0.1:8000/api` may still be used explicitly.
+
+Configuration precedence for all settings is:
+
+1. Explicit command-line option such as `--db`
+2. Environment variable
+3. `$XDG_CONFIG_HOME/sonar-cli/sonar-cli.config`
+4. Built-in default values mirrored in `sonar-cli.config`
 
 ```sh
-cp env.template .env
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli"
+cp sonar-cli.config "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli/sonar-cli.config"
 ```
+
+Edit that copied file by uncommenting only the settings you want to override.
 
 ### 2.3 Create python environment
 
@@ -97,11 +115,10 @@ Current version sonar-cli:1.0.3
 
 ## 3. Sonar-cli Setup (Docker)
 
-It is also possible to build and run the sonar-cli using docker, but we still
-have to figure out how to run commands like `import` which require access to
-the filesystem outside of the container.
+It is also possible to run the published sonar-cli image directly. For local
+development, the conda + poetry workflow above remains the recommended path.
 
-For now, you can build the cli container:
+You can still build the cli container locally:
 
 ```
 $ ./scripts/linux/build-docker.sh
@@ -123,6 +140,28 @@ positional arguments:
     list-ref            Lists all available references in the database
     add-prop            add a property to the database
 [...]
+```
+
+The published image is `ghcr.io/rki-mf1/sonar-cli`. For example:
+
+```sh
+docker run --rm \
+  --env API_URL=http://127.0.0.1:8000/api \
+  ghcr.io/rki-mf1/sonar-cli:latest list-ref
+```
+
+Use `http://127.0.0.1:8000/api` when talking to the local development stack
+through nginx. For the `example-deploy` bundle, use its published backend API
+port instead, which defaults to `http://127.0.0.1:18000/api`.
+
+For commands that read local files, mount the input directory into the
+container:
+
+```sh
+docker run --rm \
+  --env API_URL=http://127.0.0.1:8000/api \
+  -v "$PWD/test-data:/data" \
+  ghcr.io/rki-mf1/sonar-cli:latest import -r MN908947.3 --fasta /data/SARS-CoV-2_1000.fasta.xz
 ```
 
 ### Test Datasets
@@ -158,6 +197,9 @@ The table below shows the several commands that can be used.
 > You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
 >
 > for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
+>
+> for the `example-deploy` bundle, the corresponding default would be
+> `sonar-cli add-ref --db "http://127.0.0.1:18000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
 
 ## Adding Reference
 
