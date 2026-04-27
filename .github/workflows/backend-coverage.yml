@@ -52,11 +52,10 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-      - uses: jwalton/gh-find-current-pr@v1
-        id: finder
       - name: Publish coverage summary
+        if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: Coverage Report
           message: '[Report]( ${{ steps.deployment.outputs.page_url }})'
-          number: ${{ steps.finder.outputs.pr }}
+          number: ${{ github.event.pull_request.number }}
