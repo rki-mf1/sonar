@@ -10,14 +10,14 @@ repository = "https://github.com/rki-mf1/sonar-cli"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-biopython = "~1.86"
+biopython = "~1.87"
 tqdm = "~4.66.3"
 more-itertools = "~8.7.0"
 pyaml = "~20.4.0"
 tabulate = "~0.8.9"
 mpire = "^2.6.0"
 pandas = "^2.2.1"
-requests = "^2.32.4"
+requests = "^2.33.0"
 python-dotenv = "^0.21.0"
 psutil = "^5.9.3"
 dateparser = "^1.1.4"
@@ -30,7 +30,7 @@ pango-aliasor = "^0.3.0"
 pyarrow = "^19.0.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
+black = "^26.3.1"
 coverage = {extras = ["toml"], version = "^7.4.3"}
 flake8 = "^4.0.1"
 flake8-bandit = "^3.0.0"
