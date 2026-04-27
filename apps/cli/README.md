@@ -190,7 +190,7 @@ The table below shows the several commands that can be used.
 | [add-prop](#adding-property)      | Add property key for storage and querying in the database.         |
 | [delete-prop](#deleting-property) | Delete properties in the database.                                 |
 | [delete-sample](#deleting-sample) | Delete samples and associated information from the database.       |
-| [import-lineage](#import-lineage) | Import lineage parent-child relationships (e.g. SARS-CoV-2 PANGO). |
+| [import-lineage](#import-lineage) | Import lineage parent-child relationships (e.g. SARS-CoV-2 Pangolin lineages). |
 | [tasks](#tasks)                   | Query background job status.                                       |
 
 > [!TIP]
