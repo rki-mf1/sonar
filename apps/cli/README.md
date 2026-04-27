@@ -180,7 +180,6 @@ The table below shows the several commands that can be used.
 
 | Subcommand                        | Purpose                                                            |
 | --------------------------------- | ------------------------------------------------------------------ |
-| [import-dataset](#importing-public-datasets) | Download and import public pathogen datasets (RKI, Pathoplexus). |
 | [import](#importing-genomes)      | Import genome sequences and sample information into the database.  |
 | [match](#matching-genomes)        | Match genome sequences and sample information within the database. |
 | [add-ref](#adding-reference)      | Add reference genome sequences to the database.                    |
