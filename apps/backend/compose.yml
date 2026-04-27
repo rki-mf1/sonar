@@ -23,6 +23,9 @@ x-backend-env: &backend-env
     - SONAR_DATA_ARCHIVE=$SONAR_DATA_ARCHIVE
     - SECRET_KEY=$SECRET_KEY
     - KEEP_IMPORTED_DATA_FILES=$KEEP_IMPORTED_DATA_FILES
+    - CELERY_WORKER_CONCURRENCY=$CELERY_WORKER_CONCURRENCY
+    - CELERY_WORKER_MAX_TASKS_PER_CHILD=$CELERY_WORKER_MAX_TASKS_PER_CHILD
+    - CELERY_WORKER_TIME_LIMIT=$CELERY_WORKER_TIME_LIMIT
 services:
   sonar-db:
     image: $DOCKER_POSTGRES_IMAGE
@@ -137,7 +140,10 @@ services:
     # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
     # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
-    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL} -Ofair --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
+    command:
+      - /bin/sh
+      - -c
+      - exec celery -A covsonar_backend worker --loglevel "${LOG_LEVEL}" -Ofair --concurrency "${CELERY_WORKER_CONCURRENCY}" -E --max-tasks-per-child "${CELERY_WORKER_MAX_TASKS_PER_CHILD}" --time-limit "${CELERY_WORKER_TIME_LIMIT}" -n Bob
     volumes:
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
     depends_on:
