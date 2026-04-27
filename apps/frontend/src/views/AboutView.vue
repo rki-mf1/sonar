@@ -20,10 +20,6 @@
             >
             under the open-source AGPL-3.0 license.
           </p>
-          <p class="m-1 mt-3 line-height-3">
-            For this application, <strong>Sonar-Frontend</strong> enables non-technical users to
-            interact with the data in the database.
-          </p>
         </template>
       </PrimeCard>
     </div>
@@ -34,13 +30,8 @@
         <h3 class="text-primary mt-4">How it works</h3>
         <TabView>
           <!-- Document I: Home Page -->
-          <TabPanel header="Document I">
+          <TabPanel header="The Home Page">
             <div class="flex flex-column gap-3 p-2 md:p-4">
-              <img
-                src="@/assets/about-page/home-select-dataset.png"
-                alt="Home page — select organism, reference accession, and data source"
-                class="doc-image"
-              />
               <div>
                 <h4 class="text-primary mt-0 mb-2">Home Page — Select Your Dataset</h4>
                 <p class="m-0 line-height-3">
@@ -51,19 +42,19 @@
                   click to proceed to the analysis view.
                 </p>
               </div>
+              <img
+                src="@/assets/about-page/home-select-dataset.png"
+                alt="Home page — select organism, reference accession, and data source"
+                class="doc-image"
+              />
             </div>
           </TabPanel>
 
           <!-- Document II: Table Page -->
-          <TabPanel header="Document II">
+          <TabPanel header="Data Table View">
             <div class="flex flex-column gap-5 p-2 md:p-4">
               <!-- Block 1: Sample list -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/table-2-table-list.png"
-                  alt="Table view showing the full list of samples"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Table View — Sample List</h4>
                   <p class="m-0 line-height-3">
@@ -73,15 +64,15 @@
                     information for that individual sample.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/table-2-table-list.png"
+                  alt="Table view showing the full list of samples"
+                  class="doc-image"
+                />
               </div>
 
               <!-- Block 2: Sample detail -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/table-3-sample-select.png"
-                  alt="Sample detail view after clicking a row"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Sample Detail</h4>
                   <p class="m-0 line-height-3">
@@ -89,15 +80,15 @@
                     available metadata and genomic profile information.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/table-3-sample-select.png"
+                  alt="Sample detail view after clicking a row"
+                  class="doc-image"
+                />
               </div>
 
               <!-- Block 3: Filter bar -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/table-4-filter-bar.png"
-                  alt="Filter bar with collection time range, lineage, and profile filters"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Filter Bar</h4>
                   <p class="m-0 line-height-3">
@@ -107,15 +98,15 @@
                     counter on the side shows how many samples currently match your active filters.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/table-4-filter-bar.png"
+                  alt="Filter bar with collection time range, lineage, and profile filters"
+                  class="doc-image"
+                />
               </div>
 
               <!-- Block 4: Advanced filters -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/table-5-adv-filter-bar.png"
-                  alt="Advanced filter panel with AND/OR/Group logic operators"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Advanced Filters</h4>
                   <p class="m-0 line-height-3">
@@ -126,20 +117,20 @@
                     filter expressions.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/table-5-adv-filter-bar.png"
+                  alt="Advanced filter panel with AND/OR/Group logic operators"
+                  class="doc-image"
+                />
               </div>
             </div>
           </TabPanel>
 
           <!-- Document III: Graph Page -->
-          <TabPanel header="Document III">
+          <TabPanel header="Plot View">
             <div class="flex flex-column gap-5 p-2 md:p-4">
               <!-- Block 1: Graph overview -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/plot-1-page.png"
-                  alt="Graph page overview with interactive charts"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Graph Page — Visualization Overview</h4>
                   <p class="m-0 line-height-3">
@@ -148,15 +139,15 @@
                     data is displayed in the graphs.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/plot-1-page.png"
+                  alt="Graph page overview with interactive charts"
+                  class="doc-image"
+                />
               </div>
 
               <!-- Block 2: Number of samples -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/plot-2-numberofsample.png"
-                  alt="Bar chart showing number of samples per calendar week"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Number of Samples per Calendar Week</h4>
                   <p class="m-0 line-height-3">
@@ -165,15 +156,15 @@
                     with and resize the chart as needed.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/plot-2-numberofsample.png"
+                  alt="Bar chart showing number of samples per calendar week"
+                  class="doc-image"
+                />
               </div>
 
               <!-- Block 3: Lineage distribution -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/plot-2-distribution.png"
-                  alt="Stacked chart showing distribution of lineages per calendar week"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">
                     Distribution of Grouped Lineages per Calendar Week
@@ -184,15 +175,15 @@
                     time.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/plot-2-distribution.png"
+                  alt="Stacked chart showing distribution of lineages per calendar week"
+                  class="doc-image"
+                />
               </div>
 
               <!-- Block 4: Custom graph -->
               <div class="flex flex-column gap-3">
-                <img
-                  src="@/assets/about-page/plot-3-create-graph.png"
-                  alt="Custom graph creation interface"
-                  class="doc-image"
-                />
                 <div>
                   <h4 class="text-primary mt-0 mb-2">Customize Your Own Graph</h4>
                   <p class="m-0 line-height-3">
@@ -201,6 +192,11 @@
                     visualizations suited to your specific analysis or reporting needs.
                   </p>
                 </div>
+                <img
+                  src="@/assets/about-page/plot-3-create-graph.png"
+                  alt="Custom graph creation interface"
+                  class="doc-image"
+                />
               </div>
             </div>
           </TabPanel>
@@ -229,7 +225,7 @@
               <p class="m-0 line-height-3">
                 Thank you for using our tool! We would love to get your feedback and improve over
                 time. Please don't hesitate to contact us via email:
-                <a href="mailto:FuchsS@rki.de" class="text-primary font-bold">FuchsS@rki.de</a>
+                <a href="mailto:huskam@rki.de" class="text-primary font-bold">huskam@rki.de</a>
                 or leave us a ticket at
                 <a
                   href="https://github.com/rki-mf1/sonar/issues"
