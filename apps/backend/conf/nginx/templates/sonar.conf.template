@@ -3,7 +3,7 @@ server {
 
   # Backend (Django)
   location ~ ^/(api|admin|__debug__)/ {
-    proxy_pass http://sonar-django-backend:9080;
+    proxy_pass http://sonar-backend:9080;
     proxy_set_header Host $host:$server_port;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -21,9 +21,10 @@ server {
 
   # Frontend
   location / {
-    root /frontend;
-    index index.html;
-    try_files $uri $uri/ /index.html;
+    proxy_pass http://sonar-frontend:80;
+    proxy_set_header Host $host:$server_port;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   }
 
   error_page   500 502 503 504  /50x.html;

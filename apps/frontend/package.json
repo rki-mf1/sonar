@@ -10,7 +10,8 @@
     "format": "prettier . --write",
     "format-check": "prettier . --check",
     "lint": "eslint src",
-    "build-only": "vite build --emptyOutDir --outDir ../backend/work/frontend/dist",
+    "build-only": "vite build",
+    "build:backend-proxy": "npm run build && mkdir -p ../backend/work/frontend/dist && cp -r dist/. ../backend/work/frontend/dist/",
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {

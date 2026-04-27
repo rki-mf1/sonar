@@ -1,0 +1,99 @@
+services:
+  sonar-db:
+    image: ${POSTGRES_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - ./backend.env
+      - ./backend.secrets.env
+    volumes:
+      - sonar-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  sonar-cache:
+    image: ${REDIS_IMAGE}
+    restart: unless-stopped
+  sonar-backend-migrate:
+    image: ${SONAR_BACKEND_IMAGE}
+    restart: "no"
+    env_file:
+      - ./backend.env
+      - ./backend.secrets.env
+    command: python manage.py migrate
+    volumes:
+      - sonar-data:/sonar/data
+      - sonar-logs:/logs
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+      sonar-cache:
+        condition: service_started
+  sonar-backend:
+    image: ${SONAR_BACKEND_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - ./backend.env
+      - ./backend.secrets.env
+    volumes:
+      - sonar-data:/sonar/data
+      - sonar-logs:/logs
+    ports:
+      - "${SONAR_PUBLIC_BACKEND_PORT}:9080"
+    depends_on:
+      sonar-backend-migrate:
+        condition: service_completed_successfully
+      sonar-db:
+        condition: service_healthy
+      sonar-cache:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://127.0.0.1:9080/api/database/get_database_tables_status/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  sonar-backend-apscheduler:
+    image: ${SONAR_BACKEND_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - ./backend.env
+      - ./backend.secrets.env
+    command: python manage.py runapscheduler
+    volumes:
+      - sonar-data:/sonar/data
+      - sonar-logs:/logs
+    depends_on:
+      sonar-backend:
+        condition: service_healthy
+  sonar-celery-workers:
+    image: ${SONAR_BACKEND_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - ./backend.env
+      - ./backend.secrets.env
+    command: celery -A covsonar_backend worker --loglevel ${LOG_LEVEL:-INFO} -Ofair --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
+    volumes:
+      - sonar-data:/sonar/data
+      - sonar-logs:/logs
+    depends_on:
+      sonar-backend:
+        condition: service_healthy
+  sonar-frontend:
+    image: ${SONAR_FRONTEND_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - ./frontend.env
+    environment:
+      NGINX_PORT: "80"
+    ports:
+      - "${SONAR_PUBLIC_FRONTEND_PORT}:80"
+    depends_on:
+      sonar-backend:
+        condition: service_healthy
+volumes:
+  sonar-data:
+  sonar-logs:
+  sonar-postgres:
