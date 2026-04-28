@@ -1,9 +1,9 @@
 import sys
 import time
 
+from sonar_cli import config
 from sonar_cli.api_interface import APIClient
 from sonar_cli.common_utils import _files_exist
-from sonar_cli.config import BASE_URL
 from sonar_cli.lineages.sc2_lineages import main as sc2_main
 from sonar_cli.logging import LoggingConfigurator
 
@@ -29,7 +29,7 @@ class sonarUtils1:
 
     @staticmethod
     def get_info(db: str = None):
-        API_URL = BASE_URL if db is None else db
+        API_URL = config.resolve_base_url(db)
 
         json_response = APIClient(base_url=API_URL).get_database_info()
         log_message = "No information available"
@@ -69,7 +69,7 @@ class sonarUtils1:
 
     @staticmethod
     def get_all_jobs(db: str = None):
-        API_URL = BASE_URL if db is None else db
+        API_URL = config.resolve_base_url(db)
 
         json_response = APIClient(base_url=API_URL).get_all_jobs()
         if not json_response or len(json_response["detail"]) == 0:
@@ -117,7 +117,7 @@ class sonarUtils1:
 
     @staticmethod
     def get_job_byID(db: str = None, job_id=None, background=False, interval=180):
-        API_URL = BASE_URL if db is None else db
+        API_URL = config.resolve_base_url(db)
 
         if background:
             LOGGER.info(
@@ -169,9 +169,9 @@ class sonarUtils1:
 
             lineage_obj = open(lineage_file, "rb")
             try:
-                json_response = APIClient(base_url=BASE_URL).put_lineage_import(
-                    lineage_obj
-                )
+                json_response = APIClient(
+                    base_url=config.get_base_url()
+                ).put_lineage_import(lineage_obj)
                 if json_response["detail"] == "Lineages updated successfully":
                     LOGGER.info("The lineage has been updated successfully.")
                 else:

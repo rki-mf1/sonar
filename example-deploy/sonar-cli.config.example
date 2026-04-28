@@ -1,0 +1,47 @@
+# sonar-cli configuration for the example-deploy bundle
+#
+# Copy to sonar-cli.config if you want a local deploy-specific CLI config file:
+#   cp sonar-cli.config.example sonar-cli.config
+#
+# You can also copy the active file to:
+#   ${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli/sonar-cli.config
+#
+# All lines are optional. Uncomment only the settings you want to override.
+
+# Example-deploy publishes the backend API on port 18000 by default.
+# API_URL=http://127.0.0.1:18000/api
+
+# Optional client-side secret key used by parts of the CLI that expect one.
+# SECRET_KEY=development-secret
+
+# Logging level.
+# LOG_LEVEL=INFO
+
+# Max seqhash batch size for duplicate checks during import.
+# CHUNK_SIZE=10000
+
+# Samples per annotation worker chunk.
+# ANNO_CHUNK_SIZE=250
+
+# Metadata import chunk size.
+# PROP_CHUNK_SIZE=1000
+
+# Parallel import/cache tuning.
+# PARANOID_CHUNK_SIZE=50
+# PARANOID_N_JOBS=8
+# CACHE_CLEAR_CHUNK_SIZE=250
+# CACHE_CLEAR_N_JOBS=4
+
+# Skip samples with deletions longer than this many base pairs.
+# FILTER_DELETE_SIZE=2000
+
+# Page size for paginated match queries.
+# MATCH_CHUNK_LIMIT=300
+
+# Annotation tool configuration.
+# ANNO_TOOL_PATH=snpEff
+# ANNO_CONFIG_FILE=
+
+# Sourmash settings.
+# KSIZE=11
+# SCALED=1

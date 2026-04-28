@@ -12,11 +12,11 @@ Sonar command line tool to interface with the [sonar-backend](https://github.com
 
 1. Import genomes: alignment against a reference genome of your choice, mutation calling and mutation import to database
 2. Search: query database with mutation profiles or metadata (lineages, sampling dates, etc.)
-2. Support multiple genome references.
-3. Support multiple alignment tools.
-4. Support for high performance compute clusters.
+3. Support multiple genome references.
+4. Support multiple alignment tools.
+5. Support for high performance compute clusters.
 
-### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar/apps/cli/wiki/) 🏃‍♂️
+### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar/wiki/) 🏃‍♂️
 
 # QuickStart 🧬
 
@@ -28,7 +28,7 @@ We recommend [miniforge](https://conda-forge.org/download/), but other conda dis
 
 ### 1.2 Install sonar-backend
 
-Please visit [sonar-backend](https://github.com/rki-mf1/apps/backend) for download and installation
+Please visit [sonar-backend](https://github.com/rki-mf1/sonar) for download and installation
 
 ## 2. Sonar-cli Setup
 
@@ -41,11 +41,29 @@ cd sonar/apps/cli
 
 ### 2.2 Configuration
 
-🤓 There is a "env.template" file in the apps/cli directory. This file contains variables that must be used in the program and may differ depending on the environment. Hence, The ".env.template" file should be copied and changed to ".env", and then the variables should be edited according to your system.
+🤓 There is a `sonar-cli.config` file in the `apps/cli` directory. It is a
+fully commented reference file that lists every configurable CLI setting and
+its built-in default value. It can be copied to
+`$XDG_CONFIG_HOME/sonar-cli/sonar-cli.config` (or `~/.config/sonar-cli/sonar-cli.config`)
+if you want to persist those settings for your user account.
+
+For contributor local development with `./apps/backend/scripts/linux/clean-dev-env.sh`,
+the default backend URL is `http://127.0.0.1:9080/api`. In CI and in proxy-based
+deployments, `http://127.0.0.1:8000/api` may still be used explicitly.
+
+Configuration precedence for all settings is:
+
+1. Explicit command-line option such as `--db`
+2. Environment variable
+3. `$XDG_CONFIG_HOME/sonar-cli/sonar-cli.config`
+4. Built-in default values mirrored in `sonar-cli.config`
 
 ```sh
-cp env.template .env
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli"
+cp sonar-cli.config "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli/sonar-cli.config"
 ```
+
+Edit that copied file by uncommenting only the settings you want to override.
 
 ### 2.3 Create python environment
 
@@ -87,7 +105,7 @@ Next make sure you can contact the backend:
 
 ```sh
 $ sonar-cli list-ref
-Current version sonar-cli:1.0.0
+Current version sonar-cli:1.0.3
 ╒══════╤═════════════╤═══════════════╤═════════════════════════════════════════════════╕
 │   id │ accession   │ taxon         │ organism                                        │
 ╞══════╪═════════════╪═══════════════╪═════════════════════════════════════════════════╡
@@ -97,11 +115,10 @@ Current version sonar-cli:1.0.0
 
 ## 3. Sonar-cli Setup (Docker)
 
-It is also possible to build and run the sonar-cli using docker, but we still
-have to figure out how to run commands like `import` which require access to
-the filesystem outside of the container.
+It is also possible to run the published sonar-cli image directly. For local
+development, the conda + poetry workflow above remains the recommended path.
 
-For now, you can build the cli container:
+You can still build the cli container locally:
 
 ```
 $ ./scripts/linux/build-docker.sh
@@ -115,7 +132,7 @@ usage: sonar-cli [-h] [-v]
                  {list-ref,add-prop,delete-prop,add-ref,delete-ref,import,delete-sample,list-prop,import-lineage,match,tasks}
                  ...
 
-sonar-cli 1.0.0: Sonar command line tool to interface with the sonar-backend
+sonar-cli 1.0.3: Sonar command line tool to interface with the sonar-backend
 and PostgreSQL version.
 
 positional arguments:
@@ -125,12 +142,36 @@ positional arguments:
 [...]
 ```
 
+The published image is `ghcr.io/rki-mf1/sonar-cli`. For example:
+
+```sh
+docker run --rm \
+  --env API_URL=http://127.0.0.1:8000/api \
+  ghcr.io/rki-mf1/sonar-cli:latest list-ref
+```
+
+Use `http://127.0.0.1:8000/api` when talking to the local development stack
+through nginx. For the `example-deploy` bundle, use its published backend API
+port instead, which defaults to `http://127.0.0.1:18000/api`.
+
+For commands that read local files, mount the input directory into the
+container:
+
+```sh
+docker run --rm \
+  --env API_URL=http://127.0.0.1:8000/api \
+  -v "$PWD/test-data:/data" \
+  ghcr.io/rki-mf1/sonar-cli:latest import -r MN908947.3 --fasta /data/SARS-CoV-2_1000.fasta.xz
+```
+
 ### Test Datasets
 
 We provide the test datasets under the `test-data` directory.
 | File              | Usage                                                                            |
 | ----------------- | -------------------------------------------------------------------------------- |
 | `test-data/sars-cov-2/180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
+| `test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz` | 1000 FASTA sequences of SARS-CoV-2, used in import examples. |
+| `test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz` | Metadata (TSV) for the 1000 sequences above, used in import examples. |
 | `test-data/sars-cov-2/MN908947.nextclade.gb`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
 
 # Usage 🚀
@@ -148,11 +189,16 @@ The table below shows the several commands that can be used.
 | [add-prop](#adding-property)      | Add property key for storage and querying in the database.         |
 | [delete-prop](#deleting-property) | Delete properties in the database.                                 |
 | [delete-sample](#deleting-sample) | Delete samples and associated information from the database.       |
+| [import-lineage](#import-lineage) | Import lineage parent-child relationships (e.g. SARS-CoV-2 Pangolin lineages). |
+| [tasks](#tasks)                   | Query background job status.                                       |
 
 > [!TIP]
 > You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
 >
 > for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
+>
+> for the `example-deploy` bundle, the corresponding default would be
+> `sonar-cli add-ref --db "http://127.0.0.1:18000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
 
 ## Adding Reference
 
@@ -169,19 +215,19 @@ The `import` subcommand is used to import genome sequences and sample informatio
 Basic command:
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method 1
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method mafft
 ```
 
 Example command: Including properties during import
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method 1  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
 ```
 
 Example command: Including annotation step(`--auto-anno`)
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method 1  --cols name=ID  --auto-anno --auto-link
+sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID  --auto-anno --auto-link
 ```
 
 To view all available options:

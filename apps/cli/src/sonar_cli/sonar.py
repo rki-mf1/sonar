@@ -1201,17 +1201,23 @@ def handle_add_prop(args: argparse.Namespace):
 def handle_tasks(args: argparse.Namespace):
     if args.list_jobs:
         print(
-            tabulate(sonarUtils1.get_all_jobs(), headers="keys", tablefmt="fancy_grid")
+            tabulate(
+                sonarUtils1.get_all_jobs(db=args.db),
+                headers="keys",
+                tablefmt="fancy_grid",
+            )
         )
     elif args.jobid:
         if args.jobid_command:
             result, status = sonarUtils1.get_job_byID(
+                db=args.db,
                 job_id=args.jobid,
                 background=args.jobid_command == "background",
                 interval=args.interval,
             )
         else:
             result, status = sonarUtils1.get_job_byID(
+                db=args.db,
                 job_id=args.jobid,
             )
         print("Status:", status)
@@ -1323,7 +1329,7 @@ def handle_lineage(args: argparse.Namespace):
 
 
 def handle_info(args: argparse.Namespace):
-    sonarUtils1.get_info()
+    sonarUtils1.get_info(db=args.db)
 
 
 def execute_commands(args):  # noqa: C901
@@ -1404,6 +1410,7 @@ def main(args: Optional[argparse.Namespace] = None) -> int:
         config.DEBUG = False
 
     LoggingConfigurator(debug=config.DEBUG)
+    config.set_runtime_override("API_URL", getattr(args, "db", None))
 
     execute_commands(args)
 

@@ -7,23 +7,38 @@ services:
   sonar-db:
     ports:
       - "${POSTGRES_PORT}:${POSTGRES_PORT}"
-  sonar-django-backend:
+  sonar-backend:
+    image: backend:local
     volumes:
       - .:/code
     ports:
       # to access directly, normally can use localhost:8000 via the nginx proxy
       - "9080:9080"
-  sonar-django-apscheduler:
+  sonar-backend-apscheduler:
+    image: backend:local
     volumes:
       - .:/code
-  celery-workers:
+  sonar-backend-migrate:
+    image: backend:local
+  sonar-celery-workers:
+    image: backend:local
     volumes:
       - .:/code
-  celery-monitor:
+  sonar-celery-monitor:
+    image: backend:local
     volumes:
       - .:/code
     ports:
       - "5555:5555"
+  sonar-frontend:
+    image: frontend:local
+    environment:
+      - SONAR_FRONTEND_BACKEND_ADDRESS=http://localhost:9080/api/
+    ports:
+      - "127.0.0.1:8000:80"
+  sonar-proxy:
+    profiles:
+      - proxy
   sonar-cache:
     ports:
       - "6379:6379"

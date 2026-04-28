@@ -21,6 +21,7 @@ import zipfile
 
 from mpire import WorkerPool
 import pandas as pd
+from sonar_cli import config
 from sonar_cli.api_interface import APIClient
 from sonar_cli.common_utils import file_collision
 from sonar_cli.common_utils import get_fname
@@ -29,7 +30,8 @@ from sonar_cli.common_utils import hash_seq
 from sonar_cli.common_utils import open_file_autodetect
 from sonar_cli.common_utils import remove_charfromsequence_data
 from sonar_cli.common_utils import slugify
-from sonar_cli.config import BASE_URL
+from sonar_cli.config import ANNO_CONFIG_FILE
+from sonar_cli.config import ANNO_TOOL_PATH
 from sonar_cli.config import KSIZE
 from sonar_cli.config import SCALED
 from sonar_cli.config import TMP_CACHE
@@ -75,7 +77,7 @@ class sonarCache:
             disable_progress (bool): Whether to disable progress display or not.
         """
         self.result_queue = Queue()
-        self.base_url = db if db else BASE_URL
+        self.base_url = config.resolve_base_url(db)
         self.allow_updates = allow_updates
         self.debug = debug
         self.refacc = refacc
@@ -84,7 +86,7 @@ class sonarCache:
         self.disable_progress = disable_progress
         # Molecule/replicon data that belongs to the reference.\
         # self.source replaced by self.refmols
-        self.refmols = APIClient(base_url=BASE_URL).get_molecule_data(
+        self.refmols = APIClient(base_url=self.base_url).get_molecule_data(
             reference_accession=self.refacc,
         )
         if not self.refmols:
@@ -1235,35 +1237,73 @@ class sonarCache:
             return False
 
     def find_snpeff_config(self):
-        """Finds the latest snpEff.config file in the active Conda environment."""
-        conda_env_dir = os.getenv("CONDA_PREFIX")
+        """Find a usable snpEff.config file.
 
-        if not conda_env_dir:
-            LOGGER.error("No conda environment is currently activated.")
+        Search order:
+        1. ANNO_CONFIG_FILE when explicitly configured.
+        2. Common install layouts relative to ANNO_TOOL_PATH / resolved executable.
+        3. The active Conda environment, if present.
+        """
+        if ANNO_CONFIG_FILE:
+            config_path = os.path.abspath(os.path.expanduser(ANNO_CONFIG_FILE))
+            if os.path.exists(config_path):
+                return config_path
+
+            LOGGER.error(f"Configured ANNO_CONFIG_FILE does not exist: {config_path}")
             sys.exit(1)
 
-        # Look for snpEff-* directories inside 'share'
-        share_path = os.path.join(conda_env_dir, "share")
-        snpeff_versions = sorted(
-            glob.glob(os.path.join(share_path, "snpeff-*")), reverse=True
+        candidate_paths = []
+        annotator_path = os.path.expanduser(ANNO_TOOL_PATH)
+        resolved_annotator = (
+            os.path.abspath(annotator_path)
+            if os.path.sep in annotator_path
+            else shutil.which(annotator_path)
         )
 
-        if not snpeff_versions:
-            LOGGER.error("No snpEff installation found in the Conda environment.")
-            sys.exit(1)
-        else:
-            LOGGER.debug(
-                f"Found {snpeff_versions} snpEff installations in the Conda environment."
+        if resolved_annotator:
+            annotator_dir = os.path.dirname(resolved_annotator)
+            candidate_paths.extend(
+                [
+                    os.path.join(annotator_dir, "snpEff.config"),
+                    os.path.join(os.path.dirname(annotator_dir), "snpEff.config"),
+                ]
             )
-        # Take the latest version directory
-        latest_snpeff_dir = snpeff_versions[0]
-        config_path = os.path.join(latest_snpeff_dir, "snpEff.config")
 
-        if not os.path.exists(config_path):
-            LOGGER.error(f"snpEff.config not found in {latest_snpeff_dir}")
-            sys.exit(1)
+            share_dirs = sorted(
+                glob.glob(
+                    os.path.join(os.path.dirname(annotator_dir), "share", "snpeff-*")
+                ),
+                reverse=True,
+            )
+            candidate_paths.extend(
+                os.path.join(share_dir, "snpEff.config") for share_dir in share_dirs
+            )
 
-        return config_path
+        conda_env_dir = os.getenv("CONDA_PREFIX")
+        if conda_env_dir:
+            share_dirs = sorted(
+                glob.glob(os.path.join(conda_env_dir, "share", "snpeff-*")),
+                reverse=True,
+            )
+            candidate_paths.extend(
+                os.path.join(share_dir, "snpEff.config") for share_dir in share_dirs
+            )
+
+        seen_paths = set()
+        for config_path in candidate_paths:
+            if config_path in seen_paths:
+                continue
+            seen_paths.add(config_path)
+
+            if os.path.exists(config_path):
+                LOGGER.debug(f"Using snpEff config: {config_path}")
+                return config_path
+
+        LOGGER.error(
+            "Could not locate snpEff.config. Set ANNO_CONFIG_FILE explicitly or use "
+            "an ANNO_TOOL_PATH/Conda installation that includes snpEff.config."
+        )
+        sys.exit(1)
 
     def update_snpeff_config(self, reference):
         """Updates snpEff.config by adding a new reference genome."""
