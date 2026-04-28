@@ -16,7 +16,7 @@ RUN pip install --upgrade pip setuptools wheel "poetry==${POETRY_VERSION}"
 # Copy dependency metadata first to maximize layer cache reuse.
 COPY manage.py README.md pyproject.toml poetry.lock ./
 COPY permission_model/ /code/permission_model
-COPY covsonar_backend/ /code/covsonar_backend
+COPY sonar_backend/ /code/sonar_backend
 COPY rest_api/ /code/rest_api
 
 RUN poetry config virtualenvs.create false \
@@ -42,7 +42,7 @@ COPY --from=builder /opt/venv /opt/venv
 
 COPY manage.py README.md ./
 COPY permission_model/ /code/permission_model
-COPY covsonar_backend/ /code/covsonar_backend
+COPY sonar_backend/ /code/sonar_backend
 COPY rest_api/ /code/rest_api
 
 CMD ["/bin/sh", "-c", "eval \"$START_DJANGO_SERVER\""]

@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "covsonar-backend"
+name = "sonar-backend"
 version = "1.0.3"
 description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "covsonar_backend"}]
+packages = [{include = "sonar_backend"}]
 
 [tool.poetry.dependencies]
 python = ">=3.13,<3.15"

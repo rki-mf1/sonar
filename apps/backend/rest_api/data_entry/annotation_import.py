@@ -4,9 +4,9 @@ import re
 
 from django.db.models import Q
 
-from covsonar_backend.settings import LOGGER
 from rest_api.models import AnnotationType
 from rest_api.models import NucleotideMutation
+from sonar_backend.settings import LOGGER
 
 
 @dataclass

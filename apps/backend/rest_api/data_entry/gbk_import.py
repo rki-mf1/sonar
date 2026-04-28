@@ -9,7 +9,6 @@ from Bio import SeqRecord
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from rest_api.models import CDS
 from rest_api.models import CDSSegment
 from rest_api.models import Gene
@@ -27,6 +26,7 @@ from rest_api.serializers import PeptideSegmentSerializer
 from rest_api.serializers import PeptideSerializer
 from rest_api.serializers import ReferenceSerializer
 from rest_api.serializers import RepliconSerializer
+from sonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 
 
 def import_gbk_file(uploaded_files: list[InMemoryUploadedFile], translation_id: int):
