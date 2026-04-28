@@ -43,20 +43,19 @@ jobs:
       - name: Generate reports
         run: docker compose $COMPOSE_ARGS exec -T sonar-backend coverage html -d 'work/sonar/coverage'
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           # Upload entire repository
           path: '/home/runner/work/sonar/sonar/apps/backend/work/sonar/coverage/'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
-      - uses: jwalton/gh-find-current-pr@v1
-        id: finder
+        uses: actions/deploy-pages@v5
       - name: Publish coverage summary
-        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: Coverage Report
           message: '[Report]( ${{ steps.deployment.outputs.page_url }})'
-          number: ${{ steps.finder.outputs.pr }}
+          number: ${{ github.event.pull_request.number }}

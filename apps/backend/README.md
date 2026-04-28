@@ -8,7 +8,7 @@ The sonar backend is web service provides the postgres database and Rest-API for
 ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)
 ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
-**Please visit [sonar-backend wiki](https://github.com/rki-mf1/sonar/apps/backend/wiki) for more details**
+**Please visit [sonar-backend wiki](https://github.com/rki-mf1/sonar/wiki) for more details**
 
 # Setup
 
@@ -22,9 +22,9 @@ We use docker compose to manage the software stack (the django backend itself, c
 $ docker compose -f compose.yml -f compose-dev.yml
 ```
 
-To configure the containers, a set of config/environment files from the `conf/docker/` directory are loaded. For dev, that includes (in order) `common.env`, `dev.env`, and `dev-secret.yml`. For production, we load `common.env`, `prod.env` and `prod-secrets.env`. Each config file can overwrite settings in the previous, so you can overwrite "common" settings in the `dev.env` file and settings from both `common.env` and `dev.env` can be overwritten in the `dev-secrets.env` file.
+To configure the containers, a set of config/environment files from the `conf/docker/` directory are loaded. For dev, that includes (in order) `common.env`, `dev.env`, and `dev-secrets.env`. For production, we load `common.env`, `prod.env` and `prod-secrets.env`. Each config file can overwrite settings in the previous, so you can overwrite "common" settings in the `dev.env` file and settings from both `common.env` and `dev.env` can be overwritten in the `dev-secrets.env` file.
 
-The `prod-secrets.yml` file is **not** supposed to be checked into git, and should contain things like the Django `SECRET_KEY` as well as variaous default passwords for services like PostgreSQL. You can see the minimum varialbes that you should include in that file in the matching `dev-secrets.env` file, which gives examples for each of the secrets which should obviously not be reused in production.
+The `prod-secrets.env` file is **not** supposed to be checked into git, and should contain things like the Django `SECRET_KEY` as well as various default passwords for services like PostgreSQL. You can see the minimum variables that you should include in that file in the matching `dev-secrets.env` file, which gives examples for each of the secrets which should obviously not be reused in production.
 
 Taking the previous points into account, the development environment using docker compose is interacted with like this:
 
@@ -151,7 +151,7 @@ python apps/backend/manage.py import_lineage
 If you have a specific file from pangoline that you manually downloaded, you can specify it using the following command:
 
 ```bash
-python apps/backend/manage.py import_lineage --lineages test-data/lineages_2024_01_15.csv
+python apps/backend/manage.py import_lineage --lineages test-data/sars-cov-2/lineages_full_2025_09.tsv.xz
 ```
 
 ### **Note:**
@@ -181,7 +181,7 @@ We provide the test datasets under the `test-data` directory. These datasets can
 
 | File                     | Usage                                                                                                                 |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `test-data/sars-cov-2/lineages_full_2025_09.tsv`           | Used in the `python manage.py import_lineage` command.                              |
+| `test-data/sars-cov-2/lineages_full_2025_09.tsv.xz`        | Used in the `python manage.py import_lineage` command.                              |
 | `test-data/sars-cov-2/SARS-CoV-2_12.fasta.xz`        | 12 fasta sequences of SARS-CoV-2.                                                    |
 | `test-data/sars-cov-2/SARS-CoV-2_12.tsv.xz`         |   Input sample containing meta information (tsv).                              |
 | `test-data/sars-cov-2/MN908947.nextclade.gb`         | Reference genome of SARS-CoV-2 in GenBank format.                                         |
@@ -837,6 +837,6 @@ curl "http://localhost:8000/api/database/get_database_tables_status/"
 
 # Acknowledgments
 
-This tool is built upon the foundations of covsonar and mpoxsonar projects.
+This tool is built upon the foundations of sonar and mpoxsonar projects.
 
 Special thanks to all sonar contributors...

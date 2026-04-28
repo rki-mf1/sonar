@@ -1,15 +1,15 @@
 [tool.poetry]
-name = "covsonar-backend"
+name = "sonar-backend"
 version = "1.0.3"
 description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "covsonar_backend"}]
+packages = [{include = "sonar_backend"}]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.13"
-django = "^5.1.4"
-numpy = "^1.26.1"
+python = ">=3.13,<3.15"
+django = "^5.2.13"
+numpy = "^2.1.0"
 pandas = "^2.1.2"
 django-redis = "^5.4.0"
 django-cors-headers = "^4.3.0"
@@ -17,14 +17,14 @@ djangorestframework = "^3.14.0"
 django-filter = "^23.3"
 django-apscheduler = "^0.6.2"
 psycopg2-binary = "^2.9.9"
-biopython = "^1.86"
+biopython = "^1.87"
 django-debug-toolbar = "^4.2.0"
 whitenoise = "^6.6.0"
 django-environ = "^0.11.2"
 celery = {extras = ["redis"], version = "^5.3.6"}
 dnspython = "^2.6.1"
 parameterized = "^0.9.0"
-black = "^25.1.0"
+black = "^26.3.1"
 flower = "^2.0.1"
 json-log-formatter = "^1.0"
 gunicorn = "^23.0.0"

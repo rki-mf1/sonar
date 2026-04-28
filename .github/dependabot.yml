@@ -13,3 +13,16 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
+  - package-ecosystem: "pip"
+    directory: "/apps/backend"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      backend-python:
+        applies-to: version-updates
+        patterns:
+          - "*"

@@ -16,15 +16,6 @@ from django.utils import timezone
 from line_profiler import LineProfiler
 import pandas as pd
 
-from covsonar_backend.settings import KEEP_IMPORTED_DATA_FILES
-from covsonar_backend.settings import LOGGER
-from covsonar_backend.settings import PROFILE_IMPORT
-from covsonar_backend.settings import PROPERTY_BATCH_SIZE
-from covsonar_backend.settings import REDIS_URL
-from covsonar_backend.settings import SAMPLE_BATCH_SIZE
-from covsonar_backend.settings import SONAR_DATA_ARCHIVE
-from covsonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
-from covsonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 from rest_api import models
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.data_entry.sample_import import SonarImport
@@ -40,6 +31,15 @@ from rest_api.models import Sequence
 from rest_api.serializers import Sample2PropertyBulkCreateOrUpdateSerializer
 from rest_api.utils import parse_date
 from rest_api.utils import PropertyColumnMapping
+from sonar_backend.settings import KEEP_IMPORTED_DATA_FILES
+from sonar_backend.settings import LOGGER
+from sonar_backend.settings import PROFILE_IMPORT
+from sonar_backend.settings import PROPERTY_BATCH_SIZE
+from sonar_backend.settings import REDIS_URL
+from sonar_backend.settings import SAMPLE_BATCH_SIZE
+from sonar_backend.settings import SONAR_DATA_ARCHIVE
+from sonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
+from sonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 
 property_cache = {}
 

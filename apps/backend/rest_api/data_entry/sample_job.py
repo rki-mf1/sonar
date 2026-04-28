@@ -1,10 +1,10 @@
-from covsonar_backend.settings import DEBUG
-from covsonar_backend.settings import LOGGER
 from rest_api.data_entry.sequence_job import clean_unused_sequences
 from rest_api.models import Alignment
 from rest_api.models import Sample
 from rest_api.models import Sample2Property
 from rest_api.models import Sequence
+from sonar_backend.settings import DEBUG
+from sonar_backend.settings import LOGGER
 
 
 def delete_sequences(sequence_list: list):

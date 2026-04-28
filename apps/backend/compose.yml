@@ -56,6 +56,22 @@ services:
       retries: 5
       start_period: 30s
       timeout: 10s
+  sonar-db-rename-legacy:
+    image: $DOCKER_POSTGRES_IMAGE
+    restart: no
+    command: ["/bin/sh", "/rename-legacy-postgres-db.sh"]
+    volumes:
+      - ./scripts/linux/rename-legacy-postgres-db.sh:/rename-legacy-postgres-db.sh:ro
+    environment:
+      - LEGACY_POSTGRES_DB=${LEGACY_POSTGRES_DB:-covsonar}
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+      - POSTGRES_HOST=$POSTGRES_HOST
+      - POSTGRES_PORT=$POSTGRES_PORT
+    depends_on:
+      sonar-db:
+        condition: service_healthy
   # A one shot service that runs migrations before the actual backend starts
   sonar-backend-migrate:
     !!merge <<: *backend-env
@@ -63,13 +79,15 @@ services:
     restart: no
     command: python manage.py migrate
     volumes:
-      - ./covsonar2_server/test/media:/covsonarmedia
-      - ./covsonar2_server/test/static:/staticfiles
+      - ./sonar_server/test/media:/sonarmedia
+      - ./sonar_server/test/static:/staticfiles
       - ${SONAR_EXTERNAL}/logs:${LOG_PATH}
       - ${SONAR_EXTERNAL}/input-logs:/input-logs
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
       - ${SONAR_EXTERNAL}/coverage:/code/coverage
     depends_on:
+      sonar-db-rename-legacy:
+        condition: service_completed_successfully
       sonar-cache:
         condition: service_started
       sonar-db:
@@ -79,8 +97,8 @@ services:
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
     restart: unless-stopped
     volumes:
-      - ./covsonar2_server/test/media:/covsonarmedia
-      - ./covsonar2_server/test/static:/staticfiles
+      - ./sonar_server/test/media:/sonarmedia
+      - ./sonar_server/test/static:/staticfiles
       - ${SONAR_EXTERNAL}/logs:${LOG_PATH}
       - ${SONAR_EXTERNAL}/input-logs:/input-logs
       - ${SONAR_EXTERNAL}/data:${SONAR_DATA_FOLDER}
@@ -117,8 +135,8 @@ services:
     volumes:
       - ./conf/nginx/templates:/etc/nginx/templates
       # These are for the backend(?)
-      - ./covsonar2_server/test/static:/staticfiles
-      - ./covsonar2_server/test/media:/mediafiles
+      - ./sonar_server/test/static:/staticfiles
+      - ./sonar_server/test/media:/mediafiles
     environment:
       - NGINX_PORT=8000
     ports:
@@ -138,7 +156,7 @@ services:
     # if the concurrency is set too high and the SAMPLE_BATCH_SIZE is too high,
     # this will not speed up the process. You need to lower SAMPLE_BATCH_SIZE into smaller chunks to gain the benefits
     # --autoscale max, min  means will have at least min and at most max concurrent worker subprocesses for a given worker instance.
-    # command: celery -A covsonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
+    # command: celery -A sonar_backend worker --loglevel DEBUG -Ofair  --autoscale=5,0 -E --max-tasks-per-child 15 --time-limit 180
     # --concurrency=N means will have exactly N worker subprocesses for your worker instance (meaning the worker instance can handle N conccurent tasks).
     command:
       - /bin/sh
@@ -154,7 +172,7 @@ services:
   sonar-celery-monitor:
     !!merge <<: *backend-env
     image: ${SONAR_BACKEND_IMAGE:-backend:local}
-    command: celery -A covsonar_backend flower --port=5555 --basic_auth=${CELERY_FLOWER_AUTH} --enable_events=False
+    command: celery -A sonar_backend flower --port=5555 --basic_auth=${CELERY_FLOWER_AUTH} --enable_events=False
     depends_on:
       sonar-celery-workers:
         condition: service_started
