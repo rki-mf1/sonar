@@ -871,7 +871,6 @@ def _process_property_file(
                 if name in column_mapping.keys():
                     db_name = column_mapping[name].db_property_name
                     if db_name in sample_property_names:
-                        print("setattr: ", new_sample, db_name, value)
                         setattr(new_sample, db_name, value)
 
             sequence_ids = row[related_sequences_column]

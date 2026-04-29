@@ -181,7 +181,10 @@ class PathoplexusDatasetImporter(DatasetImporter):
     def _get_total_count(self) -> int:
         """Get total number of sequences available."""
         url = self._get_api_url("aggregated")
-        params = {"dataUseTerms": self.data_use_terms}
+        params = {
+            "dataUseTerms": self.data_use_terms,
+            "versionStatus": "LATEST_VERSION",
+        }
 
         response = requests.get(url, params=params)
         response.raise_for_status()
@@ -204,6 +207,7 @@ class PathoplexusDatasetImporter(DatasetImporter):
         url = self._get_api_url("details")
         params = {
             "dataUseTerms": self.data_use_terms,
+            "versionStatus": "LATEST_VERSION",
             "fields": "accession",
         }
 
@@ -235,7 +239,10 @@ class PathoplexusDatasetImporter(DatasetImporter):
             List of metadata dictionaries
         """
         url = self._get_api_url("details")
-        params = {"dataUseTerms": self.data_use_terms}
+        params = {
+            "dataUseTerms": self.data_use_terms,
+            "versionStatus": "LATEST_VERSION",
+        }
 
         if accessions:
             # For large lists, we need to use POST
@@ -243,7 +250,11 @@ class PathoplexusDatasetImporter(DatasetImporter):
                 LOGGER.info(f"Fetching metadata for {len(accessions)} sequences (POST)")
                 response = requests.post(
                     url,
-                    json={"accession": accessions, "dataUseTerms": self.data_use_terms},
+                    json={
+                        "accession": accessions,
+                        "dataUseTerms": self.data_use_terms,
+                        "versionStatus": "LATEST_VERSION",
+                    },
                 )
             else:
                 # Use GET with multiple accession params
@@ -281,7 +292,10 @@ class PathoplexusDatasetImporter(DatasetImporter):
         )
         url = self._get_api_url(endpoint)
 
-        params = {"dataUseTerms": self.data_use_terms}
+        params = {
+            "dataUseTerms": self.data_use_terms,
+            "versionStatus": "LATEST_VERSION",
+        }
 
         if accessions:
             if len(accessions) > 100:
@@ -289,7 +303,11 @@ class PathoplexusDatasetImporter(DatasetImporter):
                 LOGGER.info(f"Downloading {len(accessions)} sequences (POST)")
                 response = requests.post(
                     url,
-                    json={"accession": accessions, "dataUseTerms": self.data_use_terms},
+                    json={
+                        "accession": accessions,
+                        "dataUseTerms": self.data_use_terms,
+                        "versionStatus": "LATEST_VERSION",
+                    },
                     stream=True,
                 )
             else:
@@ -376,7 +394,7 @@ class PathoplexusDatasetImporter(DatasetImporter):
 
         count = 0
         processed_sample_ids = []
-        seen_accessions = set()
+        seen_accession_versions = set()
 
         with open(output_path, "w", newline="", encoding="utf-8") as f_out:
             writer = csv.DictWriter(
@@ -385,11 +403,11 @@ class PathoplexusDatasetImporter(DatasetImporter):
             writer.writeheader()
 
             for item in metadata:
-                # Skip duplicate accessions from the API response
-                accession = item.get("accession", "")
-                if accession in seen_accessions:
+                # Guard against unexpected duplicates in the API response
+                accession_version = item.get("accessionVersion", "")
+                if accession_version in seen_accession_versions:
                     continue
-                seen_accessions.add(accession)
+                seen_accession_versions.add(accession_version)
 
                 transformed = {}
                 for pp_col, sonar_col in PATHOPLEXUS_COLUMN_MAPPING.items():
