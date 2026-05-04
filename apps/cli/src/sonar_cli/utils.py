@@ -772,6 +772,7 @@ class sonarUtils:
         """Bundle up the data to be sent to the backend and send it"""
 
         files_to_compress = []
+        added_parquet_files = set()
         for kwargs in sample_list:
             var_parquet_file = kwargs["var_parquet_file"]
             sample_dict = kwargs
@@ -786,7 +787,12 @@ class sonarUtils:
                     sample_bytes,
                 )
             )
-            files_to_compress.append(var_parquet_file)
+            # Deduplicate parquet files: samples with identical sequences share the same
+            # seqhash and therefore the same parquet file path. Adding it twice would
+            # produce a "Duplicate name" warning from zipfile.
+            if var_parquet_file not in added_parquet_files:
+                files_to_compress.append(var_parquet_file)
+                added_parquet_files.add(var_parquet_file)
 
         # Create a zip file without writing to disk
         compressed_data = BytesIO()

@@ -792,6 +792,9 @@ def _process_property_file(
     Logic for processing a batch of the property file
     """
     properties_df = pd.DataFrame.from_dict(batch_as_dict, dtype=object)
+    properties_df.drop_duplicates(
+        subset=[sample_name_column], keep="last", inplace=True
+    )
     if sample_name_column == related_sequences_column:
         properties_df[f"{sample_name_column}_name"] = properties_df[sample_name_column]
         sample_name_column = f"{sample_name_column}_name"
@@ -868,7 +871,6 @@ def _process_property_file(
                 if name in column_mapping.keys():
                     db_name = column_mapping[name].db_property_name
                     if db_name in sample_property_names:
-                        print("setattr: ", new_sample, db_name, value)
                         setattr(new_sample, db_name, value)
 
             sequence_ids = row[related_sequences_column]
