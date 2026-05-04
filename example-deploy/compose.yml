@@ -74,7 +74,10 @@ services:
     env_file:
       - ./backend.env
       - ./backend.secrets.env
-    command: celery -A sonar_backend worker --loglevel ${LOG_LEVEL:-INFO} -Ofair --concurrency=4 -E --max-tasks-per-child 8 --time-limit 600 -n Bob
+    command:
+      - /bin/sh
+      - -c
+      - exec celery -A sonar_backend worker --loglevel "${LOG_LEVEL:-INFO}" -Ofair --concurrency "${CELERY_WORKER_CONCURRENCY:-4}" -E --max-tasks-per-child "${CELERY_WORKER_MAX_TASKS_PER_CHILD:-8}" --time-limit "${CELERY_WORKER_TIME_LIMIT:-600}" -n Bob
     volumes:
       - sonar-data:/sonar/data
       - sonar-logs:/logs
