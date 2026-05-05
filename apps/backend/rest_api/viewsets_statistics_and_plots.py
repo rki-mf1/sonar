@@ -69,7 +69,7 @@ class SampleViewSetStatistics(
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
-        # check profiles was removed becasue it is slow and because these fields
+        # check profiles was removed because it is slow and because these fields
         # are basically always populated
 
         # check sample fields
