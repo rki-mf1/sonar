@@ -273,7 +273,7 @@ class SampleFilterMixin:
         **kwargs,
     ):
         final_query = Q()
-        # Split the input value by either commas, semicolom, whitespace, or combinations of these,
+        # Split the input value by either commas, semicolon, whitespace, or combinations of these,
         # remove separators from string end
         mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
         for mutation in mutations:
@@ -506,7 +506,7 @@ class SampleFilterMixin:
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
-                mutation_alt | Q(alt=x)
+                mutation_alt |= Q(alt=x)
         else:
             mutation_alt = Q(alt=alt_aa if alt_aa != "x" else "X")
 
@@ -528,7 +528,7 @@ class SampleFilterMixin:
         **kwargs,
     ) -> Q:
         # For NT: del:first_NT_deleted-last_NT_deleted (e.g. del:133177-133186).
-        # in case only single deltion bp
+        # in case only single deletion bp
         if last_deleted == "":
             last_deleted = first_deleted
 
@@ -550,7 +550,7 @@ class SampleFilterMixin:
         # For AA: protein_symbol:del:first_AA_deleted-last_AA_deleted (e.g. OPG197:del:34-35)
         if protein_symbol not in self.get_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
-        # in case only single deltion bp
+        # in case only single deletion bp
         if last_deleted == "":
             last_deleted = first_deleted
 
@@ -688,7 +688,7 @@ class SampleViewSet(
         self, queryset, reference_accession, showNX=False
     ):
         """
-        Optimized prefetching for genomic and protemoic profiles
+        Optimized prefetching for genomic and proteomic profiles
         """
 
         genomic_profiles_qs = models.NucleotideMutation.objects.only(
