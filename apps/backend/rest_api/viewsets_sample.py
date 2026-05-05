@@ -506,7 +506,7 @@ class SampleFilterMixin:
         if alt_aa == "X":
             mutation_alt = Q()
             for x in resolve_ambiguous_NT_AA(type="aa", char=alt_aa):
-                mutation_alt | Q(alt=x)
+                mutation_alt |= Q(alt=x)
         else:
             mutation_alt = Q(alt=alt_aa if alt_aa != "x" else "X")
 
