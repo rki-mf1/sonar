@@ -165,7 +165,7 @@ class SampleFilterMixin:
         # case 2: no replicon accession in parsed mutation
         replicon_count = self._get_reference_replicon_count(reference_accession)
         LOGGER.debug(
-            f"replicon_count in resolve replicon fore reference {reference_accession}: {replicon_count}"
+            f"replicon_count in resolve replicon for reference {reference_accession}: {replicon_count}"
         )
 
         if replicon_count is None or replicon_count == 0:
@@ -274,7 +274,7 @@ class SampleFilterMixin:
     ):
         final_query = Q()
         # Split the input value by either commas, semicolom, whitespace, or combinations of these,
-        # remove seperators from string end
+        # remove separators from string end
         mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
         for mutation in mutations:
             parsed_mutation = define_profile(
@@ -695,7 +695,7 @@ class SampleViewSet(
             "ref", "alt", "start", "end", "is_frameshift", "replicon_id"
         ).prefetch_related(
             "annotations"
-        )  # Prefetch annotations direkt
+        )  # Prefetch annotations directly
         if not showNX:
             genomic_profiles_qs = genomic_profiles_qs.exclude(alt="N")
         genomic_profiles_qs = genomic_profiles_qs.order_by("start")
@@ -703,7 +703,7 @@ class SampleViewSet(
         proteomic_profiles_qs = models.AminoAcidMutation.objects.only(
             "ref", "alt", "start", "end", "cds_id"
         ).prefetch_related(
-            "cds__gene", "cds__gene__replicon"  # Auch replicon prefetchen
+            "cds__gene", "cds__gene__replicon"  # Prefetch replicon as well
         )
         if not showNX:
             proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
