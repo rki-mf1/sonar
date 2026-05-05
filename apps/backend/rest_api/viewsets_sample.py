@@ -688,7 +688,7 @@ class SampleViewSet(
         self, queryset, reference_accession, showNX=False
     ):
         """
-        Optimized prefetching for genomic and protemoic profiles
+        Optimized prefetching for genomic and proteomic profiles
         """
 
         genomic_profiles_qs = models.NucleotideMutation.objects.only(
