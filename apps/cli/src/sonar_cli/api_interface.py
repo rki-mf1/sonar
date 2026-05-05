@@ -314,25 +314,6 @@ class APIClient:
         else:
             return None
 
-    # def get_translation_dict(self, translation_id):
-    #     NOTE: no longer use, will be removed
-    #     """
-    #     Returns all elements based on given molecule id
-
-    #     Returns:
-    #         Optional[list]: The list of element if it exists, None otherwise.
-    #     """
-    #     params = {}
-    #     params["translation_id"] = translation_id
-    #     json_response = self._make_request(
-    #         "GET", endpoint=self.get_translation_table_endpoint, params=params
-    #     )
-    #     if json_response["data"]:
-    #         data = json_response["data"]
-    #         return data
-    #     else:
-    #         return None
-
     def post_import_upload(self, files, job_id=None, data={}):
         """
         send compressed sample, var, vcf file.
