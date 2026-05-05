@@ -176,7 +176,7 @@ class UpdateViewSetTestMixin(RetrieveViewSetTestMixin):
             self.fail(f"File {filename} needs filters and data to test update.")
         filters = test_content["params"]["filters"]
         data = test_content["params"]["data"]
-        if pk == None:
+        if pk is None:
             if "pk" in filters:
                 pk = filters["pk"]
             elif "id" in filters:
