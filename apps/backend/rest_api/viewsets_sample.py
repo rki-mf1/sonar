@@ -703,7 +703,7 @@ class SampleViewSet(
         proteomic_profiles_qs = models.AminoAcidMutation.objects.only(
             "ref", "alt", "start", "end", "cds_id"
         ).prefetch_related(
-            "cds__gene", "cds__gene__replicon"  # Auch replicon prefetchen
+            "cds__gene", "cds__gene__replicon"  # Prefetch replicon as well
         )
         if not showNX:
             proteomic_profiles_qs = proteomic_profiles_qs.exclude(alt="X")
