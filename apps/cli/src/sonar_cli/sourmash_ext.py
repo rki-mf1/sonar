@@ -57,8 +57,6 @@ def create_cluster_db(records: dict, db_name: str, ksize=11, scaled=1):
     with open(db_name, "wb") as db_file:
         pickle.dump(index, db_file)
 
-    # print(f"Database saved to {db_name}")
-
 
 def perform_search(fasta_file: str, db_path: str, ksize: int = 11, scaled: int = 1):
     db = _load_db(db_path)

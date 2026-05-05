@@ -478,15 +478,9 @@ class sonarCache:
             "properties": properties,
             "include_nx": include_nx,
         }
-        # fname = name  # self.get_sample_fname(name)  # return fname with full path
         self.sequenceinput_total = self.sequenceinput_total + 1
         # NOTE: write files only need to be processed
         if self.allow_updates or algnid is None:
-            # try:
-            #     self.write_pickle(fname, data)
-            # except OSError:
-            #     os.makedirs(os.path.dirname(fname), exist_ok=True)
-            #     self.write_pickle(fname, data)
             self._sequencefiles_to_profile += 1
             # NOTE: IF previous_seqhash != current_seqhash, we have realign and update the variant?
             # uncomment below to enable this
