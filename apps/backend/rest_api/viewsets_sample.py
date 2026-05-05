@@ -274,7 +274,7 @@ class SampleFilterMixin:
     ):
         final_query = Q()
         # Split the input value by either commas, semicolom, whitespace, or combinations of these,
-        # remove seperators from string end
+        # remove separators from string end
         mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
         for mutation in mutations:
             parsed_mutation = define_profile(
