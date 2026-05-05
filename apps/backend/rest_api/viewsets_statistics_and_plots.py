@@ -69,7 +69,7 @@ class SampleViewSetStatistics(
         queryset = queryset.prefetch_related("properties__property")
         annotations = {}
 
-        # check profiles was removed becasue it is slow and because these fields
+        # check profiles was removed because it is slow and because these fields
         # are basically always populated
 
         # check sample fields
@@ -400,7 +400,7 @@ class SampleViewSetPlots(
                 item[f"properties__{datatype}"]: item["total"]
                 for item in grouped_queryset
             }
-        # fixed sample table prperty
+        # fixed sample table property
         else:
             grouped_queryset = (
                 queryset.values(sample_property)
