@@ -400,7 +400,7 @@ class SampleViewSetPlots(
                 item[f"properties__{datatype}"]: item["total"]
                 for item in grouped_queryset
             }
-        # fixed sample table prperty
+        # fixed sample table property
         else:
             grouped_queryset = (
                 queryset.values(sample_property)
