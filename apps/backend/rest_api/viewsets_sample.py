@@ -695,7 +695,7 @@ class SampleViewSet(
             "ref", "alt", "start", "end", "is_frameshift", "replicon_id"
         ).prefetch_related(
             "annotations"
-        )  # Prefetch annotations direkt
+        )  # Prefetch annotations directly
         if not showNX:
             genomic_profiles_qs = genomic_profiles_qs.exclude(alt="N")
         genomic_profiles_qs = genomic_profiles_qs.order_by("start")
