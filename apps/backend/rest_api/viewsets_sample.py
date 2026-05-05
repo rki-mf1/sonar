@@ -550,7 +550,7 @@ class SampleFilterMixin:
         # For AA: protein_symbol:del:first_AA_deleted-last_AA_deleted (e.g. OPG197:del:34-35)
         if protein_symbol not in self.get_gene_symbols():
             raise ValueError(f"Invalid protein name: {protein_symbol}.")
-        # in case only single deltion bp
+        # in case only single deletion bp
         if last_deleted == "":
             last_deleted = first_deleted
 
