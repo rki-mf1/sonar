@@ -528,7 +528,7 @@ class SampleFilterMixin:
         **kwargs,
     ) -> Q:
         # For NT: del:first_NT_deleted-last_NT_deleted (e.g. del:133177-133186).
-        # in case only single deltion bp
+        # in case only single deletion bp
         if last_deleted == "":
             last_deleted = first_deleted
 
