@@ -165,7 +165,7 @@ class SampleFilterMixin:
         # case 2: no replicon accession in parsed mutation
         replicon_count = self._get_reference_replicon_count(reference_accession)
         LOGGER.debug(
-            f"replicon_count in resolve replicon fore reference {reference_accession}: {replicon_count}"
+            f"replicon_count in resolve replicon for reference {reference_accession}: {replicon_count}"
         )
 
         if replicon_count is None or replicon_count == 0:
