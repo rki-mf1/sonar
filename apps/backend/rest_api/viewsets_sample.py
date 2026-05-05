@@ -273,7 +273,7 @@ class SampleFilterMixin:
         **kwargs,
     ):
         final_query = Q()
-        # Split the input value by either commas, semicolom, whitespace, or combinations of these,
+        # Split the input value by either commas, semicolon, whitespace, or combinations of these,
         # remove separators from string end
         mutations = re.split(r"[,\s;]+", value.strip(",; \t\r\n"))
         for mutation in mutations:
