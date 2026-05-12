@@ -233,7 +233,7 @@ def test_match_prop_int_lt(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_length_exact(capfd, api_url):
     """Test exact length match"""
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --length 29676 --count")
+    code = run_cli(f"sample match --db {api_url} -r MN908947.3 --length 29676 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     # Exact match should return samples with exactly 29676 bp length
@@ -244,7 +244,9 @@ def test_match_length_exact(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_length_range(capfd, api_url):
     """Test length range filter using colon separator (28000:29900)"""
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --length 28000:29900 --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --length 28000:29900 --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert code == 0
@@ -254,7 +256,9 @@ def test_match_length_range(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_length_lt(capfd, api_url):
     """Test length less than comparison"""
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --length '<30000' --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --length '<30000' --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert code == 0
@@ -265,7 +269,7 @@ def test_match_length_lt(capfd, api_url):
 def test_match_length_with_profile(capfd, api_url):
     """Test combining length filter with mutation profile"""
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --length 29000:29900 --profile G22992A --count"
+        f"sample match --db {api_url} -r MN908947.3 --length 29000:29900 --profile G22992A --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -276,7 +280,7 @@ def test_match_length_with_profile(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_float(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro 66.11 --count")
+    code = run_cli(f"sample match --db {api_url} -r MN908947.3 --euro 66.11 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "1" == lines[-1]
@@ -285,7 +289,7 @@ def test_match_prop_float(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_float_not(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro '^66.11' --count")
+    code = run_cli(f"sample match --db {api_url} -r MN908947.3 --euro '^66.11' --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "17" == lines[-1]
@@ -294,7 +298,9 @@ def test_match_prop_float_not(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_float_range(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro '30:66.11' --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --euro '30:66.11' --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "6" == lines[-1]
@@ -303,7 +309,7 @@ def test_match_prop_float_range(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_float_gt(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro 31.16 --count")
+    code = run_cli(f"sample match --db {api_url} -r MN908947.3 --euro 31.16 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "1" == lines[-1]
@@ -312,7 +318,7 @@ def test_match_prop_float_gt(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_float_lt(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --euro '<42.64' --count")
+    code = run_cli(f"sample match --db {api_url} -r MN908947.3 --euro '<42.64' --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "6" == lines[-1]
@@ -322,7 +328,7 @@ def test_match_prop_float_lt(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_date(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --collection_date 2022-01-30  --count"
+        f"sample match --db {api_url} -r MN908947.3 --collection_date 2022-01-30  --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -333,7 +339,7 @@ def test_match_prop_date(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_date_range(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --collection_date 2022-01-30:2022-06-30  --count"
+        f"sample match --db {api_url} -r MN908947.3 --collection_date 2022-01-30:2022-06-30  --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -343,7 +349,9 @@ def test_match_prop_date_range(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_zip(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --zip_code 16816  --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --zip_code 16816  --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "1" == lines[-1]
@@ -353,7 +361,9 @@ def test_match_prop_zip(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(13)
 def test_match_prop_zip_not(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --zip_code ^16816  --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --zip_code ^16816  --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "17" == lines[-1]
@@ -364,7 +374,7 @@ def test_match_prop_zip_not(capfd, api_url):
 def test_match_prop_complex_1(capfd, api_url):
     # combine AA and AA AND PROP
     code = run_cli(
-        f"match --db {api_url}  -r MN908947.3 --profile S:E484A S:N501Y --collection_date 2022-01-30 --count"
+        f"sample match --db {api_url}  -r MN908947.3 --profile S:E484A S:N501Y --collection_date 2022-01-30 --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -372,7 +382,7 @@ def test_match_prop_complex_1(capfd, api_url):
     assert code == 0
 
     code = run_cli(
-        f"match --db {api_url}  -r MN908947.3 --profile S:E484K S:N501Y --collection_date 2022-01-30 --count "
+        f"sample match --db {api_url}  -r MN908947.3 --profile S:E484K S:N501Y --collection_date 2022-01-30 --count "
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -384,7 +394,7 @@ def test_match_prop_complex_1(capfd, api_url):
 def test_match_prop_complex_2(capfd, api_url):
     # seach on given samples and get only samples that contain sequencing reason is N
     code = run_cli(
-        f"match --db {api_url} "
+        f"sample match --db {api_url} "
         "-r MN908947.3 "
         "--sample IMS-10150-CVDP-469B04EB-4D49-4109-9F81-0531CE275F6D "
         "IMS-10768-CVDP-0E69A26F-7AC0-4631-B0F3-192FF005FDA0 "
@@ -406,7 +416,7 @@ def skip_test_match_prop_complex_3():
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_complex_4(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --lineage BA.1 --profile C25584T --with-sublineage --count"
+        f"sample match --db {api_url} -r MN908947.3 --lineage BA.1 --profile C25584T --with-sublineage --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -417,7 +427,7 @@ def test_match_prop_complex_4(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_profile_NT_DEL(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --profile del:21987-21995 --count"
+        f"sample match --db {api_url} -r MN908947.3 --profile del:21987-21995 --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -427,7 +437,9 @@ def test_match_profile_NT_DEL(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_profile_AA_INS(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile S:R214REPE --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --profile S:R214REPE --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "2" == lines[-1]
@@ -438,7 +450,7 @@ def test_match_profile_AA_INS(capfd, api_url):
 @pytest.mark.order(14)
 def test_match_profile_AA_DEL(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --profile ORF1a:del:3675-3677 --count"
+        f"sample match --db {api_url} -r MN908947.3 --profile ORF1a:del:3675-3677 --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -449,7 +461,9 @@ def test_match_profile_AA_DEL(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(15)
 def test_match_profile_NT_DEL_single(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile del:28271 --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --profile del:28271 --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "5" == lines[-1]
@@ -458,7 +472,9 @@ def test_match_profile_NT_DEL_single(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_profile_AA_DEL_single(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --profile S:del:157 --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --profile S:del:157 --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "2" == lines[-1]
@@ -467,7 +483,9 @@ def test_match_profile_AA_DEL_single(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_varchar_lineage(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --lineage BA.1.1 AY.4 --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --lineage BA.1.1 AY.4 --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "3" == lines[-1]
@@ -477,7 +495,7 @@ def test_match_prop_varchar_lineage(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_varchar_sublineage(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --lineage BA.1 --with-sublineage --count"
+        f"sample match --db {api_url} -r MN908947.3 --lineage BA.1 --with-sublineage --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -488,7 +506,9 @@ def test_match_prop_varchar_sublineage(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(16)
 def test_match_prop_varchar_not(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --sequencing_reason ^X --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --sequencing_reason ^X --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "12" == lines[-1]
@@ -497,7 +517,9 @@ def test_match_prop_varchar_not(capfd, api_url):
 
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_prop_varchar(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --sequencing_reason X  --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --sequencing_reason X  --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "5" == lines[-1]
@@ -507,7 +529,7 @@ def test_match_prop_varchar(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_anno_type(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --anno-type disruptive_inframe_insertion --count"
+        f"sample match --db {api_url} -r MN908947.3 --anno-type disruptive_inframe_insertion --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -518,7 +540,9 @@ def test_match_anno_type(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 @pytest.mark.order(17)
 def test_match_anno_impact(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r MN908947.3 --anno-impact HIGH --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     # assert "1" == lines[-1]
@@ -530,7 +554,7 @@ def test_match_anno_impact(capfd, api_url):
 @pytest.mark.order(18)
 def test_match_anno_impact_and_profile(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --anno-impact MODERATE --profile C24503T --count"
+        f"sample match --db {api_url} -r MN908947.3 --anno-impact MODERATE --profile C24503T --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -541,7 +565,7 @@ def test_match_anno_impact_and_profile(capfd, api_url):
 @pytest.mark.xdist_group(name="covid_group")
 def test_match_anno_impact_and_prop(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --anno-impact MODERATE  --age '>50' --count"
+        f"sample match --db {api_url} -r MN908947.3 --anno-impact MODERATE  --age '>50' --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -553,7 +577,7 @@ def test_match_anno_impact_and_prop(capfd, api_url):
 @pytest.mark.order(19)
 def test_match_anno_impact_and_type(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r MN908947.3 --anno-impact HIGH --anno-type stop_gained --count"
+        f"sample match --db {api_url} -r MN908947.3 --anno-impact HIGH --anno-type stop_gained --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -566,7 +590,7 @@ def test_match_anno_impact_and_type(capfd, api_url):
 @pytest.mark.xdist_group(name="rsv_group")
 @pytest.mark.order(4)
 def test_match_profile_count_rsv(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r OP975389.1  --count")
+    code = run_cli(f"sample match --db {api_url} -r OP975389.1  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "20" == lines[-1]
@@ -576,7 +600,9 @@ def test_match_profile_count_rsv(capfd, api_url):
 @pytest.mark.xdist_group(name="rsv_group")
 @pytest.mark.order(5)
 def test_match_aa_mut_rsv(capfd, api_url):
-    code = run_cli(f"match --db {api_url}  -r OP975389.1 --profile SH:K53E --count")
+    code = run_cli(
+        f"sample match --db {api_url}  -r OP975389.1 --profile SH:K53E --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "1" == lines[-1]
@@ -587,7 +613,7 @@ def test_match_aa_mut_rsv(capfd, api_url):
 @pytest.mark.xdist_group(name="mpox_group")
 @pytest.mark.order(4)
 def test_match_profile_count_mpox(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r NC_063383.1  --count")
+    code = run_cli(f"sample match --db {api_url} -r NC_063383.1  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "2" == lines[-1]
@@ -598,7 +624,7 @@ def test_match_profile_count_mpox(capfd, api_url):
 @pytest.mark.order(5)
 def test_match_aa_mut_mpox(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url}  -r NC_063383.1 --profile OPG136:D98L --count"
+        f"sample match --db {api_url}  -r NC_063383.1 --profile OPG136:D98L --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -610,7 +636,7 @@ def test_match_aa_mut_mpox(capfd, api_url):
 @pytest.mark.xdist_group(name="ebola_group")
 @pytest.mark.order(3)
 def test_match_profile_count_ebola(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r NC_002549.1  --count")
+    code = run_cli(f"sample match --db {api_url} -r NC_002549.1  --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "20" == lines[-1]
@@ -621,7 +647,7 @@ def test_match_profile_count_ebola(capfd, api_url):
 @pytest.mark.order(4)
 def test_match_aa_mut_ebola(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url}  -r NC_002549.1 --profile L:V1597A GP:K478R --count"
+        f"sample match --db {api_url}  -r NC_002549.1 --profile L:V1597A GP:K478R --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -633,7 +659,7 @@ def test_match_aa_mut_ebola(capfd, api_url):
 @pytest.mark.xdist_group(name="dengue_group")
 @pytest.mark.order(3)
 def test_match_profile_count_dengue(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r NC_001474.2 --count")
+    code = run_cli(f"sample match --db {api_url} -r NC_001474.2 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "13" == lines[-1]
@@ -644,7 +670,9 @@ def test_match_profile_count_dengue(capfd, api_url):
 @pytest.mark.xdist_group(name="dengue_group")
 @pytest.mark.order(4)
 def test_match_aa_mut_dengue(capfd, api_url):
-    code = run_cli(f"match --db {api_url}  -r NC_001474.2 --profile POLY:N997S --count")
+    code = run_cli(
+        f"sample match --db {api_url}  -r NC_001474.2 --profile POLY:N997S --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "13" == lines[-1]
@@ -655,7 +683,7 @@ def test_match_aa_mut_dengue(capfd, api_url):
 @pytest.mark.xdist_group(name="hiv_group")
 @pytest.mark.order(3)
 def test_match_profile_count_hiv(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r NC_001802.1 --count")
+    code = run_cli(f"sample match --db {api_url} -r NC_001802.1 --count")
     out, err = capfd.readouterr()
     lines = out.splitlines()
     assert "20" == lines[-1]
@@ -666,7 +694,7 @@ def test_match_profile_count_hiv(capfd, api_url):
 @pytest.mark.order(3)
 def test_match_aa_mut_hiv(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url}  -r NC_001802.1 --profile env:Q344R nef:R29E --count"
+        f"sample match --db {api_url}  -r NC_001802.1 --profile env:Q344R nef:R29E --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -679,7 +707,7 @@ def test_match_aa_mut_hiv(capfd, api_url):
 def test_match_multiple_genes_in_same_region_hiv(capfd, api_url):
     # test mutations within 2 genes in same region: gene gag-pol (336..1637,1637..4642), gene gag: 336..1838,
     code = run_cli(
-        f"match --db {api_url}  -r NC_001802.1 --profile gag-pol:K424I gag:K424I --count"
+        f"sample match --db {api_url}  -r NC_001802.1 --profile gag-pol:K424I gag:K424I --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -687,7 +715,7 @@ def test_match_multiple_genes_in_same_region_hiv(capfd, api_url):
     assert code == 0
     # multiple genes in same region: gene gag-pol (336..1637,1637..4642), gene gag: 336..1838 different translation part
     code = run_cli(
-        f"match --db {api_url}  -r NC_001802.1 --profile gag-pol:L441P gag:Y441R --count"
+        f"sample match --db {api_url}  -r NC_001802.1 --profile gag-pol:L441P gag:Y441R --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -698,7 +726,9 @@ def test_match_multiple_genes_in_same_region_hiv(capfd, api_url):
 @pytest.mark.xdist_group(name="influ_group")
 @pytest.mark.order(3)
 def test_match_aa_influ(capfd, api_url):
-    code = run_cli(f"match --db {api_url} -r NC_026438.1 --profile HA:S220T --count")
+    code = run_cli(
+        f"sample match --db {api_url} -r NC_026438.1 --profile HA:S220T --count"
+    )
     out, err = capfd.readouterr()
     lines = out.splitlines()
 
@@ -710,7 +740,7 @@ def test_match_aa_influ(capfd, api_url):
 @pytest.mark.order(4)
 def test_match_aa_2_influ(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r NC_026438.1 --profile CY121680.1:HA:S220T --count"
+        f"sample match --db {api_url} -r NC_026438.1 --profile CY121680.1:HA:S220T --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -723,7 +753,7 @@ def test_match_aa_2_influ(capfd, api_url):
 @pytest.mark.order(4)
 def test_match_nt_snp_influ(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r NC_026438.1 --profile NC_026435.1:C447G --count"
+        f"sample match --db {api_url} -r NC_026438.1 --profile NC_026435.1:C447G --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -736,7 +766,7 @@ def test_match_nt_snp_influ(capfd, api_url):
 @pytest.mark.order(4)
 def test_fail_match_nt_snp_influ(capfd, api_url):
     with pytest.raises(SystemExit) as e:
-        run_cli(f"match --db {api_url} -r NC_026438.1 --profile C447G --count")
+        run_cli(f"sample match --db {api_url} -r NC_026438.1 --profile C447G --count")
     out, err = capfd.readouterr()
     assert "Reference NC_026438.1 has 8 replicons" in err
     assert e.value.code == 1
@@ -746,7 +776,7 @@ def test_fail_match_nt_snp_influ(capfd, api_url):
 @pytest.mark.order(5)
 def test_match_nt_ins_influ(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r NC_026438.1 --profile NC_026435.1:A2274ATGAATTTAACTTGTCCTTCATGAAAAAATGCTTGTTTCTACTA --count"
+        f"sample match --db {api_url} -r NC_026438.1 --profile NC_026435.1:A2274ATGAATTTAACTTGTCCTTCATGAAAAAATGCTTGTTTCTACTA --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -759,7 +789,7 @@ def test_match_nt_ins_influ(capfd, api_url):
 @pytest.mark.order(6)
 def test_match_nt_del_influ(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r NC_026438.1 --profile CY121680.1:del:1722-1752 --count"
+        f"sample match --db {api_url} -r NC_026438.1 --profile CY121680.1:del:1722-1752 --count"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
@@ -772,7 +802,7 @@ def test_match_nt_del_influ(capfd, api_url):
 @pytest.mark.order(7)
 def test_match_profile_vcf_influenza(capfd, api_url):
     code = run_cli(
-        f"match --db {api_url} -r NC_026438.1  --sample A/swine/Miyazaki/344/2018  --format vcf"
+        f"sample match --db {api_url} -r NC_026438.1  --sample A/swine/Miyazaki/344/2018  --format vcf"
     )
     out, err = capfd.readouterr()
     lines = out.splitlines()
