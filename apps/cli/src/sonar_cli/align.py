@@ -318,9 +318,13 @@ class sonarAligner:
 
         # Translate, taking care of gaps as follows:
         # 1. "---" -> "-"
-        # 2. Anything containing a "-" but not "---" -> ""
-        # 3. Everything else is translated using Seq.translate()
-        deletions = df["altAa"] == "---"
+        # 2. Codon whose first nucleotide is deleted (alt1 == "-") is also treated as
+        #    deleted — this covers the "trailing boundary" codon of a non-codon-aligned
+        #    in-frame deletion (e.g. S:V70 in Alpha del:21765-21770 where only nucPos1
+        #    falls inside the deletion range but nucPos2/3 do not).
+        # 3. Anything else containing a "-" but not "---" -> ""
+        # 4. Everything else is translated using Seq.translate()
+        deletions = (df["altAa"] == "---") | (df["alt1"] == "-")
         df.loc[df["altAa"].str.contains("-"), "altAa"] = ""
         df["altAa"] = df["altAa"].apply(
             lambda seq: (str(Seq(seq).translate(table="Standard", to_stop=True)))
