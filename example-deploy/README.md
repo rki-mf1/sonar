@@ -160,7 +160,7 @@ cp sonar-cli.config "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli/sonar-cli.confi
 Use the provided script:
 
 ```sh
-./sonar-cli.sh list-ref
+./sonar-cli.sh reference list
 ```
 
 `sonar-cli.sh`:
@@ -179,12 +179,12 @@ assumes a Linux host with Docker and `docker compose` available.
 ### Minimal SARS-CoV-2 Dataset
 
 ```sh
-./sonar-cli.sh add-ref --gb /data/sars-cov-2/MN908947.nextclade.gb
+./sonar-cli.sh reference add --gb /data/sars-cov-2/MN908947.nextclade.gb
 
 # Optional but useful for SARS-CoV-2 sublineage queries.
-./sonar-cli.sh import-lineage -l /data/sars-cov-2/lineages_test.tsv
+./sonar-cli.sh lineage import -l /data/sars-cov-2/lineages_test.tsv
 
-./sonar-cli.sh import \
+./sonar-cli.sh sample import \
   -r MN908947.3 \
   --auto-anno \
   --fasta /data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
@@ -206,17 +206,17 @@ assumes a Linux host with Docker and `docker compose` available.
 Basic checks:
 
 ```sh
-./sonar-cli.sh list-ref
-./sonar-cli.sh info
-./sonar-cli.sh match -r MN908947.3 --count
+./sonar-cli.sh reference list
+./sonar-cli.sh info show
+./sonar-cli.sh sample match -r MN908947.3 --count
 ```
 
 ### Minimal Mpox Dataset
 
 ```sh
-./sonar-cli.sh add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
+./sonar-cli.sh reference add --gb /data/mpox/clade-IIb-NC_063383.1.gb
 
-./sonar-cli.sh import \
+./sonar-cli.sh sample import \
   -r NC_063383.1 \
   --auto-anno \
   --fasta /data/mpox/mpox_2.fasta.xz \
@@ -227,9 +227,9 @@ Basic checks:
 Basic checks:
 
 ```sh
-./sonar-cli.sh list-ref
-./sonar-cli.sh info
-./sonar-cli.sh match -r NC_063383.1 --count
+./sonar-cli.sh reference list
+./sonar-cli.sh info show
+./sonar-cli.sh sample match -r NC_063383.1 --count
 ```
 
 ## Updating Images

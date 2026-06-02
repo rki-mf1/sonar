@@ -1061,7 +1061,7 @@ class sonarUtils:
                     }
                 else:
                     LOGGER.warning(
-                        f"Property '{prop}' is unknown. Use 'list-prop' to see all valid properties or 'add-prop' to add it before import."
+                        f"Property '{prop}' is unknown. Use 'property list' to see all valid properties or 'property add' to add it before import."
                     )
         # Check if columns exist in the provided CSV/TSV files
         # only existing columns shall pass
