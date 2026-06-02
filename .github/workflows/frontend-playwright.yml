@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 jobs:
   playwright-e2e:
-    timeout-minutes: 60
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:8000
@@ -19,9 +19,25 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
       - name: Install frontend dependencies
         working-directory: ./apps/frontend
         run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-firefox-${{ hashFiles('apps/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-firefox-
+      - name: Install Playwright system dependencies
+        working-directory: ./apps/frontend
+        run: ./node_modules/.bin/playwright install-deps firefox
+      - name: Install Playwright Firefox
+        working-directory: ./apps/frontend
+        timeout-minutes: 10
+        run: ./node_modules/.bin/playwright install firefox
       - name: Set backend API url
         working-directory: ./apps/frontend
         run: echo "VITE_SONAR_BACKEND_ADDRESS=\"${SONAR_LOCAL_API_URL}\"" >> .env.production.local
@@ -31,9 +47,6 @@ jobs:
       - name: Start backend containers
         working-directory: ./apps/backend
         run: ./scripts/linux/clean-dev-env.sh
-      - name: Install Playwright Browsers (Firefox only)
-        working-directory: ./apps/frontend
-        run: npx playwright install --with-deps firefox
       - name: See if the web server is responding
         run: curl "${PLAYWRIGHT_BASE_URL}"
       - name: Run Playwright tests (Firefox only)
