@@ -22,6 +22,40 @@ def test_parse_subject_first_match():
     assert args.verb == "match"
 
 
+def test_parse_reference_add_genbank_accepts_multiple_files_in_one_flag():
+    args = sonar.parse_args(
+        [
+            "reference",
+            "add",
+            "--genbank",
+            "seq1.gb",
+            "seq2.gb",
+            "seq3.gb",
+        ]
+    )
+
+    assert args.resource == "reference"
+    assert args.verb == "add"
+    assert args.genbank == ["seq1.gb", "seq2.gb", "seq3.gb"]
+
+
+def test_parse_reference_add_genbank_accepts_repeated_flags():
+    args = sonar.parse_args(
+        [
+            "reference",
+            "add",
+            "--genbank",
+            "seq1.gb",
+            "--genbank",
+            "seq2.gb",
+            "--genbank",
+            "seq3.gb",
+        ]
+    )
+
+    assert args.genbank == ["seq1.gb", "seq2.gb", "seq3.gb"]
+
+
 def test_flat_command_is_rejected():
     with pytest.raises(SystemExit):
         sonar.parse_args(["list-ref"])

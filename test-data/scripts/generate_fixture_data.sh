@@ -21,7 +21,7 @@ cd ../cli
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate ./env
 
-sonar-cli reference add --gb ../../test-data/sars-cov-2/MN908947.nextclade.gb
+sonar-cli reference add --genbank ../../test-data/sars-cov-2/MN908947.nextclade.gb
 sonar-cli sample import -r MN908947.3 --fasta "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.fasta" --cache /sonar/data/import -t 7 --method 1  --auto-anno --no-skip --skip-nx
 sonar-cli property add --name sequencing_reason --descr "Sampling reason" --dtype value_varchar
 sonar-cli property add --name isolation_source --descr "Isolation Source" --dtype value_varchar

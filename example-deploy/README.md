@@ -179,7 +179,7 @@ assumes a Linux host with Docker and `docker compose` available.
 ### Minimal SARS-CoV-2 Dataset
 
 ```sh
-./sonar-cli.sh reference add --gb /data/sars-cov-2/MN908947.nextclade.gb
+./sonar-cli.sh reference add --genbank /data/sars-cov-2/MN908947.nextclade.gb
 
 # Optional but useful for SARS-CoV-2 sublineage queries.
 ./sonar-cli.sh lineage import -l /data/sars-cov-2/lineages_test.tsv
@@ -214,7 +214,7 @@ Basic checks:
 ### Minimal Mpox Dataset
 
 ```sh
-./sonar-cli.sh reference add --gb /data/mpox/clade-IIb-NC_063383.1.gb
+./sonar-cli.sh reference add --genbank /data/mpox/clade-IIb-NC_063383.1.gb
 
 ./sonar-cli.sh sample import \
   -r NC_063383.1 \

@@ -27,13 +27,13 @@ def test_add_duplicated_ref(monkeypatch, capfd, api_url):
     new_ref_file = "../../../test-data/HIV/NC_001802.1.gb"
 
     # Add the reference for the first time
-    code = run_cli(f"reference add --db {api_url} --gb {new_ref_file}")
+    code = run_cli(f"reference add --db {api_url} --genbank {new_ref_file}")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
 
     # Try to add the same reference again
-    code = run_cli(f"reference add --db {api_url} --gb {new_ref_file}")
+    code = run_cli(f"reference add --db {api_url} --genbank {new_ref_file}")
     out, err = capfd.readouterr()
     assert (
         "successfully." in err
@@ -127,7 +127,7 @@ def test_match_no_tsv(caplog, api_url):
 def test_match_no_gb(caplog, api_url):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         with caplog.at_level(logging.ERROR):
-            run_cli(f"reference add --db {api_url} --gb where.is.gb.gb")
+            run_cli(f"reference add --db {api_url} --genbank where.is.gb.gb")
     assert "The file 'where.is.gb.gb' does not exist" in caplog.text
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1
