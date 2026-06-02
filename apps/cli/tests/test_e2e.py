@@ -160,7 +160,7 @@ def test_delete_prop_varchar(capfd, api_url):
 def test_add_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/influenza/H7N9/InfluA_H7N9_seg6.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0

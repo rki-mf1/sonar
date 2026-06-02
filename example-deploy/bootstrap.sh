@@ -204,7 +204,7 @@ download_file \
   "data/mpox/mpox_2.tsv"
 
 echo "Running CLI example commands"
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference add --gb /data/sars-cov-2/MN908947.nextclade.gb
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference add --genbank /data/sars-cov-2/MN908947.nextclade.gb
 SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh lineage import -l /data/sars-cov-2/lineages_test.tsv
 SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh sample import \
   -r MN908947.3 \
@@ -227,7 +227,7 @@ SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference list
 SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh info show
 SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh sample match -r MN908947.3 --count
 
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference add --gb /data/mpox/clade-IIb-NC_063383.1.gb
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference add --genbank /data/mpox/clade-IIb-NC_063383.1.gb
 SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh sample import \
   -r NC_063383.1 \
   --auto-anno \

@@ -11,7 +11,7 @@ from .conftest import run_cli
 def test_add_cov19_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/sars-cov-2/MN908947.nextclade.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -22,7 +22,7 @@ def test_add_cov19_ref(monkeypatch, capfd, api_url):
 def test_add_mpox_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/mpox/clade-IIb-NC_063383.1.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -33,7 +33,7 @@ def test_add_mpox_ref(monkeypatch, capfd, api_url):
 def test_add_rsv_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/RSV/RSV-B/OP975389.1.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -44,7 +44,7 @@ def test_add_rsv_ref(monkeypatch, capfd, api_url):
 def test_add_measels_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/morbillivirus-hominis/NC_001498.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -55,7 +55,7 @@ def test_add_measels_ref(monkeypatch, capfd, api_url):
 def test_add_hiv_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/HIV/NC_001802.1.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -66,7 +66,7 @@ def test_add_hiv_ref(monkeypatch, capfd, api_url):
 def test_add_dengue_type2_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/dengue/type_2/NC_001474.2.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -77,7 +77,7 @@ def test_add_dengue_type2_ref(monkeypatch, capfd, api_url):
 def test_add_ebola_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/ebola/NC_002549.1.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -88,7 +88,7 @@ def test_add_ebola_ref(monkeypatch, capfd, api_url):
 def test_add_zika_ref(monkeypatch, capfd, api_url):
     monkeypatch.chdir(Path(__file__).parent)
     new_ref_file = "../../../test-data/zika/NC_035889.gb"
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0
@@ -109,7 +109,7 @@ def test_add_influ_gbk(monkeypatch, capfd, api_url):
     new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_7_NC_026431.gb"
     new_ref_file += " ../../../test-data/influenza/influenza-A/H1N1PDM_California/segment_8_NC_026432.1.gb"
 
-    code = run_cli(f" reference add --db {api_url} --gb {new_ref_file} ")
+    code = run_cli(f" reference add --db {api_url} --genbank {new_ref_file} ")
     out, err = capfd.readouterr()
     assert "successfully." in err
     assert code == 0

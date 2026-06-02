@@ -12,7 +12,7 @@ cd ../cli
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate ./env
 
-sonar-cli reference add --gb ../../test-data/sars-cov-2/MN908947.nextclade.gb
+sonar-cli reference add --genbank ../../test-data/sars-cov-2/MN908947.nextclade.gb
 # import sequences
 sonar-cli sample import -r MN908947.3 --fasta ../../test-data/sars-cov-2/SARS-CoV-2_12.fasta -t 7 --method 1  --auto-anno --no-skip
 # add properties to db
