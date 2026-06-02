@@ -1,5 +1,4 @@
 import pandas as pd
-
 from sonar_cli.align import sonarAligner
 
 
@@ -112,13 +111,12 @@ def test_nuc_to_aa_vars_non_codon_aligned_deletion(tmp_path):
     # (amino acids 69 and 70 in 1-based notation → label "del:69-70").
     del_rows = aa_vars[aa_vars["alt"] == " "]
     assert len(del_rows) == 1, (
-        f"Expected 1 deletion record, got {len(del_rows)}. "
-        f"Full aa_vars:\n{aa_vars}"
+        f"Expected 1 deletion record, got {len(del_rows)}. " f"Full aa_vars:\n{aa_vars}"
     )
     row = del_rows.iloc[0]
-    assert row["label"] == "del:69-70", (
-        f"Expected label 'del:69-70', got '{row['label']}'"
-    )
+    assert (
+        row["label"] == "del:69-70"
+    ), f"Expected label 'del:69-70', got '{row['label']}'"
     assert row["reference_acc"] == "QHD43422.1"
     assert row["type"] == "cds"
     assert row["start"] == 68
