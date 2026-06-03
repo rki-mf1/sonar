@@ -96,11 +96,26 @@
           <div v-else-if="column === 'proteomic_profiles'" class="cell-content">
             <div>
               <GenomicProfileLabel
-                v-for="(variant, index) in Object.values(slotProps.data.proteomic_profiles).flat()"
+                v-for="(variant, index) in Object.values(slotProps.data.proteomic_profiles).flatMap(
+                  (cds) => Object.keys(cds as Record<string, unknown>),
+                )"
                 :key="variant"
                 :variant-string="variant"
+                :annotations="
+                  (() => {
+                    for (const r of Object.values(slotProps.data.proteomic_profiles)) {
+                      const rec = r as Record<string, unknown>
+                      if (variant in rec) return rec[variant]
+                    }
+                    return []
+                  })()
+                "
                 :is-last="
-                  index === Object.values(slotProps.data.proteomic_profiles).flat().length - 1
+                  index ===
+                  Object.values(slotProps.data.proteomic_profiles).flatMap((cds) =>
+                    Object.keys(cds as Record<string, unknown>),
+                  ).length -
+                    1
                 "
               />
             </div>
@@ -245,7 +260,7 @@ export default {
         name: '',
         properties: [],
         genomic_profiles: {},
-        proteomic_profiles: [],
+        proteomic_profiles: {},
       } as SelectedRowData,
       displayDialogRow: false,
       notSortable: ['genomic_profiles', 'proteomic_profiles'],
@@ -371,7 +386,7 @@ export default {
         name: '',
         properties: [],
         genomic_profiles: {},
-        proteomic_profiles: [],
+        proteomic_profiles: {},
       }
       this.displayDialogRow = false
     },

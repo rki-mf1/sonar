@@ -112,15 +112,21 @@ export type Property = {
   value: string
 }
 
+// mutation label -> annotation strings, e.g. { "C241T": ["stop_gained HIGH"] }
+export type MutationAnnotations = {
+  [mutationLabel: string]: string[]
+}
+
+// accession (replicon or CDS) -> its mutations, e.g. { "MN908947.3": { "C241T": [...] } }
 export type GenomicProfile = {
-  [key: string]: string[]
+  [accession: string]: MutationAnnotations
 }
 
 export type SampleDetails = {
   name: string
   properties: Property[]
   genomic_profiles: GenomicProfile
-  proteomic_profiles: string[]
+  proteomic_profiles: GenomicProfile
 }
 
 export type LineageBarChartData = {
@@ -165,8 +171,8 @@ export type RowSelectEvent<T = unknown> = {
 export type SelectedRowData = {
   name: string
   properties: never[]
-  genomic_profiles: { [variant: string]: string[] }
-  proteomic_profiles: string[]
+  genomic_profiles: GenomicProfile
+  proteomic_profiles: GenomicProfile
 }
 
 export type PlotDataSets =
