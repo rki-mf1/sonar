@@ -5,6 +5,11 @@ import { saveAs } from 'file-saver'
 import * as ExcelJS from 'exceljs'
 import qs from 'qs'
 
+export interface BackendStatus {
+  name: string
+  version: string
+}
+
 export default class API {
   CODE_OK = 200
   CODE_CREATED = 201
@@ -81,6 +86,10 @@ export default class API {
 
   getDatasetOptions() {
     return this.getRequest(`references/dataset_options/`, {}, false)
+  }
+
+  getBackendStatus(): Promise<BackendStatus | undefined> {
+    return this.getRequest(`status/`, {}, true)
   }
 
   getSampleGenomes(filters: FilterGroupRoot, params: Record<string, string | number | boolean>) {

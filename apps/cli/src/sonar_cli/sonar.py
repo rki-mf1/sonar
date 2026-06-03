@@ -12,8 +12,8 @@ from sonar_cli.utils1 import sonarUtils1
 from tabulate import tabulate
 
 from . import DESCRIPTION
+from . import get_version
 from . import NAME
-from . import VERSION
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
@@ -38,9 +38,10 @@ def parse_args(args=None):
     Returns:
         argparse.Namespace: Namespace containing parsed command-line arguments.
     """
+    version = get_version()
     parser = argparse.ArgumentParser(
         prog="sonar-cli",
-        description=f"{NAME} {VERSION}: {DESCRIPTION}",
+        description=f"{NAME} {version}: {DESCRIPTION}",
     )
     general_parser = create_parser_general()
     database_parser = create_parser_database()
@@ -158,7 +159,7 @@ def parse_args(args=None):
         "-v",
         "--version",
         action="version",
-        version=f"{NAME}:{VERSION}",
+        version=f"{NAME} {version}",
         help="Show program's version number and exit.",
     )
 
@@ -249,13 +250,18 @@ def create_parser_reference() -> argparse.ArgumentParser:
 def create_subparser_info(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-    parser = subparsers.add_parser(
+    show_parser = subparsers.add_parser(
         "show",
         parents=parent_parsers,
         help="Display database information and statistics.",
     )
+    subparsers.add_parser(
+        "version",
+        parents=parent_parsers,
+        help="Display backend version.",
+    )
 
-    return subparsers, parser
+    return subparsers, show_parser
 
 
 def create_subparser_delete_reference(
@@ -1365,7 +1371,10 @@ def handle_lineage(args: argparse.Namespace):
 
 
 def handle_info(args: argparse.Namespace):
-    sonarUtils1.get_info(db=args.db)
+    if args.verb == "version":
+        sonarUtils1.get_backend_version(db=args.db)
+    else:
+        sonarUtils1.get_info(db=args.db)
 
 
 def execute_commands(args):  # noqa: C901
@@ -1378,7 +1387,6 @@ def execute_commands(args):  # noqa: C901
     Args:
         args (argparse.Namespace): Parsed command line arguments.
     """
-    LOGGER.info(f"Current version {NAME}:{VERSION}")
     if args.resource == "sample" and args.verb == "import":
         handle_import(args)
     elif args.resource == "reference" and args.verb == "add":
@@ -1405,7 +1413,7 @@ def execute_commands(args):  # noqa: C901
         handle_lineage(args)
     elif args.resource == "dataset" and args.verb == "import":
         handle_import_dataset(args)
-    elif args.resource == "info" and args.verb == "show":
+    elif args.resource == "info":
         handle_info(args)
 
 

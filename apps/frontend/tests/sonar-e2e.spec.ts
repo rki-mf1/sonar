@@ -1,12 +1,31 @@
 import { test, expect } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const referencePath = '/table?reference_accession=MN908947.3'
+const productVersion = readFileSync(
+  fileURLToPath(new URL('../../../VERSION', import.meta.url)),
+  'utf8',
+).trim()
 
 test('has title', async ({ page }) => {
   await page.goto(referencePath)
 
   // Expect a title "to contain" a substring.
   await expect(page).toHaveTitle(/Sonar/)
+})
+
+test('shows product version footer', async ({ page }) => {
+  await page.route(/.*status\/$/, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ name: 'sonar-backend', version: '9.8.7' }),
+    })
+  })
+  await page.goto('/')
+  await expect(page.getByTestId('app-version-footer')).toHaveText(
+    `Sonar version: frontend v${productVersion}, backend v9.8.7`,
+  )
 })
 
 test('correct total samples', async ({ page }) => {

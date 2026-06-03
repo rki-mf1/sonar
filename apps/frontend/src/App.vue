@@ -38,6 +38,9 @@
         </div>
         <RouterView v-else />
       </div>
+      <footer class="app-footer" data-testid="app-version-footer">
+        {{ footerVersionText }}
+      </footer>
     </main>
     <PrimeToast ref="toast" />
   </body>
@@ -49,6 +52,7 @@ import { RouterView, type RouteLocationNormalized } from 'vue-router'
 import 'primeicons/primeicons.css'
 import Filters from './components/FilterBar.vue'
 import { useSamplesStore } from '@/stores/samples'
+import API from '@/api/API'
 import {
   buildSelectionQuery,
   decodeDatasetsParam,
@@ -64,6 +68,7 @@ export default {
   data() {
     return {
       samplesStore: useSamplesStore(),
+      backendVersion: null as string | null,
     }
   },
   computed: {
@@ -98,6 +103,13 @@ export default {
       const organism = this.samplesStore.organism
       return organism ? `Sonar - ${organism}` : 'Sonar'
     },
+    appVersion() {
+      return __SONAR_VERSION__
+    },
+    footerVersionText() {
+      const backendVersion = this.backendVersion ?? 'unknown'
+      return `Sonar version: frontend v${this.appVersion}, backend v${backendVersion}`
+    },
     showInvalidURLMessage() {
       const routeName = this.$route.name as string | undefined
       if (!['Table', 'Plots'].includes(routeName ?? '')) {
@@ -129,8 +141,16 @@ export default {
       }
     },
   },
-  mounted() {},
+  mounted() {
+    this.loadBackendVersion()
+  },
   methods: {
+    async loadBackendVersion() {
+      const status = await API.getInstance().getBackendStatus()
+      if (status?.version) {
+        this.backendVersion = status.version
+      }
+    },
     syncSelectionFromRoute(route: RouteLocationNormalized) {
       if ((route.name as string) === 'Home') {
         this.samplesStore.$reset()
@@ -164,6 +184,9 @@ body {
 main {
   flex: 1;
   width: 98vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   border-radius: 20px;
   overflow: auto;
   box-shadow: var(--shadow);
@@ -176,11 +199,23 @@ header {
 
 .content {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   background-color: white;
-  min-height: 100vh;
+  min-height: 0;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.25rem 0.75rem;
+  border-top: 1px solid rgba(44, 62, 80, 0.12);
+  background-color: #f8fafc;
+  color: #4b5563;
+  font-size: 0.75rem;
+  line-height: 1.2;
 }
 
 :deep(.p-menuitem-content) {

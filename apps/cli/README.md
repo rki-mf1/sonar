@@ -101,11 +101,16 @@ Verify the installation by checking the version.
 sonar-cli -v
 ```
 
+Check which backend version the CLI is connected to:
+
+```sh
+sonar-cli info version
+```
+
 Next make sure you can contact the backend:
 
 ```sh
 $ sonar-cli reference list
-Current version sonar-cli:1.0.3
 ╒══════╤═════════════╤═══════════════╤═════════════════════════════════════════════════╕
 │   id │ accession   │ taxon         │ organism                                        │
 ╞══════╪═════════════╪═══════════════╪═════════════════════════════════════════════════╡
