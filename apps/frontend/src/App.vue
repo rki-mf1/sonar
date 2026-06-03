@@ -38,9 +38,7 @@
         </div>
         <RouterView v-else />
       </div>
-      <footer class="app-footer" data-testid="app-version-footer">
-        Sonar v{{ appVersion }}
-      </footer>
+      <footer class="app-footer" data-testid="app-version-footer">Sonar v{{ appVersion }}</footer>
     </main>
     <PrimeToast ref="toast" />
   </body>

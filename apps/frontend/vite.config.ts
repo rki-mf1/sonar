@@ -19,10 +19,7 @@ function readVersionFile(): string {
 
   try {
     const packageJson = JSON.parse(
-      readFileSync(
-        fileURLToPath(new URL('./package.json', import.meta.url)),
-        'utf8',
-      ),
+      readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'),
     )
     if (typeof packageJson.version === 'string' && packageJson.version.trim()) {
       return packageJson.version.trim()
@@ -35,9 +32,7 @@ function readVersionFile(): string {
 }
 
 const sonarVersion =
-  process.env.VITE_SONAR_VERSION?.trim() ||
-  process.env.SONAR_VERSION?.trim() ||
-  readVersionFile()
+  process.env.VITE_SONAR_VERSION?.trim() || process.env.SONAR_VERSION?.trim() || readVersionFile()
 
 // https://vitejs.dev/config/
 export default defineConfig({

@@ -17,9 +17,7 @@ test('has title', async ({ page }) => {
 
 test('shows product version footer', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByTestId('app-version-footer')).toHaveText(
-    `Sonar v${productVersion}`,
-  )
+  await expect(page.getByTestId('app-version-footer')).toHaveText(`Sonar v${productVersion}`)
 })
 
 test('correct total samples', async ({ page }) => {
