@@ -24,12 +24,15 @@ RUN poetry config virtualenvs.create false \
 
 FROM python:3.13-slim
 
+ARG SONAR_VERSION=
+
 ENV PYTHONUNBUFFERED=1
 ENV PIP_ROOT_USER_ACTION=ignore
 ENV PIP_NO_CACHE_DIR=1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+ENV SONAR_VERSION=${SONAR_VERSION}
 
 WORKDIR /code
 
@@ -40,7 +43,7 @@ RUN apt-get update \
 
 COPY --from=builder /opt/venv /opt/venv
 
-COPY manage.py README.md ./
+COPY manage.py README.md pyproject.toml ./
 COPY permission_model/ /code/permission_model
 COPY sonar_backend/ /code/sonar_backend
 COPY rest_api/ /code/rest_api

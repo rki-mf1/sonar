@@ -38,6 +38,9 @@
         </div>
         <RouterView v-else />
       </div>
+      <footer class="app-footer" data-testid="app-version-footer">
+        Sonar v{{ appVersion }}
+      </footer>
     </main>
     <PrimeToast ref="toast" />
   </body>
@@ -97,6 +100,9 @@ export default {
     appTitle() {
       const organism = this.samplesStore.organism
       return organism ? `Sonar - ${organism}` : 'Sonar'
+    },
+    appVersion() {
+      return __SONAR_VERSION__
     },
     showInvalidURLMessage() {
       const routeName = this.$route.name as string | undefined
@@ -164,6 +170,9 @@ body {
 main {
   flex: 1;
   width: 98vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   border-radius: 20px;
   overflow: auto;
   box-shadow: var(--shadow);
@@ -176,11 +185,23 @@ header {
 
 .content {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   background-color: white;
-  min-height: 100vh;
+  min-height: 0;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.25rem 0.75rem;
+  border-top: 1px solid rgba(44, 62, 80, 0.12);
+  background-color: #f8fafc;
+  color: #4b5563;
+  font-size: 0.75rem;
+  line-height: 1.2;
 }
 
 :deep(.p-menuitem-content) {

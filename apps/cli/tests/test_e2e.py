@@ -5,6 +5,8 @@ import pytest
 
 from .conftest import run_cli
 
+PRODUCT_VERSION = (Path(__file__).resolve().parents[3] / "VERSION").read_text().strip()
+
 
 def test_help():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
@@ -18,6 +20,22 @@ def test_version():
         run_cli("-v")
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 0
+
+
+def test_version_output(capfd):
+    with pytest.raises(SystemExit):
+        run_cli("-v")
+    out, err = capfd.readouterr()
+    assert out == f"sonar-cli {PRODUCT_VERSION}\n"
+    assert err == ""
+
+
+def test_version_env_override(monkeypatch, capfd):
+    monkeypatch.setenv("SONAR_VERSION", "9.9.9")
+    with pytest.raises(SystemExit):
+        run_cli("-v")
+    out, _ = capfd.readouterr()
+    assert out == "sonar-cli 9.9.9\n"
 
 
 def test_info(capfd, api_url):

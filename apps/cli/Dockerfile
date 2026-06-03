@@ -32,11 +32,14 @@ FROM mambaorg/micromamba:2.0.5
 
 USER root
 
+ARG SONAR_VERSION=
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH=/opt/conda/envs/sonar-cli/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV PYTHONPATH=/code/src
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SONAR_VERSION=${SONAR_VERSION}
 ENV _JAVA_OPTIONS="-Xms128m -Xmx4g"
 
 WORKDIR /code

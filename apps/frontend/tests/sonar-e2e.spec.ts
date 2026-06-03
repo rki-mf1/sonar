@@ -1,12 +1,25 @@
 import { test, expect } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const referencePath = '/table?reference_accession=MN908947.3'
+const productVersion = readFileSync(
+  fileURLToPath(new URL('../../../VERSION', import.meta.url)),
+  'utf8',
+).trim()
 
 test('has title', async ({ page }) => {
   await page.goto(referencePath)
 
   // Expect a title "to contain" a substring.
   await expect(page).toHaveTitle(/Sonar/)
+})
+
+test('shows product version footer', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('app-version-footer')).toHaveText(
+    `Sonar v${productVersion}`,
+  )
 })
 
 test('correct total samples', async ({ page }) => {
