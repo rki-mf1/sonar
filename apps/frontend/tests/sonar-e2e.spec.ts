@@ -16,8 +16,16 @@ test('has title', async ({ page }) => {
 })
 
 test('shows product version footer', async ({ page }) => {
+  await page.route(/.*status\/$/, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ name: 'sonar-backend', version: '9.8.7' }),
+    })
+  })
   await page.goto('/')
-  await expect(page.getByTestId('app-version-footer')).toHaveText(`Sonar v${productVersion}`)
+  await expect(page.getByTestId('app-version-footer')).toHaveText(
+    `Sonar version: frontend v${productVersion}, backend v9.8.7`,
+  )
 })
 
 test('correct total samples', async ({ page }) => {

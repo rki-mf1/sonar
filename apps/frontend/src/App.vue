@@ -38,7 +38,9 @@
         </div>
         <RouterView v-else />
       </div>
-      <footer class="app-footer" data-testid="app-version-footer">Sonar v{{ appVersion }}</footer>
+      <footer class="app-footer" data-testid="app-version-footer">
+        {{ footerVersionText }}
+      </footer>
     </main>
     <PrimeToast ref="toast" />
   </body>
@@ -50,6 +52,7 @@ import { RouterView, type RouteLocationNormalized } from 'vue-router'
 import 'primeicons/primeicons.css'
 import Filters from './components/FilterBar.vue'
 import { useSamplesStore } from '@/stores/samples'
+import API from '@/api/API'
 import {
   buildSelectionQuery,
   decodeDatasetsParam,
@@ -65,6 +68,7 @@ export default {
   data() {
     return {
       samplesStore: useSamplesStore(),
+      backendVersion: null as string | null,
     }
   },
   computed: {
@@ -102,6 +106,10 @@ export default {
     appVersion() {
       return __SONAR_VERSION__
     },
+    footerVersionText() {
+      const backendVersion = this.backendVersion ?? 'unknown'
+      return `Sonar version: frontend v${this.appVersion}, backend v${backendVersion}`
+    },
     showInvalidURLMessage() {
       const routeName = this.$route.name as string | undefined
       if (!['Table', 'Plots'].includes(routeName ?? '')) {
@@ -133,8 +141,16 @@ export default {
       }
     },
   },
-  mounted() {},
+  mounted() {
+    this.loadBackendVersion()
+  },
   methods: {
+    async loadBackendVersion() {
+      const status = await API.getInstance().getBackendStatus()
+      if (status?.version) {
+        this.backendVersion = status.version
+      }
+    },
     syncSelectionFromRoute(route: RouteLocationNormalized) {
       if ((route.name as string) === 'Home') {
         this.samplesStore.$reset()

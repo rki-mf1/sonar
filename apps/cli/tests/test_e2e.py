@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+from sonar_cli.utils1 import sonarUtils1
 
 from .conftest import run_cli
 
@@ -36,6 +37,42 @@ def test_version_env_override(monkeypatch, capfd):
         run_cli("-v")
     out, _ = capfd.readouterr()
     assert out == "sonar-cli 9.9.9\n"
+
+
+def test_info_version_dispatches_backend_version_regression(monkeypatch, capfd):
+    """Ensure the info/version subcommand is dispatched instead of silently no-oping."""
+    calls = []
+
+    def fake_get_backend_version(db=None):
+        calls.append(db)
+
+    monkeypatch.setattr(sonarUtils1, "get_backend_version", fake_get_backend_version)
+
+    code = run_cli("info version --db http://example.test/api")
+    out, err = capfd.readouterr()
+
+    assert code == 0
+    assert calls == ["http://example.test/api"]
+    assert "Current version" not in out
+    assert "Current version" not in err
+
+
+def test_info_version_prints_backend_version(monkeypatch, capfd):
+    class FakeAPIClient:
+        def __init__(self, base_url):
+            self.base_url = base_url
+
+        def get_backend_status(self):
+            return {"name": "sonar-backend", "version": "9.8.7"}
+
+    monkeypatch.setattr("sonar_cli.utils1.APIClient", FakeAPIClient)
+
+    code = run_cli("info version --db http://example.test/api")
+    out, err = capfd.readouterr()
+
+    assert code == 0
+    assert out == "sonar-backend 9.8.7\n"
+    assert "Current version" not in err
 
 
 def test_info(capfd, api_url):

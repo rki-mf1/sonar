@@ -68,6 +68,31 @@ class sonarUtils1:
                 LOGGER.info(f"  Genomes: {ref_info['genomes']}")
 
     @staticmethod
+    def get_backend_version(db: str = None):
+        API_URL = config.resolve_base_url(db)
+        if config.DEBUG:
+            LOGGER.debug(f"Resolved backend URL: {API_URL}")
+            LOGGER.debug("Fetching backend version from status endpoint")
+
+        json_response = APIClient(base_url=API_URL).get_backend_status()
+        if config.DEBUG:
+            LOGGER.debug(f"Backend status response: {json_response!r}")
+
+        if not json_response:
+            LOGGER.error("Backend status endpoint returned an empty response.")
+            LOGGER.error(f"Backend URL: {API_URL}")
+            return
+
+        name = json_response.get("name", "sonar-backend")
+        version = json_response.get("version")
+        if not version:
+            LOGGER.error("Backend status response did not include a version field.")
+            LOGGER.error(f"Backend status response: {json_response!r}")
+            return
+
+        print(f"{name} {version}")
+
+    @staticmethod
     def get_all_jobs(db: str = None):
         API_URL = config.resolve_base_url(db)
 
