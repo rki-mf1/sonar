@@ -1,3 +1,10 @@
 #!/usr/bin/env bash
 
-docker build -t backend:local -f Dockerfile .
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$APP_DIR/../.." && pwd)"
+SONAR_VERSION="$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")"
+
+docker build --build-arg "SONAR_VERSION=$SONAR_VERSION" -t backend:local -f "$APP_DIR/Dockerfile" "$APP_DIR"

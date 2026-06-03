@@ -2,14 +2,14 @@ from tests.conftest import run_cli
 
 
 def test_get_list_job(capfd, api_url):
-    code = run_cli(f" tasks --db {api_url} --list-jobs")
+    code = run_cli(f" task list --db {api_url}")
     out, err = capfd.readouterr()
     assert "Completed" in out
     assert code == 0
 
 
 def test_get_job_id(capfd, api_url):
-    code = run_cli(f" tasks --db {api_url} --jobid 'cli_failed-job'")
+    code = run_cli(f" task show --db {api_url} --jobid 'cli_failed-job'")
     out, err = capfd.readouterr()
     assert "Status: Failed" in out
     assert code == 0

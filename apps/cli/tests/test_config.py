@@ -72,7 +72,7 @@ def test_sonar_main_sets_db_override(monkeypatch, tmp_path):
         lambda args: captured.setdefault("url", config.get_base_url()),
     )
 
-    sonar.main(sonar.parse_args(["info", "--db", "http://cli.example/api"]))
+    sonar.main(sonar.parse_args(["info", "show", "--db", "http://cli.example/api"]))
 
     assert captured["url"] == "http://cli.example/api"
 

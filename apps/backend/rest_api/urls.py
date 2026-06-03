@@ -1,9 +1,11 @@
+from django.urls import path
 from rest_framework import routers
 
 from rest_api import viewsets
 from rest_api import viewsets_database
 from rest_api import viewsets_sample
 from rest_api import viewsets_statistics_and_plots
+from rest_api.views_status import status
 
 router = routers.SimpleRouter()
 router.register(r"samples", viewsets_sample.SampleViewSet, basename="sample")
@@ -29,4 +31,4 @@ router.register(r"lineages", viewsets.LineageViewSet, basename="lineage")
 router.register(r"tasks", viewsets.TasksView, basename="tasks")
 router.register(r"database", viewsets_database.DatabaseInfoView, basename="database")
 
-urlpatterns = [*router.urls]
+urlpatterns = [path("status/", status, name="status"), *router.urls]

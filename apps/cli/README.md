@@ -101,11 +101,16 @@ Verify the installation by checking the version.
 sonar-cli -v
 ```
 
+Check which backend version the CLI is connected to:
+
+```sh
+sonar-cli info version
+```
+
 Next make sure you can contact the backend:
 
 ```sh
-$ sonar-cli list-ref
-Current version sonar-cli:1.0.3
+$ sonar-cli reference list
 ╒══════╤═════════════╤═══════════════╤═════════════════════════════════════════════════╕
 │   id │ accession   │ taxon         │ organism                                        │
 ╞══════╪═════════════╪═══════════════╪═════════════════════════════════════════════════╡
@@ -129,16 +134,22 @@ Then you can run it, passing in whatever parameters you want:
 ```
 $ ./scripts/linux/sonar-cli-docker.sh --help
 usage: sonar-cli [-h] [-v]
-                 {list-ref,add-prop,delete-prop,add-ref,delete-ref,import,delete-sample,list-prop,import-lineage,match,tasks}
+                 {reference,property,sample,sequence,dataset,lineage,task,info}
                  ...
 
 sonar-cli 1.0.3: Sonar command line tool to interface with the sonar-backend
 and PostgreSQL version.
 
 positional arguments:
-  {list-ref,add-prop,delete-prop,add-ref,delete-ref,import,delete-sample,list-prop,import-lineage,match,tasks}
-    list-ref            Lists all available references in the database
-    add-prop            add a property to the database
+  {reference,property,sample,sequence,dataset,lineage,task,info}
+    reference           Manage reference genomes in the database.
+    property            Manage queryable properties in the database.
+    sample              Import, match, and delete samples.
+    sequence            Delete sequences from the database.
+    dataset             Download and import public datasets.
+    lineage             Import lineage parent-child relationships.
+    task                Query background job status.
+    info                Display database information and statistics.
 [...]
 ```
 
@@ -147,7 +158,7 @@ The published image is `ghcr.io/rki-mf1/sonar-cli`. For example:
 ```sh
 docker run --rm \
   --env API_URL=http://127.0.0.1:8000/api \
-  ghcr.io/rki-mf1/sonar-cli:latest list-ref
+  ghcr.io/rki-mf1/sonar-cli:latest reference list
 ```
 
 Use `http://127.0.0.1:8000/api` when talking to the local development stack
@@ -161,7 +172,7 @@ container:
 docker run --rm \
   --env API_URL=http://127.0.0.1:8000/api \
   -v "$PWD/test-data:/data" \
-  ghcr.io/rki-mf1/sonar-cli:latest import -r MN908947.3 --fasta /data/SARS-CoV-2_1000.fasta.xz
+  ghcr.io/rki-mf1/sonar-cli:latest sample import -r MN908947.3 --fasta /data/SARS-CoV-2_1000.fasta.xz
 ```
 
 ### Test Datasets
@@ -180,32 +191,32 @@ The table below shows the several commands that can be used.
 
 | Subcommand                        | Purpose                                                            |
 | --------------------------------- | ------------------------------------------------------------------ |
-| [import](#importing-genomes)      | Import genome sequences and sample information into the database.  |
-| [match](#matching-genomes)        | Match genome sequences and sample information within the database. |
-| [add-ref](#adding-reference)      | Add reference genome sequences to the database.                    |
-| [delete-ref](#delete-reference)   | Delete reference genome sequences from the database.               |
-| [list-ref](#listing-reference)    | List available reference genome sequences in the database.         |
-| [list-prop](#listing-property)    | List queryable properties in the database.                         |
-| [add-prop](#adding-property)      | Add property key for storage and querying in the database.         |
-| [delete-prop](#deleting-property) | Delete properties in the database.                                 |
-| [delete-sample](#deleting-sample) | Delete samples and associated information from the database.       |
-| [import-lineage](#import-lineage) | Import lineage parent-child relationships (e.g. SARS-CoV-2 Pangolin lineages). |
-| [tasks](#tasks)                   | Query background job status.                                       |
+| [sample import](#importing-genomes) | Import genome sequences and sample information into the database. |
+| [sample match](#matching-genomes) | Match genome sequences and sample information within the database. |
+| [reference add](#adding-reference)      | Add reference genome sequences to the database.                    |
+| [reference delete](#delete-reference)   | Delete reference genome sequences from the database.               |
+| [reference list](#listing-reference)    | List available reference genome sequences in the database.         |
+| [property list](#listing-property)    | List queryable properties in the database.                         |
+| [property add](#adding-property)      | Add property key for storage and querying in the database.         |
+| [property delete](#deleting-property) | Delete properties in the database.                                 |
+| [sample delete](#deleting-sample) | Delete samples and associated information from the database.       |
+| [lineage import](#import-lineage) | Import lineage parent-child relationships (e.g. SARS-CoV-2 Pangolin lineages). |
+| [task list](#tasks)               | Query background job status.                                       |
 
 > [!TIP]
 > You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
 >
-> for example, `sonar-cli add-ref --db "http://127.0.0.1:8000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
+> for example, `sonar-cli reference add --db "http://127.0.0.1:8000/api" --genbank test-data/sars-cov-2/MN908947.nextclade.gb`
 >
 > for the `example-deploy` bundle, the corresponding default would be
-> `sonar-cli add-ref --db "http://127.0.0.1:18000/api" --gb test-data/sars-cov-2/MN908947.nextclade.gb`
+> `sonar-cli reference add --db "http://127.0.0.1:18000/api" --genbank test-data/sars-cov-2/MN908947.nextclade.gb`
 
 ## Adding Reference
 
-The `add-ref` subcommand is used to add reference genome sequences to the database.
+The `reference add` subcommand is used to add reference genome sequences to the database.
 
 ```sh
-sonar-cli add-ref --gb test-data/sars-cov-2/MN908947.nextclade.gb
+sonar-cli reference add --genbank test-data/sars-cov-2/MN908947.nextclade.gb
 ```
 
 ## Importing Genomes
@@ -215,25 +226,25 @@ The `import` subcommand is used to import genome sequences and sample informatio
 Basic command:
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method mafft
+sonar-cli sample import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method mafft
 ```
 
 Example command: Including properties during import
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
+sonar-cli sample import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
 ```
 
 Example command: Including annotation step(`--auto-anno`)
 
 ```sh
-sonar-cli import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID  --auto-anno --auto-link
+sonar-cli sample import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID  --auto-anno --auto-link
 ```
 
 To view all available options:
 
 ```sh
-sonar-cli import -h
+sonar-cli sample import -h
 ```
 
 ## Matching Genomes
@@ -243,69 +254,69 @@ The `match` subcommand is used to match genome sequences and sample information 
 List all mutations
 
 ```sh
-sonar-cli match -r MN908947.3
+sonar-cli sample match -r MN908947.3
 ```
 
 With specific mutations (NT and AA) and count
 
 ```sh
-sonar-cli match -r MN908947.3 --profile C26270T S:G339D --count
+sonar-cli sample match -r MN908947.3 --profile C26270T S:G339D --count
 ```
 
 with mutations and property
 
 ```sh
-sonar-cli match -r MN908947.3 --profile C26270T S:G339D --sequencing_tech ILLUMINA --format csv
+sonar-cli sample match -r MN908947.3 --profile C26270T S:G339D --sequencing_tech ILLUMINA --format csv
 ```
 
 ## Deleting Reference
 
-The `delete-ref` subcommand is used to delete reference genome sequences from the database.
+The `reference delete` subcommand is used to delete reference genome sequences from the database.
 
 ```sh
-sonar-cli delete-ref -r MN908947.3
+sonar-cli reference delete -r MN908947.3
 ```
 
 ## Listing Reference
 
-The `list-ref` is used to list available reference genome sequences in the database.
+The `reference list` is used to list available reference genome sequences in the database.
 
 ```sh
-sonar-cli list-ref
+sonar-cli reference list
 ```
 
 ## Listing Property
 
-The `list-prop` is used to list properties associated with genome sequences in the database.
+The `property list` is used to list properties associated with genome sequences in the database.
 
 ```sh
-sonar-cli list-prop
+sonar-cli property list
 ```
 
 ## Adding Property
 
-The `add-prop` subcommand is used to add properties to genome sequences in the database.
+The `property add` subcommand is used to add properties to genome sequences in the database.
 
 ```sh
-sonar-cli add-prop --name test-prop --descr "hello world" --dtype value_varchar
+sonar-cli property add --name test-prop --descr "hello world" --dtype value_varchar
 ```
 
 ## Deleting Property
 
-The `delete-prop` subcommand is used to delete properties from genome sequences in the database.
+The `property delete` subcommand is used to delete properties from genome sequences in the database.
 
 ```sh
-sonar-cli delete-prop --name test-prop  --force
+sonar-cli property delete --name test-prop  --force
 ```
 
 ## Deleting Sample
 
-The `delete-sample` is used to delete sample and associated information from the database.
+The `sample delete` is used to delete sample and associated information from the database.
 
 User provides a sample ID using the `--sample` option or combine multiple IDs together with a file name using the `--sample-file` option (one ID per line in a file).
 
 ```sh
-sonar-cli delete-sample --sample IMS-10116-CVDP-77AB96B7-B9FB-46D6-B844-F9356151F2CA --sample-file goodbye.txt
+sonar-cli sample delete --sample IMS-10116-CVDP-77AB96B7-B9FB-46D6-B844-F9356151F2CA --sample-file goodbye.txt
 ```
 
 ---

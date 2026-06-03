@@ -6,6 +6,7 @@ from typing import List
 from typing import Optional
 
 import requests
+from sonar_cli import config
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger
@@ -31,6 +32,7 @@ class APIClient:
     get_job_byID_endpont = "tasks/get_files_by_job_id"
 
     get_database_info_endpont = "database/get_database_info"
+    get_backend_status_endpoint = "status/"
 
     post_add_reference_endpoint = "references/import_gbk/"
     post_delete_reference_endpoint = "references/delete_reference/"
@@ -72,7 +74,7 @@ class APIClient:
         return_json = response.json()
         return return_json
 
-    def _make_request(
+    def _make_request(  # noqa: C901
         self,
         method: str,
         endpoint: str,
@@ -87,6 +89,8 @@ class APIClient:
             self.headers.update(headers)
         try:
             url = f"{self.base_url}/{endpoint}"
+            if config.DEBUG:
+                LOGGER.debug(f"Requesting {method} {url}")
             response = requests.request(
                 method,
                 url,
@@ -99,9 +103,14 @@ class APIClient:
                 stream=stream,
                 # timeout=300,
             )
+            if config.DEBUG:
+                LOGGER.debug(f"Response {response.status_code} from {url}")
             if stream:
                 return response
-            return self._handle_response(response, url)
+            json_response = self._handle_response(response, url)
+            if config.DEBUG:
+                LOGGER.debug(f"Response JSON from {url}: {json_response!r}")
+            return json_response
         except requests.exceptions.ConnectionError as errc:
             LOGGER.error(f"Error Connecting: {errc}")
             sys.exit(1)
@@ -459,6 +468,12 @@ class APIClient:
 
         json_response = self._make_request(
             "GET", endpoint=self.get_database_info_endpont, params=params
+        )
+        return json_response
+
+    def get_backend_status(self):
+        json_response = self._make_request(
+            "GET", endpoint=self.get_backend_status_endpoint
         )
         return json_response
 

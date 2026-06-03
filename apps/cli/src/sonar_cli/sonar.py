@@ -12,8 +12,8 @@ from sonar_cli.utils1 import sonarUtils1
 from tabulate import tabulate
 
 from . import DESCRIPTION
+from . import get_version
 from . import NAME
-from . import VERSION
 
 # Initialize logger
 LOGGER = LoggingConfigurator.get_logger()
@@ -38,9 +38,10 @@ def parse_args(args=None):
     Returns:
         argparse.Namespace: Namespace containing parsed command-line arguments.
     """
+    version = get_version()
     parser = argparse.ArgumentParser(
         prog="sonar-cli",
-        description=f"{NAME} {VERSION}: {DESCRIPTION}",
+        description=f"{NAME} {version}: {DESCRIPTION}",
     )
     general_parser = create_parser_general()
     database_parser = create_parser_database()
@@ -51,75 +52,114 @@ def parse_args(args=None):
     reference_parser = create_parser_reference()
     thread_parser = create_parser_thread()
     lineage_parser = create_parser_lineage()
-    # Create all subparsers for the command-line interface
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    resource_subparsers = parser.add_subparsers(dest="resource", required=True)
 
-    # Reference parser
-    subparsers, _ = create_subparser_list_reference(
-        subparsers, database_parser, general_parser
+    reference_parser_root = resource_subparsers.add_parser(
+        "reference", help="Manage reference genomes in the database."
     )
-
-    subparsers, _ = create_subparser_add_prop(
-        subparsers, database_parser, property_parser, general_parser
+    reference_subparsers = reference_parser_root.add_subparsers(
+        dest="verb", required=True
     )
-    subparsers, _ = create_subparser_delete_prop(
-        subparsers, database_parser, property_parser, general_parser
+    reference_subparsers, _ = create_subparser_list_reference(
+        reference_subparsers, database_parser, general_parser
     )
-
-    subparsers, _ = create_subparser_add_reference(
-        subparsers, database_parser, general_parser
+    reference_subparsers, _ = create_subparser_add_reference(
+        reference_subparsers, database_parser, general_parser
     )
-    subparsers, _ = create_subparser_delete_reference(
-        subparsers, database_parser, reference_parser, general_parser
+    reference_subparsers, _ = create_subparser_delete_reference(
+        reference_subparsers, database_parser, reference_parser, general_parser
     )
 
-    # import parser
-    subparsers, _ = create_subparser_import(
-        subparsers, database_parser, thread_parser, reference_parser, general_parser
+    property_parser_root = resource_subparsers.add_parser(
+        "property", help="Manage queryable properties in the database."
+    )
+    property_subparsers = property_parser_root.add_subparsers(
+        dest="verb", required=True
+    )
+    property_subparsers, _ = create_subparser_list_prop(
+        property_subparsers, database_parser, general_parser
+    )
+    property_subparsers, _ = create_subparser_add_prop(
+        property_subparsers, database_parser, property_parser, general_parser
+    )
+    property_subparsers, _ = create_subparser_delete_prop(
+        property_subparsers, database_parser, property_parser, general_parser
     )
 
-    subparsers, _ = create_subparser_delete_sample(
-        subparsers, database_parser, sample_parser, general_parser
+    sample_parser_root = resource_subparsers.add_parser(
+        "sample", help="Import, match, and delete samples."
     )
-
-    subparsers, _ = create_subparser_delete_sequence(
-        subparsers, database_parser, sequence_parser, general_parser
+    sample_subparsers = sample_parser_root.add_subparsers(dest="verb", required=True)
+    sample_subparsers, _ = create_subparser_import(
+        sample_subparsers,
+        database_parser,
+        thread_parser,
+        reference_parser,
+        general_parser,
     )
-
-    # property
-    subparsers, _ = create_subparser_list_prop(
-        subparsers, database_parser, general_parser
-    )
-
-    # lineage
-    subparsers, _ = create_subparser_lineage_import(
-        subparsers, lineage_parser, output_parser, general_parser
-    )
-
-    # import-dataset
-    subparsers, _ = create_subparser_import_dataset(
-        subparsers, database_parser, thread_parser, reference_parser, general_parser
-    )
-
-    # match
-    subparsers, subparser_match = create_subparser_match(
-        subparsers,
+    sample_subparsers, subparser_match = create_subparser_match(
+        sample_subparsers,
         database_parser,
         reference_parser,
         sample_parser,
         output_parser,
         general_parser,
     )
-    # admin
-    subparsers, _ = create_subparser_tasks(subparsers, database_parser, general_parser)
+    sample_subparsers, _ = create_subparser_delete_sample(
+        sample_subparsers, database_parser, sample_parser, general_parser
+    )
 
-    subparsers, _ = create_subparser_info(subparsers, database_parser, general_parser)
+    sequence_parser_root = resource_subparsers.add_parser(
+        "sequence", help="Delete sequences from the database."
+    )
+    sequence_subparsers = sequence_parser_root.add_subparsers(
+        dest="verb", required=True
+    )
+    sequence_subparsers, _ = create_subparser_delete_sequence(
+        sequence_subparsers, database_parser, sequence_parser, general_parser
+    )
+
+    dataset_parser_root = resource_subparsers.add_parser(
+        "dataset", help="Download and import public datasets."
+    )
+    dataset_subparsers = dataset_parser_root.add_subparsers(dest="verb", required=True)
+    dataset_subparsers, _ = create_subparser_import_dataset(
+        dataset_subparsers,
+        database_parser,
+        thread_parser,
+        reference_parser,
+        general_parser,
+    )
+
+    lineage_parser_root = resource_subparsers.add_parser(
+        "lineage", help="Import lineage parent-child relationships."
+    )
+    lineage_subparsers = lineage_parser_root.add_subparsers(dest="verb", required=True)
+    lineage_subparsers, _ = create_subparser_lineage_import(
+        lineage_subparsers, lineage_parser, output_parser, general_parser
+    )
+
+    task_parser_root = resource_subparsers.add_parser(
+        "task", help="Query background job status."
+    )
+    task_subparsers = task_parser_root.add_subparsers(dest="verb", required=True)
+    task_subparsers, _ = create_subparser_tasks(
+        task_subparsers, database_parser, general_parser
+    )
+
+    info_parser_root = resource_subparsers.add_parser(
+        "info", help="Display database information and statistics."
+    )
+    info_subparsers = info_parser_root.add_subparsers(dest="verb", required=True)
+    info_subparsers, _ = create_subparser_info(
+        info_subparsers, database_parser, general_parser
+    )
     # version parser
     parser.add_argument(
         "-v",
         "--version",
         action="version",
-        version=f"{NAME}:{VERSION}",
+        version=f"{NAME} {version}",
         help="Show program's version number and exit.",
     )
 
@@ -150,9 +190,10 @@ def is_match_selected(namespace: Optional[argparse.Namespace] = None) -> bool:
     Returns:
         True if 'match' command is selected and 'db' attribute is present, False otherwise
     """
-    # Check if the 'match' command is selected and the 'db' attribute is present
-    match_selected = namespace.command == "match"
-    return match_selected
+    return (
+        getattr(namespace, "resource", None) == "sample"
+        and getattr(namespace, "verb", None) == "match"
+    )
 
 
 def create_parser_lineage() -> argparse.ArgumentParser:
@@ -209,13 +250,18 @@ def create_parser_reference() -> argparse.ArgumentParser:
 def create_subparser_info(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-    parser = subparsers.add_parser(
-        "info",
+    show_parser = subparsers.add_parser(
+        "show",
         parents=parent_parsers,
         help="Display database information and statistics.",
     )
+    subparsers.add_parser(
+        "version",
+        parents=parent_parsers,
+        help="Display backend version.",
+    )
 
-    return subparsers, parser
+    return subparsers, show_parser
 
 
 def create_subparser_delete_reference(
@@ -223,7 +269,7 @@ def create_subparser_delete_reference(
 ) -> argparse.ArgumentParser:
     # Delete Reference.
     parser = subparsers.add_parser(
-        "delete-ref",
+        "delete",
         parents=parent_parsers,
         help="Deletes a reference from the database.",
     )
@@ -249,7 +295,7 @@ def create_subparser_delete_sample(
         argparse.ArgumentParser: The created 'delete_sample' subparser.
     """
     parser_delete_sample = subparsers.add_parser(
-        "delete-sample",
+        "delete",
         help="Deletes samples from the database",
         parents=parent_parsers,
     )
@@ -276,7 +322,7 @@ def create_subparser_delete_sequence(
         argparse.ArgumentParser: The created 'delete_sequence' subparser.
     """
     parser_delete_sequence = subparsers.add_parser(
-        "delete-sequence",
+        "delete",
         help="Deletes sequences from the database",
         parents=parent_parsers,
     )
@@ -410,53 +456,53 @@ def create_parser_thread() -> argparse.ArgumentParser:
 def create_subparser_tasks(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-    # View Reference.
-    parser = subparsers.add_parser(
-        "tasks",
+    list_parser = subparsers.add_parser(
+        "list",
         parents=parent_parsers,
-        help="Use this command to query job status",
-    )
-    mutually_exclusive_group = parser.add_mutually_exclusive_group()
-
-    # Option to list all job IDs
-    mutually_exclusive_group.add_argument(
-        "--list-jobs", help="List all job IDs", action="store_true"
+        help="List all known background jobs.",
     )
 
-    # Option to search for a specific job ID
-    mutually_exclusive_group.add_argument(
-        "--jobid", help="Search for a specific job ID", type=str, default=None
+    show_parser = subparsers.add_parser(
+        "show",
+        parents=parent_parsers,
+        help="Show the status of a specific background job.",
     )
-    # Add subparsers for jobid specific commands
-    jobid_subparsers = parser.add_subparsers(dest="jobid_command")
-    # Subcommand for running in the background
-    jobid_background_parser = jobid_subparsers.add_parser(
-        "background", help="Run background checks periodically for the specified job"
+    show_parser.add_argument(
+        "--jobid", help="Search for a specific job ID", type=str, required=True
     )
-    jobid_background_parser.add_argument(
+
+    watch_parser = subparsers.add_parser(
+        "watch",
+        parents=parent_parsers,
+        help="Run background checks periodically for the specified job.",
+    )
+    watch_parser.add_argument(
+        "--jobid", help="Search for a specific job ID", type=str, required=True
+    )
+    watch_parser.add_argument(
         "--interval",
         help="Interval in seconds to check the job status (default: %(default)s)",
         type=int,
         default=60,
     )
-    return subparsers, parser
+    return subparsers, list_parser
 
 
 def create_subparser_list_prop(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
     """
-    Creates a 'list-prop' subparser with command-specific arguments and options for the command-line interface.
+    Creates the 'property list' subparser with command-specific arguments and options for the command-line interface.
 
     Args:
-        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'list-prop' subparser to.
+        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'list' subparser to.
         parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments and options.
 
     Returns:
-        argparse.ArgumentParser: The created 'list-prop' subparser.
+        argparse.ArgumentParser: The created 'property list' subparser.
     """
     parser = subparsers.add_parser(
-        "list-prop",
+        "list",
         help="Lists all sample properties added to the database",
         parents=parent_parsers,
     )
@@ -468,7 +514,7 @@ def create_subparser_list_reference(
 ) -> argparse.ArgumentParser:
     # View Reference.
     parser = subparsers.add_parser(
-        "list-ref",
+        "list",
         parents=parent_parsers,
         help="Lists all available references in the database",
     )
@@ -479,7 +525,7 @@ def create_subparser_lineage_import(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
     parser = subparsers.add_parser(
-        "import-lineage",
+        "import",
         parents=parent_parsers,
         help="Perform lineage import to the database",
     )
@@ -490,17 +536,17 @@ def create_subparser_import_dataset(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
     """
-    Creates an 'import-dataset' subparser for downloading and importing public datasets.
+    Creates the 'dataset import' subparser for downloading and importing public datasets.
 
     Args:
         subparsers (argparse._SubParsersAction): ArgumentParser object to attach the subparser to.
         parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments.
 
     Returns:
-        argparse.ArgumentParser: The created 'import-dataset' subparser.
+        argparse.ArgumentParser: The created 'dataset import' subparser.
     """
     parser = subparsers.add_parser(
-        "import-dataset",
+        "import",
         parents=parent_parsers,
         help="Download and import public pathogen genomics datasets",
         description=(
@@ -719,21 +765,23 @@ def create_subparser_add_reference(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
     parser = subparsers.add_parser(
-        "add-ref",
+        "add",
         parents=parent_parsers,
         help="Adds reference genome to the database.",
     )
     parser.add_argument(
-        "--gb",
+        "--genbank",
         metavar="FILE",
         help=(
-            "Genbank file(s) of a reference genome. Normally, one genbank file per one reference genome, "
+            "GenBank file(s) of a reference genome. Normally, one GenBank file per one reference genome, "
             "however, in a case of a segmented genome (multiple genbank files), user can provide multiple files. "
-            "For example, --gb InfluenzaA_H1N1_seg1.gb InfluenzaA_H1N1_seg2.gb InfluenzaA_H1N1_seg7.gb ... "
+            "For example, --genbank InfluenzaA_H1N1_seg1.gb InfluenzaA_H1N1_seg2.gb InfluenzaA_H1N1_seg7.gb "
+            "or --genbank InfluenzaA_H1N1_seg1.gb --genbank InfluenzaA_H1N1_seg2.gb. "
             "This will automatically treat this import as a segmented genome, and the first file will be used as the "
-            "index in the reference table and shown information in ref-list command."
+            "index in the reference table and shown information in the reference list command."
         ),
         type=str,
+        action="extend",
         nargs="+",
         default=[],
         required=True,
@@ -746,17 +794,17 @@ def create_subparser_add_prop(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
     """
-    Creates an 'add-prop' subparser with command-specific arguments and options for the command-line interface.
+    Creates the 'property add' subparser with command-specific arguments and options for the command-line interface.
 
     Args:
-        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'add-prop' subparser to.
+        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'add' subparser to.
         parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments and options.
 
     Returns:
-        argparse.ArgumentParser: The created 'add-prop' subparser.
+        argparse.ArgumentParser: The created 'property add' subparser.
     """
     parser = subparsers.add_parser(
-        "add-prop", help="add a property to the database", parents=parent_parsers
+        "add", help="add a property to the database", parents=parent_parsers
     )
     parser.add_argument(
         "--descr",
@@ -812,17 +860,17 @@ def create_subparser_delete_prop(
     subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
     """
-    Creates an 'delete-prop' subparser with command-specific arguments and options for the command-line interface.
+    Creates the 'property delete' subparser with command-specific arguments and options for the command-line interface.
 
     Args:
-        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'delete-prop' subparser to.
+        subparsers (argparse._SubParsersAction): ArgumentParser object to attach the 'delete' subparser to.
         parent_parsers (argparse.ArgumentParser): ArgumentParser objects providing common arguments and options.
 
     Returns:
-        argparse.ArgumentParser: The created 'delete-prop' subparser.
+        argparse.ArgumentParser: The created 'property delete' subparser.
     """
     parser = subparsers.add_parser(
-        "delete-prop", help="delete a property to the database", parents=parent_parsers
+        "delete", help="delete a property to the database", parents=parent_parsers
     )
     parser.add_argument(
         "--force",
@@ -935,7 +983,7 @@ def handle_import(args: argparse.Namespace):
         LOGGER.info("Alignment Tool: WFA2-lib")
     else:
         LOGGER.warning(
-            "Invalid --method. Please use 'import -h' to see available methods"
+            "Invalid --method. Please use 'sample import -h' to see available methods"
         )
         exit(1)
     LOGGER.info(f"Skip N/X mutation: {args.skip_nx}")
@@ -1092,7 +1140,7 @@ def handle_list_ref(args: argparse.Namespace):
 
 
 def handle_add_ref(args: argparse.Namespace):
-    sonarUtils.add_ref_by_genebank_file(reference_gbs=args.gb)
+    sonarUtils.add_ref_by_genebank_file(reference_gbs=args.genbank)
 
 
 def handle_delete_ref(args: argparse.Namespace):
@@ -1199,7 +1247,7 @@ def handle_add_prop(args: argparse.Namespace):
 
 
 def handle_tasks(args: argparse.Namespace):
-    if args.list_jobs:
+    if args.verb == "list":
         print(
             tabulate(
                 sonarUtils1.get_all_jobs(db=args.db),
@@ -1207,19 +1255,13 @@ def handle_tasks(args: argparse.Namespace):
                 tablefmt="fancy_grid",
             )
         )
-    elif args.jobid:
-        if args.jobid_command:
-            result, status = sonarUtils1.get_job_byID(
-                db=args.db,
-                job_id=args.jobid,
-                background=args.jobid_command == "background",
-                interval=args.interval,
-            )
-        else:
-            result, status = sonarUtils1.get_job_byID(
-                db=args.db,
-                job_id=args.jobid,
-            )
+    elif args.verb in {"show", "watch"}:
+        result, status = sonarUtils1.get_job_byID(
+            db=args.db,
+            job_id=args.jobid,
+            background=args.verb == "watch",
+            interval=getattr(args, "interval", 60),
+        )
         print("Status:", status)
         print(
             tabulate(
@@ -1329,7 +1371,10 @@ def handle_lineage(args: argparse.Namespace):
 
 
 def handle_info(args: argparse.Namespace):
-    sonarUtils1.get_info(db=args.db)
+    if args.verb == "version":
+        sonarUtils1.get_backend_version(db=args.db)
+    else:
+        sonarUtils1.get_info(db=args.db)
 
 
 def execute_commands(args):  # noqa: C901
@@ -1342,49 +1387,33 @@ def execute_commands(args):  # noqa: C901
     Args:
         args (argparse.Namespace): Parsed command line arguments.
     """
-    LOGGER.info(f"Current version {NAME}:{VERSION}")
-    if args.command == "import":
-        if len(sys.argv[1:]) == 1:
-            parse_args(["import", "-h"])
-        else:
-            handle_import(args)
-    elif args.command == "add-ref":
+    if args.resource == "sample" and args.verb == "import":
+        handle_import(args)
+    elif args.resource == "reference" and args.verb == "add":
         handle_add_ref(args)
-    elif args.command == "list-ref":
+    elif args.resource == "reference" and args.verb == "list":
         handle_list_ref(args)
-    elif args.command == "delete-ref":
+    elif args.resource == "reference" and args.verb == "delete":
         handle_delete_ref(args)
-    elif args.command == "list-prop":
+    elif args.resource == "property" and args.verb == "list":
         handle_list_prop(args)
-    elif args.command == "add-prop":
+    elif args.resource == "property" and args.verb == "add":
         handle_add_prop(args)
-    elif args.command == "delete-prop":
+    elif args.resource == "property" and args.verb == "delete":
         handle_delete_prop(args)
-    elif args.command == "match":
-        if len(sys.argv[1:]) == 1:
-            parse_args(["match", "-h"])
-        else:
-            handle_match(args)
-    elif args.command == "delete-sample":
-        if len(sys.argv[1:]) == 1:
-            parse_args(["delete-sample", "-h"])
-        else:
-            handle_delete_sample(args)
-    elif args.command == "delete-sequence":
-        if len(sys.argv[1:]) == 1:
-            parse_args(["delete-sequence", "-h"])
-        else:
-            handle_delete_sequence(args)
-    elif args.command == "tasks":
+    elif args.resource == "sample" and args.verb == "match":
+        handle_match(args)
+    elif args.resource == "sample" and args.verb == "delete":
+        handle_delete_sample(args)
+    elif args.resource == "sequence" and args.verb == "delete":
+        handle_delete_sequence(args)
+    elif args.resource == "task":
         handle_tasks(args)
-    elif args.command == "import-lineage":
+    elif args.resource == "lineage" and args.verb == "import":
         handle_lineage(args)
-    elif args.command == "import-dataset":
-        if len(sys.argv[1:]) == 1:
-            parse_args(["import-dataset", "-h"])
-        else:
-            handle_import_dataset(args)
-    elif args.command == "info":
+    elif args.resource == "dataset" and args.verb == "import":
+        handle_import_dataset(args)
+    elif args.resource == "info":
         handle_info(args)
 
 

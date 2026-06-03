@@ -204,9 +204,9 @@ download_file \
   "data/mpox/mpox_2.tsv"
 
 echo "Running CLI example commands"
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh add-ref --gb /data/sars-cov-2/MN908947.nextclade.gb
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh import-lineage -l /data/sars-cov-2/lineages_test.tsv
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh import \
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference add --genbank /data/sars-cov-2/MN908947.nextclade.gb
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh lineage import -l /data/sars-cov-2/lineages_test.tsv
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh sample import \
   -r MN908947.3 \
   --auto-anno \
   --fasta /data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
@@ -223,20 +223,20 @@ SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh import \
   lab=lab \
   lineage=lineage \
   collection_date=collection_date
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh list-ref
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh info
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh match -r MN908947.3 --count
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference list
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh info show
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh sample match -r MN908947.3 --count
 
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh add-ref --gb /data/mpox/clade-IIb-NC_063383.1.gb
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh import \
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference add --genbank /data/mpox/clade-IIb-NC_063383.1.gb
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh sample import \
   -r NC_063383.1 \
   --auto-anno \
   --fasta /data/mpox/mpox_2.fasta.xz \
   --tsv /data/mpox/mpox_2.tsv \
   --cols name=name
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh list-ref
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh info
-SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh match -r NC_063383.1 --count
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh reference list
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh info show
+SONAR_CLI_IMAGE="$SONAR_CLI_IMAGE" ./sonar-cli.sh sample match -r NC_063383.1 --count
 
 echo
 echo "Bootstrap completed."
