@@ -327,7 +327,7 @@ class sonarAligner:
         deletions = (df["altAa"] == "---") | (df["alt1"] == "-")
         df.loc[df["altAa"].str.contains("-"), "altAa"] = ""
         df["altAa"] = df["altAa"].apply(
-            lambda seq: (str(Seq(seq).translate(table="Standard", to_stop=True)))
+            lambda seq: (str(Seq(seq).translate(table="Standard", to_stop=False)))
         )
         df.loc[deletions, "altAa"] = "-"
 
