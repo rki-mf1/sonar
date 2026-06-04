@@ -60,10 +60,11 @@
           </div>
           <div style="white-space: normal; word-wrap: break-word">
             <GenomicProfileLabel
-              v-for="(mut, idx) in AA_mutations as string[]"
-              :key="mut"
-              :variant-string="mut"
-              :is-last="idx === (AA_mutations as string[]).length - 1"
+              v-for="(mutKey, idx) in Object.keys(AA_mutations as Record<string, any>)"
+              :key="mutKey"
+              :variant-string="mutKey"
+              :annotations="(AA_mutations as Record<string, any>)[mutKey]"
+              :is-last="idx === Object.keys(AA_mutations as Record<string, any>).length - 1"
             />
           </div>
         </div>
