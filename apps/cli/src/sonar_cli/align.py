@@ -3,6 +3,7 @@ from itertools import count
 import os
 import re
 import sys
+import tempfile
 import warnings
 
 from Bio import BiopythonWarning
@@ -75,20 +76,53 @@ class sonarAligner:
         all_vars = pd.concat([nuc_vars, aa_vars])
 
         if self.debug:
-            os.makedirs(os.path.dirname(sample_data["var_file"]), exist_ok=True)
-            all_vars.to_csv(sample_data["var_file"], sep="\t", index=False)
+            self._atomic_write(
+                sample_data["var_file"],
+                lambda path: all_vars.to_csv(path, sep="\t", index=False),
+            )
 
         # Write our var parquet file to be:
         # 1) used for the paranoid test
         # 2) sent to the backend for import
-        os.makedirs(os.path.dirname(sample_data["var_parquet_file"]), exist_ok=True)
-        all_vars.to_parquet(
+        self._atomic_write(
             sample_data["var_parquet_file"],
-            compression="zstd",
-            compression_level=10,
-            index=False,
+            lambda path: all_vars.to_parquet(
+                path,
+                compression="zstd",
+                compression_level=10,
+                index=False,
+            ),
         )
         return sample_data
+
+    @staticmethod
+    def _atomic_write(target_path: str, write_fn):
+        """Write a file atomically: write to a unique temp file in the same
+        directory, then ``os.replace()`` it into place.
+
+        Duplicate input sequences share the same seqhash and therefore the same
+        ``var_parquet_file`` path. With multiple worker processes, two workers
+        can write that path concurrently, producing a truncated/corrupt file
+        . Writing to a unique temp file and atomically replacing
+        the target guarantees readers only ever see a complete file, regardless
+        of how many workers race on the same path.
+
+        ``os.replace()`` is atomic when the temp file and target live on the
+        same filesystem, which is why the temp file is created in the target's
+        own directory.
+        """
+        out_dir = os.path.dirname(target_path)
+        os.makedirs(out_dir, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(dir=out_dir, suffix=".tmp")
+        os.close(fd)
+        try:
+            write_fn(tmp_path)
+            os.replace(tmp_path, target_path)
+        except BaseException:
+            # Don't leave a stray temp file behind on failure.
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
 
     def process_cached_alignment(self, data: dict):
         source_acc = str(data["source_acc"])
