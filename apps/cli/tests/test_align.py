@@ -79,6 +79,8 @@ def test_atomic_write_concurrent_same_path_stays_valid(tmp_path):
     # The final file is complete and readable despite the concurrent races.
     pd.testing.assert_frame_equal(pd.read_parquet(target), df)
     assert glob.glob(os.path.join(str(out_dir), "*.tmp")) == []
+
+
 def test_nuc_to_aa_vars_stop_gain_substitution(tmp_path):
     """
     Regression test for issue #559 (under-translation of stop-gain substitutions).
