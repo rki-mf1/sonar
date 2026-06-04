@@ -953,8 +953,16 @@ class sonarCache:
         # Prepare data that workers will need from this instance
         cache_instance_data = {"refmols": self.refmols, "error_dir": self.error_dir}
 
-        # Use mpire WorkerPool for multiprocessing
-        with WorkerPool(n_jobs=n_jobs, shared_objects=cache_instance_data) as pool:
+        # Use mpire WorkerPool for multiprocessing.
+        # NOTE: start_method="forkserver" (not the default "fork"). pyarrow/Arrow
+        # is not fork-safe (it keeps a global thread pool and memory pool, and
+        # fork() does not copy threads).
+        # forkserver gives each worker a clean Arrow initialization.
+        with WorkerPool(
+            n_jobs=n_jobs,
+            start_method="forkserver",
+            shared_objects=cache_instance_data,
+        ) as pool:
             # Process with progress bar
             with tqdm(
                 total=total_sequences,
@@ -963,9 +971,11 @@ class sonarCache:
                 bar_format="{desc} {percentage:3.0f}% [{n_fmt}/{total_fmt}, {elapsed}<{remaining}, {rate_fmt}{postfix}]",
                 disable=self.disable_progress,
             ) as pbar:
-                # Use imap for processing with progress updates
+                # Use imap for processing with progress updates.
+                # Reference the worker via the class (not self.<method>) so it
+                # pickles by reference for the forkserver start method.
                 for batch_passed, batch_failed in pool.imap_unordered(
-                    self.process_paranoid_batch_worker,
+                    sonarCache.process_paranoid_batch_worker,
                     sequence_data_dict_list,
                     chunk_size=chunk_size,
                 ):
@@ -1001,11 +1011,16 @@ class sonarCache:
 
         return passed_sequences_list
 
+    @staticmethod
     def process_paranoid_batch_worker(  # noqa: C901
-        self, cache_instance_data, **sequence_data
+        cache_instance_data, **sequence_data
     ):
         """
         Standalone worker function for paranoid batch processing using mpire.
+
+        Implemented as a staticmethod (it never uses instance state) so it is
+        picklable by reference. This lets the paranoid WorkerPool run with a
+        fork-safe start method ("forkserver"); see perform_paranoid_cached_sequences.
 
         Args:
             cache_instance_data: Dictionary containing necessary data from cache instance
