@@ -202,6 +202,24 @@ def read_var_parquet_file(
     return var_df.to_dict("records")
 
 
+def _format_profile_mutations(mutations: dict, exclude_annotation: bool) -> str:
+    """Render a ``{label: [annotations]}`` mapping into a comma-separated string.
+
+    When ``exclude_annotation`` is False, annotations are appended to the label in
+    parentheses (e.g. ``C241T(stop_gained HIGH)``). Labels may themselves contain
+    ``:`` (proteomic, e.g. ``ORF1ab:S123L``), so parentheses are used as the
+    label/annotation separator to avoid ambiguity. Labels without annotations are
+    rendered bare.
+    """
+    rendered = []
+    for label, annotations in mutations.items():
+        if not exclude_annotation and annotations:
+            rendered.append(f"{label}({'; '.join(annotations)})")
+        else:
+            rendered.append(label)
+    return ", ".join(rendered)
+
+
 def flatten_json_output(result_data: list, exclude_annotation=False):
     flattened_data = []
     # Load JSON data
@@ -214,23 +232,15 @@ def flatten_json_output(result_data: list, exclude_annotation=False):
         for prop in result.get("properties", []):
             flattened_entry[prop["name"]] = prop["value"]
 
-        if exclude_annotation:
-            flattened_entry["genomic_profiles"] = " ".join(
-                [
-                    f"{acc}({', '.join(muts.keys())})"
-                    for acc, muts in result.get("genomic_profiles", {}).items()
-                ]
-            )
-        else:
-            flattened_entry["genomic_profiles"] = " ".join(
-                [
-                    f"{acc}({', '.join(inner.keys())})"
-                    for acc, inner in result.get("genomic_profiles", {}).items()
-                ]
-            )
+        flattened_entry["genomic_profiles"] = " ".join(
+            [
+                f"{acc}({_format_profile_mutations(inner, exclude_annotation)})"
+                for acc, inner in result.get("genomic_profiles", {}).items()
+            ]
+        )
         flattened_entry["proteomic_profiles"] = " ".join(
             [
-                f"{acc}({', '.join(muts)})"
+                f"{acc}({_format_profile_mutations(muts, exclude_annotation)})"
                 for acc, muts in result.get("proteomic_profiles", {}).items()
             ]
         )

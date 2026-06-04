@@ -79,6 +79,69 @@ def test_atomic_write_concurrent_same_path_stays_valid(tmp_path):
     # The final file is complete and readable despite the concurrent races.
     pd.testing.assert_frame_equal(pd.read_parquet(target), df)
     assert glob.glob(os.path.join(str(out_dir), "*.tmp")) == []
+def test_nuc_to_aa_vars_stop_gain_substitution(tmp_path):
+    """
+    Regression test for issue #559 (under-translation of stop-gain substitutions).
+
+    A substitution that turns a sense codon into a stop codon (e.g. ORF8:Q27*,
+    CAA -> TAA) must be reported as a "*" amino-acid change.
+
+    The bug: ``Seq(codon).translate(..., to_stop=True)`` truncates at the stop
+    codon and returns "" for a codon that *is* a stop. The substitution emit loop
+    filters out ``altAa == ""``, so the stop-gain mutation was silently dropped
+    (0% call rate vs ~100% in NextClade). Using ``to_stop=False`` yields "*" so
+    the mutation is reported.
+    """
+    aligner = sonarAligner(cache_outdir=str(tmp_path))
+
+    # SNP C->T at the first nucleotide of the Q codon: CAA (Q) -> TAA (stop).
+    nuc_vars = pd.DataFrame(
+        [
+            {
+                "id": 1,
+                "ref": "C",
+                "start": 27915,
+                "end": 27916,
+                "alt": "T",
+                "reference_acc": "MN908947.3",
+                "label": "C27916T",
+                "type": "nt",
+                "frameshift": 0,
+                "parent_id": "1",
+            }
+        ]
+    )
+
+    lift_df = pd.DataFrame(
+        [
+            {
+                "elemid": 1,
+                "nucPos1": 27915,
+                "nucPos2": 27916,
+                "nucPos3": 27917,
+                "ref1": "C",
+                "ref2": "A",
+                "ref3": "A",
+                "alt1": "C",
+                "alt2": "A",
+                "alt3": "A",
+                "symbol": "ORF8",
+                "accession": "QHD43422.10",
+                "aaPos": 26,
+                "aa": "Q",
+            }
+        ]
+    )
+
+    aa_vars = aligner.nuc_to_aa_vars(nuc_vars, lift_df)
+
+    assert len(aa_vars) == 1, (
+        "Stop-gain substitution must be reported, not dropped. "
+        f"Got {len(aa_vars)} rows:\n{aa_vars}"
+    )
+    row = aa_vars.iloc[0]
+    assert row["alt"] == "*", f"Expected stop '*', got '{row['alt']}'"
+    assert row["label"] == "Q27*", f"Expected label 'Q27*', got '{row['label']}'"
 
 
 def test_nuc_to_aa_vars_non_codon_aligned_deletion(tmp_path):

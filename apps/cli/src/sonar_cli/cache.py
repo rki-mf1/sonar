@@ -1004,8 +1004,8 @@ class sonarCache:
             self.error_logfile_obj.write("Fail sample during alignment:----\n")
             LOGGER.warning("Failed sample IDs:")
             for fail_sample in list_fail_sequences:
-                self.error_logfile_obj.write(f"{fail_sample['sample_name']}\n")
-                LOGGER.warning(fail_sample["sample_name"])
+                self.error_logfile_obj.write(f"{fail_sample['sequence_name']}\n")
+                LOGGER.warning(fail_sample["sequence_name"])
             if must_pass_paranoid:
                 sys.exit("Some sequences failed the paranoid test, aborting.")
 

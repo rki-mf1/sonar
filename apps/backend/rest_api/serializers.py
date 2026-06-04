@@ -337,15 +337,24 @@ class SampleGenomesSerializer(serializers.ModelSerializer):
                         mutation, gene_symbol, mutation.start, mutation.end
                     )
 
-                    cds_mutations[key].append((gene_symbol, mutation.start, label))
+                    # AminoAcidMutation has no direct annotation link; annotations
+                    # are attached to the parent NucleotideMutation(s).
+                    annotations = []
+                    for parent in mutation.parent.all():
+                        for annotation in parent.annotations.all():
+                            annotation_str = str(annotation)
+                            if annotation_str not in annotations:
+                                annotations.append(annotation_str)
+
+                    cds_mutations[key].append(
+                        (gene_symbol, mutation.start, label, annotations)
+                    )
 
                 for key, labels in cds_mutations.items():
                     if key not in proteomic_profiles:
-                        proteomic_profiles[key] = []
-                    sorted_labels = [
-                        item[2] for item in sorted(labels, key=lambda x: (x[0], x[1]))
-                    ]
-                    proteomic_profiles[key].extend(sorted_labels)
+                        proteomic_profiles[key] = {}
+                    for item in sorted(labels, key=lambda x: (x[0], x[1])):
+                        proteomic_profiles[key][item[2]] = item[3]
 
         return OrderedDict(sorted(proteomic_profiles.items()))
 
