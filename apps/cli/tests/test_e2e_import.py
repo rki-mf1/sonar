@@ -265,21 +265,11 @@ def test_mafft_upload_hiv(monkeypatch, api_url, tmpfile_name):
         func_name = getattr(func, "__name__", "")
         for data_dict in args_list:
             if func_name in needs_shared_objects:
-                # Case: paranoid processing (needs shared_objects)
-                # Get cache instance from the bound method
-                cache_instance = getattr(func, "__self__", None)
-
-                # Serialize cache instance to dict (mimicking mpire's shared_objects)
-                if cache_instance:
-                    cache_data = {
-                        "basedir": cache_instance.basedir,
-                        "refacc": cache_instance.refacc,
-                        "refmols": cache_instance.refmols,
-                        "error_dir": cache_instance.error_dir,
-                        # Add other needed attributes
-                    }
-                else:
-                    cache_data = {}
+                # Case: paranoid processing (needs shared_objects).
+                # The worker is a staticmethod, so it has no __self__; mimic
+                # mpire by reading the shared_objects the WorkerPool was
+                # constructed with (cache_instance_data: refmols, error_dir).
+                cache_data = getattr(self.pool_params, "shared_objects", None) or {}
                 yield func(cache_data, **data_dict)
             else:
                 # Case: normal processing (no shared_objects)

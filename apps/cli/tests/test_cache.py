@@ -1,5 +1,21 @@
+import pickle
+
 import pytest
 from sonar_cli.cache import sonarCache
+
+
+def test_paranoid_worker_is_picklable_for_forkserver():
+    """
+    The paranoid WorkerPool runs with a fork-safe start method ("forkserver")
+    because pyarrow is not fork-safe. forkserver/spawn pickle the worker
+    function, so it must be a staticmethod (picklable by reference) rather than
+    a bound method (which would drag the unpicklable cache instance along).
+    """
+    worker = sonarCache.process_paranoid_batch_worker
+    # No bound instance: it's a plain function, not a bound method.
+    assert getattr(worker, "__self__", None) is None
+    # Pickling by reference must succeed (this is what forkserver/spawn do).
+    assert pickle.loads(pickle.dumps(worker)) is worker
 
 
 def test_find_snpeff_config_uses_anno_config_file(monkeypatch, tmp_path):

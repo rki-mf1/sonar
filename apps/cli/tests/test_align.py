@@ -1,5 +1,84 @@
+import glob
+import multiprocessing as mp
+import os
+
 import pandas as pd
+import pytest
 from sonar_cli.align import sonarAligner
+
+
+def _write_parquet_to(path, df):
+    """Top-level worker (must be picklable for the 'spawn'/'fork' pool) that
+    writes ``df`` to ``path`` via the aligner's atomic-write helper."""
+    sonarAligner._atomic_write(
+        path,
+        lambda p: df.to_parquet(
+            p, compression="zstd", compression_level=10, index=False
+        ),
+    )
+
+
+def test_atomic_write_produces_valid_parquet_and_no_temp_leftovers(tmp_path):
+    """Regression test for issue #557.
+
+    The atomic-write helper must produce a complete, readable Parquet file and
+    leave no ``.tmp`` files behind in the target directory.
+    """
+    out_dir = tmp_path / "var" / "ab"
+    target = str(out_dir / "sample.var.parquet")
+    df = pd.DataFrame({"ref": ["A", "C"], "alt": ["T", "G"], "start": [1, 2]})
+
+    _write_parquet_to(target, df)
+
+    # The published file is a complete, readable Parquet file.
+    assert os.path.isfile(target)
+    pd.testing.assert_frame_equal(pd.read_parquet(target), df)
+    # No stray temp files remain in the target directory.
+    assert glob.glob(os.path.join(str(out_dir), "*.tmp")) == []
+
+
+def test_atomic_write_cleans_up_on_failure(tmp_path):
+    """If the write callback raises, no temp file is left and the original
+    target (if any) is untouched."""
+    out_dir = tmp_path / "var"
+    target = str(out_dir / "sample.var.parquet")
+
+    def boom(_path):
+        raise ValueError("write failed")
+
+    with pytest.raises(ValueError, match="write failed"):
+        sonarAligner._atomic_write(target, boom)
+
+    assert not os.path.exists(target)
+    assert glob.glob(os.path.join(str(out_dir), "*.tmp")) == []
+
+
+def test_atomic_write_concurrent_same_path_stays_valid(tmp_path):
+    """Multiple processes writing the SAME path concurrently (the issue #557
+    scenario: duplicate sequences sharing one var_parquet_file) must always
+    leave a complete, readable Parquet file — never a truncated/corrupt one."""
+    out_dir = tmp_path / "var" / "cd"
+    target = str(out_dir / "shared.var.parquet")
+    # A non-trivial frame so a torn write would be detectable.
+    df = pd.DataFrame(
+        {
+            "ref": ["A", "C", "G", "T"] * 250,
+            "alt": ["T", "G", "C", "A"] * 250,
+            "start": list(range(1000)),
+        }
+    )
+
+    ctx = mp.get_context("fork")
+    procs = [ctx.Process(target=_write_parquet_to, args=(target, df)) for _ in range(8)]
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+        assert p.exitcode == 0
+
+    # The final file is complete and readable despite the concurrent races.
+    pd.testing.assert_frame_equal(pd.read_parquet(target), df)
+    assert glob.glob(os.path.join(str(out_dir), "*.tmp")) == []
 
 
 def test_nuc_to_aa_vars_stop_gain_substitution(tmp_path):
