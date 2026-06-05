@@ -27,7 +27,7 @@ sqlparse = "^0.5.4"
 colorlog = "^6.8.0"
 packaging = "^24.0"
 pango-aliasor = "^0.3.0"
-pyarrow = "^19.0.0"
+pyarrow = ">=19,<24"
 
 [tool.poetry.group.dev.dependencies]
 black = "^26.3.1"
