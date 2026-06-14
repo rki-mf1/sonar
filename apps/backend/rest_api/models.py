@@ -355,21 +355,37 @@ class Lineage(models.Model):
 
     name = models.CharField(max_length=50)  # not unique because of recombinants
     parent = models.ForeignKey("self", models.CASCADE, blank=True, null=True)
+    reference = models.ForeignKey("Reference", models.CASCADE)
 
     def get_sublineages(self) -> set:
         lineages = set([self])
         lineages.update(
-            Lineage.get_sublineages_from_list(Lineage.objects.filter(name=self.name))
+            Lineage.get_sublineages_from_list(
+                Lineage.objects.filter(name=self.name, reference=self.reference_id)
+            )
         )
         return lineages
 
     @staticmethod
     def get_sublineages_from_list(lineages):
+        # Iterative breadth-first descent over the name-based parent links.
+        # Values are materialised each round (plain lists, not lazy querysets) to
+        # avoid pathologically nested subqueries, and a visited-guard guarantees
+        # termination. Stays within the same reference(s): lineage names collide
+        # across pathogens (e.g. RSV-A "A" vs Influenza H3N2 "A").
+        ref_ids = set(lineages.values_list("reference_id", flat=True))
+        frontier = set(lineages.values_list("name", flat=True))
+        seen_names = set(frontier)
         lineages_set = set()
-        if lineages.count() > 0:
-            children = Lineage.objects.filter(parent__name__in=lineages.values("name"))
+        while frontier:
+            children = list(
+                Lineage.objects.filter(
+                    parent__name__in=frontier, reference_id__in=ref_ids
+                )
+            )
             lineages_set.update(children)
-            lineages_set.update(Lineage.get_sublineages_from_list(children))
+            frontier = {c.name for c in children if c.name not in seen_names}
+            seen_names.update(frontier)
         return lineages_set
 
     def __str__(self) -> str:
@@ -380,11 +396,11 @@ class Lineage(models.Model):
         constraints = [
             UniqueConstraint(
                 name="unique_lineage",
-                fields=["name", "parent"],
+                fields=["name", "parent", "reference"],
             ),
             UniqueConstraint(
                 name="unique_lineage_parent_null",
-                fields=["name"],
+                fields=["name", "reference"],
                 condition=models.Q(parent__isnull=True),
             ),
         ]

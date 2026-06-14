@@ -646,16 +646,25 @@ class SampleFilterMixin:
         lineageList,
         exclude: bool = False,
         includeSublineages: bool = True,
+        reference_accession: str = None,
         *args,
         **kwargs,
     ):
         if isinstance(lineageList, str):
             lineageList = [lineageList]  # convert to list if a single string is passed
 
-        lineages = models.Lineage.objects.filter(name__in=lineageList)
+        # Match names case-insensitively ("b.1.1.7" -> "B.1.1.7") and scope to the
+        # queried reference: the same lineage name can exist for different
+        # pathogens (e.g. "A"/"B" in SARS-CoV-2, mpox, RSV and influenza).
+        name_q = Q()
+        for name in lineageList:
+            name_q |= Q(name__iexact=name)
+        lineages = models.Lineage.objects.filter(name_q)
+        if reference_accession:
+            lineages = lineages.filter(reference__accession=reference_accession)
 
         if not lineages.exists():
-            raise Exception(f"Lineage {lineages} not found.")
+            raise Exception(f"Lineage {list(lineageList)} not found.")
         if includeSublineages:
             sublineages = []
             for l in lineages:

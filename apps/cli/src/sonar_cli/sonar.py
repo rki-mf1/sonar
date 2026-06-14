@@ -6,6 +6,7 @@ from typing import Optional
 from sonar_cli import config
 from sonar_cli.common_utils import combine_sample_argument
 from sonar_cli.common_utils import convert_default
+from sonar_cli.lineages.registry import PATHOGEN_CHOICES
 from sonar_cli.logging import LoggingConfigurator
 from sonar_cli.utils import sonarUtils
 from sonar_cli.utils1 import sonarUtils1
@@ -204,8 +205,16 @@ def create_parser_lineage() -> argparse.ArgumentParser:
         metavar="STR",
         help="Select a pathogen. (choices: %(choices)s. default: %(default)s)",
         type=str,
-        choices=["SARS-CoV-2", "Influenza", "RSV"],
+        choices=PATHOGEN_CHOICES,
         default="SARS-CoV-2",
+    )
+    parser.add_argument(
+        "-r",
+        "--reference",
+        metavar="STR",
+        help="Reference (accession or ID) these lineages belong to (must already be imported).",
+        type=str,
+        required=True,
     )
     parser.add_argument(
         "-l",
@@ -1366,7 +1375,10 @@ def handle_delete_sequence(args: argparse.Namespace):
 
 def handle_lineage(args: argparse.Namespace):
     sonarUtils1.upload_lineage(
-        pathogen=args.pathogen, lineage_file=args.lineage, output_file=args.out
+        pathogen=args.pathogen,
+        lineage_file=args.lineage,
+        output_file=args.out,
+        reference=args.reference,
     )
 
 

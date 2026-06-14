@@ -437,15 +437,19 @@ class APIClient:
         )
         return json_response
 
-    def put_lineage_import(self, lineage_obj):
+    def put_lineage_import(self, lineage_obj, reference):
         """
-        send lineage file.
+        send lineage file together with the target reference accession.
         """
 
         file = {"lineages_file": lineage_obj}
+        data = {"reference": reference}
 
         json_response = self._make_request(
-            "PUT", endpoint=self.put_lineage_import_endpoint, files=file
+            "PUT",
+            endpoint=self.put_lineage_import_endpoint,
+            data=data,
+            files=file,
         )
         return json_response
 

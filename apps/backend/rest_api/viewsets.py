@@ -988,12 +988,26 @@ class LineageViewSet(
 
     @action(detail=False, methods=["put"])
     def update_lineages(self, request: Request, *args, **kwargs):
+        accession = request.data.get("reference")
+        if not accession:
+            return Response(
+                {"detail": "reference field is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            reference = models.Reference.objects.get(accession=accession)
+        except models.Reference.DoesNotExist:
+            return Response(
+                {"detail": f"Reference '{accession}' not found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         tsv_file = request.FILES.get("lineages_file")
         tsv_file = self._temp_save_file(tsv_file)
         lineage_import = LineageImport()
         lineage_import.set_file(tsv_file)
-        models.Lineage.objects.all().delete()
-        lineage_import.process_lineage_data()
+        # Only replace this reference's lineages, keep the others intact.
+        models.Lineage.objects.filter(reference=reference).delete()
+        lineage_import.process_lineage_data(reference)
         return Response(
             {"detail": "Lineages updated successfully"}, status=status.HTTP_200_OK
         )
