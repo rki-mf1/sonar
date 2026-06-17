@@ -2,11 +2,17 @@
 
 This directory contains a Docker Compose deployment for running Sonar from
 prebuilt Docker images. It is the recommended setup for users who want to try or
-operate Sonar without building from source.
+operate Sonar without cloning or building the source repository.
 
-Release builds publish this directory as `sonar-ghcr-deploy-bundle.tar.gz`.
-Extract that archive and run the commands below from the extracted
-`example-deploy/` directory.
+Release builds publish this directory as `sonar-docker-deploy-bundle.tar.gz` on
+[GitHub Releases](https://github.com/rki-mf1/sonar/releases). Download and
+extract it:
+
+```sh
+curl -LO https://github.com/rki-mf1/sonar/releases/latest/download/sonar-docker-deploy-bundle.tar.gz
+tar -xzf sonar-docker-deploy-bundle.tar.gz
+cd example-deploy
+```
 
 The stack includes:
 

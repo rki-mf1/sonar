@@ -8,10 +8,13 @@ For source development, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Run With Docker
 
-The frontend is included in the Docker deployment bundle:
+The frontend is included in the Docker deployment bundle published on
+[GitHub Releases](https://github.com/rki-mf1/sonar/releases):
 
 ```sh
-cd ../../example-deploy
+curl -LO https://github.com/rki-mf1/sonar/releases/latest/download/sonar-docker-deploy-bundle.tar.gz
+tar -xzf sonar-docker-deploy-bundle.tar.gz
+cd example-deploy
 ./bootstrap.sh --tag latest
 ```
 
@@ -77,8 +80,8 @@ same selected subset of samples.
 
 ## Connecting to the Backend
 
-For Docker deployments, set `SONAR_FRONTEND_BACKEND_ADDRESS` in
-`example-deploy/frontend.env`. Example:
+For Docker deployments, set `SONAR_FRONTEND_BACKEND_ADDRESS` in the extracted
+bundle's `frontend.env`. Example:
 
 ```sh
 SONAR_FRONTEND_BACKEND_ADDRESS=http://localhost:18000/api/

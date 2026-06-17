@@ -44,8 +44,9 @@ users who only need to operate Sonar rather than develop it.
 
 ## Quick Start With Docker
 
-The fastest way to try Sonar is the Docker Compose deployment bundle. It starts
-the backend, frontend, database, worker, and cache from prebuilt Docker images.
+The fastest way to try Sonar is the Docker Compose deployment bundle from
+[GitHub Releases](https://github.com/rki-mf1/sonar/releases). It starts the
+backend, frontend, database, worker, and cache from prebuilt Docker images.
 
 Requirements:
 
@@ -54,15 +55,8 @@ Requirements:
 - `python3`
 
 ```sh
-tar -xzf sonar-ghcr-deploy-bundle.tar.gz
-cd example-deploy
-./bootstrap.sh --tag latest
-```
-
-If you are reading from a source checkout instead of a release bundle, the same
-deployment files are in [`example-deploy`](./example-deploy):
-
-```sh
+curl -LO https://github.com/rki-mf1/sonar/releases/latest/download/sonar-docker-deploy-bundle.tar.gz
+tar -xzf sonar-docker-deploy-bundle.tar.gz
 cd example-deploy
 ./bootstrap.sh --tag latest
 ```
@@ -79,7 +73,7 @@ After startup:
 | Backend API | `http://localhost:18000/api/` |
 
 For manual setup, configuration, ports, secrets, image tags, and CLI helper
-usage, see the [deployment bundle README](./example-deploy/README.md).
+usage, see the `README.md` included in the extracted deployment bundle.
 
 ## First Workflow
 
@@ -112,7 +106,7 @@ metadata mapping, public dataset import, and query examples.
 
 ## Documentation
 
-- [Docker deployment guide](./example-deploy/README.md)
+- [Docker deployment guide](./example-deploy/README.md) (also included as `README.md` in the [release](https://github.com/rki-mf1/sonar/releases) deployment bundle)
 - [CLI user guide](./apps/cli/README.md)
 - [Backend operator guide](./apps/backend/README.md)
 - [Frontend user guide](./apps/frontend/README.md)

@@ -24,16 +24,18 @@ docker run --rm \
   ghcr.io/rki-mf1/sonar-cli:latest reference list
 ```
 
-If you are using the root [example deployment](../../example-deploy), prefer its
-helper script:
+If you deployed Sonar with the release deployment bundle, prefer its helper
+script:
 
 ```sh
-cd ../../example-deploy
+curl -LO https://github.com/rki-mf1/sonar/releases/latest/download/sonar-docker-deploy-bundle.tar.gz
+tar -xzf sonar-docker-deploy-bundle.tar.gz
+cd example-deploy
 ./sonar-cli.sh reference list
 ```
 
-The helper mounts `example-deploy/data/`, reads `sonar-cli.config`, and points
-the CLI at the deployment bundle backend API by default.
+The helper mounts the bundle's `data/` directory, reads `sonar-cli.config`, and
+points the CLI at the deployment bundle backend API by default.
 
 ## Configuration
 
@@ -223,6 +225,6 @@ If SnpEff runs out of memory during annotation, increase the Java heap:
 export _JAVA_OPTIONS="-Xms512m -Xmx8g"
 ```
 
-If Docker cannot reach a local backend at `127.0.0.1`, use the
-`example-deploy/sonar-cli.sh` helper on Linux or point `API_URL` to a hostname
+If Docker cannot reach a local backend at `127.0.0.1`, use the deployment
+bundle's `sonar-cli.sh` helper on Linux or point `API_URL` to a hostname
 reachable from the CLI container.

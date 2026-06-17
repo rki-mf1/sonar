@@ -4,8 +4,9 @@ The Sonar backend stores references, samples, metadata, mutations, annotations,
 and import jobs. It provides the HTTP API used by the CLI and frontend.
 
 For most users, the backend should be run through the Docker deployment bundle
-in [`../../example-deploy`](../../example-deploy). Source-based backend setup is
-for contributors and is documented in [CONTRIBUTING.md](./CONTRIBUTING.md).
+published on [GitHub Releases](https://github.com/rki-mf1/sonar/releases).
+Source-based backend setup is for contributors and is documented in
+[CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Role in Sonar
 
@@ -34,9 +35,11 @@ CLI, frontend, and API clients query stored data
 
 ## Run With Docker
 
-Use the deployment bundle from the repository root:
+Download and extract the latest deployment bundle:
 
 ```sh
+curl -LO https://github.com/rki-mf1/sonar/releases/latest/download/sonar-docker-deploy-bundle.tar.gz
+tar -xzf sonar-docker-deploy-bundle.tar.gz
 cd example-deploy
 ./bootstrap.sh --tag latest
 ```
@@ -48,8 +51,8 @@ Default service URLs:
 | Backend API | `http://localhost:18000/api/` |
 | Django admin | `http://localhost:18000/admin/` |
 
-For detailed configuration, see
-[`example-deploy/README.md`](../../example-deploy/README.md).
+For detailed configuration, see the `README.md` included in the extracted
+deployment bundle.
 
 ## Configuration
 
