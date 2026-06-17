@@ -63,25 +63,37 @@ For normal source changes, update the root `VERSION` file when the product
 version should change. Local builds read this file when no build-time version is
 provided.
 
-For releases:
+For releases, use a pull request for the version bump. Do not push directly to
+`main`.
 
-1. Update `VERSION` to the release version, for example `1.2.3`.
-2. Commit the version bump.
-3. Create a Git tag with the same version and a leading `v`, for example:
+1. Create a release branch from the latest `main`.
+2. Update `VERSION` to the release version, for example `1.2.3`.
+3. Open a pull request for the version bump and wait for the required checks.
+4. Merge the pull request into `main`.
+5. Update your local `main` to the merged commit:
+
+   ```sh
+   git switch main
+   git pull --ff-only origin main
+   ```
+
+6. Create a Git tag on the merged `main` commit with the same version and a
+   leading `v`, for example:
 
    ```sh
    git tag v1.2.3
    ```
 
-4. Push the tag:
+7. Push the tag:
 
    ```sh
    git push origin v1.2.3
    ```
 
 Release Docker images are stamped from the Git tag. The release workflow checks
-that tag `vX.Y.Z` matches the root `VERSION` value `X.Y.Z`, so keep them in
-sync.
+that tag `vX.Y.Z` matches the root `VERSION` value `X.Y.Z`, and release
+workflows reject tags that do not point to a commit already merged into `main`.
+Keep the tag, `VERSION`, and merged `main` commit in sync.
 
 ## Documentation Review Checklist
 
