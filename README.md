@@ -26,17 +26,16 @@ Sonar has three user-facing parts:
 
 Typical data flow:
 
-```text
-FASTA/TSV/CSV/public dataset
-        |
-        v
-sonar-cli: align, call mutations, annotate, upload
-        |
-        v
-sonar-backend: queue and store imported data
-        |
-        v
-frontend, CLI, or API queries
+```mermaid
+flowchart TD
+    input["FASTA, TSV/CSV, or public dataset"]
+    cli["sonar-cli\nAlign, call mutations, annotate, upload"]
+    backend["sonar-backend\nQueue imports and store data"]
+    query["Frontend, CLI, or API queries"]
+
+    input --> cli
+    cli --> backend
+    backend --> query
 ```
 
 The backend and frontend are normally deployed with prebuilt Docker images. The
