@@ -1,93 +1,88 @@
 # Sonar Frontend
 
-A web frontend to the sonar mutation database.
+The Sonar frontend is the web interface for exploring data stored in Sonar. It
+is aimed at users who want to browse samples, filter by metadata or mutations,
+export results, and create charts without writing CLI commands.
 
-# Setup
+For source development, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-```bash
-git clone https://github.com/rki-mf1/sonar.git
-cd sonar/apps/frontend
-```
+## Run With Docker
 
-Make sure you have npm installed (`conda create -n sonar-frontend nodejs` will work with conda), and then follow the frontend docs:
-
-```
-$ npm install
-```
-
-Next you probably want to customize the url of the sonar backend. For local
-builds you can still set this from `sonar/apps/frontend/.env.production` or
-directly from the command line when building the frontend:
-
-```
-$ VITE_SONAR_BACKEND_ADDRESS=https://myserver.com/api/ npm run build
-```
-
-Then copy the built files into the backend `work/` directory. You might need to tweak the commands below depending on the relative location of sonar-frontend and sonar-backend, and whether you are updating an existing copy of the frontend or doing this for the first time:
-
-```
-$ npm run build:backend-proxy
-```
-
-Now you should be able to access the frontend on your server at port 443 (e.g. `https://servername.org`).
-
-## Project Setup
+The frontend is included in the Docker deployment bundle:
 
 ```sh
-npm install
+cd ../../example-deploy
+./bootstrap.sh --tag latest
 ```
 
-### Compile and Hot-Reload for Development
+Default URL:
+
+```text
+http://localhost:18080
+```
+
+The prebuilt Docker image reads runtime settings when the container starts:
+
+| Setting | Purpose |
+| --- | --- |
+| `SONAR_FRONTEND_BACKEND_ADDRESS` | Backend API URL used by the browser app. |
+| `SONAR_FRONTEND_AUTH_TOKEN` | Optional token to inject when explicitly needed. |
+
+In the deployment bundle, these settings live in `frontend.env`.
+
+## What Users Can Do
+
+The frontend provides three main areas:
+
+| Area | Purpose |
+| --- | --- |
+| Home | Select organism, reference genome, and dataset. |
+| Table | Browse, filter, inspect, and export samples. |
+| Graph | Visualize filtered data with default and custom charts. |
+
+The frontend is populated from the backend. If dropdowns are empty, first check
+that the backend is running and that references and samples have been imported.
+
+## Home Page
+
+The Home page selects the working dataset:
+
+- organism
+- reference accession
+- one or more datasets
+
+After selection, the Table page opens with the matching samples.
+
+## Table Page
+
+The Table page is the primary browsing and filtering interface. Users can:
+
+- sort and page through samples
+- export the current result set
+- open a sample detail panel
+- inspect metadata and mutation profiles
+- filter by collection date, lineage, DNA profile, or amino acid profile
+
+Advanced filters support custom metadata fields and boolean grouping so users
+can combine include and exclude conditions.
+
+## Graph Page
+
+The Graph page visualizes the currently filtered dataset. Default charts include
+sample counts over time and lineage distributions over time. Users can also
+create custom charts from available database fields.
+
+Filters from the Table page continue to apply, so charts and tables describe the
+same selected subset of samples.
+
+## Connecting to the Backend
+
+For Docker deployments, set `SONAR_FRONTEND_BACKEND_ADDRESS` in
+`example-deploy/frontend.env`. Example:
 
 ```sh
-npm run dev
+SONAR_FRONTEND_BACKEND_ADDRESS=http://localhost:18000/api/
 ```
 
-Note: the url of the backend api (`VITE_SONAR_BACKEND_ADDRESS`) is set in the `.env.development` file. The recommended local setup is:
-
-- backend dev stack on `http://localhost:9080/api/`
-- Vite frontend on `http://localhost:5173`
-- optional built frontend container on `http://localhost:8000`
-
-Use `5173` when working on the Vite frontend directly. Use `8000` when you want
-to exercise the nginx-served stack, which proxies `/api` to the backend.
-
-For frontend work, create a local override file and point Vite at the backend directly:
-
-```sh
-cp .env.development.local.example .env.development.local
-```
-
-That file sets:
-
-```sh
-VITE_SONAR_BACKEND_ADDRESS="http://localhost:9080/api/"
-```
-
-This local dev flow is unchanged and still provides automatic updates via the
-Vite dev server.
-
-### Type-Check, Compile and Minify for Production
-
-First, set the url of the backend api (`VITE_SONAR_BACKEND_ADDRESS`) in a file
-`.env.production` or `.env.production.local` if you do not want to add the url
-to git. Next, run:
-
-```sh
-npm run build
-```
-
-Output files will be placed in the `./dist/` folder.
-
-## Deploying the prebuilt frontend image
-
-The published frontend image is `ghcr.io/rki-mf1/sonar-frontend`.
-
-Unlike the static Vite build, the prebuilt container reads its deployment
-settings at container startup. Use:
-
-- `SONAR_FRONTEND_BACKEND_ADDRESS` to point the app at the backend API
-- `SONAR_FRONTEND_AUTH_TOKEN` only if you explicitly want to inject a token
-
-For a full image-based deployment example, see
-[`example-deploy`](../../example-deploy).
+For source development with the Vite dev server, use
+`.env.development.local` as described in [CONTRIBUTING.md](./CONTRIBUTING.md).
