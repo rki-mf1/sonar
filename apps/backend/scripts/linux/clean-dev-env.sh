@@ -3,6 +3,8 @@
 set -euo pipefail
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+REPO_ROOT="$(cd "$SCRIPTPATH/../../../.." && pwd)"
+export SONAR_VERSION="${SONAR_VERSION:-$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")}"
 
 # Default to adding test data and also rebuilding the docker container
 DELETE=1

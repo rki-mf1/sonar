@@ -2,6 +2,8 @@ name: frontend test build
 on:
   pull_request:
     paths:
+      - 'VERSION'
+      - 'scripts/sync-version.py'
       - 'apps/frontend/**'
   workflow_dispatch:
 jobs:
@@ -15,6 +17,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
+      - name: Check synchronized versions
+        working-directory: .
+        run: python scripts/sync-version.py --check
       - name: Install
         run: npm ci
       - name: Run eslint

@@ -63,28 +63,35 @@ For normal source changes, update the root `VERSION` file when the product
 version should change. Local builds read this file when no build-time version is
 provided.
 
+After changing `VERSION`, synchronize component package metadata:
+
+```sh
+python scripts/sync-version.py
+```
+
 For releases, use a pull request for the version bump. Do not push directly to
 `main`.
 
 1. Create a release branch from the latest `main`.
 2. Update `VERSION` to the release version, for example `1.2.3`.
-3. Open a pull request for the version bump and wait for the required checks.
-4. Merge the pull request into `main`.
-5. Update your local `main` to the merged commit:
+3. Run `python scripts/sync-version.py`.
+4. Open a pull request for the version bump and wait for the required checks.
+5. Merge the pull request into `main`.
+6. Update your local `main` to the merged commit:
 
    ```sh
    git switch main
    git pull --ff-only origin main
    ```
 
-6. Create a Git tag on the merged `main` commit with the same version and a
+7. Create a Git tag on the merged `main` commit with the same version and a
    leading `v`, for example:
 
    ```sh
    git tag v1.2.3
    ```
 
-7. Push the tag:
+8. Push the tag:
 
    ```sh
    git push origin v1.2.3
