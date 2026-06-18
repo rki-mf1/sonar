@@ -12,7 +12,7 @@ Sonar is designed for groups that need to:
 - search samples by mutation profile, lineage, collection date, or custom metadata
 - explore filtered datasets in a web interface with tables, exports, and charts
 
-<img width="1099" alt="Sonar frontend graph page" src="https://github.com/user-attachments/assets/01d61c91-72e3-4c15-a9cc-8f1c0d6215ca" />
+<img width="1099" alt="Sonar frontend table view" src="./docs/assets/frontend-screenshot.png" />
 
 ## How Sonar Works
 
