@@ -63,6 +63,14 @@ if [ $REBUILD -eq 0 ]; then
   DC_ARGS="--build"
 fi
 
+mkdir -p \
+  ./work/sonar/data/import/gbks \
+  ./work/sonar/data/processing \
+  ./work/sonar/data/archive \
+  ./work/sonar/logs \
+  ./work/sonar/input-logs \
+  ./work/sonar/coverage
+
 $SCRIPTPATH/dc-dev.sh up --wait -d $DC_ARGS
 
 if [ $TEST_DATA -eq 0 ]; then
