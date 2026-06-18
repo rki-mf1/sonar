@@ -24,6 +24,18 @@ _FLU = "https://raw.githubusercontent.com/influenza-clade-nomenclature/seasonal_
 _FLU_YAM = "https://raw.githubusercontent.com/nextstrain/seasonal-flu/master/config/nextstrain_clades_yam_ha.tsv"
 _MPOX = "https://raw.githubusercontent.com/mpxv-lineages/lineage-designation/master/auto-generated/lineages.json"
 
+# pathogen key -> human-readable full name
+PATHOGEN_FULL_NAMES = {
+    "SARS-CoV-2": "Severe Acute Respiratory Syndrome Coronavirus 2",
+    "RSV-A": "Respiratory Syncytial Virus A",
+    "RSV-B": "Respiratory Syncytial Virus B",
+    "flu-H3N2": "Influenza A H3N2",
+    "flu-H1N1pdm": "Influenza A H1N1",
+    "flu-Bvic": "Influenza B Victoria",
+    "flu-Byam": "Influenza B Yamagata",
+    "mpox": "Mpox (Monkeypox)",
+}
+
 # pathogen key -> (parser engine, [source URLs])
 PATHOGEN_SOURCES = {
     "SARS-CoV-2": (SC2, []),

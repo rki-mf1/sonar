@@ -139,6 +139,9 @@ def parse_args(args=None):
     lineage_subparsers, _ = create_subparser_lineage_import(
         lineage_subparsers, lineage_parser, output_parser, general_parser
     )
+    lineage_subparsers, _ = create_subparser_lineage_list(
+        lineage_subparsers, general_parser
+    )
 
     task_parser_root = resource_subparsers.add_parser(
         "task", help="Query background job status."
@@ -537,6 +540,17 @@ def create_subparser_lineage_import(
         "import",
         parents=parent_parsers,
         help="Perform lineage import to the database",
+    )
+    return subparsers, parser
+
+
+def create_subparser_lineage_list(
+    subparsers: argparse._SubParsersAction, *parent_parsers: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    parser = subparsers.add_parser(
+        "list",
+        parents=parent_parsers,
+        help="List all supported pathogens and their lineage sources.",
     )
     return subparsers, parser
 
@@ -1382,6 +1396,21 @@ def handle_lineage(args: argparse.Namespace):
     )
 
 
+def handle_lineage_list(args: argparse.Namespace):
+    from sonar_cli.lineages.registry import PATHOGEN_FULL_NAMES
+    from sonar_cli.lineages.registry import PATHOGEN_SOURCES
+
+    rows = []
+    for pathogen in PATHOGEN_SOURCES.keys():
+        rows.append(
+            {
+                "Pathogen": pathogen,
+                "Full Name": PATHOGEN_FULL_NAMES.get(pathogen, ""),
+            }
+        )
+    print(tabulate(rows, headers="keys", tablefmt="fancy_grid"))
+
+
 def handle_info(args: argparse.Namespace):
     if args.verb == "version":
         sonarUtils1.get_backend_version(db=args.db)
@@ -1423,6 +1452,8 @@ def execute_commands(args):  # noqa: C901
         handle_tasks(args)
     elif args.resource == "lineage" and args.verb == "import":
         handle_lineage(args)
+    elif args.resource == "lineage" and args.verb == "list":
+        handle_lineage_list(args)
     elif args.resource == "dataset" and args.verb == "import":
         handle_import_dataset(args)
     elif args.resource == "info":
