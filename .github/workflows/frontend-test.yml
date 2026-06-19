@@ -14,7 +14,7 @@ jobs:
         working-directory: ./apps/frontend
     steps:
       - name: Check out pipeline code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
       - name: Check synchronized versions

@@ -15,7 +15,7 @@ jobs:
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:8000
       SONAR_LOCAL_API_URL: http://127.0.0.1:8000/api/
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
       - name: Check synchronized versions
