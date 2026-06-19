@@ -26,3 +26,41 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
+  - package-ecosystem: "pip"
+    directory: "/apps/cli"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      cli-python:
+        applies-to: version-updates
+        patterns:
+          - "*"
+  - package-ecosystem: "npm"
+    directory: "/apps/frontend"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      frontend-npm:
+        applies-to: version-updates
+        patterns:
+          - "*"
+  - package-ecosystem: "docker"
+    directory: "/apps/backend"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/apps/cli"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/apps/frontend"
+    schedule:
+      interval: "weekly"
