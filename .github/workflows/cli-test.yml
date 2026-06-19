@@ -12,7 +12,7 @@ jobs:
         working-directory: ./apps/cli
     steps:
       - name: Checkout 🐱
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
       - name: Set up Python 🐱
