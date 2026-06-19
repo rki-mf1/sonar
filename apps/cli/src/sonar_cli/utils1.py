@@ -3,8 +3,9 @@ import time
 
 from sonar_cli import config
 from sonar_cli.api_interface import APIClient
+from sonar_cli.basic import _check_reference
 from sonar_cli.common_utils import _files_exist
-from sonar_cli.lineages.sc2_lineages import main as sc2_main
+from sonar_cli.lineages.registry import PATHOGEN_BUILDERS
 from sonar_cli.logging import LoggingConfigurator
 
 # Initialize logger
@@ -170,8 +171,15 @@ class sonarUtils1:
             return sonarUtils1.fetch_job_status(API_URL, job_id)
 
     @staticmethod
-    def upload_lineage(pathogen: str, lineage_file: str, output_file: str):
+    def upload_lineage(
+        pathogen: str, lineage_file: str, output_file: str, reference: str
+    ):
         LOGGER.info("Using Pathogen: %s", pathogen)
+
+        # Accept either a reference ID or an accession, like match/import.
+        # Maps the ID to its accession and validates that it exists.
+        reference = _check_reference(db=config.get_base_url(), reference=reference)
+        LOGGER.info("Using Reference: %s", reference)
 
         if not lineage_file:
             LOGGER.info("No lineage file provided. Generating lineage file...")
@@ -180,10 +188,11 @@ class sonarUtils1:
                 LOGGER.info(
                     "Output file not provided. Using default file name: %s", output_file
                 )
-            if pathogen == "SARS-CoV-2":
-                lineage_file = sc2_main(output_file=output_file)
-            else:
-                pass
+            builder = PATHOGEN_BUILDERS.get(pathogen)
+            if builder is None:
+                LOGGER.error("No lineage source available for pathogen: %s", pathogen)
+                return
+            lineage_file = builder(output_file=output_file)
         else:
             _files_exist(lineage_file)
             LOGGER.info("Lineage file provided: %s", lineage_file)
@@ -196,7 +205,7 @@ class sonarUtils1:
             try:
                 json_response = APIClient(
                     base_url=config.get_base_url()
-                ).put_lineage_import(lineage_obj)
+                ).put_lineage_import(lineage_obj, reference)
                 if json_response["detail"] == "Lineages updated successfully":
                     LOGGER.info("The lineage has been updated successfully.")
                 else:

@@ -31,7 +31,7 @@ try {
     else {
         Write-Output "######### loading fixtures with test data ############"    
         scripts\win\dev-manage.ps1 loaddata initial_auth test_data_10
-        scripts\win\dev-manage.ps1 import_lineage
+        scripts\win\dev-manage.ps1 import_lineage --reference MN908947.3
         scripts\win\dev-copy-gbk.ps1 ..\..\..\test-data\sars-cov-2\MN908947.nextclade.gb .\work\sonar\data\import\gbks\
 
     }

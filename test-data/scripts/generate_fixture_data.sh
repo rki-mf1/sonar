@@ -26,7 +26,7 @@ sonar-cli sample import -r MN908947.3 --fasta "../../test-data/sars-cov-2/SARS-C
 sonar-cli property add --name sequencing_reason --descr "Sampling reason" --dtype value_varchar
 sonar-cli property add --name isolation_source --descr "Isolation Source" --dtype value_varchar
 sonar-cli sample import -r MN908947.3 -t 7 --tsv "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.tsv" --cols name=igs_id sequencing_reason=sequencing_reason isolation_source=isolation_source collection_date=date_of_sampling sequencing_tech=sequencing_platform lab=sequencing_lab.demis_lab_id zip_code=prime_diagnostic_lab.postal_code lineage=lineages data_set=data_set
-sonar-cli lineage import -l ../../test-data/sars-cov-2/lineages_test.tsv
+sonar-cli lineage import -r MN908947.3 -l ../../test-data/sars-cov-2/lineages_test.tsv
 
 rm "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.tsv"
 rm "../../test-data/sars-cov-2/SARS-CoV-2_${SUFFIX}.fasta"

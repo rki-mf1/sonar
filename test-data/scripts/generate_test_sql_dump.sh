@@ -24,7 +24,7 @@ sonar-cli property add --name comments --descr "Comments" --dtype value_varchar
 # import sample properties
 sonar-cli sample import -r MN908947.3 -t 7 --tsv ../../test-data/sars-cov-2/SARS-CoV-2_12.tsv --cols name=name  collection_date=collection_date sequencing_tech=sequencing_tech lab=lab zip_code=zip_code lineage=lineage sample_type=sample_type comments=comments age=age euro=euro sequencing_reason=sequencing_reason
 # import lineages
-sonar-cli lineage import -l ../../test-data/sars-cov-2/lineages_test.tsv
+sonar-cli lineage import -r MN908947.3 -l ../../test-data/sars-cov-2/lineages_test.tsv
 
 cd ../backend
 # add to processing_job table: (job_name, status):

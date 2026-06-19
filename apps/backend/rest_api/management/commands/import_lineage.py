@@ -5,10 +5,12 @@ from typing import List
 from typing import Optional
 
 from django.core.management.base import BaseCommand
+from django.core.management.base import CommandError
 from django.db import transaction
 import pandas as pd
 
 from rest_api.models import Lineage
+from rest_api.models import Reference
 
 
 class LineageImport:
@@ -46,9 +48,12 @@ class LineageImport:
         # Can we remove this? playwright-e2e is failing without
         self.lineage_file = "lineage-test-data/lineages_test.tsv"
 
-    def process_lineage_data(self):
+    def process_lineage_data(self, reference: Reference):
         """
         Process the lineage data.
+
+        Args:
+            reference (Reference): The reference all imported lineages belong to.
         """
         tsv_data = pd.read_csv(self.lineage_file, sep="\t")
 
@@ -66,7 +71,7 @@ class LineageImport:
 
             # Ensure the lineage is added even if it has no children
             if lineage not in all_lineages:
-                all_lineages[lineage] = Lineage(name=lineage)
+                all_lineages[lineage] = Lineage(name=lineage, reference=reference)
 
             # Process sublineages if they exist and create them if needed
             if sublineages != "none":
@@ -78,7 +83,7 @@ class LineageImport:
                             f"Sublineage name too long " f"({len(val)} chars): {val}"
                         )
                     if val not in all_lineages:
-                        all_lineages[val] = Lineage(name=val)
+                        all_lineages[val] = Lineage(name=val, reference=reference)
 
         # Second pass: Set parent relationships
         for lineage, sublineages in tsv_data.itertuples(index=False):
@@ -112,7 +117,7 @@ class LineageImport:
             for child in children_to_save:
                 child.save()
 
-    def update_lineage_data(self, lineages: str) -> List[Lineage]:
+    def update_lineage_data(self, lineages: str, reference: Reference) -> List[Lineage]:
         """
         Update the lineage data.
 
@@ -124,7 +129,7 @@ class LineageImport:
         else:
             self.set_file()
 
-        df = self.process_lineage_data()
+        df = self.process_lineage_data(reference)
         return df
 
 
@@ -138,9 +143,25 @@ class Command(BaseCommand):
             type=str,
             default=None,
         )
+        parser.add_argument(
+            "--reference",
+            help="accession of the reference the lineages belong to",
+            type=str,
+            required=True,
+        )
 
     def handle(self, *args, **kwargs):
-        Lineage.objects.all().delete()
+        try:
+            reference = Reference.objects.get(accession=kwargs["reference"])
+        except Reference.DoesNotExist:
+            raise CommandError(
+                f"Reference with accession '{kwargs['reference']}' not found. "
+                "Import the reference before importing its lineages."
+            )
+        # Only replace the lineages of this reference, keep the others intact.
+        Lineage.objects.filter(reference=reference).delete()
         with LineageImport() as lineage_manager:
-            lineages = lineage_manager.update_lineage_data(kwargs["lineages"])
+            lineages = lineage_manager.update_lineage_data(
+                kwargs["lineages"], reference
+            )
         print("--Done--")
