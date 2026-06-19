@@ -361,30 +361,30 @@ django = ">=4.2"
 
 [[package]]
 name = "django-debug-toolbar"
-version = "6.3.0"
+version = "7.0.0"
 description = "A configurable set of panels that display various debug information about the current request/response."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "django_debug_toolbar-6.3.0-py3-none-any.whl", hash = "sha256:a199ce3d0f884739a9096835ad417479fede05f3b3c4824bc8b354721ba8f629"},
-    {file = "django_debug_toolbar-6.3.0.tar.gz", hash = "sha256:f830a86fe02e17f625a22cfbed24a5bd1500762e201ec959c50efb0f9327282b"},
+    {file = "django_debug_toolbar-7.0.0-py3-none-any.whl", hash = "sha256:656161388ce48384276342eeb16d532113ec670816fa1546cc3753730aa51b3d"},
+    {file = "django_debug_toolbar-7.0.0.tar.gz", hash = "sha256:ef7494c5b459c149e87cc2da88d86e944064945e86bd7b2d879093586b5fefbf"},
 ]
 
 [package.dependencies]
-django = ">=4.2.9"
+django = ">=5.2"
 sqlparse = ">=0.2"
 
 [[package]]
 name = "django-environ"
-version = "0.13.0"
+version = "0.14.0"
 description = "A package that allows you to utilize 12factor inspired environment variables to configure your Django application."
 optional = false
 python-versions = "<4,>=3.9"
 groups = ["main"]
 files = [
-    {file = "django_environ-0.13.0-py3-none-any.whl", hash = "sha256:37799d14cd78222c6fd8298e48bfe17965ff8e586091ad66a463e52e0e7b799e"},
-    {file = "django_environ-0.13.0.tar.gz", hash = "sha256:6c401e4c219442c2c4588c2116d5292b5484a6f69163ed09cd41f3943bfb645f"},
+    {file = "django_environ-0.14.0-py3-none-any.whl", hash = "sha256:8dbe8a57f0a540ab8abd6f54f230de5e99e3a2c9d797cb9caecb037bca3d47d8"},
+    {file = "django_environ-0.14.0.tar.gz", hash = "sha256:b6c48d93b9d2ff8a3ea14099e90c35aa4f101c1b4d5f262dfee0d27b06742ed7"},
 ]
 
 [package.extras]
@@ -527,13 +527,14 @@ tests = ["freezegun", "pytest", "pytest-cov"]
 
 [[package]]
 name = "json-log-formatter"
-version = "1.1.1"
+version = "1.2.1"
 description = "JSON log formatter"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "json_log_formatter-1.1.1.tar.gz", hash = "sha256:0815e3b4469e5c79cf3f6dc8a0613ba6601f4a7464f85ba03655cfa6e3e17d10"},
+    {file = "json_log_formatter-1.2.1-py3-none-any.whl", hash = "sha256:1e40432466c911ba2d106a302314b1c3b0019de44c762bef94e8f23138a415a7"},
+    {file = "json_log_formatter-1.2.1.tar.gz", hash = "sha256:1d4fd14495ad7e694aa576259ba81acaa69e6945d9d780f32ed25373d7d5ae93"},
 ]
 
 [[package]]
@@ -1307,4 +1308,4 @@ brotli = ["brotli"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.15"
-content-hash = "657a485ea02941ed97ec88cb7938466c15ee46a872bb37cc42d33e77896e0905"
+content-hash = "aacebc570cda904d5048321ddd678e0a34108de107fefe9033a765d3849c07d8"
