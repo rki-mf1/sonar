@@ -21,17 +21,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify release tag is on main
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "::error::Release tag ${GITHUB_REF_NAME} must point to a commit that has been merged into main"
+            exit 1
+          fi
       - name: Create bundle archive
         run: |
           mkdir -p dist
-          tar -czf dist/sonar-ghcr-deploy-bundle.tar.gz example-deploy
+          tar -czf dist/sonar-docker-deploy-bundle.tar.gz example-deploy
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          name: sonar-ghcr-deploy-bundle
-          path: dist/sonar-ghcr-deploy-bundle.tar.gz
+          name: sonar-docker-deploy-bundle
+          path: dist/sonar-docker-deploy-bundle.tar.gz
       - name: Upload release asset
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/sonar-ghcr-deploy-bundle.tar.gz
+          files: dist/sonar-docker-deploy-bundle.tar.gz

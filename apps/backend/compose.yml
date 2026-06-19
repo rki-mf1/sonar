@@ -180,6 +180,8 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+      args:
+        SONAR_VERSION: ${SONAR_VERSION:-}
     image: frontend:local
     restart: unless-stopped
     environment:

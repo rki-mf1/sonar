@@ -3,6 +3,8 @@
 set -euo pipefail
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+REPO_ROOT="$(cd "$SCRIPTPATH/../../../.." && pwd)"
+export SONAR_VERSION="${SONAR_VERSION:-$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")}"
 
 # Default to adding test data and also rebuilding the docker container
 DELETE=1
@@ -60,6 +62,14 @@ if [ $REBUILD -eq 0 ]; then
   $SCRIPTPATH/build-docker-dev.sh
   DC_ARGS="--build"
 fi
+
+mkdir -p \
+  ./work/sonar/data/import/gbks \
+  ./work/sonar/data/processing \
+  ./work/sonar/data/archive \
+  ./work/sonar/logs \
+  ./work/sonar/input-logs \
+  ./work/sonar/coverage
 
 $SCRIPTPATH/dc-dev.sh up --wait -d $DC_ARGS
 

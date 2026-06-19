@@ -1,14 +1,14 @@
 {
   "name": "sonar-frontend",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
-    "format": "prettier . --write",
-    "format-check": "prettier . --check",
+    "format": "prettier --write '**/*.{js,ts,vue,json}'",
+    "format-check": "prettier --check '**/*.{js,ts,vue,json}'",
     "lint": "eslint src",
     "build-only": "vite build",
     "build:backend-proxy": "npm run build && mkdir -p ../backend/work/frontend/dist && cp -r dist/. ../backend/work/frontend/dist/",

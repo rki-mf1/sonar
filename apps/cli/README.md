@@ -1,328 +1,230 @@
-# sonar-cli
+# Sonar CLI
 
-Sonar command line tool to interface with the [sonar-backend](https://github.com/rki-mf1/sonar/apps/backend) (API version; DjangoREST+PostgreSQL). Allows you to import new sequences and metadata.
+`sonar-cli` is the command-line tool for operating Sonar. It adds reference
+genomes, imports sequences and metadata, runs preprocessing, checks import jobs,
+and queries stored samples.
 
-[![Test&Check](https://github.com/rki-mf1/sonar-cli/actions/workflows/dev.workflow.yml/badge.svg?branch=dev)](https://github.com/rki-mf1/sonar-cli/actions/workflows/dev.workflow.yml)
+Use the CLI when you need to:
 
-![Static Badge](https://img.shields.io/badge/Maintenance%20status-actively%20developed-brightgreen)
+- register GenBank reference genomes
+- import FASTA sequences with TSV or CSV metadata
+- import public example datasets
+- query samples by mutation profile, lineage, collection date, or custom metadata
+- automate Sonar workflows from scripts or batch jobs
 
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+For local source development, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Features
+## Recommended Usage: Docker
 
-1. Import genomes: alignment against a reference genome of your choice, mutation calling and mutation import to database
-2. Search: query database with mutation profiles or metadata (lineages, sampling dates, etc.)
-3. Support multiple genome references.
-4. Support multiple alignment tools.
-5. Support for high performance compute clusters.
-
-### For more information?, Visit 📚 [Sonar-CLI - Wiki Page](https://github.com/rki-mf1/sonar/wiki/) 🏃‍♂️
-
-# QuickStart 🧬
-
-## 1. Prerequisite software
-
-### 1.1 Conda (Package manager)
-
-We recommend [miniforge](https://conda-forge.org/download/), but other conda disributions will work as well.
-
-### 1.2 Install sonar-backend
-
-Please visit [sonar-backend](https://github.com/rki-mf1/sonar) for download and installation
-
-## 2. Sonar-cli Setup
-
-### 2.1 Download sonar-cli
+For users, the recommended path is the published Docker image:
 
 ```sh
-git clone https://github.com/rki-mf1/sonar.git
-cd sonar/apps/cli
+docker run --rm \
+  --env API_URL=http://127.0.0.1:18000/api \
+  ghcr.io/rki-mf1/sonar-cli:latest reference list
 ```
 
-### 2.2 Configuration
+If you deployed Sonar with the release deployment bundle, prefer its helper
+script:
 
-🤓 There is a `sonar-cli.config` file in the `apps/cli` directory. It is a
-fully commented reference file that lists every configurable CLI setting and
-its built-in default value. It can be copied to
-`$XDG_CONFIG_HOME/sonar-cli/sonar-cli.config` (or `~/.config/sonar-cli/sonar-cli.config`)
-if you want to persist those settings for your user account.
+```sh
+curl -LO https://github.com/rki-mf1/sonar/releases/latest/download/sonar-docker-deploy-bundle.tar.gz
+tar -xzf sonar-docker-deploy-bundle.tar.gz
+cd example-deploy
+./sonar-cli.sh reference list
+```
 
-For contributor local development with `./apps/backend/scripts/linux/clean-dev-env.sh`,
-the default backend URL is `http://127.0.0.1:9080/api`. In CI and in proxy-based
-deployments, `http://127.0.0.1:8000/api` may still be used explicitly.
+The helper mounts the bundle's `data/` directory, reads `sonar-cli.config`, and
+points the CLI at the deployment bundle backend API by default.
 
-Configuration precedence for all settings is:
+## Configuration
 
-1. Explicit command-line option such as `--db`
-2. Environment variable
+The CLI needs the backend API URL. Configuration precedence is:
+
+1. command-line options such as `--db`
+2. environment variables such as `API_URL`
 3. `$XDG_CONFIG_HOME/sonar-cli/sonar-cli.config`
-4. Built-in default values mirrored in `sonar-cli.config`
+4. built-in defaults mirrored in `sonar-cli.config`
+
+For the Docker deployment bundle, the default backend URL is:
+
+```text
+http://127.0.0.1:18000/api
+```
+
+For the backend development stack, common local URLs are:
+
+```text
+http://127.0.0.1:8000/api   # nginx entrypoint
+http://127.0.0.1:9080/api   # direct Django dev server
+```
+
+To persist CLI settings:
 
 ```sh
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli"
 cp sonar-cli.config "${XDG_CONFIG_HOME:-$HOME/.config}/sonar-cli/sonar-cli.config"
 ```
 
-Edit that copied file by uncommenting only the settings you want to override.
+Edit the copied file and uncomment only the settings you want to override.
 
-### 2.3 Create python environment
-
-```sh
-conda env update -n sonar -f environment.yml --prune
-conda activate sonar
-```
-
-The same `conda env update` command can be used any time if you change your environment.yml file and want to update your environment to reflect the changes.
-
-Environment variables:
-
-The above environment file sets two environment variables to work around issues we've encountered so far. These are automatically set when you activate the environment:
-
-1. SSL errors: `REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`
-2. [snpEff OutOfMemoryError](https://github.com/rki-mf1/sonar-cli/issues/72) (this bumps the memory up from 2GB to 4GB): `_JAVA_OPTIONS="-Xms128m -Xmx4g"`
-
-### 2.4 Install sonar CLI
-
-Navigate to the directory of `sonar/apps/cli`.
+## Command Structure
 
 ```sh
-cd path/to/sonar/apps/cli
+sonar-cli <subject> <verb> [options]
 ```
 
-Install the application using Poetry.
+Top-level subjects:
+
+| Subject | Purpose |
+| --- | --- |
+| `reference` | Add, list, and delete reference genomes. |
+| `property` | Add, list, and delete queryable metadata fields. |
+| `sample` | Import, match, and delete samples. |
+| `sequence` | Delete sequence data while preserving sample records. |
+| `dataset` | Download and import supported public datasets. |
+| `lineage` | Import lineage parent-child relationships. |
+| `task` | List, inspect, and watch backend import jobs. |
+| `info` | Show database information and statistics. |
+
+Use help for exact options:
 
 ```sh
-poetry install --only main
-```
-
-Verify the installation by checking the version.
-
-```sh
-sonar-cli -v
-```
-
-Check which backend version the CLI is connected to:
-
-```sh
-sonar-cli info version
-```
-
-Next make sure you can contact the backend:
-
-```sh
-$ sonar-cli reference list
-╒══════╤═════════════╤═══════════════╤═════════════════════════════════════════════════╕
-│   id │ accession   │ taxon         │ organism                                        │
-╞══════╪═════════════╪═══════════════╪═════════════════════════════════════════════════╡
-│    1 │ MN908947.3  │ taxon:2697049 │ Severe acute respiratory syndrome coronavirus 2 │
-╘══════╧═════════════╧═══════════════╧═════════════════════════════════════════════════╛
-```
-
-## 3. Sonar-cli Setup (Docker)
-
-It is also possible to run the published sonar-cli image directly. For local
-development, the conda + poetry workflow above remains the recommended path.
-
-You can still build the cli container locally:
-
-```
-$ ./scripts/linux/build-docker.sh
-```
-
-Then you can run it, passing in whatever parameters you want:
-
-```
-$ ./scripts/linux/sonar-cli-docker.sh --help
-usage: sonar-cli [-h] [-v]
-                 {reference,property,sample,sequence,dataset,lineage,task,info}
-                 ...
-
-sonar-cli 1.0.3: Sonar command line tool to interface with the sonar-backend
-and PostgreSQL version.
-
-positional arguments:
-  {reference,property,sample,sequence,dataset,lineage,task,info}
-    reference           Manage reference genomes in the database.
-    property            Manage queryable properties in the database.
-    sample              Import, match, and delete samples.
-    sequence            Delete sequences from the database.
-    dataset             Download and import public datasets.
-    lineage             Import lineage parent-child relationships.
-    task                Query background job status.
-    info                Display database information and statistics.
-[...]
-```
-
-The published image is `ghcr.io/rki-mf1/sonar-cli`. For example:
-
-```sh
-docker run --rm \
-  --env API_URL=http://127.0.0.1:8000/api \
-  ghcr.io/rki-mf1/sonar-cli:latest reference list
-```
-
-Use `http://127.0.0.1:8000/api` when talking to the local development stack
-through nginx. For the `example-deploy` bundle, use its published backend API
-port instead, which defaults to `http://127.0.0.1:18000/api`.
-
-For commands that read local files, mount the input directory into the
-container:
-
-```sh
-docker run --rm \
-  --env API_URL=http://127.0.0.1:8000/api \
-  -v "$PWD/test-data:/data" \
-  ghcr.io/rki-mf1/sonar-cli:latest sample import -r MN908947.3 --fasta /data/SARS-CoV-2_1000.fasta.xz
-```
-
-### Test Datasets
-
-We provide the test datasets under the `test-data` directory.
-| File              | Usage                                                                            |
-| ----------------- | -------------------------------------------------------------------------------- |
-| `test-data/sars-cov-2/180.sars-cov-2.zip` | Input sample containing the genomic sequence (fasta) and meta information (tsv). |
-| `test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz` | 1000 FASTA sequences of SARS-CoV-2, used in import examples. |
-| `test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz` | Metadata (TSV) for the 1000 sequences above, used in import examples. |
-| `test-data/sars-cov-2/MN908947.nextclade.gb`  | Reference genome of SARS-CoV-2 in GenBank format.                                |
-
-# Usage 🚀
-
-The table below shows the several commands that can be used.
-
-| Subcommand                        | Purpose                                                            |
-| --------------------------------- | ------------------------------------------------------------------ |
-| [sample import](#importing-genomes) | Import genome sequences and sample information into the database. |
-| [sample match](#matching-genomes) | Match genome sequences and sample information within the database. |
-| [reference add](#adding-reference)      | Add reference genome sequences to the database.                    |
-| [reference delete](#delete-reference)   | Delete reference genome sequences from the database.               |
-| [reference list](#listing-reference)    | List available reference genome sequences in the database.         |
-| [property list](#listing-property)    | List queryable properties in the database.                         |
-| [property add](#adding-property)      | Add property key for storage and querying in the database.         |
-| [property delete](#deleting-property) | Delete properties in the database.                                 |
-| [sample delete](#deleting-sample) | Delete samples and associated information from the database.       |
-| [lineage import](#import-lineage) | Import lineage parent-child relationships (e.g. SARS-CoV-2 Pangolin lineages). |
-| [task list](#tasks)               | Query background job status.                                       |
-
-> [!TIP]
-> You can use `--db` to provide the URL to the backend (and it overwrites the configuration).
->
-> for example, `sonar-cli reference add --db "http://127.0.0.1:8000/api" --genbank test-data/sars-cov-2/MN908947.nextclade.gb`
->
-> for the `example-deploy` bundle, the corresponding default would be
-> `sonar-cli reference add --db "http://127.0.0.1:18000/api" --genbank test-data/sars-cov-2/MN908947.nextclade.gb`
-
-## Adding Reference
-
-The `reference add` subcommand is used to add reference genome sequences to the database.
-
-```sh
-sonar-cli reference add --genbank test-data/sars-cov-2/MN908947.nextclade.gb
-```
-
-## Importing Genomes
-
-The `import` subcommand is used to import genome sequences and sample information into the database.
-
-Basic command:
-
-```sh
-sonar-cli sample import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --cache cache_folder/ -t 2 --method mafft
-```
-
-Example command: Including properties during import
-
-```sh
-sonar-cli sample import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_1000.fasta.xz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID sequencing_tech=SEQUENCING_METHOD zip_code=DL.POSTAL_CODE  collection_date=DATE_OF_SAMPLING lab=SL.ID sample_type=SEQUENCE.SAMPLE_TYPE sequencing_reason=SEQUENCE.SEQUENCING_REASON  lineage=LINEAGE_LATEST
-```
-
-Example command: Including annotation step(`--auto-anno`)
-
-```sh
-sonar-cli sample import -r MN908947.3 --fasta test-data/sars-cov-2/SARS-CoV-2_2.fasta.gz --tsv test-data/sars-cov-2/SARS-CoV-2_1000.tsv.xz --cache cache_folder/ -t 2 --method mafft  --cols name=ID  --auto-anno --auto-link
-```
-
-To view all available options:
-
-```sh
+sonar-cli -h
 sonar-cli sample import -h
 ```
 
-## Matching Genomes
+## Add a Reference Genome
 
-The `match` subcommand is used to match genome sequences and sample information within the database.
-
-List all mutations
+Reference genomes must be registered before importing samples.
 
 ```sh
-sonar-cli sample match -r MN908947.3
+./sonar-cli.sh reference add --genbank /data/sars-cov-2/MN908947.nextclade.gb
+./sonar-cli.sh reference list
 ```
 
-With specific mutations (NT and AA) and count
+For multi-segment references, pass all GenBank files in one command:
 
 ```sh
-sonar-cli sample match -r MN908947.3 --profile C26270T S:G339D --count
+sonar-cli reference add --genbank \
+  CY115152.1.gbk \
+  CY115153.1.gbk \
+  CY115154.1.gbk \
+  CY115155.1.gbk \
+  CY115156.1.gbk \
+  CY115157.1.gbk \
+  CY115158.1.gbk \
+  CY115159.1.gbk
 ```
 
-with mutations and property
+Deleting a reference also removes samples and alignments associated with that
+reference:
 
 ```sh
-sonar-cli sample match -r MN908947.3 --profile C26270T S:G339D --sequencing_tech ILLUMINA --format csv
+sonar-cli reference delete -r MN908947.3 --force
 ```
 
-## Deleting Reference
+## Import Samples
 
-The `reference delete` subcommand is used to delete reference genome sequences from the database.
+`sample import` preprocesses sequences, calls mutations, optionally annotates
+variants, and uploads the results to the backend for storage.
 
 ```sh
-sonar-cli reference delete -r MN908947.3
+./sonar-cli.sh sample import \
+  -r MN908947.3 \
+  --fasta /data/sars-cov-2/SARS-CoV-2_12.fasta.xz \
+  --tsv /data/sars-cov-2/SARS-CoV-2_12.tsv.xz \
+  --cols \
+    name=name \
+    lineage=lineage \
+    collection_date=collection_date \
+  --auto-anno
 ```
 
-## Listing Reference
+Important options:
 
-The `reference list` is used to list available reference genome sequences in the database.
+| Option | Purpose |
+| --- | --- |
+| `-r, --reference` | Reference accession to import against. |
+| `--fasta` | FASTA input file or files. |
+| `--tsv`, `--csv` | Metadata files. |
+| `--cols PROP=COL` | Map database properties to metadata columns. |
+| `--auto-link` | Link matching metadata columns automatically. |
+| `--auto-anno` | Run SnpEff annotation during import. |
+| `--cache DIR` | Keep intermediate files and resume interrupted imports. |
+| `--method mafft|parasail|wfa` | Choose the alignment method. |
+| `-t, --threads INT` | Number of worker threads. |
+
+The `name` property must map to a unique sample identifier. It is used to detect
+existing samples and to link metadata.
+
+## Track Import Jobs
+
+Imports are processed asynchronously by the backend.
 
 ```sh
-sonar-cli reference list
+sonar-cli task list
+sonar-cli task show --jobid cli_...
+sonar-cli task watch --jobid cli_... --interval 5
 ```
 
-## Listing Property
+## Query Samples
 
-The `property list` is used to list properties associated with genome sequences in the database.
+Count samples for a reference:
 
 ```sh
-sonar-cli property list
+sonar-cli sample match -r MN908947.3 --count
 ```
 
-## Adding Property
-
-The `property add` subcommand is used to add properties to genome sequences in the database.
+Match mutation profiles:
 
 ```sh
-sonar-cli property add --name test-prop --descr "hello world" --dtype value_varchar
+sonar-cli sample match -r MN908947.3 --profile C26270T
+sonar-cli sample match -r MN908947.3 --profile S:E484K S:N501Y
+sonar-cli sample match -r MN908947.3 --profile S:E484K --profile S:N501Y
 ```
 
-## Deleting Property
-
-The `property delete` subcommand is used to delete properties from genome sequences in the database.
+Filter by metadata properties:
 
 ```sh
-sonar-cli property delete --name test-prop  --force
+sonar-cli sample match -r MN908947.3 --lineage BA.2 --with-sublineage
+sonar-cli sample match -r MN908947.3 --collection_date 2022-01-01:2022-12-31
 ```
 
-## Deleting Sample
-
-The `sample delete` is used to delete sample and associated information from the database.
-
-User provides a sample ID using the `--sample` option or combine multiple IDs together with a file name using the `--sample-file` option (one ID per line in a file).
+Export results:
 
 ```sh
-sonar-cli sample delete --sample IMS-10116-CVDP-77AB96B7-B9FB-46D6-B844-F9356151F2CA --sample-file goodbye.txt
+sonar-cli sample match -r MN908947.3 --format csv -o samples.csv
 ```
 
----
+Use `sonar-cli property list` to inspect available metadata fields.
 
-# Acknowledgments
+## Import Public Datasets
 
-This tool is built upon the foundations of sonar and pathosonar projects.
+`dataset import` can download and import supported public datasets.
 
-Special thanks to the sonar contributors
+```sh
+sonar-cli dataset import \
+  --source pathoplexus \
+  --pathogen mpox \
+  -r NC_063383.1 \
+  --sample-size 20 \
+  --cache ./mpox_cache \
+  --auto-link \
+  --auto-anno
+```
+
+Supported sources include RKI and Pathoplexus. Use
+`sonar-cli dataset import -h` to see the current source and pathogen choices.
+
+## Troubleshooting
+
+If SnpEff runs out of memory during annotation, increase the Java heap:
+
+```sh
+export _JAVA_OPTIONS="-Xms512m -Xmx8g"
+```
+
+If Docker cannot reach a local backend at `127.0.0.1`, use the deployment
+bundle's `sonar-cli.sh` helper on Linux or point `API_URL` to a hostname
+reachable from the CLI container.
