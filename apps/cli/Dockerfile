@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:2.0.5 AS builder
+FROM mambaorg/micromamba:2.8.1 AS builder
 
 USER root
 
@@ -28,7 +28,7 @@ RUN micromamba run -n sonar-cli pip install --no-cache-dir "poetry==${POETRY_VER
 RUN micromamba run -n sonar-cli poetry config virtualenvs.create false \
  && micromamba run -n sonar-cli poetry install --only main --no-root --no-interaction
 
-FROM mambaorg/micromamba:2.0.5
+FROM mambaorg/micromamba:2.8.1
 
 USER root
 
