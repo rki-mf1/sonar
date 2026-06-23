@@ -294,7 +294,7 @@ header {
   background: var(--secondary-color-lighter);
 }
 
-.p-inputswitch.p-component.p-highlight .p-inputswitch-slider {
+.p-toggleswitch.p-component.p-toggleswitch-checked .p-toggleswitch-slider {
   background: var(--primary-color);
 }
 

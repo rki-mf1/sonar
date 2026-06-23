@@ -8,7 +8,7 @@ import Aura from '@primeuix/themes/aura'
 import Menubar from 'primevue/menubar'
 import Button from 'primevue/button'
 import RadioButton from 'primevue/radiobutton'
-import Dropdown from 'primevue/dropdown'
+import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -17,18 +17,20 @@ import DataTable from 'primevue/datatable'
 import Paginator from 'primevue/paginator'
 import Column from 'primevue/column'
 import Card from 'primevue/card'
-import InputSwitch from 'primevue/inputswitch'
+import ToggleSwitch from 'primevue/toggleswitch'
 import SplitButton from 'primevue/splitbutton'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Dialog from 'primevue/dialog'
 import MultiSelect from 'primevue/multiselect'
-import Calendar from 'primevue/calendar'
+import DatePicker from 'primevue/datepicker'
 import Chart from 'primevue/chart'
 import Tooltip from 'primevue/tooltip'
 import Accordion from 'primevue/accordion'
-import AccordionTab from 'primevue/accordiontab'
-import OverlayPanel from 'primevue/overlaypanel'
+import AccordionPanel from 'primevue/accordionpanel'
+import AccordionHeader from 'primevue/accordionheader'
+import AccordionContent from 'primevue/accordioncontent'
+import Popover from 'primevue/popover'
 import Chip from 'primevue/chip'
 import Message from 'primevue/message'
 import { OhVueIcon, addIcons } from 'oh-vue-icons'
@@ -43,7 +45,10 @@ import Skeleton from 'primevue/skeleton'
 import Slider from 'primevue/slider'
 import Splitter from 'primevue/splitter'
 import SplitterPanel from 'primevue/splitterpanel'
-import TabView from 'primevue/tabview'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Menu from 'primevue/menu'
 addIcons(FaDna, FaCalendarAlt, GiRadarSweep)
@@ -96,7 +101,7 @@ app.component('MultiSelect', MultiSelect)
 app.component('PrimeButton', Button)
 app.component('RadioButton', RadioButton)
 app.component('InputText', InputText)
-app.component('PrimeDropdown', Dropdown)
+app.component('PrimeDropdown', Select)
 app.component('InputNumber', InputNumber)
 app.component('DataTable', DataTable)
 app.component('PrimePaginator', Paginator)
@@ -104,14 +109,16 @@ app.component('PrimeColumn', Column)
 app.component('PrimeCard', Card)
 app.component('ProgressSpinner', ProgressSpinner)
 app.component('ProgressBar', ProgressBar)
-app.component('InputSwitch', InputSwitch)
+app.component('InputSwitch', ToggleSwitch)
 app.component('SplitButton', SplitButton)
-app.component('PrimeCalendar', Calendar)
+app.component('PrimeCalendar', DatePicker)
 app.component('PrimeChart', Chart)
-app.component('AccordionTab', AccordionTab)
 app.component('PrimeAccordion', Accordion)
+app.component('AccordionPanel', AccordionPanel)
+app.component('AccordionHeader', AccordionHeader)
+app.component('AccordionContent', AccordionContent)
 app.component('VIcon', OhVueIcon)
-app.component('OverlayPanel', OverlayPanel)
+app.component('PrimePopover', Popover)
 app.component('PrimeChip', Chip)
 
 app.component('PrimeMessage', Message)
@@ -121,7 +128,10 @@ app.component('PrimeSkeleton', Skeleton)
 app.component('PrimeSlider', Slider)
 app.component('PrimeSplitter', Splitter)
 app.component('SplitterPanel', SplitterPanel)
-app.component('TabView', TabView)
+app.component('PrimeTabs', Tabs)
+app.component('TabList', TabList)
+app.component('PrimeTab', Tab)
+app.component('TabPanels', TabPanels)
 app.component('TabPanel', TabPanel)
 app.component('PrimeMenu', Menu)
 
