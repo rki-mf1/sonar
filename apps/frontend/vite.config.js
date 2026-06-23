@@ -4,10 +4,7 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 function readVersionFile() {
     try {
-        const version = readFileSync(
-            fileURLToPath(new URL('../../VERSION', import.meta.url)),
-            'utf8',
-        ).trim();
+        const version = readFileSync(fileURLToPath(new URL('../../VERSION', import.meta.url)), 'utf8').trim();
         if (version) {
             return version;
         }
@@ -16,10 +13,7 @@ function readVersionFile() {
         // Docker builds use the app directory as context, so the root VERSION file is absent there.
     }
     try {
-        const packageJson = JSON.parse(readFileSync(
-            fileURLToPath(new URL('./package.json', import.meta.url)),
-            'utf8',
-        ));
+        const packageJson = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', import.meta.url)), 'utf8'));
         if (typeof packageJson.version === 'string' && packageJson.version.trim()) {
             return packageJson.version.trim();
         }
@@ -29,9 +23,7 @@ function readVersionFile() {
     }
     return '0+unknown';
 }
-const sonarVersion = process.env.VITE_SONAR_VERSION?.trim()
-    || process.env.SONAR_VERSION?.trim()
-    || readVersionFile();
+const sonarVersion = process.env.VITE_SONAR_VERSION?.trim() || process.env.SONAR_VERSION?.trim() || readVersionFile();
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [vue()],

@@ -30,7 +30,7 @@
         <h3 class="text-primary mt-4">How it works</h3>
         <TabView>
           <!-- Document I: Home Page -->
-          <TabPanel header="The Home Page">
+          <TabPanel value="home" header="The Home Page">
             <div class="flex flex-column gap-3 p-2 md:p-4">
               <div>
                 <h4 class="text-primary mt-0 mb-2">Home Page — Select Your Dataset</h4>
@@ -51,7 +51,7 @@
           </TabPanel>
 
           <!-- Document II: Table Page -->
-          <TabPanel header="Data Table View">
+          <TabPanel value="table" header="Data Table View">
             <div class="flex flex-column gap-5 p-2 md:p-4">
               <!-- Block 1: Sample list -->
               <div class="flex flex-column gap-3">
@@ -127,7 +127,7 @@
           </TabPanel>
 
           <!-- Document III: Graph Page -->
-          <TabPanel header="Plot View">
+          <TabPanel value="plot" header="Plot View">
             <div class="flex flex-column gap-5 p-2 md:p-4">
               <!-- Block 1: Graph overview -->
               <div class="flex flex-column gap-3">

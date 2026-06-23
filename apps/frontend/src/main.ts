@@ -1,11 +1,10 @@
 import 'primeflex/primeflex.css'
-import 'primevue/resources/themes/aura-light-blue/theme.css'
 import './util/custom_theme.css'
-import 'primevue/resources/primevue.min.css' // Core CSS
 import 'primeicons/primeicons.css' //icons
 import ToastMixin from './util/toastMixin'
 
 import PrimeVue from 'primevue/config'
+import Aura from '@primeuix/themes/aura'
 import Menubar from 'primevue/menubar'
 import Button from 'primevue/button'
 import RadioButton from 'primevue/radiobutton'
@@ -74,7 +73,14 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 
-app.use(PrimeVue)
+app.use(PrimeVue, {
+  theme: {
+    preset: Aura,
+    options: {
+      darkModeSelector: false,
+    },
+  },
+})
 app.use(ToastService)
 
 app.component('FilterGroup', FilterGroup)

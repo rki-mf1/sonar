@@ -105,17 +105,9 @@
       </PrimePanel>
     </div>
 
-    <div
-      class="plots-container"
-      style="
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        width: 100%;
-      "
-    >
+    <div class="plots-container">
       <!-- metadata plot-->
-      <div class="panel metadata-plot" style="grid-column: span 2">
+      <div class="panel metadata-plot">
         <PrimePanel header="Coverage of Metadata" class="w-full shadow-2">
           <!-- Zoom toggle (top-right) — wheel zoom disabled by default to avoid accidental zooming while scrolling the page -->
           <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem">
@@ -138,7 +130,7 @@
         </PrimePanel>
       </div>
       <!-- Property plots -->
-      <div v-for="(plot, index) in plots" :key="index" class="panel" style="grid-column: span 2">
+      <div v-for="(plot, index) in plots" :key="index" class="panel">
         <PrimePanel :header="plot.plotTitle" class="w-full shadow-2">
           <!-- Top bar: remove button (left) + zoom toggle (right) -->
           <div
@@ -268,7 +260,7 @@ import router from '@/router'
 import { useSamplesStore } from '@/stores/samples'
 import { decodeDatasetsParam, safeDecodeURIComponent } from '@/util/routeParams'
 import chroma from 'chroma-js'
-import type { ChartOptions, TooltipItem } from 'chart.js'
+import type { ChartOptions, ChartTypeRegistry, TooltipItem } from 'chart.js'
 import PrimeToggleButton from 'primevue/togglebutton'
 import PrimeInputNumber from 'primevue/inputnumber'
 import {
@@ -278,6 +270,8 @@ import {
   type PlotConfig,
   type ScatterPlotData,
 } from '@/util/types'
+
+type AnyTooltipItem = TooltipItem<keyof ChartTypeRegistry>
 
 export default {
   name: 'PlotsView',
@@ -645,8 +639,7 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar'>) =>
-                `${context.dataset.label}: ${context.parsed.y}%`,
+              label: (context: AnyTooltipItem) => `${context.dataset.label}: ${context.parsed.y}%`,
             },
           },
         },
@@ -751,8 +744,7 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar'>) =>
-                `${context.dataset.label}: ${context.parsed.y}%`,
+              label: (context: AnyTooltipItem) => `${context.dataset.label}: ${context.parsed.y}%`,
             },
           },
         },
@@ -784,7 +776,7 @@ export default {
           },
           tooltip: {
             callbacks: {
-              label: (context: TooltipItem<'bar' | 'line' | 'doughnut'>) => {
+              label: (context) => {
                 const value = context.raw
                 // const label = context.label || 'Unknown Category';
                 return `${value} samples`
@@ -854,12 +846,12 @@ export default {
           },
           tooltip: {
             callbacks: {
-              title: (context: TooltipItem<'scatter'>[]) => {
+              title: (context) => {
                 // Use the `x` value from the first data point in the tooltip context, because default behavior uses labels and here labels can occur multiple times in x-values
                 const raw = context[0].raw as { x: string; y: number; category: string }
                 return `Date: ${raw.x}`
               },
-              label: (context: TooltipItem<'scatter'>) => {
+              label: (context) => {
                 const raw = context.raw as { x: string; y: number; category: string }
                 return `${y_feature}: ${raw.category}, ${x_feature}: ${raw.x}, ${raw.y} samples`
               },
@@ -1198,9 +1190,18 @@ export default {
 .plots-container {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  /* Responsive grid */
+  grid-template-columns: 1fr;
   width: 100%;
+}
+
+.plots-container > .panel {
+  min-width: 0;
+}
+
+@media screen and (min-width: 900px) {
+  .plots-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .add-property-button {
