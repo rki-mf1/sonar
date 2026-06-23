@@ -28,179 +28,187 @@
     <PrimePanel header="" class="shadow-4 mb-4 w-full">
       <div>
         <h3 class="text-primary mt-4">How it works</h3>
-        <TabView>
-          <!-- Document I: Home Page -->
-          <TabPanel header="The Home Page">
-            <div class="flex flex-column gap-3 p-2 md:p-4">
-              <div>
-                <h4 class="text-primary mt-0 mb-2">Home Page — Select Your Dataset</h4>
-                <p class="m-0 line-height-3">
-                  When you open the application, you will be presented with the Home page. Here you
-                  can select your target <strong>Organism</strong>, choose the
-                  <strong>Reference Accession ID</strong>, and specify the
-                  <strong>data source</strong> you want to explore. Once your dataset is configured,
-                  click to proceed to the analysis view.
-                </p>
-              </div>
-              <img
-                src="@/assets/about-page/home-select-dataset.png"
-                alt="Home page — select organism, reference accession, and data source"
-                class="doc-image"
-              />
-            </div>
-          </TabPanel>
-
-          <!-- Document II: Table Page -->
-          <TabPanel header="Data Table View">
-            <div class="flex flex-column gap-5 p-2 md:p-4">
-              <!-- Block 1: Sample list -->
-              <div class="flex flex-column gap-3">
+        <PrimeTabs value="home">
+          <TabList>
+            <PrimeTab value="home">The Home Page</PrimeTab>
+            <PrimeTab value="table">Data Table View</PrimeTab>
+            <PrimeTab value="plot">Plot View</PrimeTab>
+          </TabList>
+          <TabPanels>
+            <!-- Document I: Home Page -->
+            <TabPanel value="home">
+              <div class="flex flex-column gap-3 p-2 md:p-4">
                 <div>
-                  <h4 class="text-primary mt-0 mb-2">Table View — Sample List</h4>
+                  <h4 class="text-primary mt-0 mb-2">Home Page — Select Your Dataset</h4>
                   <p class="m-0 line-height-3">
-                    After selecting your dataset, the Table View is the first page you will see. It
-                    displays all samples in a sortable, paginated table. You can export the data
-                    using the <strong>Export</strong> button, or click on any row to view detailed
-                    information for that individual sample.
+                    When you open the application, you will be presented with the Home page. Here
+                    you can select your target <strong>Organism</strong>, choose the
+                    <strong>Reference Accession ID</strong>, and specify the
+                    <strong>data source</strong> you want to explore. Once your dataset is
+                    configured, click to proceed to the analysis view.
                   </p>
                 </div>
                 <img
-                  src="@/assets/about-page/table-2-table-list.png"
-                  alt="Table view showing the full list of samples"
+                  src="@/assets/about-page/home-select-dataset.png"
+                  alt="Home page — select organism, reference accession, and data source"
                   class="doc-image"
                 />
               </div>
+            </TabPanel>
 
-              <!-- Block 2: Sample detail -->
-              <div class="flex flex-column gap-3">
-                <div>
-                  <h4 class="text-primary mt-0 mb-2">Sample Detail</h4>
-                  <p class="m-0 line-height-3">
-                    Clicking on a sample row opens a detailed view of that sample, showing all
-                    available metadata and genomic profile information.
-                  </p>
+            <!-- Document II: Table Page -->
+            <TabPanel value="table">
+              <div class="flex flex-column gap-5 p-2 md:p-4">
+                <!-- Block 1: Sample list -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">Table View — Sample List</h4>
+                    <p class="m-0 line-height-3">
+                      After selecting your dataset, the Table View is the first page you will see.
+                      It displays all samples in a sortable, paginated table. You can export the
+                      data using the <strong>Export</strong> button, or click on any row to view
+                      detailed information for that individual sample.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/table-2-table-list.png"
+                    alt="Table view showing the full list of samples"
+                    class="doc-image"
+                  />
                 </div>
-                <img
-                  src="@/assets/about-page/table-3-sample-select.png"
-                  alt="Sample detail view after clicking a row"
-                  class="doc-image"
-                />
-              </div>
 
-              <!-- Block 3: Filter bar -->
-              <div class="flex flex-column gap-3">
-                <div>
-                  <h4 class="text-primary mt-0 mb-2">Filter Bar</h4>
-                  <p class="m-0 line-height-3">
-                    The top of the Table View contains a filter bar for quick data filtering.
-                    Available filters include: <strong>Sample Collection Time Range</strong>,
-                    <strong>Lineage</strong>, and <strong>DNA or Amino Acid Profiles</strong>. A
-                    counter on the side shows how many samples currently match your active filters.
-                  </p>
+                <!-- Block 2: Sample detail -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">Sample Detail</h4>
+                    <p class="m-0 line-height-3">
+                      Clicking on a sample row opens a detailed view of that sample, showing all
+                      available metadata and genomic profile information.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/table-3-sample-select.png"
+                    alt="Sample detail view after clicking a row"
+                    class="doc-image"
+                  />
                 </div>
-                <img
-                  src="@/assets/about-page/table-4-filter-bar.png"
-                  alt="Filter bar with collection time range, lineage, and profile filters"
-                  class="doc-image"
-                />
-              </div>
 
-              <!-- Block 4: Advanced filters -->
-              <div class="flex flex-column gap-3">
-                <div>
-                  <h4 class="text-primary mt-0 mb-2">Advanced Filters</h4>
-                  <p class="m-0 line-height-3">
-                    For more complex queries, the Advanced Filter panel allows you to filter by any
-                    property stored in the database. It supports logical operators (<strong
-                      >AND / OR / Group</strong
-                    >) and inclusion/exclusion logic, enabling you to build arbitrarily complex
-                    filter expressions.
-                  </p>
+                <!-- Block 3: Filter bar -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">Filter Bar</h4>
+                    <p class="m-0 line-height-3">
+                      The top of the Table View contains a filter bar for quick data filtering.
+                      Available filters include: <strong>Sample Collection Time Range</strong>,
+                      <strong>Lineage</strong>, and <strong>DNA or Amino Acid Profiles</strong>. A
+                      counter on the side shows how many samples currently match your active
+                      filters.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/table-4-filter-bar.png"
+                    alt="Filter bar with collection time range, lineage, and profile filters"
+                    class="doc-image"
+                  />
                 </div>
-                <img
-                  src="@/assets/about-page/table-5-adv-filter-bar.png"
-                  alt="Advanced filter panel with AND/OR/Group logic operators"
-                  class="doc-image"
-                />
-              </div>
-            </div>
-          </TabPanel>
 
-          <!-- Document III: Graph Page -->
-          <TabPanel header="Plot View">
-            <div class="flex flex-column gap-5 p-2 md:p-4">
-              <!-- Block 1: Graph overview -->
-              <div class="flex flex-column gap-3">
-                <div>
-                  <h4 class="text-primary mt-0 mb-2">Graph Page — Visualization Overview</h4>
-                  <p class="m-0 line-height-3">
-                    The Graph page visualizes your filtered dataset as interactive charts. All
-                    filter features from the Table View remain available, so you can refine what
-                    data is displayed in the graphs.
-                  </p>
+                <!-- Block 4: Advanced filters -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">Advanced Filters</h4>
+                    <p class="m-0 line-height-3">
+                      For more complex queries, the Advanced Filter panel allows you to filter by
+                      any property stored in the database. It supports logical operators (<strong
+                        >AND / OR / Group</strong
+                      >) and inclusion/exclusion logic, enabling you to build arbitrarily complex
+                      filter expressions.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/table-5-adv-filter-bar.png"
+                    alt="Advanced filter panel with AND/OR/Group logic operators"
+                    class="doc-image"
+                  />
                 </div>
-                <img
-                  src="@/assets/about-page/plot-1-page.png"
-                  alt="Graph page overview with interactive charts"
-                  class="doc-image"
-                />
               </div>
+            </TabPanel>
 
-              <!-- Block 2: Number of samples -->
-              <div class="flex flex-column gap-3">
-                <div>
-                  <h4 class="text-primary mt-0 mb-2">Number of Samples per Calendar Week</h4>
-                  <p class="m-0 line-height-3">
-                    This default chart shows the total count of samples collected per calendar week,
-                    giving you a clear picture of sequencing activity over time. You can interact
-                    with and resize the chart as needed.
-                  </p>
+            <!-- Document III: Graph Page -->
+            <TabPanel value="plot">
+              <div class="flex flex-column gap-5 p-2 md:p-4">
+                <!-- Block 1: Graph overview -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">Graph Page — Visualization Overview</h4>
+                    <p class="m-0 line-height-3">
+                      The Graph page visualizes your filtered dataset as interactive charts. All
+                      filter features from the Table View remain available, so you can refine what
+                      data is displayed in the graphs.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/plot-1-page.png"
+                    alt="Graph page overview with interactive charts"
+                    class="doc-image"
+                  />
                 </div>
-                <img
-                  src="@/assets/about-page/plot-2-numberofsample.png"
-                  alt="Bar chart showing number of samples per calendar week"
-                  class="doc-image"
-                />
-              </div>
 
-              <!-- Block 3: Lineage distribution -->
-              <div class="flex flex-column gap-3">
-                <div>
-                  <h4 class="text-primary mt-0 mb-2">
-                    Distribution of Grouped Lineages per Calendar Week
-                  </h4>
-                  <p class="m-0 line-height-3">
-                    This default stacked chart shows how lineages are distributed across calendar
-                    weeks, helping you track the spread and dominance of specific variants over
-                    time.
-                  </p>
+                <!-- Block 2: Number of samples -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">Number of Samples per Calendar Week</h4>
+                    <p class="m-0 line-height-3">
+                      This default chart shows the total count of samples collected per calendar
+                      week, giving you a clear picture of sequencing activity over time. You can
+                      interact with and resize the chart as needed.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/plot-2-numberofsample.png"
+                    alt="Bar chart showing number of samples per calendar week"
+                    class="doc-image"
+                  />
                 </div>
-                <img
-                  src="@/assets/about-page/plot-2-distribution.png"
-                  alt="Stacked chart showing distribution of lineages per calendar week"
-                  class="doc-image"
-                />
-              </div>
 
-              <!-- Block 4: Custom graph -->
-              <div class="flex flex-column gap-3">
-                <div>
-                  <h4 class="text-primary mt-0 mb-2">Customize Your Own Graph</h4>
-                  <p class="m-0 line-height-3">
-                    Beyond the default charts, you can create custom graphs from any data fields
-                    available in the database. This gives you full flexibility to generate
-                    visualizations suited to your specific analysis or reporting needs.
-                  </p>
+                <!-- Block 3: Lineage distribution -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">
+                      Distribution of Grouped Lineages per Calendar Week
+                    </h4>
+                    <p class="m-0 line-height-3">
+                      This default stacked chart shows how lineages are distributed across calendar
+                      weeks, helping you track the spread and dominance of specific variants over
+                      time.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/plot-2-distribution.png"
+                    alt="Stacked chart showing distribution of lineages per calendar week"
+                    class="doc-image"
+                  />
                 </div>
-                <img
-                  src="@/assets/about-page/plot-3-create-graph.png"
-                  alt="Custom graph creation interface"
-                  class="doc-image"
-                />
+
+                <!-- Block 4: Custom graph -->
+                <div class="flex flex-column gap-3">
+                  <div>
+                    <h4 class="text-primary mt-0 mb-2">Customize Your Own Graph</h4>
+                    <p class="m-0 line-height-3">
+                      Beyond the default charts, you can create custom graphs from any data fields
+                      available in the database. This gives you full flexibility to generate
+                      visualizations suited to your specific analysis or reporting needs.
+                    </p>
+                  </div>
+                  <img
+                    src="@/assets/about-page/plot-3-create-graph.png"
+                    alt="Custom graph creation interface"
+                    class="doc-image"
+                  />
+                </div>
               </div>
-            </div>
-          </TabPanel>
-        </TabView>
+            </TabPanel>
+          </TabPanels>
+        </PrimeTabs>
       </div>
     </PrimePanel>
 

@@ -128,94 +128,123 @@
         <PrimeButton type="button" icon="pi pi-question-circle" label="help" @click="toggleHelp" />
       </PrimeDialog>
 
-      <OverlayPanel ref="advancedFiltersHelp">
+      <PrimePopover ref="advancedFiltersHelp">
         <div class="flex flex-column gap-3 w-25rem">
           <div>
             <span class="font-medium text-900 block mb-2">Example of Input</span>
-            <PrimeAccordion :active-index="0">
-              <AccordionTab header="Property: Date">
-                <p class="m-0">
-                  We let users select a range of dates where first date is the start of the range
-                  and second date is the end.
-                  <PrimeChip label="2021-12-30 - 2023-01-18" />
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: exact">
-                <p class="m-0">
-                  exact = "exact match"
-                  <br />
-                  This operator filters values that exactly match the given input.
-                  <br />
-                  Example: A ID(name) filter with
-                  <PrimeChip label="ID-001" /> will return records with this exact ID.
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: contain">
-                <p class="m-0">
-                  contains = "substring match"
-                  <br />
-                  Filters records that contain the input value as a substring.
-                  <br />
-                  Example: A name filter with
-                  <PrimeChip label="John" /> will return names like "Johnathan" or "Johnny."
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: gt">
-                <p class="m-0">
-                  gt = "greater than" <br />
-                  Example:
-                  <PrimeChip label="10" /> will filter records where the value is greater than 10.
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: gte">
-                <p class="m-0">
-                  gte = "greater than or equal" <br />
-                  Example:
-                  <PrimeChip label="15" /> will filter records where the value is greater than or
-                  equal to 15.
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: lt">
-                <p class="m-0">
-                  lt = "less than" <br />
-                  Example:
-                  <PrimeChip label="20" /> will filter records where the value is less than 20.
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: lte">
-                <p class="m-0">
-                  lte = "less than or equal" <br />
-                  Example:
-                  <PrimeChip label="25" /> will filter records where the value is less than or equal
-                  to 25.
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: range">
-                <p class="m-0">
-                  range = "value between two numbers" <br />
-                  Example value input:
-                  <PrimeChip label="(1, 5)" /> <br />
-                  This means the value starts from 1 and goes up to 5, inclusive.
-                </p>
-              </AccordionTab>
-              <AccordionTab header="Operator: regex">
-                <p class="m-0">
-                  regex = "matches regular expression" <br />
-                  Example:
-                  <PrimeChip label="^IMS-101" /> will filter records where the value starts with
-                  'IMS-101'. <br />
-                  For more regex expressions, please visit
-                  <a href="https://regex101.com/" target="_blank">this link</a>.
-                </p>
-              </AccordionTab>
+            <PrimeAccordion value="property-date">
+              <AccordionPanel value="property-date">
+                <AccordionHeader>Property: Date</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    We let users select a range of dates where first date is the start of the range
+                    and second date is the end.
+                    <PrimeChip label="2021-12-30 - 2023-01-18" />
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-exact">
+                <AccordionHeader>Operator: exact</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    exact = "exact match"
+                    <br />
+                    This operator filters values that exactly match the given input.
+                    <br />
+                    Example: A ID(name) filter with
+                    <PrimeChip label="ID-001" /> will return records with this exact ID.
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-contain">
+                <AccordionHeader>Operator: contain</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    contains = "substring match"
+                    <br />
+                    Filters records that contain the input value as a substring.
+                    <br />
+                    Example: A name filter with
+                    <PrimeChip label="John" /> will return names like "Johnathan" or "Johnny."
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-gt">
+                <AccordionHeader>Operator: gt</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    gt = "greater than" <br />
+                    Example:
+                    <PrimeChip label="10" /> will filter records where the value is greater than 10.
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-gte">
+                <AccordionHeader>Operator: gte</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    gte = "greater than or equal" <br />
+                    Example:
+                    <PrimeChip label="15" /> will filter records where the value is greater than or
+                    equal to 15.
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-lt">
+                <AccordionHeader>Operator: lt</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    lt = "less than" <br />
+                    Example:
+                    <PrimeChip label="20" /> will filter records where the value is less than 20.
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-lte">
+                <AccordionHeader>Operator: lte</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    lte = "less than or equal" <br />
+                    Example:
+                    <PrimeChip label="25" /> will filter records where the value is less than or
+                    equal to 25.
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-range">
+                <AccordionHeader>Operator: range</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    range = "value between two numbers" <br />
+                    Example value input:
+                    <PrimeChip label="(1, 5)" /> <br />
+                    This means the value starts from 1 and goes up to 5, inclusive.
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
+              <AccordionPanel value="operator-regex">
+                <AccordionHeader>Operator: regex</AccordionHeader>
+                <AccordionContent>
+                  <p class="m-0">
+                    regex = "matches regular expression" <br />
+                    Example:
+                    <PrimeChip label="^IMS-101" /> will filter records where the value starts with
+                    'IMS-101'. <br />
+                    For more regex expressions, please visit
+                    <a href="https://regex101.com/" target="_blank">this link</a>.
+                  </p>
+                </AccordionContent>
+              </AccordionPanel>
             </PrimeAccordion>
           </div>
         </div>
-      </OverlayPanel>
+      </PrimePopover>
     </div>
 
     <div class="statistics-right">
-      <SampleNumberStatistics :filtered-count="samplesStore.filteredCount"></SampleNumberStatistics>
+      <SampleNumberStatistics
+        :filtered-count="samplesStore.filteredCount ?? 0"
+      ></SampleNumberStatistics>
     </div>
   </div>
 </template>
@@ -533,7 +562,7 @@ export default {
     font-weight: 600;
   }
 
-  .filter-container :deep(.p-calendar),
+  .filter-container :deep(.p-datepicker),
   .filter-container :deep(.p-inputtext),
   .filter-container :deep(.p-multiselect) {
     width: 100% !important;
@@ -619,7 +648,7 @@ export default {
   background: var(--secondary-color-lighter);
 }
 
-:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+:deep(.p-toggleswitch.p-component.p-toggleswitch-checked .p-toggleswitch-slider) {
   background: var(--primary-color);
 }
 

@@ -480,7 +480,7 @@ export default {
   background: var(--secondary-color-lighter);
 }
 
-:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+:deep(.p-toggleswitch.p-component.p-toggleswitch-checked .p-toggleswitch-slider) {
   background: var(--primary-color);
 }
 

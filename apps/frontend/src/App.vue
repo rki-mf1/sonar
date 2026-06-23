@@ -218,11 +218,11 @@ header {
   line-height: 1.2;
 }
 
-:deep(.p-menuitem-content) {
+.p-menuitem-content {
   font-size: 20px;
 }
 
-:deep(.p-menubar) {
+.p-menubar {
   padding: 0px;
 }
 
@@ -267,38 +267,38 @@ header {
   border-radius: 10px;
 }
 
-:deep(.p-button) {
+.p-button {
   background: var(--primary-color);
   border: 1px solid var(--primary-color-darker);
 }
 
-:deep(.p-button):hover {
+.p-button:hover {
   background: var(--primary-color-lighter);
 }
 
-:deep(.p-button.p-button-outlined) {
+.p-button.p-button-outlined {
   background: transparent;
   color: var(--primary-color);
 }
 
-:deep(.p-button.p-button-outlined):hover {
+.p-button.p-button-outlined:hover {
   background: rgb(248, 247, 247);
 }
 
-:deep(.p-button.p-button-warning) {
+.p-button.p-button-warning {
   background: var(--secondary-color);
   border: 1px solid var(--secondary-color-darker);
 }
 
-:deep(.p-button.p-button-warning):hover {
+.p-button.p-button-warning:hover {
   background: var(--secondary-color-lighter);
 }
 
-:deep(.p-inputswitch.p-component.p-highlight .p-inputswitch-slider) {
+.p-toggleswitch.p-component.p-toggleswitch-checked .p-toggleswitch-slider {
   background: var(--primary-color);
 }
 
-:deep(.p-radiobutton .p-radiobutton-box .p-radiobutton-icon) {
+.p-radiobutton .p-radiobutton-box .p-radiobutton-icon {
   background: var(--primary-color);
 }
 </style>

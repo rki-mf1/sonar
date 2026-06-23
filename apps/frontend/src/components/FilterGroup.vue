@@ -538,7 +538,7 @@ export default {
 
     initializeOperators(filter: PropertyFilter) {
       const propertyType = this.propertiesDict[filter.propertyName]
-      let newOperators = []
+      let newOperators
       if (propertyType === 'value_varchar') {
         newOperators = Object.values(StringDjangoFilterType)
       } else if (propertyType === 'value_integer' || propertyType === 'value_float') {
