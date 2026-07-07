@@ -285,7 +285,6 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
             if batch_size:
                 replicon_cache = {}
                 gene_cache_by_accession = {}
-                gene_cache_by_var_pos = {}
                 if REDIS_URL:
                     print("setting up sample import celery jobs..")
                     sample_jobs = []
@@ -296,7 +295,6 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                                 batch,
                                 replicon_cache,
                                 gene_cache_by_accession,
-                                gene_cache_by_var_pos,
                                 str(temp_dir),
                             )
                         )
@@ -334,7 +332,6 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                             batch,
                             replicon_cache,
                             gene_cache_by_accession,
-                            gene_cache_by_var_pos,
                             str(temp_dir),
                         )
                     # annotation
@@ -427,7 +424,6 @@ def process_batch(
     batch: list[str],
     replicon_cache,
     gene_cache_by_accession,
-    gene_cache_by_var_pos,
     temp_dir,
 ):
     parameters = locals().copy()
@@ -451,7 +447,6 @@ def process_batch_run(
     batch: list[str],
     replicon_cache,
     gene_cache_by_accession,
-    gene_cache_by_var_pos,
     temp_dir,
 ):
     try:
@@ -486,7 +481,9 @@ def process_batch_run(
             )
 
         nt_mutation_set: list[NucleotideMutation] = []
+        nt_mutation_lookup: dict[tuple, NucleotideMutation] = {}
         cds_mutation_set: list[AminoAcidMutation] = []
+        cds_mutation_lookup: dict[tuple, AminoAcidMutation] = {}
         mutation_parent_relations = []
         nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through] = (
             []
@@ -495,13 +492,14 @@ def process_batch_run(
         for sample_import_obj in sonar_import_objs:
             id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
                 nt_mutation_set,
+                nt_mutation_lookup,
                 replicon_cache,
-                gene_cache_by_var_pos,
                 nt_mutation_alignment_relations,
             )
             parent_relations = (
                 sample_import_obj.get_mutation_objs_cds_and_parent_relations(
                     cds_mutation_set,
+                    cds_mutation_lookup,
                     gene_cache_by_accession,
                     id_to_mutation_mapping,
                     aa_mutation_alignment_relations,
@@ -589,7 +587,7 @@ def process_annotation(file_name):
 
 
 def process_batch_single_thread(
-    batch, replicon_cache, gene_cache_by_accession, gene_cache_by_var_pos, temp_dir
+    batch, replicon_cache, gene_cache_by_accession, temp_dir
 ):
     try:
         sample_import_objs = [
@@ -621,7 +619,9 @@ def process_batch_single_thread(
                 update_fields=["sequence", "replicon"],
             )
             nt_mutation_set: list[NucleotideMutation] = []
+            nt_mutation_lookup: dict[tuple, NucleotideMutation] = {}
             cds_mutation_set: list[AminoAcidMutation] = []
+            cds_mutation_lookup: dict[tuple, AminoAcidMutation] = {}
             mutation_parent_relations = []
             nt_mutation_alignment_relations: list[
                 NucleotideMutation.alignments.through
@@ -633,13 +633,14 @@ def process_batch_single_thread(
             for sample_import_obj in sample_import_objs:
                 id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
                     nt_mutation_set,
+                    nt_mutation_lookup,
                     replicon_cache,
-                    gene_cache_by_var_pos,
                     nt_mutation_alignment_relations,
                 )
                 parent_relations = (
                     sample_import_obj.get_mutation_objs_cds_and_parent_relations(
                         cds_mutation_set,
+                        cds_mutation_lookup,
                         gene_cache_by_accession,
                         id_to_mutation_mapping,
                         aa_mutation_alignment_relations,

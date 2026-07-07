@@ -11,7 +11,6 @@ import pandas as pd
 from rest_api.models import Alignment
 from rest_api.models import AminoAcidMutation
 from rest_api.models import CDS
-from rest_api.models import Gene
 from rest_api.models import NucleotideMutation
 from rest_api.models import Replicon
 from rest_api.models import Sample
@@ -140,8 +139,8 @@ class SonarImport:
     def get_mutation_objs_nt(
         self,
         nt_mutation_set: list[NucleotideMutation],
+        nt_mutation_lookup: dict[tuple, NucleotideMutation],
         replicon_cache: dict[str, Replicon | None],
-        gene_cache_by_var_pos: dict[Replicon | None, dict[int, dict[int, Gene | None]]],
         nt_mutation_alignment_relations: list[NucleotideMutation.alignments.through],
     ) -> dict[int, NucleotideMutation]:
         import_id_to_sample_mutations: dict[int, NucleotideMutation] = {}
@@ -155,19 +154,6 @@ class SonarImport:
                         )
                     )
                 replicon = replicon_cache[var_raw.replicon_or_cds_accession]
-                if not replicon in gene_cache_by_var_pos:
-                    gene_cache_by_var_pos[replicon] = {}
-                if not var_raw.start in gene_cache_by_var_pos[replicon]:
-                    gene_cache_by_var_pos[replicon][var_raw.start] = {}
-                if not var_raw.end in gene_cache_by_var_pos[replicon][var_raw.start]:
-                    gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end] = (
-                        Gene.objects.filter(
-                            replicon=replicon,
-                            start__gte=var_raw.start,
-                            end__lte=var_raw.end,
-                        ).first()
-                    )
-                gene = gene_cache_by_var_pos[replicon][var_raw.start][var_raw.end]
                 # in DEL, we dont keep REF in the database.
                 if var_raw.alt is None:
                     var_raw.ref = ""
@@ -180,15 +166,18 @@ class SonarImport:
                     "replicon": self.replicon,
                     "is_frameshift": var_raw.frameshift,
                 }
-                mutation = next(
-                    filter(
-                        lambda x: self.is_same_mutation(mutation_data, x),
-                        nt_mutation_set,
-                    ),
-                    None,
+                mutation_key = (
+                    mutation_data["ref"],
+                    mutation_data["alt"],
+                    mutation_data["start"],
+                    mutation_data["end"],
+                    mutation_data["replicon"].pk if mutation_data["replicon"] else None,
+                    mutation_data["is_frameshift"],
                 )
+                mutation = nt_mutation_lookup.get(mutation_key)
                 if not mutation:
                     mutation = NucleotideMutation(**mutation_data)
+                    nt_mutation_lookup[mutation_key] = mutation
                     nt_mutation_set.append(mutation)
                 nt_mutation_alignment_relations.append(
                     NucleotideMutation.alignments.through(
@@ -206,6 +195,7 @@ class SonarImport:
     def get_mutation_objs_cds_and_parent_relations(
         self,
         cds_mutation_set: list[AminoAcidMutation],
+        cds_mutation_lookup: dict[tuple, AminoAcidMutation],
         gene_cache_by_accession: dict[str, CDS | None],
         parent_id_mapping: dict[int, NucleotideMutation],
         aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through],
@@ -234,15 +224,17 @@ class SonarImport:
                     "start": var_raw.start if var_raw.start else 0,
                     "end": var_raw.end if var_raw.end else 0,
                 }
-                mutation = next(
-                    filter(
-                        lambda x: self.is_same_mutation(mutation_data, x),
-                        cds_mutation_set,
-                    ),
-                    None,
+                mutation_key = (
+                    mutation_data["cds"].pk if mutation_data["cds"] else None,
+                    mutation_data["ref"],
+                    mutation_data["alt"],
+                    mutation_data["start"],
+                    mutation_data["end"],
                 )
+                mutation = cds_mutation_lookup.get(mutation_key)
                 if not mutation:
                     mutation = AminoAcidMutation(**mutation_data)
+                    cds_mutation_lookup[mutation_key] = mutation
                     cds_mutation_set.append(mutation)
                 aa_mutation_alignment_relations.append(
                     AminoAcidMutation.alignments.through(
