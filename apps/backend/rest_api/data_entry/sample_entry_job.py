@@ -1,12 +1,16 @@
+from collections import Counter
 from datetime import datetime
 import pathlib
 import pickle
 import shutil
+import time
+from time import perf_counter
 import traceback
 import zipfile
 
 from celery import group
 from celery import shared_task
+from celery import states
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist
 from django.db import DataError
@@ -42,6 +46,75 @@ from sonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from sonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 
 property_cache = {}
+
+
+def _collect_celery_group_results(
+    group_result,
+    *,
+    task_label="import",
+    poll_interval_seconds=0.5,
+    progress_interval_seconds=30,
+):
+    """Collect Celery group results without Redis result-backend pubsub."""
+    async_results = list(group_result.results)
+    pending_results = {
+        async_result.id: (index, async_result)
+        for index, async_result in enumerate(async_results)
+    }
+    results = [None] * len(pending_results)
+    completed_count = 0
+    total_count = len(pending_results)
+    last_progress = perf_counter()
+
+    try:
+        while pending_results:
+            completed_task_ids = []
+            status_counts = Counter()
+            for task_id, (index, async_result) in pending_results.items():
+                meta = async_result.backend.get_task_meta(task_id)
+                status = meta.get("status")
+                status_counts[status] += 1
+                if status not in states.READY_STATES:
+                    continue
+
+                if status in states.PROPAGATE_STATES:
+                    result = meta.get("result")
+                    if isinstance(result, BaseException):
+                        raise result
+                    raise RuntimeError(
+                        f"Celery {task_label} task {task_id} failed: {result}"
+                    )
+
+                results[index] = meta.get("result")
+                completed_task_ids.append(task_id)
+
+            for task_id in completed_task_ids:
+                _, async_result = pending_results.pop(task_id)
+                async_result.forget()
+
+            if completed_task_ids:
+                completed_count += len(completed_task_ids)
+            now = perf_counter()
+            if now - last_progress >= progress_interval_seconds:
+                LOGGER.info(
+                    "Waiting for %s Celery tasks: %s/%s complete; pending statuses: %s",
+                    task_label,
+                    completed_count,
+                    total_count,
+                    dict(status_counts),
+                )
+                last_progress = now
+            if pending_results:
+                time.sleep(poll_interval_seconds)
+    finally:
+        try:
+            group_result.forget()
+        except Exception as exc:
+            LOGGER.warning(
+                "Could not forget Celery %s group result: %s", task_label, exc
+            )
+
+    return results
 
 
 def check_for_new_data():
@@ -227,16 +300,20 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                                 str(temp_dir),
                             )
                         )
-                    results = group(sample_jobs).apply_async().get()
+                    results = _collect_celery_group_results(
+                        group(sample_jobs).apply_async(),
+                        task_label="sample import",
+                    )
                     for result in results:
                         if not result[0]:
                             raise Exception(
                                 f"Sample Import Error: {result[1]} - {result[2]}"
                             )
-                    results = (
-                        group([process_annotation.s(str(file)) for file in anno_files])
-                        .apply_async()
-                        .get()
+                    results = _collect_celery_group_results(
+                        group(
+                            [process_annotation.s(str(file)) for file in anno_files]
+                        ).apply_async(),
+                        task_label="annotation import",
                     )
                     for result in results:
                         if not result[0]:
@@ -725,7 +802,10 @@ def import_property(
                 )
 
             # Run the Celery group of tasks and collect results
-            results = group(property_jobs).apply_async().get()
+            results = _collect_celery_group_results(
+                group(property_jobs).apply_async(),
+                task_label="property import",
+            )
 
             for result in results:
                 if not result[0]:
