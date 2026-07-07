@@ -1,4 +1,5 @@
 from collections import Counter
+from collections import defaultdict
 from datetime import datetime
 import pathlib
 import pickle
@@ -23,6 +24,8 @@ import pandas as pd
 from rest_api import models
 from rest_api.data_entry.annotation_import import AnnotationImport
 from rest_api.data_entry.sample_import import SonarImport
+from rest_api.data_entry.sample_import import VAR_BATCH_SAMPLE_COLUMN
+from rest_api.data_entry.sample_import import VAR_PARQUET_COLUMNS
 from rest_api.models import Alignment
 from rest_api.models import AminoAcidMutation
 from rest_api.models import AnnotationType
@@ -46,6 +49,50 @@ from sonar_backend.settings import SONAR_DATA_ENTRY_FOLDER
 from sonar_backend.settings import SONAR_DATA_PROCESSING_FOLDER
 
 property_cache = {}
+
+
+def _load_sample_raw_by_file(batch: list[str]):
+    sample_raw_by_file = {}
+    for file in batch:
+        if pathlib.Path(file).suffix == ".samplebatch":
+            sample_batch = SonarImport.import_pickle(file)
+            for index, sample_raw in enumerate(sample_batch):
+                sample_raw_by_file[f"{file}::{index}"] = sample_raw
+        else:
+            sample_raw_by_file[file] = SonarImport.import_pickle(file)
+    return sample_raw_by_file
+
+
+def _load_variant_batch_rows_by_sample_file(
+    sample_raw_by_file: dict[str, dict],
+    temp_dir,
+):
+    var_batch_files = sorted(
+        {
+            sample_raw.get("var_batch_file")
+            for sample_raw in sample_raw_by_file.values()
+            if sample_raw.get("var_batch_file")
+        }
+    )
+    if not var_batch_files:
+        return {}
+
+    sample_file_by_name = {
+        sample_raw.get("var_batch_sample_name") or sample_raw["name"]: sample_file
+        for sample_file, sample_raw in sample_raw_by_file.items()
+        if sample_raw.get("var_batch_file")
+    }
+    rows_by_sample_file = defaultdict(list)
+    for var_batch_file in var_batch_files:
+        variant_batch_df = pd.read_parquet(
+            pathlib.Path(temp_dir).joinpath(var_batch_file),
+            columns=[VAR_BATCH_SAMPLE_COLUMN, *VAR_PARQUET_COLUMNS],
+        )
+        for row in variant_batch_df.itertuples(index=False, name=None):
+            sample_file = sample_file_by_name.get(row[0])
+            if sample_file:
+                rows_by_sample_file[sample_file].append(row[1:])
+    return rows_by_sample_file
 
 
 def _collect_celery_group_results(
@@ -261,11 +308,15 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
             batch_size = SAMPLE_BATCH_SIZE
             print("Batch size:", batch_size)
             # var and vcf
-            sample_files = list(temp_dir.joinpath("samples").glob("**/*.sample"))
+            sample_batch_files = sorted(
+                temp_dir.joinpath("sample_batches").glob("**/*.samplebatch")
+            )
+            sample_files = sorted(temp_dir.joinpath("samples").glob("**/*.sample"))
             anno_files = list(temp_dir.joinpath("anno").glob("**/*.vcf.*"))
             print(f"Sample: {len(sample_files)} files found")
+            print(f"Sample batches: {len(sample_batch_files)} files found")
             print(f"Annotation (vcfs): {len(anno_files)} files found")
-            if len(sample_files) > 0:
+            if len(sample_batch_files) > 0 or len(sample_files) > 0:
                 import_type = ImportLog.ImportType.SAMPLE
             elif len(anno_files) > 0:
                 import_type = ImportLog.ImportType.ANNOTATION
@@ -274,22 +325,32 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
 
             timer = datetime.now()
 
-            number_of_batches = (
-                (len(sample_files) + batch_size - 1) // batch_size
-                if sample_files
-                else (len(anno_files) + batch_size - 1) // batch_size
-            )
+            if sample_batch_files:
+                sample_work_items = [str(file) for file in sample_batch_files]
+                number_of_batches = len(sample_work_items)
+            else:
+                sample_work_items = [str(file) for file in sample_files]
+                number_of_batches = (
+                    (len(sample_work_items) + batch_size - 1) // batch_size
+                    if sample_work_items
+                    else (len(anno_files) + batch_size - 1) // batch_size
+                )
 
             print(f"Total number of batches: {number_of_batches}")
-            sample_files = [str(file) for file in sample_files]
             if batch_size:
                 replicon_cache = {}
                 gene_cache_by_accession = {}
                 if REDIS_URL:
                     print("setting up sample import celery jobs..")
                     sample_jobs = []
-                    for i in range(0, len(sample_files), batch_size):
-                        batch = sample_files[i : i + batch_size]
+                    if sample_batch_files:
+                        sample_batches = [[file] for file in sample_work_items]
+                    else:
+                        sample_batches = [
+                            sample_work_items[i : i + batch_size]
+                            for i in range(0, len(sample_work_items), batch_size)
+                        ]
+                    for batch in sample_batches:
                         sample_jobs.append(
                             process_batch.s(
                                 batch,
@@ -322,12 +383,18 @@ def import_archive(process_file_path: pathlib.Path, pkl_path: pathlib.Path = Non
                     replicon_cache = {}
                     gene_cache_by_accession = {}
                     # Samples
-                    for i in range(0, len(sample_files), batch_size):
+                    if sample_batch_files:
+                        sample_batches = [[file] for file in sample_work_items]
+                    else:
+                        sample_batches = [
+                            sample_work_items[i : i + batch_size]
+                            for i in range(0, len(sample_work_items), batch_size)
+                        ]
+                    for batch in sample_batches:
                         # print(
                         #     f"processing batch {(i//batch_size) + 1} of {number_of_batches}"
                         # )
                         # batchtimer = datetime.now()
-                        batch = sample_files[i : i + batch_size]
                         process_batch_single_thread(
                             batch,
                             replicon_cache,
@@ -450,8 +517,19 @@ def process_batch_run(
     temp_dir,
 ):
     try:
+        sample_raw_by_file = _load_sample_raw_by_file(batch)
+        variant_rows_by_file = _load_variant_batch_rows_by_sample_file(
+            sample_raw_by_file,
+            temp_dir,
+        )
         sonar_import_objs = [
-            SonarImport(pathlib.Path(file), import_folder=temp_dir) for file in batch
+            SonarImport(
+                pathlib.Path(file),
+                import_folder=temp_dir,
+                sample_raw_data=sample_raw_by_file[file],
+                variant_rows=variant_rows_by_file.get(file),
+            )
+            for file in sample_raw_by_file
         ]
         sequences = [
             sample_import_obj.get_sequence_obj()
@@ -590,8 +668,19 @@ def process_batch_single_thread(
     batch, replicon_cache, gene_cache_by_accession, temp_dir
 ):
     try:
+        sample_raw_by_file = _load_sample_raw_by_file(batch)
+        variant_rows_by_file = _load_variant_batch_rows_by_sample_file(
+            sample_raw_by_file,
+            temp_dir,
+        )
         sample_import_objs = [
-            SonarImport(file, import_folder=temp_dir) for file in batch
+            SonarImport(
+                pathlib.Path(file),
+                import_folder=temp_dir,
+                sample_raw_data=sample_raw_by_file[file],
+                variant_rows=variant_rows_by_file.get(file),
+            )
+            for file in sample_raw_by_file
         ]
         with transaction.atomic():
             sequences = [

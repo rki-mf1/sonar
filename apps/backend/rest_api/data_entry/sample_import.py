@@ -35,6 +35,8 @@ class SampleRaw:
     translationid: int
     include_nx: bool
     var_parquet_file: Optional[str] = None
+    var_batch_file: Optional[str] = None
+    var_batch_sample_name: Optional[str] = None
     vcffile: Optional[str] = None
     algnid: Optional[int] = None
     sequenceid: Optional[int] = None
@@ -70,6 +72,7 @@ VAR_PARQUET_COLUMNS = [
     "frameshift",
     "parent_id",
 ]
+VAR_BATCH_SAMPLE_COLUMN = "sample_name"
 
 
 class VCFInfoLOFRaw:
@@ -93,19 +96,34 @@ class SonarImport:
         self,
         path: pathlib.Path,
         import_folder="import_data",
+        sample_raw_data: dict | None = None,
+        variant_rows=None,
     ):
         self.sample_file_path = path
         self.import_folder = import_folder
-        self.sample_raw = SampleRaw(**self._import_pickle(path))
+        if sample_raw_data is None:
+            sample_raw_data = self._import_pickle(path)
+        self.sample_raw = SampleRaw(**sample_raw_data)
         self.sequence: None | Sequence = None
         self.sample: None | Sample = None
         self.replicon: None | Replicon = None
         self.alignment: None | Alignment = None
         self.success = False
 
-        if self.sample_raw.var_parquet_file:
+        if variant_rows is not None:
+            self.vars_raw = self._import_vars_from_rows(
+                variant_rows,
+                self.sample_raw.include_nx,
+            )
+        elif self.sample_raw.var_parquet_file:
             self.vars_raw = self._import_vars(
                 self.sample_raw.var_parquet_file, self.sample_raw.include_nx
+            )
+        elif self.sample_raw.var_batch_file:
+            self.vars_raw = self._import_vars_from_batch(
+                self.sample_raw.var_batch_file,
+                self.sample_raw.include_nx,
+                self.sample_raw.var_batch_sample_name or self.sample_raw.name,
             )
         else:
             raise Exception("No var file found")
@@ -277,6 +295,11 @@ class SonarImport:
         with open(path, "rb") as f:
             return pickle.load(f)
 
+    @staticmethod
+    def import_pickle(path: str):
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
     def _parse_parent_ids(self, parent_id) -> list[int] | None:
         if pd.notna(parent_id) and parent_id.strip() != "":
             return [int(x) for x in parent_id.split(",")]
@@ -297,6 +320,33 @@ class SonarImport:
         )
         var_df = pd.read_parquet(self.var_file_path, columns=VAR_PARQUET_COLUMNS)
 
+        return self._import_vars_from_rows(
+            var_df.itertuples(index=False, name=None),
+            include_nx,
+        )
+
+    def _import_vars_from_batch(
+        self,
+        path,
+        include_nx: bool,
+        sample_name: str,
+    ):
+        self.var_file_path = pathlib.Path(self.import_folder).joinpath(path)
+        var_df = pd.read_parquet(
+            self.var_file_path,
+            columns=[VAR_BATCH_SAMPLE_COLUMN, *VAR_PARQUET_COLUMNS],
+        )
+
+        return self._import_vars_from_rows(
+            (
+                row[1:]
+                for row in var_df.itertuples(index=False, name=None)
+                if row[0] == sample_name
+            ),
+            include_nx,
+        )
+
+    def _import_vars_from_rows(self, variant_rows, include_nx: bool):
         variants = []
         for (
             var_id,
@@ -308,7 +358,7 @@ class SonarImport:
             var_type,
             frameshift,
             parent_id,
-        ) in var_df.itertuples(index=False, name=None):
+        ) in variant_rows:
             try:
                 ref = self._clean_variant_base(ref)
                 alt = self._clean_variant_base(alt)
