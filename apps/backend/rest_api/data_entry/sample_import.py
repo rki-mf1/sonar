@@ -290,42 +290,32 @@ class SonarImport:
         var_df = pd.read_parquet(self.var_file_path, columns=VAR_PARQUET_COLUMNS)
 
         variants = []
-        for (
-            var_id,
-            ref,
-            start,
-            end,
-            alt,
-            reference_acc,
-            var_type,
-            frameshift,
-            parent_id,
-        ) in var_df.itertuples(index=False, name=None):
+        for var in var_df.itertuples(index=False, name=None):
             try:
-                ref = self._clean_variant_base(ref)
-                alt = self._clean_variant_base(alt)
+                ref = self._clean_variant_base(var.ref)
+                alt = self._clean_variant_base(var.alt)
                 if not include_nx and (
-                    (var_type == "nt" and "N" in alt)
-                    or (var_type == "cds" and "X" in alt)
+                    (var.var_type == "nt" and "N" in alt)
+                    or (var.var_type == "cds" and "X" in alt)
                 ):
                     continue
                 variants.append(
                     VarRaw(
-                        var_id,
+                        var.var_id,
                         ref,
-                        start,
-                        end,
+                        var.start,
+                        var.end,
                         alt,
-                        reference_acc,
-                        var_type,
-                        frameshift,
-                        self._parse_parent_ids(parent_id),
+                        var.reference_acc,
+                        var.var_type,
+                        var.frameshift,
+                        self._parse_parent_ids(var.parent_id),
                     ),
                 )
             except Exception as e:
                 print(
                     "Error processing row: "
-                    f"{(var_id, ref, start, end, alt, reference_acc, var_type, frameshift, parent_id)}"
+                    f"{(var.var_id, ref, var.start, var.end, alt, var.reference_acc, var.var_type, var.frameshift, var.parent_id)}"
                 )
                 print(f"Error file: {self.var_file_path}")
                 raise e
