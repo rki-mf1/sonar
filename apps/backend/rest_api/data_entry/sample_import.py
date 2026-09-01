@@ -290,24 +290,24 @@ class SonarImport:
         var_df = pd.read_parquet(self.var_file_path, columns=VAR_PARQUET_COLUMNS)
 
         variants = []
-        for var in var_df.itertuples(index=False, name=None):
+        for var in var_df.itertuples(index=False, name="Var"):
             try:
                 ref = self._clean_variant_base(var.ref)
                 alt = self._clean_variant_base(var.alt)
                 if not include_nx and (
-                    (var.var_type == "nt" and "N" in alt)
-                    or (var.var_type == "cds" and "X" in alt)
+                    (var.type == "nt" and "N" in alt)
+                    or (var.type == "cds" and "X" in alt)
                 ):
                     continue
                 variants.append(
                     VarRaw(
-                        var.var_id,
+                        var.id,
                         ref,
                         var.start,
                         var.end,
                         alt,
                         var.reference_acc,
-                        var.var_type,
+                        var.type,
                         var.frameshift,
                         self._parse_parent_ids(var.parent_id),
                     ),
@@ -315,7 +315,7 @@ class SonarImport:
             except Exception as e:
                 print(
                     "Error processing row: "
-                    f"{(var.var_id, ref, var.start, var.end, alt, var.reference_acc, var.var_type, var.frameshift, var.parent_id)}"
+                    f"{(var.id, ref, var.start, var.end, alt, var.reference_acc, var.type, var.frameshift, var.parent_id)}"
                 )
                 print(f"Error file: {self.var_file_path}")
                 raise e
