@@ -491,14 +491,12 @@ def process_batch_run(
         aa_mutation_alignment_relations: list[AminoAcidMutation.alignments.through] = []
         for sample_import_obj in sonar_import_objs:
             id_to_mutation_mapping = sample_import_obj.get_mutation_objs_nt(
-                nt_mutation_set,
                 nt_mutation_lookup,
                 replicon_cache,
                 nt_mutation_alignment_relations,
             )
             parent_relations = (
                 sample_import_obj.get_mutation_objs_cds_and_parent_relations(
-                    cds_mutation_set,
                     cds_mutation_lookup,
                     gene_cache_by_accession,
                     id_to_mutation_mapping,
@@ -506,6 +504,8 @@ def process_batch_run(
                 )
             )
             mutation_parent_relations.extend(parent_relations)
+        nt_mutation_set = list(nt_mutation_lookup.values())
+        cds_mutation_set = list(cds_mutation_lookup.values())
         with cache.lock("mutation"):
             NucleotideMutation.objects.bulk_create(
                 nt_mutation_set,
