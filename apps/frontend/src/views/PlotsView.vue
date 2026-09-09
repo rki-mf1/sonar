@@ -818,19 +818,9 @@ export default {
       y_feature: string,
       x_feature: string,
       x_axis_type:
-        | 'category'
-        | 'linear'
-        | 'time'
-        | 'logarithmic'
-        | 'timeseries'
-        | 'radialLinear' = 'category',
+        'category' | 'linear' | 'time' | 'logarithmic' | 'timeseries' | 'radialLinear' = 'category',
       y_axis_type:
-        | 'category'
-        | 'linear'
-        | 'time'
-        | 'logarithmic'
-        | 'timeseries'
-        | 'radialLinear' = 'linear',
+        'category' | 'linear' | 'time' | 'logarithmic' | 'timeseries' | 'radialLinear' = 'linear',
     ): ChartOptions {
       return {
         animation: { duration: 1000 },
