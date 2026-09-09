@@ -772,27 +772,34 @@ class sonarUtils:
         """Bundle up the data to be sent to the backend and send it"""
 
         files_to_compress = []
-        added_parquet_files = set()
+        sample_batch = []
+        sample_batch_rel_path = f"sample_batches/chunk-{chunk_number:06d}.samplebatch"
+        variant_batch_frames = []
+        variant_batch_rel_path = f"var_batches/chunk-{chunk_number:06d}.parquet"
         for kwargs in sample_list:
-            var_parquet_file = kwargs["var_parquet_file"]
-            sample_dict = kwargs
+            var_parquet_file = kwargs.get("var_parquet_file")
+            sample_dict = dict(kwargs)
+            if var_parquet_file:
+                var_df = pd.read_parquet(var_parquet_file)
+                var_df.insert(0, "sample_name", sample_dict["name"])
+                variant_batch_frames.append(var_df)
+                sample_dict["var_batch_file"] = variant_batch_rel_path
+                sample_dict["var_batch_sample_name"] = sample_dict["name"]
+                sample_dict["var_parquet_file"] = None
 
-            # Serialize the sample dictionary to bytes
-            sample_bytes = pickle.dumps(sample_dict)
-
-            # Append the serialized sample dictionary to the files to compress
-            files_to_compress.append(
-                (
-                    f"samples/{get_fname(kwargs['name'], extension='.sample', enable_parent_dir=True)}",
-                    sample_bytes,
-                )
+            sample_batch.append(sample_dict)
+        files_to_compress.append((sample_batch_rel_path, pickle.dumps(sample_batch)))
+        if variant_batch_frames:
+            variant_batch_bytes = BytesIO()
+            pd.concat(variant_batch_frames).to_parquet(
+                variant_batch_bytes,
+                compression="zstd",
+                compression_level=10,
+                index=False,
             )
-            # Deduplicate parquet files: samples with identical sequences share the same
-            # seqhash and therefore the same parquet file path. Adding it twice would
-            # produce a "Duplicate name" warning from zipfile.
-            if var_parquet_file not in added_parquet_files:
-                files_to_compress.append(var_parquet_file)
-                added_parquet_files.add(var_parquet_file)
+            files_to_compress.append(
+                (variant_batch_rel_path, variant_batch_bytes.getvalue())
+            )
 
         # Create a zip file without writing to disk
         compressed_data = BytesIO()
