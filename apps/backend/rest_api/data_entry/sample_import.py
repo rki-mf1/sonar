@@ -59,6 +59,19 @@ class VarRaw:
     parent_id: list[int] | None
 
 
+VAR_PARQUET_COLUMNS = [
+    "id",
+    "ref",
+    "start",
+    "end",
+    "alt",
+    "reference_acc",
+    "type",
+    "frameshift",
+    "parent_id",
+]
+
+
 class VCFInfoLOFRaw:
     # Predicted loss of function effects for this variant.
     gene_name: str
@@ -91,12 +104,9 @@ class SonarImport:
         self.success = False
 
         if self.sample_raw.var_parquet_file:
-            self.vars_raw = [
-                var
-                for var in self._import_vars(
-                    self.sample_raw.var_parquet_file, self.sample_raw.include_nx
-                )
-            ]
+            self.vars_raw = self._import_vars(
+                self.sample_raw.var_parquet_file, self.sample_raw.include_nx
+            )
         else:
             raise Exception("No var file found")
 
@@ -259,6 +269,16 @@ class SonarImport:
         with open(path, "rb") as f:
             return pickle.load(f)
 
+    def _parse_parent_ids(self, parent_id) -> list[int] | None:
+        if pd.notna(parent_id) and parent_id.strip() != "":
+            return [int(x) for x in parent_id.split(",")]
+        return None
+
+    def _clean_variant_base(self, value):
+        if pd.isna(value) or value == " ":
+            return ""
+        return value
+
     def _import_vars(self, path, include_nx: bool):
         file_name = pathlib.Path(path).name
         self.var_file_path = (
@@ -267,38 +287,39 @@ class SonarImport:
             .joinpath(file_name[:2])
             .joinpath(file_name)
         )
-        var_df = pd.read_parquet(self.var_file_path)
-        var_df[["ref", "alt"]] = var_df[["ref", "alt"]].fillna("").replace({" ": ""})
+        var_df = pd.read_parquet(self.var_file_path, columns=VAR_PARQUET_COLUMNS)
 
-        if not include_nx:
-            # remove all ref containing Ns for nt, or X for cds
-            var_df = var_df[
-                ~((var_df["type"] == "nt") & var_df["alt"].str.contains("N", na=False))
-            ]
-            var_df = var_df[
-                ~((var_df["type"] == "cds") & var_df["alt"].str.contains("X", na=False))
-            ]
-        for _, row in var_df.iterrows():
+        variants = []
+        for var in var_df.itertuples(index=False, name="Var"):
             try:
-                yield VarRaw(
-                    row["id"],
-                    row["ref"],
-                    row["start"],
-                    row["end"],
-                    row["alt"],
-                    row["reference_acc"],
-                    row["type"],
-                    row["frameshift"],
-                    (
-                        [int(x) for x in row["parent_id"].split(",")]
-                        if pd.notna(row["parent_id"]) and row["parent_id"].strip() != ""
-                        else None
+                ref = self._clean_variant_base(var.ref)
+                alt = self._clean_variant_base(var.alt)
+                if not include_nx and (
+                    (var.type == "nt" and "N" in alt)
+                    or (var.type == "cds" and "X" in alt)
+                ):
+                    continue
+                variants.append(
+                    VarRaw(
+                        var.id,
+                        ref,
+                        var.start,
+                        var.end,
+                        alt,
+                        var.reference_acc,
+                        var.type,
+                        var.frameshift,
+                        self._parse_parent_ids(var.parent_id),
                     ),
                 )
             except Exception as e:
-                print(f"Error processing row: {row}")
+                print(
+                    "Error processing row: "
+                    f"{(var.id, ref, var.start, var.end, alt, var.reference_acc, var.type, var.frameshift, var.parent_id)}"
+                )
                 print(f"Error file: {self.var_file_path}")
                 raise e
+        return variants
 
     def _import_seq(self, path):
         file_name = pathlib.Path(path).name
