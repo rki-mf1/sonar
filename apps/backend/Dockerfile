@@ -1,4 +1,4 @@
-FROM python:3.14-slim AS builder
+FROM python:3.15-slim AS builder
 
 ENV PYTHONUNBUFFERED=1
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -22,7 +22,7 @@ COPY rest_api/ /code/rest_api
 RUN poetry config virtualenvs.create false \
  && poetry install --only main --no-root --no-interaction
 
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 ARG SONAR_VERSION=
 
